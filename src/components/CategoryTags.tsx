@@ -26,22 +26,26 @@ const CategoryTags: React.FC<CategoryTagsProps> = ({
   };
 
   return (
-    <div className="flex gap-5 flex-wrap max-md:justify-center max-sm:gap-2.5">
-      {categories.map((category) => (
-        <button
-          key={category}
-          onClick={() => toggleCategory(category)}
-          className={`flex w-[134px] h-[34px] justify-center items-center px-[11px] py-[7px] rounded-lg max-sm:w-[120px] max-sm:h-[30px] max-sm:px-2 max-sm:py-[5px] transition-colors ${
-            selectedCategories.includes(category)
-              ? 'bg-[#EF4118] text-white'
-              : 'bg-[#EF4118] text-white hover:bg-[#d63614]'
-          }`}
-        >
-          <span className="text-sm font-bold max-sm:text-xs">
-            {category}
-          </span>
-        </button>
-      ))}
+    <div className="relative">
+      <div className="flex gap-5 overflow-x-auto scrollbar-hide pb-2">
+        {categories.map((category) => (
+          <button
+            key={category}
+            onClick={() => toggleCategory(category)}
+            className={`flex w-[134px] h-[34px] justify-center items-center px-[11px] py-[7px] rounded-lg flex-shrink-0 transition-colors ${
+              selectedCategories.includes(category)
+                ? 'bg-[#EF4118] text-white'
+                : 'bg-[#EF4118] text-white hover:bg-[#d63614]'
+            }`}
+          >
+            <span className="text-sm font-bold whitespace-nowrap">
+              {category}
+            </span>
+          </button>
+        ))}
+      </div>
+      {/* Fade overlay para indicar mais itens à direita */}
+      <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
     </div>
   );
 };

@@ -141,13 +141,11 @@ const Index = () => {
           size="large"
         />
 
-        <div className="px-[158px] py-5 max-md:p-5 max-sm:p-[15px]">
-          <EventsGrid 
-            title="🦜 Pelo Brasil..."
-            events={brazilEvents}
-            size="small"
-          />
-        </div>
+        <EventsGrid 
+          title="🦜 Pelo Brasil..."
+          events={brazilEvents}
+          size="small"
+        />
 
         <Banner />
       </main>
