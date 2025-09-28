@@ -32,9 +32,9 @@ const EventCard: React.FC<EventCardProps> = ({
             : 'w-[156px] h-[118px] max-sm:w-full'
         } rounded-[14px_14px_0_0] object-cover`}
       />
-      <div className={`flex ${
-        isLarge ? 'w-[187px]' : 'w-[119px]'
-      } flex-col items-start gap-${isLarge ? '[15px]' : '2.5'} px-${isLarge ? '4' : '[18px]'} py-[19px]`}>
+      <div className={`flex flex-col items-start ${
+        isLarge ? 'w-[187px] gap-[15px] px-4 py-[19px]' : 'w-[119px] gap-2 px-3 py-3'
+      }`}>
         <time className="text-[#2A2AD7] text-xs font-normal">
           {date}
         </time>

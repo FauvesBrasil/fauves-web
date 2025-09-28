@@ -27,12 +27,12 @@ const CategoryTags: React.FC<CategoryTagsProps> = ({
 
   return (
     <div className="relative">
-      <div className="flex gap-5 overflow-x-auto scrollbar-hide pb-2">
+      <div className="flex gap-5 overflow-x-scroll scrollbar-hide pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {categories.map((category) => (
           <button
             key={category}
             onClick={() => toggleCategory(category)}
-            className={`flex w-[134px] h-[34px] justify-center items-center px-[11px] py-[7px] rounded-lg flex-shrink-0 transition-colors ${
+            className={`flex min-w-[134px] h-[34px] justify-center items-center px-[11px] py-[7px] rounded-lg flex-shrink-0 transition-colors ${
               selectedCategories.includes(category)
                 ? 'bg-[#EF4118] text-white'
                 : 'bg-[#EF4118] text-white hover:bg-[#d63614]'
@@ -45,7 +45,7 @@ const CategoryTags: React.FC<CategoryTagsProps> = ({
         ))}
       </div>
       {/* Fade overlay para indicar mais itens à direita */}
-      <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
+      <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-white via-white/80 to-transparent pointer-events-none"></div>
     </div>
   );
 };

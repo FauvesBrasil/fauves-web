@@ -12,37 +12,39 @@ const Banner: React.FC = () => {
         alt="FacePass Security Banner"
         className="w-[1040px] h-[365px] rounded-[20px] max-md:w-full max-sm:h-[300px] max-sm:object-cover"
       />
-      <div className="absolute px-16 py-14 left-0 top-0 max-md:px-[30px] max-md:py-10 max-sm:p-5">
-        <h2 className="w-[266px] text-white text-[32px] font-bold mb-2.5 max-md:text-[28px] max-sm:w-full max-sm:text-2xl max-sm:mb-[15px]">
-          A sua segurança é a nossa
-        </h2>
-        <p className="w-[291px] text-white text-lg font-medium mb-6 max-md:text-base max-sm:w-full max-sm:text-sm max-sm:mb-5">
-          A única plataforma com um sistema seguro de identificação facial,
-          trocando o convencional QR Code pelo seu rosto, que só você tem.
-        </p>
-        <button 
-          onClick={handleRegisterEvent}
-          className="w-[260px] h-[45px] flex items-center relative bg-[#F9C900] px-[17px] py-0 rounded-[5px] max-sm:w-full max-sm:max-w-[260px] hover:bg-[#e6b500] transition-colors group"
-        >
-          <span className="text-[#091747] text-sm font-bold">
-            Cadastrar meu evento
-          </span>
-          <svg 
-            width="6" 
-            height="10" 
-            viewBox="0 0 6 10" 
-            fill="none" 
-            xmlns="http://www.w3.org/2000/svg" 
-            className="absolute right-[26px] group-hover:translate-x-1 transition-transform"
+      <div className="absolute inset-0 flex flex-col justify-center px-16 py-14 max-md:px-[30px] max-md:py-10 max-sm:p-5">
+        <div className="max-w-[350px]">
+          <h2 className="text-white text-[32px] font-bold mb-4 leading-tight max-md:text-[28px] max-sm:text-2xl max-sm:mb-3">
+            A sua segurança é a nossa
+          </h2>
+          <p className="text-white text-lg font-medium mb-8 leading-relaxed max-md:text-base max-sm:text-sm max-sm:mb-6">
+            A única plataforma com um sistema seguro de identificação facial,
+            trocando o convencional QR Code pelo seu rosto, que só você tem.
+          </p>
+          <button 
+            onClick={handleRegisterEvent}
+            className="w-[260px] h-[45px] flex items-center relative bg-[#F9C900] px-[17px] py-0 rounded-[5px] max-sm:w-full max-sm:max-w-[260px] hover:bg-[#e6b500] transition-colors group"
           >
-            <path 
-              fillRule="evenodd" 
-              clipRule="evenodd" 
-              d="M5.76144 5.55547L1.15212 10L0 8.88906L4.03325 5L0 1.11094L1.15212 0L5.76144 4.44453C5.91419 4.59187 6 4.79167 6 5C6 5.20833 5.91419 5.40813 5.76144 5.55547Z" 
-              fill="#091747"
-            />
-          </svg>
-        </button>
+            <span className="text-[#091747] text-sm font-bold">
+              Cadastrar meu evento
+            </span>
+            <svg 
+              width="6" 
+              height="10" 
+              viewBox="0 0 6 10" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="absolute right-[26px] group-hover:translate-x-1 transition-transform"
+            >
+              <path 
+                fillRule="evenodd" 
+                clipRule="evenodd" 
+                d="M5.76144 5.55547L1.15212 10L0 8.88906L4.03325 5L0 1.11094L1.15212 0L5.76144 4.44453C5.91419 4.59187 6 4.79167 6 5C6 5.20833 5.91419 5.40813 5.76144 5.55547Z" 
+                fill="#091747"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </section>
   );
