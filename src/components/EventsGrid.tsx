@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react'; // Não é necessário para JSX automático
 import EventCard from './EventCard';
 
 interface Event {
@@ -25,20 +25,32 @@ const EventsGrid: React.FC<EventsGridProps> = ({ title, events, size = 'large' }
       </h2>
       <div className={`grid gap-5 ${
         isLarge 
-          ? 'grid-cols-[repeat(4,1fr)] grid-rows-[repeat(2,1fr)] w-[1040px] h-[520px] max-md:grid-cols-[repeat(2,1fr)] max-md:grid-rows-[repeat(4,1fr)] max-md:w-full max-md:h-auto max-md:gap-[15px] max-sm:grid-cols-[1fr] max-sm:grid-rows-[repeat(8,1fr)] max-sm:gap-[15px]'
-          : 'grid-cols-[repeat(6,1fr)] w-[1038px] h-[250px] max-md:grid-cols-[repeat(3,1fr)] max-md:w-full max-md:h-auto max-md:gap-[15px] max-sm:grid-cols-[repeat(2,1fr)] max-sm:gap-2.5'
+          ? 'grid-cols-[repeat(4,1fr)] max-md:grid-cols-[repeat(2,1fr)] max-md:gap-[15px] max-sm:grid-cols-[1fr] max-sm:gap-[15px]'
+          : 'grid-cols-[repeat(6,1fr)] max-md:grid-cols-[repeat(3,1fr)] max-md:gap-[15px] max-sm:grid-cols-[repeat(2,1fr)] max-sm:gap-2.5'
       }`}>
-        {events.map((event) => (
+        {events.map((event, idx) => (
           <EventCard
             key={event.id}
+            id={event.id}
             image={event.image}
             date={event.date}
             title={event.title}
             location={event.location}
-            size={size}
+            size={size === 'large' ? 'large' : 'small'}
+            style={{
+              opacity: 0,
+              animation: `fadeIn 0.5s ease forwards`,
+              animationDelay: `${idx * 80}ms`,
+            }}
           />
         ))}
       </div>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </section>
   );
 };

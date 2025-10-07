@@ -1,4 +1,4 @@
-import React from 'react';
+import bannerImg from '../assets/banner-facepassv2.jpg';
 
 const Banner: React.FC = () => {
   const handleRegisterEvent = () => {
@@ -8,18 +8,17 @@ const Banner: React.FC = () => {
   return (
     <section className="w-[1040px] h-[365px] relative mx-[156px] my-10 max-md:w-[calc(100%_-_40px)] max-md:mx-5 max-md:my-10 max-sm:w-[calc(100%_-_30px)] max-sm:h-[300px] max-sm:mx-[15px] max-sm:my-5">
       <img
-        src="https://api.builder.io/api/v1/image/assets/TEMP/572a0d29ab87c1a1ef9641958a41dcaf1ce13d1a?width=2080"
+        src={bannerImg}
         alt="FacePass Security Banner"
         className="w-[1040px] h-[365px] rounded-[20px] max-md:w-full max-sm:h-[300px] max-sm:object-cover"
       />
       <div className="absolute inset-0 flex flex-col justify-center px-16 py-14 max-md:px-[30px] max-md:py-10 max-sm:p-5">
         <div className="max-w-[350px]">
-          <h2 className="text-white text-[32px] font-bold mb-4 leading-tight max-md:text-[28px] max-sm:text-2xl max-sm:mb-3">
-            A sua segurança é a nossa
+          <h2 className="text-white text-[26px] font-bold mb-4 leading-tight max-md:text-[28px] max-sm:text-2xl max-sm:mb-3">
+            Sua cara é seu ingresso. Literalmente.
           </h2>
-          <p className="text-white text-lg font-medium mb-8 leading-relaxed max-md:text-base max-sm:text-sm max-sm:mb-6">
-            A única plataforma com um sistema seguro de identificação facial,
-            trocando o convencional QR Code pelo seu rosto, que só você tem.
+          <p className="text-white text-[18px] font-medium mb-8 leading-relaxed max-md:text-base max-sm:text-sm max-sm:mb-6">
+            Chega de QR Code! A gente usa reconhecimento facial pra garantir segurança, só você entra com o seu rosto.
           </p>
           <button 
             onClick={handleRegisterEvent}

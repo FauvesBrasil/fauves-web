@@ -1,3 +1,17 @@
+.animate-fadein-modal {
+  animation: fadein-modal 0.3s;
+}
+.animate-slidein-modal {
+  animation: slidein-modal 0.3s;
+}
+@keyframes fadein-modal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slidein-modal {
+  from { opacity: 0; transform: translateY(-40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 #root {
   max-width: 1280px;
   margin: 0 auto;

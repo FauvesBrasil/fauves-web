@@ -60,6 +60,89 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Design System & Layout Padrões
+
+### AppShell
+`AppShell` centraliza o layout base (Header, Footer, `<main>`). Use-o para todas as páginas padrão:
+
+```tsx
+import AppShell from '@/components/AppShell';
+
+export default function Page() {
+	return (
+		<AppShell>
+			<div>Conteúdo</div>
+		</AppShell>
+	);
+}
+```
+
+Variantes planejadas: `default | checkout | dashboard | marketing` (atualmente `checkout` reserva apenas possíveis ajustes e omite footer se necessário).
+
+Props:
+- `variant` (string) – altera comportamento visual.
+- `noHeader` / `noFooter` – removem seções quando necessário (ex: landing hero full-screen).
+
+### Design Tokens
+Tokens são definidos em `src/index.css` via CSS custom properties e expostos ao Tailwind por `tailwind.config.ts`.
+
+Principais grupos adicionados:
+- Cores semânticas: `--brand-primary`, `--brand-accent`, `--brand-warn`, `--brand-success`, `--brand-info`.
+- Superfícies e foregrounds: `--brand-surface`, `--brand-primary-foreground`.
+- Raios: `--brand-radius-xs|sm|md|lg|pill`.
+- Sombras: `--brand-shadow-sm|md|lg`.
+
+Uso em classe Tailwind (mapping extend):
+- `bg-brand-primary`, `text-brand-primary-foreground`
+- `bg-brand-accent` / `text-brand-accent-foreground`
+- `text-brand-warn`, `text-brand-success`, `text-brand-info`
+- `rounded-brand-md`, `rounded-brand-pill`
+- `shadow-brand-md`
+
+Exemplo de botão semântico:
+```tsx
+<button className="px-4 py-2 rounded-brand-pill bg-brand-primary text-brand-primary-foreground shadow-brand-sm hover:shadow-brand-md transition">
+	Ação
+</button>
+```
+
+### Convenções de Cores
+Evitar hex solto (`#2A2AD7`, `#091747`). Use classes de token. Se um tom não existe, adicionar primeiro como token (CSS var + config) antes de usar.
+
+### Espaçamento
+Usar escala Tailwind padrão (2, 4, 6, 8...). Se surgir padrão repetido que não existe (ex: 18px), avaliar ajustar design ou criar utilidade custom só se realmente necessário.
+
+### Componentização Gradual
+Componentes planejados (não implementados ainda):
+- `StatusBadge` (cores derivadas de tokens: success, warn, info)
+- `ProgressBar` (usa brand-primary e surface)
+- `SectionCard` (container com padding padrão, `rounded-brand-lg`, `shadow-brand-sm`)
+
+### Página de Checkout
+Layout 50/50: coluna esquerda scroll (`overflow-y-auto`), coluna direita fixa para ação. Branding mantém `bg-brand-primary` (atualmente valor aproximação do azul institucional). Futuras alterações do tom atualizam sem mudar classes.
+
+### Estratégia de Dark Mode
+Tokens também possuem valores ajustados dentro de `.dark` em `index.css`. Ao trocar `class="dark"` no `<html>` ou `<body>`, componentes trocam esquema automaticamente.
+
+### Extensão de Tokens Futuras
+- Tipografia semântica (ex: `--font-size-title-lg`)
+- Z-index escala (`--z-overlay`, `--z-toast`)
+- Animações padrão (`--dur-fast`, `--easing-standard`)
+
+## Boas Práticas de Contribuição Visual
+1. Antes de introduzir nova cor verifique se pode derivar de existente.
+2. Prefira tokens semânticos (ex: `bg-brand-warn`) a nomes puramente descritivos de cor.
+3. Não espalhar `style={{ color: '#...' }}` – usar classes.
+4. Ajustes de layout cross-page devem ocorrer no `AppShell`.
+5. Evitar duplicar wrappers de largura; usar `container` do Tailwind ou wrapper central já existente.
+
+## Próximos Passos Recomendados
+- Migrar cores hard-coded restantes (Header, modais, badges).
+- Criar componentes auxiliares listados.
+- Documentar tokens finais no Storybook (se adicionado futuramente) ou MDX.
+
+---
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/4d0050a1-59de-4360-9a8b-7fd04f79f2ce) and click on Share -> Publish.

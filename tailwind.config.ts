@@ -14,6 +14,16 @@ export default {
     },
     extend: {
       colors: {
+        brand: {
+          primary: 'hsl(var(--brand-primary))',
+          'primary-foreground': 'hsl(var(--brand-primary-foreground))',
+          surface: 'hsl(var(--brand-surface))',
+          accent: 'hsl(var(--brand-accent))',
+          'accent-foreground': 'hsl(var(--brand-accent-foreground))',
+          warn: 'hsl(var(--brand-warn))',
+          success: 'hsl(var(--brand-success))',
+          info: 'hsl(var(--brand-info))',
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -58,10 +68,20 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      boxShadow: {
+        'brand-sm': 'var(--brand-shadow-sm)',
+        'brand-md': 'var(--brand-shadow-md)',
+        'brand-lg': 'var(--brand-shadow-lg)',
+      },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        'brand-xs': 'var(--brand-radius-xs)',
+        'brand-sm': 'var(--brand-radius-sm)',
+        'brand-md': 'var(--brand-radius-md)',
+        'brand-lg': 'var(--brand-radius-lg)',
+        'brand-pill': 'var(--brand-radius-pill)',
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       keyframes: {
         "accordion-down": {
