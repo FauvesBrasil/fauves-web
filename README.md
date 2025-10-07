@@ -1,156 +1,240 @@
-# Welcome to your Lovable project
+🦊 Fauves — Plataforma de Venda e Gestão de Ingressos
 
-## Project info
+Fauves é uma plataforma moderna para gestão de eventos e venda de ingressos online, projetada para unir organização, tecnologia e experiência do usuário em um único ambiente digital.
 
-**URL**: https://lovable.dev/projects/4d0050a1-59de-4360-9a8b-7fd04f79f2ce
+Com foco em praticidade, o sistema permite que produtores criem eventos, gerenciem suas equipes e acompanhem em tempo real as vendas e o acesso do público.
 
-## How can I edit this code?
+🚀 Principais Funcionalidades
 
-There are several ways of editing your application.
+🎟️ Venda online de ingressos
 
-**Use Lovable**
+Interface intuitiva e segura para compra.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/4d0050a1-59de-4360-9a8b-7fd04f79f2ce) and start prompting.
+Suporte a múltiplos tipos de ingressos (lote, área VIP, combos, etc).
 
-Changes made via Lovable will be committed automatically to this repo.
+🗓️ Gestão de eventos
 
-**Use your preferred IDE**
+Cadastro e edição de eventos com informações completas.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Controle de disponibilidade e monitoramento de vendas.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+👥 Gestão de equipe e check-in (em desenvolvimento)
 
-Follow these steps:
+Acesso por função (admin, check-in, produtor).
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Leitura de QR Code para validação de ingressos.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+💳 Pagamentos integrados (em desenvolvimento)
 
-# Step 3: Install the necessary dependencies.
-npm i
+Suporte planejado a gateways como Mercado Pago e Asaas.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+🧩 Stack Tecnológica
+
+Front-end:
+
+React
+ — estrutura base da aplicação
+
+TypeScript
+ — tipagem estática e segurança no código
+
+Tailwind CSS
+ — estilização rápida e consistente
+
+Back-end:
+
+Node.js
+ — ambiente de execução JavaScript
+
+Integrações planejadas com APIs de eventos e gateways de pagamento
+
+💻 Como Rodar Localmente
+
+Certifique-se de ter o Node.js e npm instalados.
+
+# 1. Clone o repositório
+git clone https://github.com/levycamara/FauvesBrasil/fauves-web.git
+
+# 2. Acesse a pasta do projeto
+cd fauves
+
+# 3. Instale as dependências
+npm install
+
+# 4. Inicie o servidor de desenvolvimento
 npm run dev
-```
 
-**Edit a file directly in GitHub**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Acesse o projeto no navegador em http://localhost:5173 (ou a porta indicada no terminal).
 
-**Use GitHub Codespaces**
+🎨 Identidade Visual
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+A Fauves utiliza um design system próprio, com base em tons institucionais de azul e preto, reforçando a identidade moderna e premium da marca.
 
-## What technologies are used for this project?
+A interface é construída sobre componentes reutilizáveis e tokens de design para:
 
-This project is built with:
+Cores semânticas (primária, sucesso, alerta, etc).
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Espaçamentos e raios padronizados.
 
-## Design System & Layout Padrões
+Sombras e estados de interação coerentes com o branding.
 
-### AppShell
-`AppShell` centraliza o layout base (Header, Footer, `<main>`). Use-o para todas as páginas padrão:
+📦 Estrutura do Projeto
+src/
+ ├── components/     # Componentes reutilizáveis (botões, cards, modais, etc)
+ ├── pages/          # Páginas principais da aplicação
+ ├── layouts/        # Estrutura base de layout
+ ├── hooks/          # Hooks e lógicas reutilizáveis
+ ├── utils/          # Funções auxiliares
+ └── assets/         # Imagens, ícones e fontes
 
-```tsx
-import AppShell from '@/components/AppShell';
+🧠 Roadmap
 
-export default function Page() {
-	return (
-		<AppShell>
-			<div>Conteúdo</div>
-		</AppShell>
-	);
-}
-```
+✅ Base do site e layout responsivo
 
-Variantes planejadas: `default | checkout | dashboard | marketing` (atualmente `checkout` reserva apenas possíveis ajustes e omite footer se necessário).
+🕓 Integração de autenticação e painel do organizador
 
-Props:
-- `variant` (string) – altera comportamento visual.
-- `noHeader` / `noFooter` – removem seções quando necessário (ex: landing hero full-screen).
+🚧 Leitor de QR Code para check-in de ingressos
 
-### Design Tokens
-Tokens são definidos em `src/index.css` via CSS custom properties e expostos ao Tailwind por `tailwind.config.ts`.
+🔜 Integração com gateway de pagamento
 
-Principais grupos adicionados:
-- Cores semânticas: `--brand-primary`, `--brand-accent`, `--brand-warn`, `--brand-success`, `--brand-info`.
-- Superfícies e foregrounds: `--brand-surface`, `--brand-primary-foreground`.
-- Raios: `--brand-radius-xs|sm|md|lg|pill`.
-- Sombras: `--brand-shadow-sm|md|lg`.
+🔜 Dashboard com relatórios de vendas
 
-Uso em classe Tailwind (mapping extend):
-- `bg-brand-primary`, `text-brand-primary-foreground`
-- `bg-brand-accent` / `text-brand-accent-foreground`
-- `text-brand-warn`, `text-brand-success`, `text-brand-info`
-- `rounded-brand-md`, `rounded-brand-pill`
-- `shadow-brand-md`
+🤝 Contribuição
 
-Exemplo de botão semântico:
-```tsx
-<button className="px-4 py-2 rounded-brand-pill bg-brand-primary text-brand-primary-foreground shadow-brand-sm hover:shadow-brand-md transition">
-	Ação
-</button>
-```
+Contribuições são bem-vindas!
+Abra uma issue para sugestões, correções ou novas ideias.
 
-### Convenções de Cores
-Evitar hex solto (`#2A2AD7`, `#091747`). Use classes de token. Se um tom não existe, adicionar primeiro como token (CSS var + config) antes de usar.
+🦊 Sobre a Fauves
 
-### Espaçamento
-Usar escala Tailwind padrão (2, 4, 6, 8...). Se surgir padrão repetido que não existe (ex: 18px), avaliar ajustar design ou criar utilidade custom só se realmente necessário.
+A Fauves é uma marca voltada à inovação e experiência em entretenimento.
+Nosso objetivo é transformar a forma como as pessoas compram, vendem e vivenciam eventos, com tecnologia e design que inspiram.
 
-### Componentização Gradual
-Componentes planejados (não implementados ainda):
-- `StatusBadge` (cores derivadas de tokens: success, warn, info)
-- `ProgressBar` (usa brand-primary e surface)
-- `SectionCard` (container com padding padrão, `rounded-brand-lg`, `shadow-brand-sm`)
+📄 Licença
 
-### Página de Checkout
-Layout 50/50: coluna esquerda scroll (`overflow-y-auto`), coluna direita fixa para ação. Branding mantém `bg-brand-primary` (atualmente valor aproximação do azul institucional). Futuras alterações do tom atualizam sem mudar classes.
+Este projeto é de propriedade da Fauves.
+Todos os direitos reservados.
 
-### Estratégia de Dark Mode
-Tokens também possuem valores ajustados dentro de `.dark` em `index.css`. Ao trocar `class="dark"` no `<html>` ou `<body>`, componentes trocam esquema automaticamente.
+Quer que eu inclua também badges (tipo os ícones do Node, React, status do projeto, etc) e um print ou banner no topo pra deixar visualmente mais impactante? Isso deixa o README com cara de projeto profissional de portfólio.
 
-### Extensão de Tokens Futuras
-- Tipografia semântica (ex: `--font-size-title-lg`)
-- Z-index escala (`--z-overlay`, `--z-toast`)
-- Animações padrão (`--dur-fast`, `--easing-standard`)
+Você disse:
+o frontend que é esse repositorio está assim:
 
-## Boas Práticas de Contribuição Visual
-1. Antes de introduzir nova cor verifique se pode derivar de existente.
-2. Prefira tokens semânticos (ex: `bg-brand-warn`) a nomes puramente descritivos de cor.
-3. Não espalhar `style={{ color: '#...' }}` – usar classes.
-4. Ajustes de layout cross-page devem ocorrer no `AppShell`.
-5. Evitar duplicar wrappers de largura; usar `container` do Tailwind ou wrapper central já existente.
+O ChatGPT disse:
 
-## Próximos Passos Recomendados
-- Migrar cores hard-coded restantes (Header, modais, badges).
-- Criar componentes auxiliares listados.
-- Documentar tokens finais no Storybook (se adicionado futuramente) ou MDX.
+Perfeito 🔥 esse print ajuda muito!
+Pelo que vejo, o seu repositório está bem estruturado e segue um padrão moderno com Vite + React + TypeScript — o que reforça que o README que veio do Lovable realmente não faz sentido.
 
----
+Vamos atualizar ele para refletir exatamente o que está no seu diretório atual.
+Abaixo está uma nova versão do README.md — pronta pra substituir o arquivo que está aí no repositório:
 
-## How can I deploy this project?
+🦊 Fauves — Plataforma de Venda e Gestão de Ingressos
 
-Simply open [Lovable](https://lovable.dev/projects/4d0050a1-59de-4360-9a8b-7fd04f79f2ce) and click on Share -> Publish.
+Fauves é uma plataforma completa para gestão e venda de ingressos online, desenvolvida com foco em performance, escalabilidade e uma experiência moderna para o usuário.
 
-## Can I connect a custom domain to my Lovable project?
+O projeto atual representa o frontend web da plataforma, criado com React, Vite e Tailwind CSS, e será futuramente integrado ao backend para controle de eventos, ingressos e validação de check-in.
 
-Yes, you can!
+🚀 Funcionalidades Atuais
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+🎟️ Interface para exibição e compra de ingressos
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+🗓️ Estrutura de páginas para listagem de eventos
+
+🧩 Componentização reutilizável com Tailwind
+
+🧠 Context API e Hooks para gerenciamento de estado
+
+⚙️ Suporte a variáveis de ambiente (.env, .env.local)
+
+🔧 Pronto para deploy com Nginx ou container Docker
+
+🧩 Stack Tecnológica
+
+React + Vite → Frontend rápido e modular
+
+TypeScript → Tipagem estática e segurança no código
+
+Tailwind CSS → Estilização ágil e consistente
+
+Node.js / Nginx → Preparado para deploy em ambiente web
+
+ESLint + Prettier → Padronização e qualidade de código
+
+📁 Estrutura de Pastas
+frontend/
+ ├── public/                # Arquivos públicos (favicon, imagens estáticas)
+ ├── src/
+ │   ├── assets/            # Ícones, imagens e fontes
+ │   ├── components/        # Componentes reutilizáveis
+ │   ├── context/           # Contextos globais (ex: Auth, Theme)
+ │   ├── hooks/             # Hooks customizados
+ │   ├── lib/               # Funções auxiliares e integrações
+ │   ├── pages/             # Páginas da aplicação
+ │   ├── types/             # Tipos e interfaces TypeScript
+ │   ├── App.tsx            # Componente raiz
+ │   ├── main.tsx           # Ponto de entrada Vite/React
+ │   └── index.css          # Estilos globais (Tailwind)
+ ├── nginx.conf             # Configuração para deploy
+ ├── .env / .env.local      # Variáveis de ambiente
+ ├── package.json           # Dependências e scripts
+ ├── tailwind.config.ts     # Configuração do Tailwind
+ ├── tsconfig.json          # Configuração TypeScript
+ └── README.md              # Documentação do projeto
+
+💻 Como Rodar Localmente
+
+Certifique-se de ter Node.js 18+ instalado.
+Em seguida, execute os comandos abaixo:
+
+# 1. Clone o repositório
+git clone https://github.com/seuusuario/fauves-frontend.git
+
+# 2. Acesse o diretório
+cd fauves-frontend
+
+# 3. Instale as dependências
+npm install
+
+# 4. Crie um arquivo .env (baseado em .env.example)
+cp .env.example .env
+
+# 5. Inicie o ambiente de desenvolvimento
+npm run dev
+
+
+Abra o navegador em http://localhost:5173
+.
+
+⚙️ Scripts Disponíveis
+Comando	Descrição
+npm run dev	Inicia o ambiente de desenvolvimento
+npm run build	Gera a build de produção
+npm run preview	Visualiza a build localmente
+npm run lint	Analisa o código com ESLint
+🧠 Roadmap
+
+✅ Base de layout e design system
+
+🚧 Integração com API de backend (eventos e ingressos)
+
+🔜 Sistema de login e painel de organizador
+
+🔜 Leitura de QR Code para check-in
+
+🔜 Dashboard com métricas e relatórios
+
+🌐 Deploy
+
+O projeto pode ser publicado em qualquer serviço que suporte aplicações Node.js estáticas (como Vercel, Netlify ou Nginx).
+Exemplo com Nginx incluído no arquivo nginx.conf.
+
+
+🦊 Sobre a Fauves
+
+A Fauves é uma marca voltada à inovação em entretenimento, conectando tecnologia, design e experiência.
+Nosso objetivo é transformar a maneira como as pessoas compram, vendem e vivem eventos.
+
+📄 Licença
+
+Este projeto é de propriedade da Fauves.
+Todos os direitos reservados.
