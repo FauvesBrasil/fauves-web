@@ -9,7 +9,13 @@
 
 const LS_KEY = 'API_BASE_WORKING';
 const stored = (typeof window !== 'undefined') ? window.localStorage.getItem(LS_KEY) : null;
-const envBase = (import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL)?.replace(/\/$/, '') || null;
+// Normaliza env base removendo barras finais e um sufixo /api (para evitar construir /api/api/* em probes)
+let _rawEnv = (import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL) || '';
+_rawEnv = _rawEnv.replace(/\/$/, '');
+if (/\/api$/i.test(_rawEnv)) {
+  _rawEnv = _rawEnv.replace(/\/api$/i, '');
+}
+const envBase = _rawEnv || null;
 
 // Ordem montada dinamicamente
 const candidates: string[] = [];
@@ -30,9 +36,19 @@ async function probe(base: string): Promise<boolean> {
   try {
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 1800);
-  const r = await fetch(base + '/api/health', { signal: ctrl.signal });
+    // Se base já for root (sem /api), testamos /api/health; se futuramente /health direto existir, aceitamos fallback.
+    const healthUrls = [base + '/api/health', base + '/health'];
+    let r: Response | null = null;
+    for (const u of healthUrls) {
+      try {
+        r = await fetch(u, { signal: ctrl.signal });
+        if (r.ok) break;
+      } catch {
+        // tenta próxima
+      }
+    }
     clearTimeout(to);
-    if (r.ok) return true; // somente 2xx/3xx considerados saudáveis
+    if (r && r.ok) return true; // somente 2xx/3xx considerados saudáveis
   } catch {}
   return false;
 }
