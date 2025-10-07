@@ -8,6 +8,7 @@ import EventsGrid from '@/components/EventsGrid';
 import Banner from '@/components/Banner';
 import Footer from '@/components/Footer';
 import { useEffect, useState } from 'react';
+import { fetchApi } from '@/lib/apiBase';
 
 // OBS: removido supabase e spinner não utilizados; carregamento é puramente via backend /events
 
@@ -24,83 +25,33 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  function buildErrorMessage(primary: string, fallback: string | null, e1: any, e2: any) {
+  function buildErrorMessage(status?: number, detail?: string) {
+    const baseEnv = (import.meta as any).env?.VITE_API_BASE || (import.meta as any).env?.VITE_BACKEND_URL || '(não definido)';
     const parts: string[] = [];
-    const norm = (e: any) => e?.name === 'AbortError' ? 'timeout' : (e?.message || e?.toString?.() || 'erro desconhecido');
-    parts.push(`Falha ao buscar eventos em ${primary}: ${norm(e1)}`);
-    if (fallback && e2) parts.push(`Fallback ${fallback} falhou: ${norm(e2)}`);
-    parts.push('Verifique se o backend está na porta correta (ex: 4000) ou ajuste VITE_BACKEND_URL.');
-    return parts.join(' | ');
+    if (status) parts.push(`HTTP ${status}`);
+    if (detail) parts.push(detail);
+    parts.push(`Verifique se VITE_API_BASE está configurado para o backend público (atual: ${baseEnv}).`);
+    return 'Falha ao listar eventos: ' + parts.join(' | ');
   }
 
-  // Carrega eventos do backend (estratégia resiliente com fallback mesmo se VITE_BACKEND_URL estiver incorreta)
+  // Carrega eventos usando fetchApi centralizado (sem fallback localhost em produção)
   useEffect(() => {
-    let backendEnv = (import.meta as any).env?.VITE_BACKEND_URL || '';
-    // Se a env apontar para localhost em porta diferente da 4000, ignorar para evitar tentativas desnecessárias
-    if (backendEnv && /^(https?:\/\/)?localhost:(\d+)/i.test(backendEnv)) {
-      const portMatch = backendEnv.match(/localhost:(\d+)/i);
-      const port = portMatch ? portMatch[1] : '';
-      if (port && port !== '4000') {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('[Index] Ignorando VITE_BACKEND_URL porque porta != 4000:', backendEnv);
-        }
-        backendEnv = '';
-      }
-    }
-    const backendPort = (import.meta as any).env?.VITE_BACKEND_PORT || '4000';
-    const base = backendEnv ? backendEnv.replace(/\/$/, '') : '';
-    // Tentar reaproveitar uma URL previamente validada (persistida em localStorage)
-    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('eventsApiBase') : null;
-    const primaryUrl = stored ? `${stored.replace(/\/$/, '')}/events` : (base ? `${base}/events` : '/events');
-    const fallbackUrl = `http://localhost:${backendPort}/events`;
-
-    const fetchWithTimeout = async (url: string, ms: number) => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), ms);
-      try {
-        const res = await fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/json' } });
-        if (!res.ok) {
-          const err: any = new Error(`HTTP ${res.status}`);
-          err.status = res.status;
-          err.url = url;
-          throw err;
-        }
-        return await res.json();
-      } finally {
-        clearTimeout(timer);
-      }
-    };
-
     (async () => {
-      let firstError: any = null;
       try {
-        if (process.env.NODE_ENV !== 'production') console.log('[Index] Fetch eventos', primaryUrl);
-        const data = await fetchWithTimeout(primaryUrl, 8000);
-        if (!Array.isArray(data)) throw new Error('Formato inesperado');
-        setEvents(data);
-        // Persistir base funcional (se não é a rota relativa '/events')
-        if (!primaryUrl.startsWith('/events')) {
-          const baseOk = primaryUrl.replace(/\/events$/, '');
-          try { window.localStorage.setItem('eventsApiBase', baseOk); } catch {}
-        }
-      } catch (err:any) {
-        firstError = err;
-        // Tentar fallback em qualquer erro: se primary era relativo (/events) e deu 500 (proxy) ou se era URL absoluta
-        if (primaryUrl !== '/events' || backendEnv || primaryUrl === '/events') {
-          try {
-            if (process.env.NODE_ENV !== 'production') console.warn('[Index] Fallback eventos', fallbackUrl, 'motivo:', err?.message || err);
-            const data2 = await fetchWithTimeout(fallbackUrl, 6000);
-            if (!Array.isArray(data2)) throw new Error('Formato inesperado');
-            setEvents(data2);
-            setError(null);
-            try { window.localStorage.setItem('eventsApiBase', `http://localhost:${backendPort}`); } catch {}
-            return;
-          } catch (e2:any) {
-            const msg = buildErrorMessage(primaryUrl, fallbackUrl, firstError, e2);
-            setError(msg);
-            setEvents([]);
+        const r = await fetchApi('/events', { headers: { 'Accept': 'application/json' } });
+        if (!r.ok) {
+          const detail = await (async () => { try { const j = await r.json(); return j?.error || j?.message; } catch { return null; } })();
+          setError(buildErrorMessage(r.status, detail));
+        } else {
+          const data = await r.json();
+          if (Array.isArray(data)) {
+            setEvents(data);
+          } else {
+            setError(buildErrorMessage(undefined, 'Resposta inesperada'));
           }
         }
+      } catch (e:any) {
+        setError(buildErrorMessage(undefined, e?.message || 'network error'));
       } finally {
         setLoading(false);
       }
