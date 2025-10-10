@@ -1,0 +1,22 @@
+{
+  "scripts": {
+    "start:backend": "npm --prefix backend run start",
+    "start:backend:dev": "npm --prefix backend run start:dev",
+    "migrate:deploy": "npm --prefix backend exec prisma migrate deploy",
+    "prisma:generate": "npm --prefix backend exec prisma generate"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/multer": "^2.0.0",
+    "prisma": "^6.16.2"
+  },
+  "dependencies": {
+    "@tiptap/react": "^3.6.2",
+    "@tiptap/starter-kit": "^3.6.2",
+    "@types/uuid": "^10.0.0",
+    "axios": "^1.12.2",
+    "react-navigation": "^4.4.4",
+    "react-navigation-stack": "^2.10.4",
+    "uuid": "^13.0.0"
+  }
+}
