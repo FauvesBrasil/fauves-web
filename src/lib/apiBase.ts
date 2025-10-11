@@ -16,6 +16,7 @@ if (/\/api$/i.test(_rawEnv)) {
   _rawEnv = _rawEnv.replace(/\/api$/i, '');
 }
 const envBase = _rawEnv || null;
+const isProd = import.meta.env.PROD;
 
 // Ordem montada dinamicamente
 const candidates: string[] = [];
@@ -54,6 +55,20 @@ async function probe(base: string): Promise<boolean> {
 }
 
 export async function ensureApiBase(force = false): Promise<string> {
+  // If an envBase is provided (build-time), prefer it. Previously we only auto-used it in production
+  // to allow local development probes; but in hosted previews/envs we want to trust the build-time value
+  // to avoid resolving to localhost. This reduces cases where the app tries http://localhost:4000 in deployed sites.
+  if (envBase) {
+    resolvedBase = envBase;
+    if (isProd) {
+      // production: log minimal message
+      console.log('[apiBase] using env VITE_API_BASE (production)');
+    } else {
+      // preview/development: still prefer env var but log a clear message so debugging is easier
+      console.log('[apiBase] using env VITE_API_BASE (build-time) — will not probe localhost');
+    }
+    return resolvedBase;
+  }
   const now = Date.now();
   if (!force && resolvedBase && (now - lastResolutionTs) < 5000) return resolvedBase;
   if (!force && backendDownUntil && now < backendDownUntil && resolvedBase) return resolvedBase; // não reprobe durante backoff
