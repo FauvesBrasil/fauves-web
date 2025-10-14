@@ -1,5 +1,6 @@
+// Supabase removido: autenticação apenas via backend
 import React from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
 
 interface LoginModalProps {
   open: boolean;
@@ -7,6 +8,7 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ open, onClose }) => {
+  const { login } = useAuth();
   const [isClosing, setIsClosing] = React.useState(false);
 
   // Fecha com animação suave
@@ -70,43 +72,35 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose }) => {
               return;
             }
             if (isSignup) {
-              // Signup flow
-              const { error: signUpError } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                  data: {
-                    nome,
-                    sobrenome,
-                  },
-                },
-              });
-              if (signUpError) {
-                setError(signUpError.message);
+                // Cadastro via backend
+                const res = await fetch('/api/auth/register', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email, password, nome, sobrenome }),
+                });
+                if (!res.ok) {
+                  const errText = await res.text();
+                  setError('Erro ao criar conta: ' + errText);
+                } else {
+                  setSuccess('Conta criada! Faça login.');
+                  setIsSignup(false);
+                }
+                setLoading(false);
+                return;
               } else {
-                setSuccess('Conta criada! Verifique seu e-mail para ativar.');
-                setEmail('');
-                setPassword('');
-                setNome('');
-                setSobrenome('');
+                // Login flow via AuthContext
+                const ok = await login(email, password);
+                if (!ok) {
+                  setError('Falha no login');
+                } else {
+                  setSuccess('Login realizado com sucesso!');
+                  setEmail('');
+                  setPassword('');
+                  handleClose();
+                }
+                setLoading(false);
               }
-            } else {
-              // Login flow
-              const { error: signInError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-              });
-              if (signInError) {
-                setError(signInError.message);
-              } else {
-                setSuccess('Login realizado com sucesso!');
-                setEmail('');
-                setPassword('');
-                handleClose();
-              }
-            }
-            setLoading(false);
-          }}
+            }}
         >
           {/* Formulário restaurado sem animação */}
           <input

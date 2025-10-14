@@ -10,7 +10,7 @@ import PersonalData from "./account/PersonalData";
 import { AlertTriangle } from "lucide-react";
 import AccountSettingsSkeleton from "@/components/skeletons/AccountSettingsSkeleton";
 import { fetchApi, apiUrl } from "@/lib/apiBase";
-import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 import LoginModal from "@/components/LoginModal";
 
 const AccountSettings: React.FC = () => {
@@ -19,7 +19,7 @@ const AccountSettings: React.FC = () => {
   const [editData, setEditData] = useState<any>({});
   const [cepStatus, setCepStatus] = useState<'idle'|'loading'|'error'|'filled'>('idle');
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
@@ -27,39 +27,42 @@ const AccountSettings: React.FC = () => {
   const [uploadError, setUploadError] = useState<string|null>(null);
   const menuItems = [
     "Informações da conta",
-    "Alterar e-mail",
-    "Senha",
-    "FacePass",
-    "Preferências de e-mail",
-    "Encerrar conta",
-    "Dados pessoais"
+  "Alterar e-mail",
+  "Senha",
+  "FacePass",
+  "Preferências de e-mail",
+  "Encerrar conta",
+  "Dados pessoais"
   ];
+  const { user, token, loading } = useAuth();
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoading(true);
+      setLoadingData(true);
       setError(null);
-      // Obtém usuário autenticado via Supabase
-      let userId: string | null = null;
-      try {
-        const { data } = await supabase.auth.getUser();
-        userId = data?.user?.id || null;
-      } catch {}
-      if (!userId) {
-        setError('Usuário não autenticado');
-        setShowLogin(true);
-        setLoading(false);
+      if (!user || !token) {
+        if (!loading) {
+          setError('Usuário não autenticado');
+          setShowLogin(true);
+        } else {
+          setShowLogin(false);
+        }
+        setLoadingData(false);
         return;
+      } else {
+        setShowLogin(false);
       }
-      // Persiste userId para reuso rápido (opcional)
-      try { localStorage.setItem('userId', userId); } catch {}
+      try { localStorage.setItem('userId', user.id); } catch {}
       try {
         const res = await fetchApi('/account-settings', {
-          headers: { 'x-user-id': userId }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) {
           let msg = `Erro ao carregar (status ${res.status})`;
-            try { const j = await res.json(); if (j?.error) msg = j.error; } catch {}
+          try {
+            const j = await res.json();
+            if (j?.error) msg = j.error;
+          } catch {}
           if (!cancelled) setError(msg);
         } else {
           const data = await res.json();
@@ -69,29 +72,29 @@ const AccountSettings: React.FC = () => {
               name: data.name || '',
               surname: data.surname || '',
               birth: data.birth ? data.birth.split('T')[0] : '',
-              phone: maskPhone(data.phone || ''),
-              cpf: maskCPF(data.cpf || ''),
-              photoUrl: data.photoUrl || '',
-              cep: maskCEP(data.cep || ''),
-              address: data.address || '',
-              complement: data.complement || '',
-              city: data.city || '',
-              state: data.state || '',
-              country: data.country || ''
+                phone: maskPhone(data.phone || ''),
+                cpf: maskCPF(data.cpf || ''),
+                photoUrl: data.photoUrl || '',
+                cep: maskCEP(data.cep || ''),
+                address: data.address || '',
+                complement: data.complement || '',
+                city: data.city || '',
+                state: data.state || '',
+                country: data.country || ''
             });
           }
         }
       } catch (e: any) {
         if (!cancelled) setError('Falha de rede ao buscar dados da conta');
       } finally {
-        if (!cancelled) setLoading(false);
+  if (!cancelled) setLoadingData(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, [reloadKey]);
+  }, [reloadKey, user, token]);
 
-  if (loading) return <AccountSettingsSkeleton />;
+  if (loading || loadingData) return <AccountSettingsSkeleton />;
   if (error) {
     return (
       <div className="min-h-screen bg-white relative">
@@ -183,22 +186,23 @@ const AccountSettings: React.FC = () => {
   switch (activeMenuItem) {
     case "Informações da conta":
       MainContent = (
-        <div className="flex-1 flex justify-center items-start py-12 px-8 bg-[#F8F7FA]">
-          <div className="w-full max-w-[700px] bg-white rounded-3xl shadow-xl p-10 border border-gray-100">
-            <div className="flex justify-between items-center mb-2">
-              <h1 className="text-3xl font-bold text-[#091747]">Informações da conta</h1>
-              <span className="text-sm text-[#091747] opacity-70">Conta da Fauves criada em: {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString() : '--'}</span>
-            </div>
-            <hr className="my-6 border-gray-200" />
-            {/* Foto do perfil */}
-            <div className="mb-8">
-              <h2 className="text-lg font-bold text-[#091747] mb-3">Foto do perfil</h2>
-              <div className="flex gap-6 items-center">
-                <div
-                  className="relative group w-[140px] h-[140px] bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors hover:border-[#2A2AD7]"
-                  onClick={() => document.getElementById('profile-photo-input')?.click()}
-                  onDragOver={(e)=>{e.preventDefault(); e.stopPropagation();}}
-                  onDrop={async (e)=>{
+        <>
+          <div className="flex justify-between items-center mb-2">
+            <h1 className="text-3xl font-bold text-[#091747]">Informações da conta</h1>
+            <span className="text-sm text-[#091747] opacity-70">
+              Conta criada em: {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '--'}
+            </span>
+          </div>
+          <hr className="my-6 border-gray-200" />
+          {/* Foto do perfil */}
+          <div className="mb-8">
+            <h2 className="text-lg font-bold text-[#091747] mb-3">Foto do perfil</h2>
+            <div className="flex gap-6 items-center">
+              <div
+                className="relative group w-[140px] h-[140px] bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors hover:border-[#2A2AD7]"
+                onClick={() => document.getElementById('profile-photo-input')?.click()}
+                onDragOver={(e)=>{e.preventDefault(); e.stopPropagation();}}
+                onDrop={async (e)=>{
                     e.preventDefault(); e.stopPropagation();
                     const file = e.dataTransfer.files?.[0];
                     if (!file) return;
@@ -305,36 +309,39 @@ const AccountSettings: React.FC = () => {
             <div className="flex justify-end mt-6">
               <button
                 type="button"
-                disabled={saving}
-                className={`bg-[#2A2AD7] text-white font-bold px-8 py-3 rounded-lg text-lg shadow hover:bg-[#091747] transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
+                //disabled={saving}
+                className={`bg-[#2A2AD7] text-white font-bold px-8 py-3 rounded-lg text-lg shadow hover:bg-[#091747] transition-colors`}
                 onClick={async () => {
                   setSaving(true);
+                  if (!user || !token) { setError('Usuário não autenticado'); return; }
+                  try { localStorage.setItem('userId', user.id); } catch {}
+                  // Desfazer máscaras antes de enviar
+                  const payload = {
+                    ...editData,
+                    cpf: unmask(editData.cpf),
+                    phone: unmask(editData.phone),
+                    cep: unmask(editData.cep),
+                  };
+                  console.log('[AccountSettings] Enviando payload para backend:', payload);
                   try {
-                    let userId: string | null = null;
-                    try { const { data } = await supabase.auth.getUser(); userId = data?.user?.id || null; } catch {}
-                    if (!userId) { setError('Usuário não autenticado'); return; }
-                    try { localStorage.setItem('userId', userId); } catch {}
-                    // Desfazer máscaras antes de enviar
-                    const payload = {
-                      ...editData,
-                      cpf: unmask(editData.cpf),
-                      phone: unmask(editData.phone),
-                      cep: unmask(editData.cep),
-                    };
                     const res = await fetchApi('/account-settings', {
                       method: 'PUT',
                       headers: {
                         'Content-Type': 'application/json',
-                        'x-user-id': userId
+                        'Authorization': `Bearer ${token}`
                       },
                       body: JSON.stringify(payload)
                     });
+                    let responseBody;
+                    try { responseBody = await res.clone().json(); } catch { responseBody = null; }
+                    console.log('[AccountSettings] Resposta do backend:', res.status, responseBody);
                     if (!res.ok) {
                       let msg = `Erro ao salvar (status ${res.status})`;
-                      try { const j = await res.json(); if (j?.error) msg = j.error; } catch {}
+                      if (responseBody && responseBody.error) msg = responseBody.error;
                       setError(msg);
                     } else {
-                      const data = await res.json();
+                      const data = responseBody;
+                      console.log('[AccountSettings] Dados recebidos do backend:', data);
                       setUserData(data);
                       try { window.dispatchEvent(new Event('profile-updated')); } catch {}
                       // Reaplica máscaras após salvar / travar
@@ -345,35 +352,36 @@ const AccountSettings: React.FC = () => {
                         cep: maskCEP(data.cep || prev.cep || ''),
                       }));
                     }
-                  } catch {
+                  } catch (err) {
                     setError('Falha de rede ao salvar');
+                    console.error('[AccountSettings] Erro ao salvar:', err);
                   } finally {
                     setSaving(false);
+                    console.log('Estado saving:', saving);
                   }
                 }}
               >{saving ? 'Salvando...' : 'Salvar'}</button>
-            </div>
-          </div>
         </div>
+        </>
       );
       break;
     case "Alterar e-mail":
-      MainContent = <ChangeEmail />;
+      MainContent = (<><ChangeEmail /></>);
       break;
     case "Senha":
-      MainContent = <ChangePassword />;
+      MainContent = (<><ChangePassword /></>);
       break;
     case "FacePass":
-      MainContent = <FacePass />;
+      MainContent = (<><FacePass /></>);
       break;
     case "Preferências de e-mail":
-      MainContent = <EmailPreferences />;
+      MainContent = (<><EmailPreferences /></>);
       break;
     case "Encerrar conta":
-      MainContent = <CloseAccount />;
+      MainContent = (<><CloseAccount /></>);
       break;
     case "Dados pessoais":
-      MainContent = <PersonalData />;
+      MainContent = (<><PersonalData /></>);
       break;
     default:
       MainContent = null;
@@ -406,7 +414,11 @@ const AccountSettings: React.FC = () => {
           </div>
         </div>
         {/* Conteúdo dinâmico */}
-        {MainContent}
+        <div className="flex-1 flex justify-center items-start py-12 px-8 bg-[#F8F7FA]">
+          <div className="w-full max-w-[700px] bg-white rounded-3xl shadow-xl p-10 border border-gray-100">
+            {MainContent}
+          </div>
+        </div>
       </div>
       <LoginModal open={showLogin} onClose={() => { setShowLogin(false); setReloadKey(k => k + 1); }} />
     </div>

@@ -49,7 +49,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ activeKeyOverride }) => {
               >
                 <Icon className={`w-6 h-6 transition-colors ${isActive ? 'text-orange-600' : 'text-indigo-700'}`} />
               </button>
-              <span className={`fixed left-16 opacity-0 group-hover:opacity-100 bg-[#F8F7FA] ${isActive ? 'text-orange-600' : 'text-indigo-700'} text-xs font-semibold px-2 py-1 rounded shadow transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50`}>{item.label}</span>
+              <span className={`fixed left-16 opacity-0 group-hover:opacity-100 bg-[#F8F7FA] ${isActive ? 'text-orange-600' : 'text-indigo-700'} text-xs font-semibold px-2 py-1 rounded shadow transition-opacity duration-200 pointer-events-none whitespace-nowrap z-60`}>{item.label}</span>
             </div>
           );
         })}
@@ -61,7 +61,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ activeKeyOverride }) => {
           <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-indigo-100 transition-colors" title="Ajuda">
             <HelpCircle className="w-6 h-6 text-gray-500 hover:text-gray-700 transition-colors" />
           </button>
-          <span className="fixed left-16 opacity-0 group-hover:opacity-100 bg-[#F8F7FA] text-gray-700 text-xs font-semibold px-2 py-1 rounded shadow transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">Ajuda</span>
+          <span className="fixed left-16 opacity-0 group-hover:opacity-100 bg-[#F8F7FA] text-gray-700 text-xs font-semibold px-2 py-1 rounded shadow transition-opacity duration-200 pointer-events-none whitespace-nowrap z-60">Ajuda</span>
         </div>
       </div>
     </div>

@@ -9,20 +9,32 @@ interface Props {
   toName?: string | null;
 }
 
-// Simple avatar circle with initial letter
-const Circle: React.FC<{ label: string; delay?: number }> = ({ label }) => (
-  <motion.div
-    initial={{ scale: 0.8, opacity: 0, y: 20 }}
-    animate={{ scale: 1, opacity: 1, y: 0 }}
-    exit={{ scale: 0.6, opacity: 0, y: -20 }}
-    transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-    className="w-[120px] h-[120px] rounded-full bg-[#D9D9D9] shadow-[0_4px_10px_rgba(0,0,0,0.08)] flex items-center justify-center relative overflow-hidden"
-  >
-    <span className="text-5xl font-bold text-white select-none">
-      {label.substring(0, 1).toUpperCase()}
-    </span>
-  </motion.div>
-);
+// Avatar circle that prefers an org logo when available, otherwise initials
+const Circle: React.FC<{ label: string; orgId?: string | null }> = ({ label, orgId }) => {
+  const { orgs } = useOrganization();
+  const org = orgs.find(o => o.id === orgId) || null;
+  const [errored, setErrored] = React.useState(false);
+  React.useEffect(() => { setErrored(false); }, [org?.logoUrl, orgId]);
+
+  const content = org?.logoUrl && !errored ? (
+    // eslint-disable-next-line jsx-a11y/alt-text
+    <img src={org!.logoUrl} onError={() => setErrored(true)} className="w-full h-full object-cover" />
+  ) : (
+    <span className="text-5xl font-bold text-white select-none">{(label || '?').substring(0,1).toUpperCase()}</span>
+  );
+
+  return (
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0, y: 20 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.6, opacity: 0, y: -20 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+      className="w-[120px] h-[120px] rounded-full bg-[#D9D9D9] shadow-[0_4px_10px_rgba(0,0,0,0.08)] flex items-center justify-center relative overflow-hidden"
+    >
+      {content}
+    </motion.div>
+  );
+};
 
 const ArrowSwap: React.FC = () => (
   <motion.div
@@ -50,6 +62,11 @@ const ArrowSwap: React.FC = () => (
 );
 
 export const OrganizationTransitionOverlay: React.FC<Props> = ({ transitioning, fromName, toName }) => {
+  const { orgs } = useOrganization();
+  // best-effort: find org objects by name to pull logoUrl
+  const fromOrg = fromName ? orgs.find(o => o.name === fromName) || orgs.find(o => (o.name || '').toLowerCase().includes((fromName || '').toLowerCase())) || null : null;
+  const toOrg = toName ? orgs.find(o => o.name === toName) || orgs.find(o => (o.name || '').toLowerCase().includes((toName || '').toLowerCase())) || null : null;
+
   return (
     <AnimatePresence>
       {transitioning && (
@@ -63,9 +80,9 @@ export const OrganizationTransitionOverlay: React.FC<Props> = ({ transitioning, 
           <div className="flex flex-col items-center">
             <div className="flex flex-col items-center gap-4">
               <div className="flex flex-col items-center gap-3 relative">
-                <Circle label={fromName || '?'} />
+                <Circle label={fromName || '?'} orgId={fromOrg?.id || null} />
                 <ArrowSwap />
-                <Circle label={toName || '?'} />
+                <Circle label={toName || '?'} orgId={toOrg?.id || null} />
               </div>
               <motion.div
                 initial={{ opacity: 0, y: 10 }}

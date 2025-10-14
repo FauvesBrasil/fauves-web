@@ -1,5 +1,17 @@
 import AppHeader from "@/components/AppHeader";
 import React, { useEffect, useState } from "react";
+// Animated ticket deletion effect styles
+const style = document.createElement('style');
+style.innerHTML = `
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slide-up { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes trash { 0% { transform: scale(1) rotate(0deg); } 40% { transform: scale(1.2) rotate(-10deg); } 60% { transform: scale(1.1) rotate(10deg); } 100% { transform: scale(1) rotate(0deg); } }
+  .animate-fade-in { animation: fade-in 0.5s ease; }
+  .animate-slide-up { animation: slide-up 0.7s cubic-bezier(.4,2,.6,1); }
+  .animate-trash { animation: trash 0.7s cubic-bezier(.4,2,.6,1); }
+  .animate-delete-ticket { border-color: #fca5a5 !important; box-shadow: 0 0 0 4px #fca5a555; transition: border-color 0.7s, box-shadow 0.7s; }
+`;
+document.head.appendChild(style);
 import { fetchApi } from "@/lib/apiBase";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose, DrawerTrigger, DrawerDescription } from "@/components/ui/drawer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,11 +25,14 @@ import EventDetailsSidebar from "@/components/EventDetailsSidebar";
 import { useNavigate, useLocation } from "react-router-dom";
 import StepFlowOverlay from "@/components/overlays/StepFlowOverlay";
 import { Pencil, Trash, MoreVertical, GripVertical } from "lucide-react";
+import CheckIcon from "../components/icons/CheckIcon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const CreateTickets: React.FC = () => {
+  // Estado para manter animação até backend remover
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   // Util para formatar BRL sem espaço após R$
   const formatBRL = React.useCallback((n: number) => {
     if (Number.isNaN(n)) n = 0;
@@ -300,10 +315,12 @@ const CreateTickets: React.FC = () => {
   };
 
   const goToPublish = () => {
-    // Show step 3 overlay and navigate to publish
+    // Show step 3 overlay, wait briefly for animation, then navigate to publish
     setFlowStep(3);
     setFlowVisible(true);
-    navigate(`/publish-details${eventId ? `?eventId=${eventId}` : ''}`, { state: { stepFlow: { visible: true, step: 3 } } });
+    setTimeout(() => {
+      navigate(`/publish-details${eventId ? `?eventId=${eventId}` : ''}`, { state: { stepFlow: { visible: true, step: 3 } } });
+    }, 700);
   };
 
   // Helpers for date/time input constraints
@@ -411,8 +428,9 @@ const CreateTickets: React.FC = () => {
                 const receive = round2(t.absorbFee ? (t.price - fee) : t.price);
                 return (
                   <div key={t.id} className="relative w-full">
+                    {/* Animated deletion effect */}
                     <div
-                      className={`bg-white rounded-2xl border border-[#E5E7EB] p-6 ${isParentWithHalf ? 'mb-1' : 'mb-4'} shadow-sm ${draggingId === t.id ? 'opacity-70' : ''} ${dragOverId === t.id ? 'ring-2 ring-indigo-200' : ''}`}
+                      className={`bg-white rounded-2xl border p-6 transition-all duration-700 ${isParentWithHalf ? 'mb-1' : 'mb-4'} shadow-sm ${draggingId === t.id ? 'opacity-70' : ''} ${dragOverId === t.id ? 'ring-2 ring-indigo-200' : ''} ${deleteId === t.id ? 'border-red-300 animate-delete-ticket' : 'border-[#E5E7EB]'}`}
                       style={t.isHalf ? { marginLeft: HALF_INDENT_PX, width: `calc(100% - ${HALF_INDENT_PX}px)` } : undefined}
                       draggable={!t.isHalf}
                       onDragStart={(e) => {
@@ -448,6 +466,15 @@ const CreateTickets: React.FC = () => {
                         reorderTickets(list);
                       }}
                     >
+                      {/* Animated trash icon and message when deleting */}
+                      {pendingDeleteId === t.id && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10 rounded-2xl border-2 border-red-300 animate-fade-in">
+                          <svg className="w-16 h-16 text-red-400 animate-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6m5 10v-6" />
+                          </svg>
+                          <div className="mt-4 text-lg font-bold text-red-500 animate-slide-up">Jogando fora esse ingresso…</div>
+                        </div>
+                      )}
                       <div className="flex justify-between items-start">
                       <div className="flex items-start gap-3">
                         {!t.isHalf && (
@@ -717,10 +744,15 @@ const CreateTickets: React.FC = () => {
       {/* Botão fixo Continuar para publicar (mesmo estilo do CreateEditEvent) */}
       <div className="fixed bottom-6 right-6 z-50">
         <Button
-          onClick={goToPublish}
-          className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-[45px] w-[180px] rounded-md shadow-lg"
+          onClick={() => {
+            setFlowStep(3);
+            setFlowVisible(true);
+            setTimeout(() => goToPublish(), 80);
+          }}
+          className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-12 min-w-[180px] rounded-md shadow-lg px-4 flex items-center justify-center gap-2 whitespace-nowrap"
         >
-          Continuar para publicar
+          <span>Continuar para publicar</span>
+          <svg className="ml-2 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
         </Button>
       </div>
       <StepFlowOverlay visible={flowVisible} activeStep={flowStep} subtitle={flowStep === 2 ? "Preparando criação de ingressos…" : undefined} />
@@ -740,13 +772,15 @@ const CreateTickets: React.FC = () => {
               disabled={deleteLoading}
               onClick={async () => {
                 if (!deleteId) return;
+                setPendingDeleteId(deleteId); // inicia animação
+                setDeleteLoading(true);
+                setDeleteId(null); // fecha popup imediatamente
                 try {
-                  setDeleteLoading(true);
                   await fetchApi(`/api/ticket-type/${deleteId}`, { method: 'DELETE' });
                   await fetchTickets();
                 } finally {
                   setDeleteLoading(false);
-                  setDeleteId(null);
+                  setPendingDeleteId(null); // encerra animação após backend remover
                 }
               }}
             >

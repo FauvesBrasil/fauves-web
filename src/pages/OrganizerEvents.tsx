@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import SidebarMenu from "@/components/SidebarMenu";
 import AppHeader from "@/components/AppHeader";
-import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
 import CollectionDrawer from "@/components/CollectionDrawer";
@@ -46,8 +46,10 @@ const formatDate = (iso?: string | null) => {
 };
 
 const OrganizerEvents: React.FC = () => {
+  const [fabOpen, setFabOpen] = useState(false);
   const navigate = useNavigate();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id || null;
   const [events, setEvents] = useState<OrgEvent[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
   const { selectedOrg, orgs, loading: loadingOrgs } = useOrganization();
@@ -95,9 +97,8 @@ const OrganizerEvents: React.FC = () => {
       setLoading(true);
       try {
         try { const cached = sessionStorage.getItem('collections-cache'); if (cached) { const parsed = JSON.parse(cached); if (Array.isArray(parsed) && parsed.length) setCollections(parsed); } } catch {}
-        const { data } = await supabase.auth.getUser();
-        const uid = data?.user?.id || null; setUserId(uid);
-        if (!uid) { setEvents([]); setCollections([]); return; }
+  const uid = userId;
+  if (!uid) { setEvents([]); setCollections([]); return; }
         await ensureApiBase();
         const buildAttempts = (path: string) => {
           const attempts: string[] = [];
@@ -321,7 +322,6 @@ const OrganizerEvents: React.FC = () => {
             <>
               <div className="flex items-center gap-4 mt-2">{/* simplified: removed placeholder select */}
                 <input className="flex-1 h-[46px] px-5 rounded-xl border border-[#E5E7EB] focus:outline-none focus:ring-2 focus:ring-indigo-200 text-[15px]" placeholder="Pesquisar eventos" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <Link to="/create-event" className="h-[46px] px-6 inline-flex items-center rounded-full bg-orange-600 text-white font-semibold hover:bg-orange-700 text-sm whitespace-nowrap">+ Criar evento</Link>
               </div>
               <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm mt-4">{/* card style like dashboard's large cards */}
                 <table className="w-full text-left">
@@ -408,7 +408,6 @@ const OrganizerEvents: React.FC = () => {
               <p className="text-slate-600 mb-6 text-[15px]">Ajude os participantes a encontrarem os melhores eventos criando páginas de coleção para seus eventos relacionados.</p>
               <div className="flex items-center justify-between mb-6 gap-4">
                 <input className="flex-1 h-[46px] px-5 rounded-xl border border-[#E5E7EB] focus:outline-none focus:ring-2 focus:ring-indigo-200 text-[15px]" placeholder="Pesquisar coleções por título" value={collectionsSearch} onChange={(e) => setCollectionsSearch(e.target.value)} />
-                <button onClick={openCreateCollection} className="h-[46px] px-6 rounded-full bg-indigo-600 text-white font-semibold hover:bg-indigo-700 text-sm">+ Criar coleção</button>
               </div>
               <div className="grid grid-cols-2 gap-8 max-md:grid-cols-1">
                 {filteredCollections.map((c) => (
@@ -452,6 +451,47 @@ const OrganizerEvents: React.FC = () => {
         </div>
       )}
       <CollectionDrawer open={showCollectionDrawer} mode={collectionDrawerMode} initialData={editingCollection} organizationOptions={organizations} onClose={()=> setShowCollectionDrawer(false)} onSaved={handleCollectionSaved} onDelete={async (id)=> handleDeleteCollection(id)} loadEvents={collectionDrawerMode==='edit'? loadCollectionEvents : undefined} allUserEvents={events} onAddEvent={addEventToCollection} onRemoveEvent={removeEventFromCollection} />
+    {/* Botão flutuante com submenu animado */}
+    <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
+      {/* Submenu animado */}
+      <div className={`flex flex-col items-end gap-3 transition-all duration-300 ${fabOpen ? 'opacity-100 translate-y-0' : 'opacity-0 pointer-events-none translate-y-4'}`}>
+        <Link
+          to="/create-event"
+          className="w-48 h-14 rounded-xl bg-[#EF4118] shadow-lg flex items-center justify-center hover:bg-[#d12c0f] transition-all text-white font-bold text-base"
+          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+          onClick={()=>setFabOpen(false)}
+        >
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" className="mr-2">
+            <circle cx="16" cy="16" r="16" fill="#EF4118" />
+            <path d="M16 10v12M10 16h12" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          Criar evento
+        </Link>
+        <button
+          className="w-48 h-14 rounded-xl bg-indigo-600 shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-all text-white font-bold text-base"
+          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+          onClick={()=>{ setFabOpen(false); openCreateCollection(); }}
+        >
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" className="mr-2">
+            <circle cx="16" cy="16" r="16" fill="#6366F1" />
+            <path d="M16 10v12M10 16h12" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          Criar coleção
+        </button>
+      </div>
+      {/* Botão principal */}
+      <button
+        className="w-16 h-16 rounded-full bg-[#EF4118] shadow-lg flex items-center justify-center hover:bg-[#d12c0f] transition-all"
+        aria-label="Ações rápidas"
+        style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+        onClick={()=>setFabOpen(f=>!f)}
+      >
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="16" fill="#EF4118" />
+          <path d="M16 10v12M10 16h12" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
     </div>
   );
 };

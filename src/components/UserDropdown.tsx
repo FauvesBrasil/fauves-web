@@ -3,14 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, Repeat2, User as UserIcon } from "lucide-react";
 import { fetchApi, apiUrl } from '@/lib/apiBase';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
 
 interface UserDropdownProps {
-  userName: string;
+  userName: string; // já recebe user.name ou fallback
   userEmail: string;
 }
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ userName, userEmail }) => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const handleLogout = async () => {
     // Adapte para seu auth provider
@@ -30,8 +31,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userName, userEmail }) => {
 
   const loadProfile = useCallback(async () => {
     try {
-      const { data } = await supabase.auth.getUser();
-      const uid = data?.user?.id;
+      const uid = user?.id;
       if (!uid) { setPhotoUrl(''); return; }
       const res = await fetchApi('/account-settings', { headers: { 'x-user-id': uid } });
       if (!res.ok) return;
@@ -86,7 +86,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userName, userEmail }) => {
             </Avatar>
           )}
         </div>
-        <span className="text-[#091747] font-bold text-[15px]">{userName}</span>
+  <span className="text-[#091747] font-bold text-[15px]">{userName}</span>
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-[#091747]">
           <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>

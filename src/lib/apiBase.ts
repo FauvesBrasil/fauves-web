@@ -20,10 +20,14 @@ const isProd = import.meta.env.PROD;
 
 // Ordem montada dinamicamente
 const candidates: string[] = [];
-if (envBase) candidates.push(envBase);
+// In non-production prefer local candidates first and leave envBase as a last-resort candidate.
 if (stored && !candidates.includes(stored)) candidates.push(stored);
 ['http://localhost:4000','http://127.0.0.1:4000']
   .forEach(b => { if (!candidates.includes(b)) candidates.push(b); });
+if (envBase) {
+  if (isProd) candidates.unshift(envBase); // production: envBase is authoritative
+  else if (!candidates.includes(envBase)) candidates.push(envBase); // dev: keep envBase as fallback
+}
 
 let resolvedBase: string | null = null; // base atual saudável
 let resolving = false;                 // lock de resolução
@@ -59,15 +63,27 @@ export async function ensureApiBase(force = false): Promise<string> {
   // to allow local development probes; but in hosted previews/envs we want to trust the build-time value
   // to avoid resolving to localhost. This reduces cases where the app tries http://localhost:4000 in deployed sites.
   if (envBase) {
-    resolvedBase = envBase;
+    // In production we trust the build-time env base. In development/preview, probe it briefly
+    // and if it doesn't respond we fall back to probing candidates (localhost). This avoids
+    // pointing the client to a VITE_API_BASE that is unreachable from the current environment.
     if (isProd) {
-      // production: log minimal message
+      resolvedBase = envBase;
       console.log('[apiBase] using env VITE_API_BASE (production)');
-    } else {
-      // preview/development: still prefer env var but log a clear message so debugging is easier
-      console.log('[apiBase] using env VITE_API_BASE (build-time) — will not probe localhost');
+      return resolvedBase;
     }
-    return resolvedBase;
+    // Non-production: probe the envBase quickly. If it responds, use it; otherwise continue resolution.
+    try {
+      // quick probe with a short timeout
+      const ok = await probe(envBase);
+      if (ok) {
+        resolvedBase = envBase;
+        console.log('[apiBase] using env VITE_API_BASE (build-time)');
+        return resolvedBase;
+      }
+      console.log('[apiBase] env VITE_API_BASE did not respond, falling back to probing candidates');
+    } catch (e) {
+      console.log('[apiBase] probe of VITE_API_BASE failed, falling back to candidates');
+    }
   }
   const now = Date.now();
   if (!force && resolvedBase && (now - lastResolutionTs) < 5000) return resolvedBase;
@@ -139,21 +155,42 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
   const headers = new Headers(init?.headers || {});
   if (authToken && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + authToken);
   const finalInit: RequestInit = { ...init, headers };
+  // Apply a request timeout so slow endpoints don't hang forever. Default 4s.
+  const TIMEOUT_MS = 4000;
+  const ctrl = new AbortController();
+  const userSignal = init && (init as any).signal;
+  // If caller passed a signal, propagate its abort to our controller
+  if (userSignal) {
+    if ((userSignal as AbortSignal).aborted) ctrl.abort();
+    else (userSignal as AbortSignal).addEventListener('abort', () => ctrl.abort());
+  }
+  const to = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const reqStart = Date.now();
   try {
-    const r = await fetch(finalUrl, finalInit);
+    const finalInitWithSignal: RequestInit = { ...finalInit, signal: ctrl.signal };
+    const r = await fetch(finalUrl, finalInitWithSignal);
   if (!r.ok && (r.status >= 500 || r.status === 404) && /\/api\/health$/.test(path)) {
       failureCount[resolvedBase!] = (failureCount[resolvedBase!] || 0) + 1;
       if (failureCount[resolvedBase!] >= 2) {
         backendDownUntil = Date.now() + BACKOFF_MS;
       }
     }
+    clearTimeout(to);
+    // no-op diagnostics removed for production cleanliness
     return r;
   } catch (e) {
+    clearTimeout(to);
     if (resolvedBase) {
       failureCount[resolvedBase] = (failureCount[resolvedBase] || 0) + 1;
       if (failureCount[resolvedBase] >= 2) {
         backendDownUntil = Date.now() + BACKOFF_MS;
       }
+    }
+    const isAbort = (e && (e.name === 'AbortError' || e instanceof DOMException && e.name === 'AbortError')) || (ctrl.signal && ctrl.signal.aborted);
+    // Differentiate timeout/abort from network refused
+  // no-op diagnostics removed for production cleanliness
+    if (isAbort) {
+      return new Response(JSON.stringify({ error: 'request_aborted', base: resolvedBase, hint: 'request aborted or timed out' }), { status: 504, headers: { 'Content-Type': 'application/json' } });
     }
     // Resposta offline controlada
     return new Response(JSON.stringify({ error: 'network_refused', base: resolvedBase, hint: 'API não acessível agora. Repetiremos automaticamente.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });

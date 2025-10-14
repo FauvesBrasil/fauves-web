@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import SelectEventModal from '@/components/SelectEventModal';
 import SidebarMenu from '@/components/SidebarMenu';
 import AppHeader from '@/components/AppHeader';
 import { supabase } from '@/lib/supabaseClient';
@@ -19,6 +20,27 @@ interface OrderRow {
 }
 
 const OrdersManager: React.FC = () => {
+  // Modal de seleção de eventos
+  const [showSelectModal, setShowSelectModal] = useState(false);
+  // Pega eventIds da query string
+  const eventIdsFromQuery = (() => {
+    const params = new URLSearchParams(window.location.search);
+    const ids = params.get('eventIds');
+    return ids ? ids.split(',') : [];
+  })();
+  // Se não houver eventos selecionados, mostra modal ao carregar
+  useEffect(() => {
+    if (eventIdsFromQuery.length === 0) setShowSelectModal(true);
+  }, []);
+  // Ao confirmar seleção, atualiza a URL
+  const handleSelectConfirm = (selectedIds) => {
+    setShowSelectModal(false);
+    if (selectedIds.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      params.set('eventIds', selectedIds.join(','));
+      window.location.search = params.toString();
+    }
+  };
   const [userId, setUserId] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -286,14 +308,12 @@ const OrdersManager: React.FC = () => {
               value={search}
               onChange={e=>setSearch(e.target.value)}
             />
-            <select
-              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-              value={eventFilter}
-              onChange={e=>setEventFilter(e.target.value)}
+            <button
+              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-orange-600 text-white font-bold flex items-center gap-2"
+              onClick={() => setShowSelectModal(true)}
             >
-              <option value="all">Selecione um evento</option>
-              {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
-            </select>
+              <span className="material-icons">event</span> Selecionar eventos
+            </button>
             <select
               className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
               value={statusFilter}
@@ -461,7 +481,8 @@ const OrdersManager: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+  </div>
+  <SelectEventModal open={showSelectModal} onClose={() => setShowSelectModal(false)} onConfirm={handleSelectConfirm} />
     {selected && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={()=>setSelected(null)}>
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={e=>e.stopPropagation()}>

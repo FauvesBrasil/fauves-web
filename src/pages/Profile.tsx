@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
 import ProfilePageSkeleton from '@/components/skeletons/ProfilePageSkeleton';
 
 interface User {
@@ -22,30 +22,15 @@ interface User {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data?.user || null);
-      if (!data?.user) {
-        navigate('/');
-      }
-      setLoading(false);
-    };
-    fetchUser();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) {
-        navigate('/');
-      }
-    });
-    return () => {
-      listener?.subscription.unsubscribe();
-    };
-  }, [navigate]);
+    if (!loading && !user) {
+      navigate('/');
+    }
+  }, [loading, user, navigate]);
 
-  const userName = user?.user_metadata?.nome || user?.user_metadata?.full_name || 'Null';
+  const userName = user?.name ? user.name.split(' ')[0] : (user?.email ? user.email.split('@')[0] : 'Null');
 
   if (loading) return <ProfilePageSkeleton />;
 
@@ -58,16 +43,13 @@ const Profile = () => {
           <div className="sticky top-24 self-start flex flex-row items-center gap-5">
             <div className="relative">
               <div className="w-[100px] h-[100px] rounded-full bg-[#F7F7F7] border border-[rgba(9,23,71,0.05)] shadow-[0_4px_8px_rgba(9,23,71,0.10)] flex items-center justify-center">
-                {user?.user_metadata?.avatar_url ? (
-                  <Avatar className="w-[100px] h-[100px]">
-                    <AvatarImage src={user.user_metadata.avatar_url} alt="Profile" />
-                    <AvatarFallback className="bg-[#F7F7F7] text-[#091747] text-2xl font-semibold">
-                      {userName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <div className="w-16 h-16 rounded-full bg-[#D9D9D9]" />
-                )}
+                {/* Avatar: ajuste conforme seu backend salva foto */}
+                <Avatar className="w-[100px] h-[100px]">
+                  <AvatarImage src={''} alt="Profile" />
+                  <AvatarFallback className="bg-[#F7F7F7] text-[#091747] text-2xl font-semibold">
+                    {userName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
               </div>
             </div>
             <div className="relative">

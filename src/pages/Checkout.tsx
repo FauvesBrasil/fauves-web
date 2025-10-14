@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shield, Lock } from 'lucide-react';
 import { loadCheckoutSelection, clearCheckoutSelection } from '@/lib/checkoutSelection';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
 import { fetchApi, apiUrl, getApiDiagnostics } from '@/lib/apiBase';
 import { fetchCep } from '@/lib/cep';
 import LogoFauves from '@/components/LogoFauves';
@@ -95,7 +95,8 @@ function Checkout() {
   },[isDev]);
   const [prefilled, setPrefilled] = useStateReact<{email?: boolean; name?: boolean; surname?: boolean; cpf?: boolean; phone?: boolean; cep?: boolean}>({});
   const [loadingProfile, setLoadingProfile] = useStateReact(true);
-  const [userId, setUserId] = useStateReact<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id || null;
   const [participants, setParticipants] = useStateReact<string[]>([]);
   const [participantsTouched, setParticipantsTouched] = useStateReact(false);
   // Coupon (UI básica)
@@ -111,10 +112,7 @@ function Checkout() {
 
   const loadProfile = useCallback(async () => {
     try {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user;
       if (!user) { setLoadingProfile(false); return; }
-      setUserId(user.id);
       // Prefer backend account-settings (single source of truth for locked fields)
       try {
         const res = await fetchApi('/account-settings', { headers: { 'x-user-id': user.id } });
@@ -137,15 +135,14 @@ function Checkout() {
           return; // done
         }
       } catch {}
-      // Fallback to basic supabase info if backend call fails
+      // Fallback to basic user info if backend call fails
       if (user.email) setBuyerEmail(user.email);
-      const fullName = user.user_metadata?.full_name || '';
-      if (fullName) {
-        const parts = fullName.split(' ');
+      if (user.name) {
+        const parts = user.name.split(' ');
         setBuyerName(parts[0]);
         setBuyerSurname(parts.slice(1).join(' '));
       }
-      setPrefilled(p=>({ ...p, email: !!user.email, name: !!fullName, surname: !!(fullName && fullName.split(' ').slice(1).length) }));
+      setPrefilled(p=>({ ...p, email: !!user.email, name: !!user.name, surname: !!(user.name && user.name.split(' ').slice(1).length) }));
     } finally {
       setLoadingProfile(false);
     }

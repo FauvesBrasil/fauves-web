@@ -29,7 +29,7 @@ const PublishDetails: React.FC = () => {
   const [category, setCategory] = React.useState<string>("");
   const [categories, setCategories] = React.useState<Array<{ name: string; slug?: string }>>([]);
   const [organizerId, setOrganizerId] = React.useState<string | "">("");
-  const [organizerOptions, setOrganizerOptions] = React.useState<Array<{id:string; name:string}>>([]);
+  const [organizerOptions, setOrganizerOptions] = React.useState<Array<{id:string; name:string; logoUrl?: string | null}>>([]);
   const [selected, setSelected] = React.useState<string[]>([]);
   const toggle = (id: string) => setSelected(sel => sel.includes(id) ? sel.filter(i => i !== id) : [...sel, id]);
   const eventId = React.useMemo(() => {
@@ -69,8 +69,34 @@ const PublishDetails: React.FC = () => {
           setBannerUrl(ev.image || null);
           setCategory(ev.category || "");
           setIsPublic(ev.privacy ? ev.privacy !== 'private' : true);
-          setOrganizerId(ev.organizerId || ev.organizationId || "");
+          const evOrgId = ev.organizerId || ev.organizationId || '';
+          setOrganizerId(evOrgId || "");
           setPublicUrl(getEventPath({ id: ev.id, slug: ev.slug }));
+          // If the event payload directly includes the organization name, add it now
+          const evOrgName = ev.organization?.name || ev.organizationName || ev.organizerName || '';
+          const evOrgLogo = ev.organization?.logoUrl || ev.organization?.logo || ev.logoUrl || ev.logo || '';
+          if (evOrgName && evOrgId) {
+            setOrganizerOptions(prev => {
+              if (prev.find(p => p.id === evOrgId)) return prev;
+              return [...prev, { id: evOrgId, name: evOrgName, logoUrl: evOrgLogo || null }];
+            });
+          }
+          // Also try fetching the organization directly so we always have name/logo available
+          try {
+            const oid = evOrgId;
+            if (oid) {
+              const orgRes = await fetchApi(`/api/organization/${oid}`);
+              if (orgRes && orgRes.ok) {
+                const orgObj = await orgRes.json();
+                if (orgObj && orgObj.id) {
+                  setOrganizerOptions(prev => {
+                    if (prev.find(p => p.id === orgObj.id)) return prev;
+                    return [...prev, { id: orgObj.id, name: orgObj.name, logoUrl: orgObj.logoUrl || orgObj.logo || null }];
+                  });
+                }
+              }
+            }
+          } catch (_) {}
           if (ev.startDate) {
             const d = new Date(ev.startDate);
             const months = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
@@ -112,13 +138,39 @@ const PublishDetails: React.FC = () => {
           const or = await fetchApi(`/api/organization/user/${uid}`);
           if (or.ok) {
             const list = await or.json();
-            setOrganizerOptions((list || []).map((o: any) => ({ id: o.id, name: o.name })));
+            setOrganizerOptions((list || []).map((o: any) => ({ id: o.id, name: o.name, logoUrl: o.logoUrl || o.logo || null })));
+          }
+        }
+      } catch (_) {}
+      // If organizer for the event isn't present in organizerOptions, try fetching it by id
+      try {
+        const oid = (typeof organizerId === 'string' && organizerId) ? organizerId : null;
+        if (oid) {
+          const exists = (organizerOptions || []).find(o => o.id === oid);
+          if (!exists) {
+            const orgRes = await fetchApi(`/api/organization/${oid}`);
+            if (orgRes && orgRes.ok) {
+              const orgObj = await orgRes.json();
+              if (orgObj && orgObj.id) {
+                setOrganizerOptions(prev => {
+                  if (prev.find(p => p.id === orgObj.id)) return prev;
+                  return [...prev, { id: orgObj.id, name: orgObj.name, logoUrl: orgObj.logoUrl || orgObj.logo || null }];
+                });
+              }
+            }
           }
         }
       } catch (_) {}
     };
     load();
   }, [eventId]);
+  const organizerName = React.useMemo(() => {
+    return organizerOptions.find(o => o.id === organizerId)?.name || '';
+  }, [organizerOptions, organizerId]);
+  const organizerInitials = React.useMemo(() => {
+    if (!organizerName) return '';
+    return organizerName.split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
+  }, [organizerName]);
   const formatBRL = React.useCallback((n: number) => {
     if (Number.isNaN(n)) n = 0;
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
@@ -239,21 +291,21 @@ const PublishDetails: React.FC = () => {
                 </div>
                 <div className="bg-white rounded-2xl shadow p-6 flex flex-col gap-2">
                   <label className="text-[18px] text-indigo-900/80 font-medium mb-1">Organizado por</label>
-                  <span className="text-xs text-indigo-900/70 mt-1 mb-3">Seu evento aparecerá na página de perfil desta organização.</span>
-                  <Select value={organizerId} onValueChange={setOrganizerId}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Organização" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {organizerOptions.length === 0 ? (
-                        <SelectItem value="no-options" disabled>Nenhuma organização</SelectItem>
+                  {/* Show the already-selected organization (no dropdown) */}
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center text-sm font-semibold text-zinc-700">
+                      {organizerOptions.find(o => o.id === organizerId && o.logoUrl) ? (
+                        <img src={organizerOptions.find(o => o.id === organizerId)!.logoUrl as string} alt={organizerName || 'org'} className="w-full h-full object-cover" />
                       ) : (
-                        organizerOptions.map(opt => (
-                          <SelectItem key={opt.id} value={opt.id}>{opt.name}</SelectItem>
-                        ))
+                        <div className="text-sm font-semibold text-zinc-700">{organizerInitials || '??'}</div>
                       )}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="font-medium text-indigo-950">{organizerName || 'Organização não selecionada'}</div>
+                      {/* keep a small hint if none selected */}
+                      {!organizerName && <div className="text-xs text-indigo-900/70">Nenhuma organização selecionada.</div>}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -344,11 +396,13 @@ const PublishDetails: React.FC = () => {
       {/* Botão fixo Publicar */}
       <div className="fixed bottom-6 right-6 z-50">
         <Button
-          className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-[45px] w-[180px] rounded-md shadow-lg disabled:opacity-60"
+          className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-12 min-w-[180px] rounded-md shadow-lg disabled:opacity-60 px-4 flex items-center justify-center whitespace-nowrap"
           onClick={handlePublish}
           disabled={publishing || !eventId}
         >
-          {publishing ? 'Publicando…' : 'Publicar'}
+          {publishing ? 'Publicando…' : (
+            <span className="flex items-center justify-center gap-2">Publicar <svg className="ml-2 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+          )}
         </Button>
       </div>
     </div>

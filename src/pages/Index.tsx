@@ -9,6 +9,7 @@ import Banner from '@/components/Banner';
 import Footer from '@/components/Footer';
 import { useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/apiBase';
+import EventSlider, { EventSliderSlide } from '@/components/EventSlider';
 
 // OBS: removido supabase e spinner não utilizados; carregamento é puramente via backend /events
 
@@ -22,6 +23,7 @@ interface Event {
 
 const Index = () => {
   const [events, setEvents] = useState<Event[]>([]);
+  const [sliderEvents, setSliderEvents] = useState<EventSliderSlide[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +48,20 @@ const Index = () => {
           const data = await r.json();
           if (Array.isArray(data)) {
             setEvents(data);
+            // filtra os 5 eventos mais próximos da data atual
+            const now = new Date();
+            const sorted = [...data].filter(ev => ev.startDate).sort((a, b) => {
+              const da = new Date(a.startDate).getTime();
+              const db = new Date(b.startDate).getTime();
+              return da - db;
+            });
+            const slides: EventSliderSlide[] = sorted.slice(0, 5).map(ev => ({
+              category: ev.name,
+              image: ev.bannerUrl || ev.image || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
+              id: ev.id,
+              slug: ev.slug,
+            }));
+            setSliderEvents(slides);
           } else {
             setError(buildErrorMessage(undefined, 'Resposta inesperada'));
           }
@@ -87,21 +103,10 @@ const Index = () => {
           </div>
         </div>
       )}
+      <EventSlider slides={sliderEvents} />
       <div className="max-w-[1352px] mx-auto">
         <main>
-          <section className="relative px-[156px] py-5 max-md:p-5 max-sm:p-[15px]">
-            <div className="flex items-center gap-4 max-md:flex-col max-md:items-start">
-              <h1 className="text-[#091747] text-[18px] font-bold whitespace-nowrap max-sm:text-[14px]">
-                Melhores eventos em
-              </h1>
-              <LocationSelector />
-              <div className="flex-1">
-                <SearchBar />
-              </div>
-            </div>
-          </section>
-
-          <section className="px-[156px] py-0 max-md:p-5 max-sm:p-[15px]">
+          <section className="px-[156px] py-5 max-md:p-5 max-sm:p-[15px]">
             <CategoryTags />
           </section>
 

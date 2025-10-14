@@ -1,7 +1,8 @@
 import * as React from "react";
-import { supabase } from "@/lib/supabaseClient";
+import OrganizerEditDrawer from '@/components/OrganizerEditDrawer';
+import { useAuth } from "@/context/AuthContext";
 import { ensureApiBase, apiUrl } from '@/lib/apiBase';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -10,9 +11,10 @@ import { useState, useRef, useEffect } from "react";
 import logoSquare from "@/assets/logo-square-fauves-blue.svg";
 import SidebarMenu from "@/components/SidebarMenu";
 import AppHeader from "@/components/AppHeader";
-import NextEventCardSkeleton from "@/components/skeletons/NextEventCardSkeleton";
-import OrgProfileCardSkeleton from "@/components/skeletons/OrgProfileCardSkeleton";
+import NextEventCardSkeleton from "../components/skeletons/NextEventCardSkeleton";
+import OrgProfileCardSkeleton from "../components/skeletons/OrgProfileCardSkeleton";
 import { useOrganization } from '@/context/OrganizationContext';
+import RequireOrganization from '@/components/RequireOrganization';
 interface UserDropdownProps {
   userName: string;
   userEmail: string;
@@ -20,8 +22,9 @@ interface UserDropdownProps {
 
 function UserDropdown({ userName, userEmail }: UserDropdownProps) {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logout();
     navigate("/");
   };
   const [open, setOpen] = useState(false);
@@ -86,30 +89,84 @@ function UserDropdown({ userName, userEmail }: UserDropdownProps) {
 }
 
 const OrganizerDashboard = () => {
+  // Estado para Drawer de edição igual ao OrganizerSettingsPage
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [form, setForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const openEditDrawer = () => {
+    if (orgInfo && orgInfo.id) {
+      setForm({ ...orgInfo });
+      setDrawerOpen(true);
+    } else {
+      setSaveError('Selecione uma organização válida para editar.');
+    }
+  };
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      let logoUrl = form.logoUrl;
+      if (logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('data:image')) {
+        const arr = logoUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+        const file = new Blob([u8arr], { type: mime });
+        const formData = new FormData();
+        formData.append('file', file, 'logo.png');
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          logoUrl = data.url;
+        } else {
+          setSaveError('Erro ao enviar imagem');
+          setSaving(false);
+          return;
+        }
+      }
+      const payload = { ...form, logoUrl };
+      if (!form || !form.id) {
+        setSaveError('Organização não definida. Tente novamente ou selecione uma organização.');
+        setSaving(false);
+        return;
+      }
+      const res = await fetch(`/api/organization/${form.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(()=>null);
+        setSaveError(data?.error || data?.message || 'Erro ao salvar organização');
+        setSaving(false);
+        return;
+      }
+      setDrawerOpen(false);
+      await ensureApiBase();
+      if (selectedOrg) {
+        const org = await fetch(apiUrl(`/api/organization/${selectedOrg.id}`)).then(r => r.json());
+        setOrgInfo(org);
+      }
+    } catch (e: any) {
+      setSaveError(e?.message || 'Erro ao salvar organização');
+      setSaving(false);
+    }
+  };
   const navigate = useNavigate();
-  const { selectedOrg, loading: loadingOrgs, orgs } = useOrganization();
-  const [user, setUser] = React.useState<any>(null);
+  const location = useLocation();
+  const { selectedOrg, loading: loadingOrgs, orgs, refresh } = useOrganization();
+  const { user } = useAuth();
   const [nextEvent, setNextEvent] = React.useState<any>(null);
   const [orgInfo, setOrgInfo] = React.useState<any>(null);
   const [orgEventCount, setOrgEventCount] = React.useState<number>(0);
-  const [loadingUser, setLoadingUser] = React.useState(true);
   const [loadingEvent, setLoadingEvent] = React.useState(false);
   const [loadingOrg, setLoadingOrg] = React.useState(false);
-
-  // Carrega usuário para saudação
-  React.useEffect(() => {
-    let cancelled = false;
-    const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!cancelled) setUser(data?.user || null);
-      setLoadingUser(false);
-    };
-    loadUser();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!cancelled) setUser(session?.user || null);
-    });
-    return () => { cancelled = true; listener?.subscription.unsubscribe(); };
-  }, []);
 
   // Reage à troca de organização selecionada
   React.useEffect(() => {
@@ -153,15 +210,69 @@ const OrganizerDashboard = () => {
     loadOrgScopedData();
     return () => { cancelled = true; };
   }, [selectedOrg?.id]);
-  const userName = user?.user_metadata?.nome || user?.user_metadata?.full_name || user?.email || "Visitante";
+  const userName = user?.name ? user.name.split(' ')[0] : (user?.email ? user.email.split('@')[0] : "Visitante");
   const userEmail = user?.email || "";
+  // Modal para criar organização se não houver nenhuma
+  const [showCreateOrgModal, setShowCreateOrgModal] = useState(false);
+  const modalAutoOpenedRef = useRef(false);
+
+  // Auto-open RequireOrganization modal when authenticated user has no orgs
+  useEffect(() => {
+    try {
+      if (!user || !user.email) return;
+      if (loadingOrgs) return;
+      const hasOrgs = Array.isArray(orgs) && orgs.length > 0;
+      if (!hasOrgs && !modalAutoOpenedRef.current) {
+        console.debug('[OrganizerDashboard] No organizations found for user, opening RequireOrganization modal');
+        modalAutoOpenedRef.current = true;
+        setShowCreateOrgModal(true);
+      }
+      if (hasOrgs) modalAutoOpenedRef.current = false;
+    } catch (e) {
+      console.warn('[OrganizerDashboard] auto-open org modal effect failed', e);
+    }
+  }, [user, loadingOrgs, orgs]);
+
   return (
     <div className="relative min-h-screen w-full bg-white flex justify-center items-start">
+      {/* When modal is open, show a simple translucent cover; keep detailed skeleton only when modal is NOT open */}
+      {(!loadingOrgs && Array.isArray(orgs) && orgs.length === 0 && user && !showCreateOrgModal) && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-white">
+          <div className="w-full max-w-4xl p-6">
+            <div className="mb-6">
+              <div className="text-2xl font-bold text-center text-slate-900">Crie o perfil da sua organização</div>
+              <div className="text-sm text-center text-slate-600 mt-2">Você precisa de uma organização para acessar o painel de organizador.</div>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="p-4 bg-white rounded-xl shadow-sm">
+                <OrgProfileCardSkeleton />
+              </div>
+              <div className="p-4 bg-white rounded-xl shadow-sm">
+                <NextEventCardSkeleton />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showCreateOrgModal && (
+        <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/40">
+          <div className="w-full h-full" aria-hidden="true" />
+        </div>
+      )}
       <SidebarMenu />
       <div className="rounded-3xl h-[852px] w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
         <AppHeader />
         <div className="flex absolute flex-col gap-6 items-start left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:px-0 max-md:py-5 max-md:w-full max-sm:px-0 max-sm:py-4">
           <div className="mb-6 text-4xl font-bold text-slate-900 max-sm:text-3xl">Olá, {userName}!</div>
+          {showCreateOrgModal && (
+            <RequireOrganization
+              onCreated={(org) => {
+                // Return the refresh() Promise so RequireOrganization animation waits for context update
+                try { return refresh(); } catch (e) { return Promise.resolve(); }
+              }}
+              onClose={() => setShowCreateOrgModal(false)}
+            />
+          )}
           <div className="flex gap-5 items-start w-full max-md:flex-col max-md:gap-5">
             <div className="flex flex-col gap-5 items-start max-w-[900px] w-full">
               {/* Próximo evento estilizado ou card de criação */}
@@ -290,7 +401,18 @@ const OrganizerDashboard = () => {
                         <div className="text-2xl font-bold text-slate-900 max-sm:text-2xl">{orgInfo.name || selectedOrg.name}</div>
                         <div className="flex gap-5 items-center max-sm:flex-col max-sm:gap-2.5 max-sm:items-start">
                           <a href={orgInfo.publicUrl || '#'} target="_blank" rel="noopener noreferrer" className="text-base text-indigo-700 cursor-pointer hover:text-indigo-800 transition-colors">Ver página</a>
-                          <a href={`/editar-organizacao/${selectedOrg.id}`} className="text-base text-indigo-700 cursor-pointer hover:text-indigo-800 transition-colors">Editar</a>
+                          <button type="button" className="text-base text-indigo-700 cursor-pointer hover:text-indigo-800 transition-colors" onClick={openEditDrawer}>Editar</button>
+                          <OrganizerEditDrawer
+                            open={drawerOpen}
+                            onOpenChange={setDrawerOpen}
+                            org={orgInfo}
+                            isNew={false}
+                            onSave={handleSave}
+                            saving={saving}
+                            saveError={saveError}
+                            form={form}
+                            setForm={setForm}
+                          />
                         </div>
                       </div>
                     ) : (

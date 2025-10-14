@@ -2,7 +2,8 @@ import React from "react";
 import { useRegisterSidebar } from '@/context/LayoutOffsetsContext';
 import { fetchApi } from "@/lib/apiBase";
 import { useLocation } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { getEventPath } from '@/lib/eventUrl';
 import { ChevronLeft, ChevronDown, ExternalLink } from "lucide-react";
 import './event-sidebar-scrollbar.css';
 
@@ -92,14 +93,22 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  // Confetti canvas ref
+  const confettiCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
+  // Keep previous status to detect transition
+  const prevStatusRef = React.useRef<typeof eventStatus | null>(null);
   // Registrar somente quando estiver fixed (faz parte do layout lateral)
   useRegisterSidebar('detail', containerRef, fixed);
-  // Lê eventId da query string para saber se o evento já existe
+  // Resolve eventId from multiple possible sources: explicit override, route params (id/slugOrId/eventId), or query string
+  const routeParams = useParams();
   const eventId = React.useMemo(() => {
     if (eventIdOverride) return eventIdOverride;
+    // route params commonly used: id, slugOrId, eventId
+    const candidate = (routeParams as any).id || (routeParams as any).slugOrId || (routeParams as any).eventId;
+    if (candidate) return candidate;
     const params = new URLSearchParams(location.search);
     return params.get("eventId");
-  }, [location.search, eventIdOverride]);
+  }, [location.search, eventIdOverride, routeParams]);
 
   // Paths base de cada etapa (sem query string) para detectar etapa ativa
   const stepPaths: Record<string, string> = {
@@ -109,7 +118,8 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   };
   // Rotas completas para navegação (anexando eventId quando disponível)
   const stepRoutes: Record<string, string> = {
-    "create-page": eventId ? `/create-event?eventId=${eventId}` : "/create-event",
+    // when we already have an eventId, take the user to the public event page
+    "create-page": eventId ? getEventPath({ id: String(eventId) }) : "/create-event",
     "configure-ticket": eventId ? `/create-tickets?eventId=${eventId}` : "/create-tickets",
     "publish": eventId ? `/publish-details?eventId=${eventId}` : "/publish-details",
   };
@@ -182,8 +192,177 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   const isOnCreate = location.pathname.startsWith('/create-event');
   const isOnTickets = location.pathname.startsWith('/create-tickets');
   const isOnPublish = location.pathname.startsWith('/publish-details');
-  const isPanelActive = !(isOnCreate || isOnTickets || isOnPublish);
-  const panelRoute = React.useMemo(() => panelRouteProp || location.pathname, [panelRouteProp, location.pathname]);
+  const isOnMarketing = location.pathname.startsWith('/marketing');
+  // Panel is active when we're not on the create/tickets/publish flows and not on marketing pages
+  const isOnParticipants = location.pathname.startsWith('/participantes/pedidos') || location.pathname.startsWith('/participantes/lista') || location.pathname.startsWith('/participantes/checkin');
+  const isOnEquipe = location.pathname.startsWith('/gerenciar-equipe');
+  const isPanelActive = !(isOnCreate || isOnTickets || isOnPublish || isOnMarketing || isOnParticipants || isOnEquipe);
+  // Always route 'Painel' to painel-evento when we have an eventId
+  const panelRoute = React.useMemo(() => {
+    if (eventId) return `/painel-evento/${eventId}`;
+    return panelRouteProp || location.pathname;
+  }, [panelRouteProp, location.pathname, eventId]);
+
+  // Format the event date string into a localized pt-BR short weekday + day + short month + year, then time.
+  // Examples handled: "2025-11-22 às 10:00", "2025-11-22 10:00", or any parseable date string.
+  // Normalize event date/time display across the app to: "DD MMM YYYY às HH:MM" (e.g. "15 jan 2025 às 18:30").
+  const formatEventDate = (input?: string) => {
+    if (!input) return '';
+    // Try to match ISO-like inputs first: "YYYY-MM-DD às HH:MM" or "YYYY-MM-DD HH:MM" or "YYYY-MM-DD"
+    const isoLike = /(?:(\d{4}-\d{2}-\d{2}))(?:\s*(?:às)?\s*(\d{2}:\d{2}))?/i;
+    const m = input.match(isoLike);
+    let dateObj: Date | null = null;
+    if (m) {
+      const datePart = m[1];
+      const timePart = m[2] || '00:00';
+      const iso = `${datePart}T${timePart}:00`;
+      dateObj = new Date(iso);
+    } else {
+      const parsed = Date.parse(input);
+      if (!isNaN(parsed)) dateObj = new Date(parsed);
+    }
+
+    if (!dateObj || isNaN(dateObj.getTime())) {
+      // If we can't parse, return the original input to avoid hiding information
+      return input;
+    }
+
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const monthsShort = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const month = monthsShort[dateObj.getMonth()] || '';
+    const year = dateObj.getFullYear();
+    const hh = String(dateObj.getHours()).padStart(2, '0');
+    const mm = String(dateObj.getMinutes()).padStart(2, '0');
+    return `${day} ${month} ${year} às ${hh}:${mm}`;
+  };
+
+  // Submenu state (which top-level menu is expanded)
+  const [expandedMenu, setExpandedMenu] = React.useState<string | null>(null);
+
+  // Auto-expand Marketing submenu when current route is a marketing page
+  React.useEffect(() => {
+    try {
+      if (location.pathname.startsWith('/marketing')) {
+        setExpandedMenu('Marketing');
+      } else if (
+        location.pathname.startsWith('/participantes/pedidos') ||
+        location.pathname.startsWith('/participantes/lista') ||
+        location.pathname.startsWith('/participantes/checkin')
+      ) {
+        setExpandedMenu('Gerenciar participantes');
+      } else if (location.pathname.startsWith('/gerenciar-equipe')) {
+        setExpandedMenu(null);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [location.pathname]);
+
+  const handleMenuClick = (itemTitle: string) => {
+    // Toggle expand only for items that have submenus
+    if (!itemTitle) return;
+    setExpandedMenu(prev => prev === itemTitle ? null : itemTitle);
+  };
+
+  // Trigger confetti when eventStatus transitions to 'Publicado'
+  React.useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = eventStatus;
+    if (prev === 'Publicado') return; // already published before
+    if (eventStatus !== 'Publicado') return;
+
+    // Launch confetti animation
+    const canvas = confettiCanvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let raf = 0;
+    const DPR = Math.max(1, window.devicePixelRatio || 1);
+
+    function resize() {
+      const parent = canvas.parentElement as HTMLElement | null;
+      if (!parent) return;
+      canvas.width = Math.floor(parent.clientWidth * DPR);
+      canvas.height = Math.floor(parent.clientHeight * DPR);
+      canvas.style.width = `${parent.clientWidth}px`;
+      canvas.style.height = `${parent.clientHeight}px`;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    type Particle = { x: number; y: number; vx: number; vy: number; size: number; color: string; rotation: number; vr: number };
+    const colors = ['#FF7A00', '#FFD700', '#2AD2D7', '#7C3AED', '#FF4D6D', '#33CC66'];
+    const particles: Particle[] = [];
+    const count = 80;
+    const w = canvas.width / DPR;
+    const h = canvas.height / DPR;
+
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.random() * Math.PI) - (Math.PI / 2);
+      const speed = 2 + Math.random() * 6;
+      particles.push({
+        x: w / 2 + (Math.random() - 0.5) * (w * 0.5),
+        y: h * 0.15 + (Math.random() - 0.5) * 20,
+        vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 2,
+        vy: Math.sin(angle) * speed + Math.random() * 2,
+        size: 6 + Math.random() * 8,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.2,
+      });
+    }
+
+    const gravity = 0.12;
+    const drag = 0.998;
+
+    const start = performance.now();
+    const duration = 2500; // ms
+
+    function render(now: number) {
+      const elapsed = now - start;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let p of particles) {
+        p.vy += gravity;
+        p.vx *= drag;
+        p.vy *= 0.999;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rotation += p.vr;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        ctx.restore();
+      }
+
+      if (elapsed < duration || particles.some(p => p.y < h + 50)) {
+        raf = requestAnimationFrame(render);
+      } else {
+        // clear once finished
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    raf = requestAnimationFrame(render);
+
+    // stop after a while and cleanup
+    const cleanupTimeout = window.setTimeout(() => {
+      cancelAnimationFrame(raf);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }, duration + 500);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      clearTimeout(cleanupTimeout);
+      try { ctx.clearRect(0, 0, canvas.width, canvas.height); } catch (e) { /**/ }
+    };
+  }, [eventStatus]);
   return (
   <div
     ref={containerRef}
@@ -199,7 +378,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
           </div>
           <button 
             className="self-stretch my-auto hover:text-indigo-900 transition-colors"
-            onClick={onBack}
+            onClick={() => navigate('/organizer-events')}
           >
             Voltar para eventos
           </button>
@@ -214,11 +393,11 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
               </div>
               <div className="flex gap-2.5 items-center mt-7 w-full text-xs">
                 <div className="self-stretch my-auto">
-                  {eventDate}
+                  {formatEventDate(eventDate)}
                 </div>
               </div>
             </div>
-            <div className="flex gap-10 items-center mt-14 text-sm font-semibold whitespace-nowrap">
+            <div className="flex gap-10 items-center mt-8 text-sm font-semibold whitespace-nowrap">
               <div className="self-stretch my-auto rounded-[100px] w-[137px]">
                 <div className="relative flex items-center px-0 py-0 min-h-[42px]">
                   <select
@@ -314,31 +493,89 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
         {showEventMenus && (
           <div className="-mb-6 w-full text-sm font-semibold text-indigo-950">
             {menuItems.map((item, index) => {
-              const active = item.title === 'Painel' && isPanelActive;
+              const active = (item.title === 'Painel' && isPanelActive) || (item.title === 'Gerenciar equipe' && isOnEquipe);
               const isPanelItem = item.title === 'Painel';
+              const isMarketing = item.title === 'Marketing';
+              const isEquipe = item.title === 'Gerenciar equipe';
               return (
-              <div key={index}>
-                {item.hasSubmenu ? (
-                  <div className={`flex gap-10 justify-between items-center p-6 w-full whitespace-nowrap min-h-[65px] ${active ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-50'}`}>
-                    <div className="self-stretch my-auto">
-                      {item.title}
+                <div key={index}>
+                  {item.hasSubmenu ? (
+                    <div>
+                      <div
+                        className={`flex gap-10 justify-between items-center p-6 w-full whitespace-nowrap min-h-[65px] ${active ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-50'} cursor-pointer`}
+                        onClick={() => handleMenuClick(item.title)}
+                        role="button"
+                        tabIndex={0}
+                      >
+                        <div className="self-stretch my-auto">{item.title}</div>
+                        <ChevronDown className={`object-contain shrink-0 self-stretch my-auto w-2 aspect-[1.6] transition-transform ${expandedMenu === item.title ? 'rotate-180' : ''}`} />
+                      </div>
+                      {/* Submenu items (only for Marketing right now) */}
+                      {expandedMenu === item.title && isMarketing && (
+                        <div className="bg-white border-t border-gray-100">
+                          {(() => {
+                            const linkActive = location.pathname.startsWith('/marketing/link-rastreamento');
+                            const pixelsActive = location.pathname.startsWith('/marketing/pixels');
+                            return (
+                              <>
+                                <div
+                                  className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${linkActive ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-indigo-50'}`}
+                                  onClick={() => navigate(eventId ? `/marketing/link-rastreamento/${eventId}` : '/marketing/link-rastreamento')}
+                                >
+                                  Link de rastreamento
+                                </div>
+                                <div
+                                  className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${pixelsActive ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-indigo-50'}`}
+                                  onClick={() => navigate(eventId ? `/marketing/pixels/${eventId}` : '/marketing/pixels')}
+                                >
+                                  Pixels de rastreamento
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                      {/* Submenu items for Gerenciar participantes */}
+                      {expandedMenu === item.title && item.title === 'Gerenciar participantes' && (
+                        <div className="bg-white border-t border-gray-100">
+                          <div
+                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center${location.pathname.startsWith('/participantes/pedidos') ? ' bg-indigo-50 text-indigo-700' : ' hover:bg-indigo-50'}`}
+                            onClick={() => navigate(eventId ? `/participantes/pedidos/${eventId}` : '/participantes/pedidos')}
+                          >
+                            Gerenciar pedidos
+                          </div>
+                          <div
+                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center${location.pathname.startsWith('/participantes/lista') ? ' bg-indigo-50 text-indigo-700' : ' hover:bg-indigo-50'}`}
+                            onClick={() => navigate(eventId ? `/participantes/lista/${eventId}` : '/participantes/lista')}
+                          >
+                            Lista de Participantes
+                          </div>
+                          <div
+                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center${location.pathname.startsWith('/participantes/checkin') ? ' bg-indigo-50 text-indigo-700' : ' hover:bg-indigo-50'}`}
+                            onClick={() => navigate(eventId ? `/participantes/checkin/${eventId}` : '/participantes/checkin')}
+                          >
+                            Check-in
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <ChevronDown className="object-contain shrink-0 self-stretch my-auto w-2 aspect-[1.6]" />
-                  </div>
-                ) : (
-                  <div
-                    className={`flex gap-2.5 items-center p-6 w-full min-h-[65px] transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-50'} ${isPanelItem ? 'cursor-pointer hover:bg-indigo-100' : ''}`}
-                    onClick={isPanelItem ? () => navigate(panelRoute) : undefined}
-                    role={isPanelItem ? 'button' : undefined}
-                    tabIndex={isPanelItem ? 0 : -1}
-                  >
-                    <div className="self-stretch my-auto">
-                      {item.title}
+                  ) : (
+                    <div
+                      className={`flex gap-2.5 items-center p-6 w-full min-h-[65px] transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-50'} ${isPanelItem ? (eventId ? 'cursor-pointer hover:bg-indigo-100' : 'opacity-60 cursor-not-allowed') : ''} ${isEquipe ? (eventId ? 'cursor-pointer hover:bg-indigo-100' : 'opacity-60 cursor-not-allowed') : ''}`}
+                      onClick={
+                        isPanelItem ? (eventId ? () => navigate(panelRoute) : undefined)
+                        : isEquipe ? (eventId ? () => navigate(`/gerenciar-equipe/${eventId}`) : undefined)
+                        : undefined
+                      }
+                      role={(isPanelItem && eventId) || (isEquipe && eventId) ? 'button' : undefined}
+                      tabIndex={(isPanelItem && eventId) || (isEquipe && eventId) ? 0 : -1}
+                    >
+                      <div className="self-stretch my-auto">{item.title}</div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )})}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -5,9 +5,7 @@ import { LayoutOffsetsProvider } from '@/context/LayoutOffsetsContext';
 import { OrganizationProvider } from '@/context/OrganizationContext';
 
 createRoot(document.getElementById("root")!).render(
-	<LayoutOffsetsProvider>
-		<OrganizationProvider>
+		<LayoutOffsetsProvider>
 			<App />
-		</OrganizationProvider>
-	</LayoutOffsetsProvider>
+		</LayoutOffsetsProvider>
 );
