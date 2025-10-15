@@ -82,6 +82,16 @@ async function probe(base: string): Promise<boolean> {
 }
 
 export async function ensureApiBase(force = false): Promise<string> {
+  // Runtime override: if we're running on the public app domain, force the known Railway backend
+  // This ensures the running bundle does not attempt to call the frontend origin and receive 405s
+  // while Vercel rewrites or envs are being fixed. Temporary emergency measure.
+  try {
+    if (typeof window !== 'undefined' && window.location && window.location.hostname === 'app.fauves.com.br') {
+      resolvedBase = DEFAULT_PROD_BACKEND;
+      console.log('[apiBase] runtime override: using DEFAULT_PROD_BACKEND for app.fauves.com.br');
+      return resolvedBase;
+    }
+  } catch (e) {}
   // If an envBase is provided (build-time), prefer it. Previously we only auto-used it in production
   // to allow local development probes; but in hosted previews/envs we want to trust the build-time value
   // to avoid resolving to localhost. This reduces cases where the app tries http://localhost:4000 in deployed sites.
