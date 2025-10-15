@@ -1,0 +1,103 @@
+// Backup de emergência do arquivo corrompido
+// Conteúdo original preservado para recuperação manual
+import React, { useState, useEffect } from 'react';
+import SidebarMenu from '@/components/SidebarMenu';
+import AppHeader from '@/components/AppHeader';
+import SelectEventModal from '@/components/SelectEventModal';
+import { Calendar } from 'lucide-react';
+
+export default function OrganizerReportsOrders() {
+  // Estado reativo para eventIds
+  const getEventIds = () => {
+    const params = new URLSearchParams(window.location.search);
+    const ids = params.get('eventIds');
+    return ids ? ids.split(',') : [];
+  };
+  const [eventIds, setEventIds] = useState(getEventIds());
+  const [showSelectModal, setShowSelectModal] = useState(eventIds.length === 0);
+    // Função para confirmar seleção de eventos
+    const handleSelectConfirm = (selectedIds: string[]) => {
+      setShowSelectModal(false);
+      if (selectedIds.length > 0) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('eventIds', selectedIds.join(','));
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+        setEventIds(selectedIds);
+      }
+    };
+    // Função para exportar CSV mock
+    // ...existing code...
+                      <td className="px-2 py-2">Free</td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">Não</td>
+                    </tr>
+                    <tr className="font-bold bg-zinc-50">
+                      <td className="px-2 py-2">TOTAIS</td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2">2</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2"></td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2">0</td>
+                      <td className="px-2 py-2"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+                  <span className="text-[#231942] text-sm">{eventIds.length}</span>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm border px-6 py-5 flex flex-col gap-2">
+                  <span className="font-bold text-[#231942] text-lg">Total de pedidos</span>
+                  <span className="text-[#231942] text-sm">1</span>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm border px-6 py-5 flex flex-col gap-2">
+                  <span className="font-bold text-[#231942] text-lg">Vendas líquidas</span>
+                  <span className="text-[#231942] text-sm">0,00</span>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm border px-6 py-5 flex flex-col gap-2">
+                  <span className="font-bold text-[#231942] text-lg">Localização principal do comprador</span>
+                  <span className="text-[#231942] text-sm">Fortaleza, CE, BR</span>
+                </div>
+              </div>
+              {/* Remove duplicação: mantém apenas a tabela completa e os cards de resumo */}
+            </div>
+          )}
+        </div>
+      </div>
+      <SelectEventModal open={showSelectModal} onClose={() => setShowSelectModal(false)} onConfirm={handleSelectConfirm} />
+    </div>
+  );
+}

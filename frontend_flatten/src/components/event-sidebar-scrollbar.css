@@ -1,0 +1,30 @@
+/* Custom scrollbar for EventDetailsSidebar: thumb só aparece no hover */
+
+
+/* Barra de rolagem sobreposta, só thumb visível, sem alterar dimensões */
+.event-sidebar-scrollbar {
+  scrollbar-width: none; /* Firefox: oculta por padrão */
+}
+.event-sidebar-scrollbar:hover {
+  scrollbar-width: thin; /* Firefox: mostra thumb no hover */
+}
+.event-sidebar-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+  position: absolute;
+  z-index: 50;
+}
+.event-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.event-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #a5b4fc;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.event-sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+  pointer-events: auto;
+}
