@@ -1,4 +1,5 @@
 {
+  "description": "deploy-trigger: touch vercel.json to force Vercel to pick up rewrites (auto-generated)",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://fauves-backend-production.up.railway.app/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
