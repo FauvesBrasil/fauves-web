@@ -26,6 +26,18 @@ let finalEnvBase = envBase;
 if (isProd && !finalEnvBase) {
   finalEnvBase = DEFAULT_PROD_BACKEND;
 }
+// If the configured env base equals the current frontend origin (e.g. VERCEL set to the site URL),
+// ignore it because that causes the app to call itself (leading to 405). Use default backend instead.
+try {
+  if (typeof window !== 'undefined' && finalEnvBase) {
+    const origin = window.location.origin.replace(/\/$/, '');
+    const norm = finalEnvBase.replace(/\/$/, '');
+    if (norm === origin || norm.startsWith(origin + '/')) {
+      console.log('[apiBase] detected VITE_API_BASE pointing to frontend origin; switching to default backend');
+      finalEnvBase = DEFAULT_PROD_BACKEND;
+    }
+  }
+} catch (e) {}
 
 // Ordem montada dinamicamente
 const candidates: string[] = [];
