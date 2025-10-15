@@ -28,6 +28,46 @@ let finalEnvBase = envBase;
 if (isProd) {
   finalEnvBase = DEFAULT_PROD_BACKEND;
 }
+// Runtime fetch override: rewrite any relative /api requests to the known backend host
+// This ensures 3rd-party libraries or legacy calls that do direct fetch('/api/...')
+// are routed to the backend instead of being served by Vercel (index.html -> 405).
+if (typeof window !== 'undefined') {
+  try {
+    if (!((window as any).__apiFetchPatched) && window.location && window.location.hostname === 'app.fauves.com.br') {
+      const originalFetch = window.fetch.bind(window);
+      (window as any).__apiFetchPatched = true;
+      window.fetch = async (input: RequestInfo, init?: RequestInit) => {
+        try {
+          // Rewrite string URLs starting with /api or absolute same-origin /api
+          if (typeof input === 'string') {
+            if (input.startsWith('/api/') || input === '/api' || input.startsWith('/api?')) {
+              const rewritten = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + input;
+              console.log('[apiBase] fetch override: rewriting', input, '->', rewritten);
+              input = rewritten;
+            }
+            // also handle relative paths that start with './api' or without leading slash
+            else if (/^\.?\/?api\//.test(input)) {
+              const path = input.replace(/^\.?\//, '/');
+              const rewritten = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + path;
+              console.log('[apiBase] fetch override: rewriting', input, '->', rewritten);
+              input = rewritten;
+            }
+          } else if (input instanceof Request) {
+            const reqUrl = new URL(input.url, window.location.origin);
+            if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
+              const newUrl = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + reqUrl.pathname + reqUrl.search;
+              console.log('[apiBase] fetch override: rewriting Request ->', newUrl);
+              input = new Request(newUrl, input);
+            }
+          }
+        } catch (e) {
+          // swallow
+        }
+        return originalFetch(input as any, init);
+      };
+    }
+  } catch (e) {}
+}
 // If the configured env base equals the current frontend origin (e.g. VERCEL set to the site URL),
 // ignore it because that causes the app to call itself (leading to 405). Use default backend instead.
 try {
