@@ -86,9 +86,9 @@ const Index = () => {
       year: 'numeric',
     }) : 'Data não informada',
     location: ev.location || 'Local não informado',
-    image: ev.image && typeof ev.image === 'string' && ev.image.length > 5
+    image: ev.bannerUrl || ev.banner || (ev.image && typeof ev.image === 'string' && ev.image.length > 5
       ? ev.image
-      : 'https://via.placeholder.com/245x130?text=Sem+Imagem',
+      : 'https://via.placeholder.com/245x130?text=Sem+Imagem'),
   });
 
   // Mostrar todos os eventos sem filtro de data
