@@ -1,0 +1,58 @@
+const Footer: React.FC = () => {
+  const handleContactSupport = () => {
+    console.log('Contacting support...');
+  };
+  return (
+    <footer className="w-full bg-[rgba(9,23,71,0.05)] py-10 max-md:py-5 max-sm:py-[15px]">
+      <div className="max-w-[1080px] mx-auto px-5">
+        <div className="flex flex-row justify-between items-start mb-8 max-md:flex-col max-md:gap-5">
+          <div className="flex flex-col items-start max-w-[220px] w-full max-md:mb-8">
+            <h2 className="text-[rgba(9,23,71,0.50)] text-[38px] font-extrabold leading-tight w-[182px] h-[98px] mb-5 max-sm:text-[28px] max-sm:w-full max-sm:h-auto max-sm:mb-[15px]">
+              Precisa de ajuda?
+            </h2>
+            <button 
+              onClick={handleContactSupport}
+              className="w-44 h-[45px] flex items-center justify-center bg-[#2A2AD7] rounded-[31px] max-sm:w-full max-sm:max-w-[200px] hover:bg-[#0205D3] transition-colors"
+            >
+              <span className="text-white text-center text-[15px] font-bold">
+                Fale com a Fauves
+              </span>
+            </button>
+          </div>
+          <div className="flex flex-row gap-[80px] flex-wrap justify-end w-full max-md:justify-start max-md:gap-10">
+            <div className="flex flex-col items-start gap-1.5 min-w-[150px]">
+              <h3 className="h-8 text-[#091747] text-base font-extrabold">Institucional</h3>
+              <button className="text-[rgba(9,23,71,0.50)] text-sm font-normal hover:text-[#091747] transition-colors">Conhecer</button>
+              <button className="text-[rgba(9,23,71,0.50)] text-sm font-normal hover:text-[#091747] transition-colors">Marca</button>
+              <button className="text-[rgba(9,23,71,0.50)] text-sm font-normal hover:text-[#091747] transition-colors">Backstage</button>
+            </div>
+            <div className="flex flex-col items-start gap-1.5 min-w-[150px]">
+              <h3 className="h-8 text-[#091747] text-base font-extrabold">Termos</h3>
+              <button className="text-[rgba(9,23,71,0.50)] text-sm font-normal hover:text-[#091747] transition-colors">Lei da Meia-Entrada</button>
+              <button className="text-[rgba(9,23,71,0.50)] text-sm font-normal hover:text-[#091747] transition-colors">Termos de Serviço</button>
+              <button className="text-[rgba(9,23,71,0.50)] text-sm font-normal hover:text-[#091747] transition-colors">Termos de Privacidade</button>
+            </div>
+            <div className="flex flex-col items-start gap-1.5 min-w-[150px]">
+              <h3 className="h-8 text-[#091747] text-base font-extrabold">Segue a gente</h3>
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-[rgba(9,23,71,0.50)] text-sm font-normal hover:text-[#091747] transition-colors">Instagram</a>
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-[rgba(9,23,71,0.50)] text-sm font-normal hover:text-[#091747] transition-colors">Linkedin</a>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center pt-5 border-t-[#D5D5D5] border-t border-solid max-md:flex-col max-md:gap-[15px] max-md:text-center max-md:mt-5 max-sm:gap-2.5">
+          <img
+            src="https://api.builder.io/api/v1/image/assets/TEMP/c4c55f53d6583e6f046213e7141d64e0a960b5ef?width=160"
+            alt="LOGO"
+            className="w-20 h-[38px]"
+          />
+          <p className="text-[rgba(9,23,71,0.50)] text-right text-sm font-normal max-sm:text-center max-sm:text-xs">
+            © 2025 Fauves LTDA. 00.000.000/0000-00Fortaleza/CE
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;

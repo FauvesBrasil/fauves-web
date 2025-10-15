@@ -1,0 +1,31 @@
+/* Header.css - estilos básicos para o Header. Ajuste conforme necessário para o seu design final. */
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+.header-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1e1e1e;
+}
+.header-menu {
+  display: flex;
+  gap: 16px;
+}
+.header-menu-item {
+  background: none;
+  border: none;
+  color: #1e1e1e;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+.header-menu-item:hover {
+  background: #f0f0f0;
+}
