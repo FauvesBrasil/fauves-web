@@ -8,7 +8,7 @@ import EventsGrid from '@/components/EventsGrid';
 import Banner from '@/components/Banner';
 import Footer from '@/components/Footer';
 import { useEffect, useState } from 'react';
-import { fetchApi } from '@/lib/apiBase';
+import { fetchApi, apiUrl } from '@/lib/apiBase';
 import EventSlider, { EventSliderSlide } from '@/components/EventSlider';
 
 // OBS: removido supabase e spinner não utilizados; carregamento é puramente via backend /events
@@ -57,7 +57,12 @@ const Index = () => {
             });
             const slides: EventSliderSlide[] = sorted.slice(0, 5).map(ev => ({
               category: ev.name,
-              image: ev.bannerUrl || ev.image || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
+              image: ((): string => {
+                const candidate = ev.bannerUrl || ev.image;
+                if (!candidate) return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80';
+                if (typeof candidate === 'string' && candidate.startsWith('/uploads/')) return apiUrl(candidate);
+                return candidate;
+              })(),
               id: ev.id,
               slug: ev.slug,
             }));
@@ -86,9 +91,12 @@ const Index = () => {
       year: 'numeric',
     }) : 'Data não informada',
     location: ev.location || 'Local não informado',
-    image: ev.bannerUrl || ev.banner || (ev.image && typeof ev.image === 'string' && ev.image.length > 5
-      ? ev.image
-      : 'https://via.placeholder.com/245x130?text=Sem+Imagem'),
+    image: ((): string => {
+      const candidate = ev.bannerUrl || ev.banner || (ev.image && typeof ev.image === 'string' && ev.image.length > 5 ? ev.image : null);
+      if (!candidate) return 'https://via.placeholder.com/245x130?text=Sem+Imagem';
+      if (candidate.startsWith('/uploads/')) return apiUrl(candidate);
+      return candidate;
+    })(),
   });
 
   // Mostrar todos os eventos sem filtro de data
