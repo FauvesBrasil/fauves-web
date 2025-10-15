@@ -17,7 +17,7 @@ Pré-requisitos: Docker + Docker Compose.
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-# Ajuste DATABASE_URL e JWT_SECRET no backend/.env
+# Ajuste DATABASE_URL (Railway/Postgres) e JWT_SECRET no backend/.env
 
 docker compose build
 docker compose up -d
@@ -75,8 +75,11 @@ docker pull ghcr.io/<org>/fauves-backend:latest
 ```
 
 ---
-## 4. Banco de Dados / Prisma
-Aplicar migrações ao subir produção:
+
+# 4. Banco de Dados / Prisma
+Banco de dados: Railway/Postgres (usado em dev e produção)
+
+Aplicar migrações:
 ```bash
 npx prisma migrate deploy
 ```
@@ -91,8 +94,9 @@ npm run seed
 
 ---
 ## 5. Variáveis de Ambiente (Resumo)
+
 Backend:
-- DATABASE_URL=postgresql://user:pass@host:5432/db?schema=public
+- DATABASE_URL='postgresql://postgres:SijrFvZQJEsjVaqArYStTpCpYlPngLzV@caboose.proxy.rlwy.net:30638/railway?schema=public'
 - JWT_SECRET=chave-secreta
 - NODE_ENV=production
 - PORT=4000

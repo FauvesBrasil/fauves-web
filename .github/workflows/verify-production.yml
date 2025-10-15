@@ -1,0 +1,93 @@
+name: Verify Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      run-prod-checks:
+        description: 'Run checks against PROD_URL (true/false)'
+        required: false
+        default: 'true'
+  schedule:
+    - cron: '0 * * * *' # every hour
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      PROD_URL: ${{ secrets.PROD_URL }}
+      RAILWAY_URL: ${{ secrets.RAILWAY_URL }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - name: Setup
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y jq
+
+      - name: Verify PROD health and auth
+        if: ${{ github.event.inputs.run-prod-checks == 'true' || github.event_name == 'schedule' }}
+        run: |
+          set -euo pipefail
+          echo "PROD_URL=$PROD_URL"
+          if [ -z "$PROD_URL" ]; then
+            echo "PROD_URL not set, skipping prod checks"
+            exit 0
+          fi
+
+          now=$(date +%s)
+          echo "Checking $PROD_URL/api/health"
+          status=$(curl -s -o /dev/null -w "%{http_code}" "$PROD_URL/api/health" || true)
+          echo "health status: $status"
+          if [ "$status" != "200" ] && [ "$status" != "204" ]; then
+            echo "PROD health failed with $status"
+            failed=true
+          else
+            failed=false
+          fi
+
+          echo "Running register smoke test"
+          email="ci-smoke+$now@example.com"
+          body='{"email":"'$email'","password":"Password123!","name":"CI Smoke"}'
+          reg_status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$PROD_URL/api/auth/register" -H "Content-Type: application/json" -d "$body" || true)
+          echo "register status: $reg_status"
+          if [[ ! "$reg_status" =~ ^2 ]] && [ "$reg_status" != "409" ]; then
+            echo "Register smoke failed with $reg_status"
+            failed=true
+          fi
+
+          echo "Running login smoke test (using same email)"
+          login_body='{"email":"'$email'","password":"Password123!"}'
+          login_status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$PROD_URL/api/auth/login" -H "Content-Type: application/json" -d "$login_body" || true)
+          echo "login status: $login_status"
+          if [[ ! "$login_status" =~ ^2 ]] ; then
+            echo "Login smoke failed with $login_status"
+            failed=true
+          fi
+
+          if [ "$failed" = true ]; then
+            echo "One or more PROD checks failed"
+            if [ -n "$SLACK_WEBHOOK_URL" ]; then
+              payload=$(jq -n --arg p "$PROD_URL" --arg s1 "$status" --arg s2 "$reg_status" --arg s3 "$login_status" '{text: ("[Verify Production] Failures on " + $p + ": health=" + $s1 + ", register=" + $s2 + ", login=" + $s3)}')
+              curl -s -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL" || true
+            fi
+            exit 1
+          fi
+          echo "PROD checks passed"
+
+      - name: Verify Railway health
+        if: ${{ github.event.inputs.run-prod-checks == 'true' || github.event_name == 'schedule' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$RAILWAY_URL" ]; then
+            echo "RAILWAY_URL not set, skipping railway checks"
+            exit 0
+          fi
+          rstatus=$(curl -s -o /dev/null -w "%{http_code}" "$RAILWAY_URL/api/health" || true)
+          echo "railway health: $rstatus"
+          if [ "$rstatus" != "200" ] && [ "$rstatus" != "204" ]; then
+            echo "Railway health failed with $rstatus"
+            if [ -n "$SLACK_WEBHOOK_URL" ]; then
+              payload=$(jq -n --arg r "$RAILWAY_URL" --arg s "$rstatus" '{text: ("[Verify Production] Railway health failed on " + $r + ": status=" + $s)}')
+              curl -s -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL" || true
+            fi
+            exit 1
+          fi
+          echo "Railway checks passed"

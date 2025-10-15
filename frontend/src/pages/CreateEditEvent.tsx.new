@@ -1,0 +1,136 @@
+import * as React from "react";
+const { useState, useEffect, useRef } = React;
+import { HowItWorksModulesList } from "@/components/HowItWorksModulesList";
+import { HowItWorksModuleData } from "@/components/HowItWorksModule";
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
+import { LocationAutocomplete } from "@/components/LocationAutocomplete";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useUserOrganizations } from "@/hooks/useUserOrganizations";
+import { supabase } from "@/lib/supabaseClient";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import BomSaberHighlightsModal from '@/components/BomSaberHighlightsModal';
+import ProgramacaoExamplesModal from '../components/ProgramacaoExamplesModal';
+import SidebarMenu from "@/components/SidebarMenu";
+import EventDetailsSidebar from "@/components/EventDetailsSidebar";
+import AppHeader from "@/components/AppHeader";
+import CreateEditEventSkeleton from "@/components/skeletons/CreateEditEventSkeleton";
+import StepFlowOverlay from "@/components/overlays/StepFlowOverlay";
+import RequireOrganization from "@/components/RequireOrganization";
+import { apiUrl } from "@/lib/apiBase";
+
+function CreateEditEvent() {
+  // keep essential state; trimmed for syntactic correctness
+  const [eventName, setEventName] = useState('');
+  const [eventSubtitle, setEventSubtitle] = useState('');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [tempEventName, setTempEventName] = useState('');
+  const [tempEventSubtitle, setTempEventSubtitle] = useState('');
+  const [showProgramacao, setShowProgramacao] = useState(false);
+  const [showAgenda, setShowAgenda] = useState(false);
+  const [showBomSaber, setShowBomSaber] = useState(false);
+  const [programacaoItems, setProgramacaoItems] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [showCreateOrgModal, setShowCreateOrgModal] = useState(false);
+  const [showHighlightsModal, setShowHighlightsModal] = useState(false);
+  const [showProgramacaoExamples, setShowProgramacaoExamples] = useState(false);
+  const [organizerDropdownOpen, setOrganizerDropdownOpen] = useState(false);
+  const { orgs, loading: orgsLoading, refetch } = useUserOrganizations(true);
+  const organizerOptions = orgs && orgs.length > 0 ? orgs.map((org: any) => ({ id: org.id, name: org.name, avatar: org.logoUrl || null })) : [];
+  const [selectedOrganizer, setSelectedOrganizer] = useState<any>(organizerOptions[0] || null);
+  const fileInputRef = useRef<any>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!selectedOrganizer && organizerOptions.length > 0) setSelectedOrganizer(organizerOptions[0]);
+  }, [organizerOptions, selectedOrganizer]);
+
+  const addProgramacaoItem = () => setProgramacaoItems(prev => [...prev, { id: Math.random().toString(36).slice(2), name: '' }]);
+
+  return (
+    <div className="min-h-screen w-full bg-white flex relative">
+      <SidebarMenu />
+      <div className="flex-1 flex flex-col ml-[350px]">
+        <AppHeader />
+        <div className="p-8">
+          <div className="max-w-[900px]">
+            <form id="create-edit-event-form" onSubmit={e => e.preventDefault()}>
+              <div className="mb-4">
+                {!editingTitle ? (
+                  <div className="flex items-center justify-between p-4 border rounded">
+                    <div>
+                      <div className="font-bold text-2xl">{eventName || 'Nome do evento'}</div>
+                      <div className="text-sm text-gray-600">{eventSubtitle || 'Subtítulo do evento'}</div>
+                    </div>
+                    <div>
+                      <Button type="button" onClick={() => { setTempEventName(eventName); setTempEventSubtitle(eventSubtitle); setEditingTitle(true); }}>Editar</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 border rounded space-y-2">
+                    <label className="font-bold">Nome do evento</label>
+                    <Input value={tempEventName} onChange={e => setTempEventName((e.target as HTMLInputElement).value)} />
+                    <label className="font-bold">Subtítulo</label>
+                    <Input value={tempEventSubtitle} onChange={e => setTempEventSubtitle((e.target as HTMLInputElement).value)} />
+                    <div className="flex gap-2">
+                      <Button onClick={() => { setEventName(tempEventName); setEventSubtitle(tempEventSubtitle); setEditingTitle(false); }}>Salvar</Button>
+                      <Button variant="outline" onClick={() => { setTempEventName(eventName); setTempEventSubtitle(eventSubtitle); setEditingTitle(false); }}>Cancelar</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mb-4">
+                <div className="p-4 border rounded flex items-center justify-between">
+                  <div>
+                    <div className="font-bold">Como funciona</div>
+                    <div className="text-sm text-gray-600">Adicione módulos explicativos.</div>
+                  </div>
+                  <div>
+                    <Button type="button" onClick={() => setShowBomSaber(v => !v)}>{showBomSaber ? 'Fechar' : 'Editar'}</Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <div className="p-4 border rounded">
+                  <div className="flex gap-2">
+                    <Button type="button" onClick={() => setShowProgramacao(v => !v)}>{showProgramacao ? 'Remover Programação' : 'Adicionar Programação'}</Button>
+                    <Button type="button" onClick={() => setShowAgenda(v => !v)}>{showAgenda ? 'Remover Agenda' : 'Adicionar Agenda'}</Button>
+                  </div>
+
+                  {showProgramacao && (
+                    <div className="mt-4">
+                      <div className="font-bold">Programação</div>
+                      <div className="mt-2 space-y-3">
+                        {programacaoItems.map(item => (
+                          <div key={item.id} className="p-3 border rounded flex justify-between">
+                            <div>{item.name || 'Sem nome'}</div>
+                            <div>
+                              <Button variant="outline" onClick={() => setProgramacaoItems(prev => prev.filter(p => p.id !== item.id))}>Remover</Button>
+                            </div>
+                          </div>
+                        ))}
+                        <div>
+                          <Button onClick={addProgramacaoItem}>+ Adicionar</Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="fixed bottom-6 right-6">
+                <Button type="submit" form="create-edit-event-form">Salvar e continuar</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default CreateEditEvent;
