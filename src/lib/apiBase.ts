@@ -23,7 +23,9 @@ const isProd = import.meta.env.PROD;
 // This is a safe fallback during emergency; we can remove it once Vercel rewrites are stable.
 const DEFAULT_PROD_BACKEND = 'https://fauves-backend-production.up.railway.app';
 let finalEnvBase = envBase;
-if (isProd && !finalEnvBase) {
+// Emergency: in production, force the known Railway backend as authoritative to avoid
+// situations where VITE_API_BASE is misconfigured to the frontend origin and causes 405s.
+if (isProd) {
   finalEnvBase = DEFAULT_PROD_BACKEND;
 }
 // If the configured env base equals the current frontend origin (e.g. VERCEL set to the site URL),
