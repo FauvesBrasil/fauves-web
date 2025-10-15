@@ -83,21 +83,21 @@ export async function ensureApiBase(force = false): Promise<string> {
   // If an envBase is provided (build-time), prefer it. Previously we only auto-used it in production
   // to allow local development probes; but in hosted previews/envs we want to trust the build-time value
   // to avoid resolving to localhost. This reduces cases where the app tries http://localhost:4000 in deployed sites.
-  if (envBase) {
+  if (finalEnvBase) {
     // In production we trust the build-time env base. In development/preview, probe it briefly
     // and if it doesn't respond we fall back to probing candidates (localhost). This avoids
     // pointing the client to a VITE_API_BASE that is unreachable from the current environment.
     if (isProd) {
-      resolvedBase = envBase;
+      resolvedBase = finalEnvBase;
       console.log('[apiBase] using env VITE_API_BASE (production)');
       return resolvedBase;
     }
     // Non-production: probe the envBase quickly. If it responds, use it; otherwise continue resolution.
     try {
       // quick probe with a short timeout
-      const ok = await probe(envBase);
+      const ok = await probe(finalEnvBase);
       if (ok) {
-        resolvedBase = envBase;
+        resolvedBase = finalEnvBase;
         console.log('[apiBase] using env VITE_API_BASE (build-time)');
         return resolvedBase;
       }
