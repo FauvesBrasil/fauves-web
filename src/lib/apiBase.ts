@@ -18,15 +18,24 @@ if (/\/api$/i.test(_rawEnv)) {
 const envBase = _rawEnv || null;
 const isProd = import.meta.env.PROD;
 
+// Fallback production backend (hardcoded) to guarantee API calls work even if VITE_API_BASE
+// was not set in the build environment or Vercel rewrite is not yet applied.
+// This is a safe fallback during emergency; we can remove it once Vercel rewrites are stable.
+const DEFAULT_PROD_BACKEND = 'https://fauves-backend-production.up.railway.app';
+let finalEnvBase = envBase;
+if (isProd && !finalEnvBase) {
+  finalEnvBase = DEFAULT_PROD_BACKEND;
+}
+
 // Ordem montada dinamicamente
 const candidates: string[] = [];
 // In non-production prefer local candidates first and leave envBase as a last-resort candidate.
 if (stored && !candidates.includes(stored)) candidates.push(stored);
 ['http://localhost:4000','http://127.0.0.1:4000']
   .forEach(b => { if (!candidates.includes(b)) candidates.push(b); });
-if (envBase) {
-  if (isProd) candidates.unshift(envBase); // production: envBase is authoritative
-  else if (!candidates.includes(envBase)) candidates.push(envBase); // dev: keep envBase as fallback
+if (finalEnvBase) {
+  if (isProd) candidates.unshift(finalEnvBase); // production: envBase (or default) is authoritative
+  else if (!candidates.includes(finalEnvBase)) candidates.push(finalEnvBase); // dev: keep envBase as fallback
 }
 
 let resolvedBase: string | null = null; // base atual saudável
