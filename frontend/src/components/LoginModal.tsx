@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 import { ArrowLeft } from 'lucide-react';
 import LogoSquare from '@/assets/logo-square-fauves.svg?react';
 import GoogleIco from '@/assets/googleico.svg?react';
@@ -78,7 +79,24 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
   };
 
   const doGoogle = async () => {
-    alert('Login com Google ainda não implementado (placeholder)');
+    setError(null);
+    setLoading(true);
+    try {
+      if (!supabase) throw new Error('Supabase não configurado');
+      // Use current origin as redirect target so user returns to the app after OAuth
+      const redirectTo = window.location.origin + '/';
+      // supabase.auth.signInWithOAuth will redirect the browser to the provider
+      // If the client is not configured, this will throw earlier from our guarded client
+      const res: any = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+      if (res?.error) {
+        setError('Falha ao iniciar login com Google: ' + (res.error.message || String(res.error)));
+      }
+      // Note: normally the call redirects the browser, so code below may not run.
+    } catch (err: any) {
+      setError(String(err?.message || err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submitLogin = async (e?: React.FormEvent) => {
