@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { apiUrl } from '@/lib/apiBase';
 import { supabase } from '@/lib/supabaseClient';
 import { ArrowLeft } from 'lucide-react';
 import LogoSquare from '@/assets/logo-square-fauves.svg?react';
@@ -82,19 +83,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
     setError(null);
     setLoading(true);
     try {
-      if (!supabase) throw new Error('Supabase não configurado');
-      // Use current origin as redirect target so user returns to the app after OAuth
-      const redirectTo = window.location.origin + '/';
-      // supabase.auth.signInWithOAuth will redirect the browser to the provider
-      // If the client is not configured, this will throw earlier from our guarded client
-      const res: any = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
-      if (res?.error) {
-        setError('Falha ao iniciar login com Google: ' + (res.error.message || String(res.error)));
-      }
-      // Note: normally the call redirects the browser, so code below may not run.
+      // Start OAuth flow via backend which will redirect to Google and back to the app
+      // use apiUrl so we target the correct backend origin in production/previews
+      window.location.href = apiUrl('/api/auth/google');
     } catch (err: any) {
       setError(String(err?.message || err));
-    } finally {
       setLoading(false);
     }
   };
