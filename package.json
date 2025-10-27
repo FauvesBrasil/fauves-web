@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+  "dev": "vite",
+  "build": "npm --prefix frontend install && npm --prefix frontend run build && rm -rf dist && cp -r frontend/dist dist",
+  "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
   },
