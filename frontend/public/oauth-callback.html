@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>OAuth callback</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+  </head>
+  <body>
+    <script>
+      (function(){
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const token = params.get('auth_token') || params.get('token');
+          if (token) {
+            // If opened as a popup by the main app, postMessage the token and close
+            try {
+              if (window.opener && !window.opener.closed) {
+                // Prefer secure postMessage targetOrigin = opener origin if available
+                let target = window.location.origin;
+                try { target = window.opener.location && window.opener.location.origin || target; } catch(e) {}
+                window.opener.postMessage({ type: 'fauves_oauth', token }, target);
+                // Also persist to localStorage as a fallback
+                try { localStorage.setItem('AUTH_TOKEN_V1', token); } catch(e) {}
+                window.close();
+                return;
+              }
+            } catch(e) {}
+
+            // Not a popup (direct navigation) -> redirect to home with token still in query (AuthProvider will pick it up)
+            const home = '/?auth_token=' + encodeURIComponent(token);
+            window.location.replace(home);
+            return;
+          }
+        } catch (e) {}
+        // Nothing to do
+        document.body.innerText = 'OAuth callback received no token.';
+      })();
+    </script>
+  </body>
+</html>

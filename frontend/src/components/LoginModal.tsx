@@ -83,9 +83,44 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
     setError(null);
     setLoading(true);
     try {
-      // Start OAuth flow via backend which will redirect to Google and back to the app
-      // use apiUrl so we target the correct backend origin in production/previews
-      window.location.href = apiUrl('/api/auth/google');
+      // Open OAuth flow in a popup so user can finish Google consent without leaving the app
+      const oauthUrl = apiUrl('/api/auth/google');
+      const width = 600;
+      const height = 700;
+      const left = Math.max(0, Math.round((window.screen.width - width) / 2));
+      const top = Math.max(0, Math.round((window.screen.height - height) / 2));
+      const popup = window.open(oauthUrl, 'fauves_oauth', `toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=${width},height=${height},top=${top},left=${left}`);
+
+      if (!popup) {
+        // fallback to full redirect if popup blocked
+        window.location.href = oauthUrl;
+        return;
+      }
+
+      // Listen for postMessage from popup (oauth-callback.html)
+      const handler = (ev: MessageEvent) => {
+        try {
+          if (!ev.data || ev.data.type !== 'fauves_oauth' || !ev.data.token) return;
+          // Persist token and reload app so AuthProvider picks it up
+          try { window.localStorage.setItem('AUTH_TOKEN_V1', ev.data.token); } catch (e) {}
+          window.removeEventListener('message', handler);
+          try { popup.close(); } catch (e) {}
+          // reload to refresh auth state
+          window.location.reload();
+        } catch (e) {
+          console.warn('oauth message handler error', e);
+        }
+      };
+      window.addEventListener('message', handler);
+
+      // Safety: if popup is closed without message, cleanup listener and stop loading
+      const interval = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(interval);
+          window.removeEventListener('message', handler);
+          setLoading(false);
+        }
+      }, 500);
     } catch (err: any) {
       setError(String(err?.message || err));
       setLoading(false);
