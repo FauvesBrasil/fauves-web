@@ -17,8 +17,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Carrega token inicial
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(LS_TOKEN_KEY);
-      if (stored) setToken(stored);
+      // First, check if OAuth redirected with a token in the query string (e.g. ?auth_token=...)
+      const params = new URLSearchParams(window.location.search);
+      const authToken = params.get('auth_token') || params.get('token') || null;
+      if (authToken) {
+        try { window.localStorage.setItem(LS_TOKEN_KEY, authToken); } catch {}
+        setToken(authToken);
+        // remove token from URL without reloading
+        params.delete('auth_token'); params.delete('token');
+        const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
+        window.history.replaceState({}, '', newUrl);
+      } else {
+        const stored = window.localStorage.getItem(LS_TOKEN_KEY);
+        if (stored) setToken(stored);
+      }
     } catch {}
     setLoading(false);
   }, []);
