@@ -24,6 +24,7 @@ import CreateOrganization from "./pages/CreateOrganization";
 import EventPanel from "./pages/EventPanel";
 import OrganizerEvents from "./pages/OrganizerEvents";
 import PublicCollection from "./pages/PublicCollection";
+import OrganizationPublicProfile from "./pages/OrganizationPublicProfile";
 import OrdersManager from "./pages/OrdersManager";
 import MarketingTools from "./pages/MarketingTools";
 import MarketingLink from "./pages/MarketingLink";
@@ -86,6 +87,7 @@ const AppInner = () => {
           <Route path="/marketing/pixels" element={<MarketingPixels />} />
           <Route path="/marketing/pixels/:id" element={<MarketingPixels />} />
           <Route path="/colecoes/:slug" element={<PublicCollection />} />
+          <Route path="/org/:slug" element={<OrganizationPublicProfile />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/pix" element={<CheckoutPix />} />
           <Route path="/organizer-settings" element={<OrganizerSettingsPage />} />

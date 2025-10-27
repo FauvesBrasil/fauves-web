@@ -22,7 +22,7 @@ export default function MarketingLink(){
   const [eventName, setEventName] = useState('Nome do evento');
   const [eventDate, setEventDate] = useState('Data não definida');
   const [eventStatus, setEventStatus] = useState<'Rascunho' | 'Publicado'>('Rascunho');
-  const [showGoogleAdsModal, setShowGoogleAdsModal] = useState(false);
+  // removed Google Ads modal state
 
   // load event info
   useEffect(() => {
@@ -124,7 +124,7 @@ export default function MarketingLink(){
   const { totalLeft } = useLayoutOffsets();
 
   return (
-    <div className="min-h-screen bg-white w-full">
+  <div className="min-h-screen bg-white dark:bg-[#0b0b0b] w-full">
       {/* Fixed main sidebar */}
       <SidebarMenu />
 
@@ -149,24 +149,22 @@ export default function MarketingLink(){
       {/* Content with left margin for both sidebars */}
       <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 min-h-screen relative">
         <div className="mt-24 max-w-4xl">
-          <h1 className="text-3xl font-bold text-indigo-950 mb-3">Link de Rastreamento</h1>
-          <p className="text-sm text-gray-600 mb-6">Use links personalizados para monitorar o sucesso de seus e-mails promocionais, folhetos e muito mais.</p>
+          <h1 className="text-3xl font-bold text-indigo-950 dark:text-white mb-3">Link de Rastreamento</h1>
+          <p className="text-sm text-gray-600 dark:text-slate-300 mb-6">Use links personalizados para monitorar o sucesso de seus e-mails promocionais, folhetos e muito mais.</p>
 
-          <div className="mb-8">
-            <Button onClick={() => setShowGoogleAdsModal(true)} variant="outline" className="mr-2">Adicionar Pixel Google Ads</Button>
-          </div>
+          {/* removed Google Ads Pixel button (not needed) */}
 
           {links.length === 0 ? (
-            <div className="bg-white border border-zinc-200 rounded-xl p-6">
-              <h2 className="text-xl font-semibold mb-4">Utilize o campo a seguir para criar um novo link de rastreamento:</h2>
+            <div className="bg-white border border-zinc-200 rounded-xl p-6 dark:bg-[#242424] dark:border-[#1F1F1F]">
+              <h2 className="text-xl font-semibold mb-4 dark:text-white">Utilize o campo a seguir para criar um novo link de rastreamento:</h2>
 
-              <label className="block text-sm mb-2">Nome Do Seu Link De Rastreamento:</label>
-              <Input value={alias} onChange={e => setAlias((e.target as HTMLInputElement).value)} placeholder="affiliate1" className="mb-3" />
-              <div className="text-xs text-gray-500 mb-4">São permitidos apenas letras e números. (Exemplos: comprasespecial, apenasmembros, dc121232, etc.)</div>
+              <label className="block text-sm mb-2 dark:text-slate-300">Nome Do Seu Link De Rastreamento:</label>
+              <Input value={alias} onChange={e => setAlias((e.target as HTMLInputElement).value)} placeholder="affiliate1" className="mb-3 dark:bg-[#121212] dark:border-transparent dark:text-white" />
+              <div className="text-xs text-gray-500 dark:text-slate-300 mb-4">São permitidos apenas letras e números. (Exemplos: comprasespecial, apenasmembros, dc121232, etc.)</div>
 
-              <label className="block text-sm mb-2">Enviar Este Link Para Seus AFILIADOS:</label>
+              <label className="block text-sm mb-2 dark:text-slate-300">Enviar Este Link Para Seus AFILIADOS:</label>
               <div className="flex gap-2 items-center">
-                <Input value={generated} readOnly className="flex-1" />
+                <Input value={generated} readOnly className="flex-1 dark:bg-[#121212] dark:border-transparent dark:text-white" />
                 <Button onClick={() => { navigator.clipboard?.writeText(generated); setCopied(true); setTimeout(() => setCopied(false), 1500); }} variant="ghost">{copied ? 'Copiado' : 'Copiar'}</Button>
               </div>
 
@@ -174,15 +172,15 @@ export default function MarketingLink(){
                 <Button onClick={handleCreate}>Criar Link</Button>
               </div>
 
-              <div className="mt-6 text-sm text-gray-600 inline-flex items-center gap-2"><svg className="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg> <a className="text-indigo-700 underline" href="https://help.example.com">Learn more about tracking links</a></div>
+              <div className="mt-6 text-sm text-gray-600 dark:text-slate-300 inline-flex items-center gap-2"><svg className="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg> <a className="text-indigo-700 underline dark:text-white" href="https://help.example.com">Learn more about tracking links</a></div>
             </div>
           ) : (
             <>
-              <div className="bg-white border border-zinc-200 rounded-xl p-6">
+              <div className="bg-white border border-zinc-200 rounded-xl p-6 dark:bg-[#242424] dark:border-[#1F1F1F]">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-sm font-semibold">Ver</div>
+                  <div className="text-sm font-semibold dark:text-white">Ver</div>
                   <div>
-                    <select className="border rounded px-3 py-2">
+                    <select className="border rounded px-3 py-2 dark:bg-[#121212] dark:border-transparent dark:text-white">
                       <option>Todos</option>
                       <option>Ontem</option>
                       <option>Últimos 7 dias</option>
@@ -193,7 +191,7 @@ export default function MarketingLink(){
 
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-zinc-500 border-b">
+                    <tr className="text-left text-xs text-zinc-500 border-b dark:text-slate-300 dark:border-[#1F1F1F]">
                       <th className="py-3">Nome Do Link</th>
                       <th className="py-3">Visualizações de página</th>
                       <th className="py-3">Ingressos Vendidos</th>
@@ -203,19 +201,19 @@ export default function MarketingLink(){
                   </thead>
                   <tbody>
                     {links.map(link => (
-                      <tr key={link.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3"><a className="text-indigo-700 underline" href={link.url} target="_blank" rel="noreferrer">{link.alias}</a></td>
-                        <td className="py-3">{link.views}</td>
-                        <td className="py-3">{link.sold}</td>
-                        <td className="py-3">R${String(link.revenue.toFixed(2)).replace('.',',')}</td>
+                      <tr key={link.id} className="border-b hover:bg-gray-50 dark:border-[#1F1F1F] dark:hover:bg-[#1F1F1F]">
+                        <td className="py-3"><a className="text-indigo-700 underline dark:text-white" href={link.url} target="_blank" rel="noreferrer">{link.alias}</a></td>
+                        <td className="py-3 dark:text-slate-300">{link.views}</td>
+                        <td className="py-3 dark:text-slate-300">{link.sold}</td>
+                        <td className="py-3 dark:text-slate-300">R${String(link.revenue.toFixed(2)).replace('.',',')}</td>
                         <td className="py-3 text-right">
                           <div className="inline-flex items-center relative overflow-visible">
-                            <button data-action-toggle onClick={() => setActiveMenu(link.id)} className="px-3 py-2 border rounded">Ações rápidas...</button>
+                            <button data-action-toggle onClick={() => setActiveMenu(link.id)} className="px-3 py-2 border rounded dark:text-white">Ações rápidas...</button>
                             {activeMenu === link.id && (
-                              <div data-action-menu className="absolute right-0 mt-10 w-48 bg-white border rounded shadow z-50 pointer-events-auto">
-                                <div className="p-2 cursor-pointer hover:bg-gray-50" onClick={() => handleCopyRow(link.url)}>Copiar link</div>
-                                <div className="p-2 cursor-pointer hover:bg-gray-50">Relatório de links de rastreamento</div>
-                                <div className="p-2 cursor-pointer hover:bg-gray-50 text-red-600" onClick={() => handleDeleteRow(link.id)}>Apagar link</div>
+                              <div data-action-menu className="absolute right-0 mt-10 w-48 bg-white border rounded shadow z-50 pointer-events-auto dark:bg-[#242424] dark:border-[#1F1F1F]">
+                                <div className="p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1F1F1F]" onClick={() => handleCopyRow(link.url)}>Copiar link</div>
+                                <div className="p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1F1F1F]">Relatório de links de rastreamento</div>
+                                <div className="p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1F1F1F] text-red-600" onClick={() => handleDeleteRow(link.id)}>Apagar link</div>
                               </div>
                             )}
                           </div>
@@ -230,13 +228,13 @@ export default function MarketingLink(){
                 </div>
 
                 {showCreateBelow && (
-                  <div className="mt-6 border-t pt-6">
-                    <h3 className="text-lg font-semibold mb-3">Criar link</h3>
-                    <label className="block text-sm mb-2">Nome Do Seu Link De Rastreamento:</label>
-                    <Input value={alias} onChange={e => setAlias((e.target as HTMLInputElement).value)} placeholder="affiliate1" className="mb-3" />
-                    <div className="text-xs text-gray-500 mb-4">São permitidos apenas letras e números.</div>
+                  <div className="mt-6 border-t pt-6 dark:border-[#1F1F1F]">
+                    <h3 className="text-lg font-semibold mb-3 dark:text-white">Criar link</h3>
+                    <label className="block text-sm mb-2 dark:text-slate-300">Nome Do Seu Link De Rastreamento:</label>
+                    <Input value={alias} onChange={e => setAlias((e.target as HTMLInputElement).value)} placeholder="affiliate1" className="mb-3 dark:bg-[#121212] dark:border-transparent dark:text-white" />
+                    <div className="text-xs text-gray-500 dark:text-slate-300 mb-4">São permitidos apenas letras e números.</div>
                     <div className="flex gap-2 items-center mb-4">
-                      <Input value={generated} readOnly className="flex-1" />
+                      <Input value={generated} readOnly className="flex-1 dark:bg-[#121212] dark:border-transparent dark:text-white" />
                       <Button onClick={() => { navigator.clipboard?.writeText(generated); setCopied(true); setTimeout(() => setCopied(false), 1500); }} variant="ghost">{copied ? 'Copiado' : 'Copiar'}</Button>
                     </div>
                     <div>

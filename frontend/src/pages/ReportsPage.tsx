@@ -62,18 +62,18 @@ function OrganizerReportsPage() {
     navigate('/organizer-reports/sales');
   };
   return (
-    <div className="relative min-h-screen w-full bg-white flex justify-center items-start">
+    <div className="relative min-h-screen w-full bg-white dark:bg-[#0b0b0b] flex justify-center items-start">
       <SidebarMenu />
-      <div className="rounded-3xl w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
+    <div className="rounded-3xl w-[1352px] min-h-screen bg-white dark:bg-[#0b0b0b] dark:border-[#1F1F1F] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
         <AppHeader />
-        <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4 pb-32">
-          <h1 className="text-5xl font-extrabold text-[#231942] mb-8">Relatórios</h1>
-          <div className="flex items-center gap-6 border-b border-zinc-200 -mb-2">
+  <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4">
+          <h1 className="text-5xl font-extrabold text-[#231942] dark:text-white mb-8">Relatórios</h1>
+          <div className="flex items-center gap-6 border-b border-zinc-200 dark:border-[#1F1F1F] -mb-2">
             {tabs.map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
-                className={`pb-2 text-base font-bold transition ${activeTab === i ? 'border-b-2 border-indigo-600 text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`pb-2 text-base font-bold transition ${activeTab === i ? 'border-b-2 border-indigo-600 text-indigo-700 dark:border-white dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-300 hover:dark:text-white'}`}
               >
                 {tab}
               </button>
@@ -81,21 +81,21 @@ function OrganizerReportsPage() {
           </div>
           {sections.map((section, idx) => (
             <div key={section.title} className="mb-12">
-              <h2 className="text-2xl font-bold text-[#231942] mb-2">{section.title}</h2>
-              <p className="text-[#231942] mb-6 text-base">{section.description}</p>
+              <h2 className="text-2xl font-bold text-[#231942] dark:text-white mb-2">{section.title}</h2>
+              <p className="text-[#231942] dark:text-slate-300 mb-6 text-base">{section.description}</p>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {section.items.map((item, i) => (
                   <div
                     key={item.title}
-                    className={`bg-white rounded-xl shadow-sm border px-6 py-5 flex flex-col gap-2 relative${['Pedidos','Vendas'].includes(item.title) ? ' cursor-pointer' : ''}`}
+                    className={`bg-white dark:bg-[#242424] rounded-xl shadow-sm border dark:border-[#1F1F1F] px-6 py-5 flex flex-col gap-2 relative${['Pedidos','Vendas'].includes(item.title) ? ' cursor-pointer' : ''}`}
                     onClick={item.title === 'Pedidos' ? handlePedidosClick : item.title === 'Vendas' ? handleVendasClick : undefined}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#231942]" style={{ fontSize: 18 }}>{item.title}</span>
-                      {item.tag && <span className="px-3 py-1 text-xs font-bold rounded-xl bg-green-50 text-green-700 border border-green-200">Novo</span>}
-                      {item.icon && <span className="ml-2">{item.icon}</span>}
+                      <span className="font-bold text-[#231942] dark:text-white" style={{ fontSize: 18 }}>{item.title}</span>
+                      {item.tag && <span className="px-3 py-1 text-xs font-bold rounded-xl bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-800">Novo</span>}
+                      {item.icon && <span className="ml-2">{React.cloneElement(item.icon as any, { className: `${(item.icon as any).props.className || ''} dark:text-white` })}</span>}
                     </div>
-                    <span className="text-[#231942]" style={{ fontSize: 12 }}>{item.desc}</span>
+                    <span className="text-[#231942] dark:text-slate-300" style={{ fontSize: 12 }}>{item.desc}</span>
                   </div>
                 ))}
               </div>

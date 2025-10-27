@@ -67,6 +67,12 @@ export default function CheckoutPix() {
       const res = await fetch(`/api/orders/${orderId}`);
       const json = await res.json();
       if (json.error) {
+        // backend may require userId/userEmail for this endpoint; don't fail the public checkout page on that.
+        // If it's the specific authorization message, ignore and return (we'll still show PIX intent).
+        if (String(json.error).toLowerCase().includes('userid or useremail required') || String(json.error).toLowerCase().includes('userId or userEmail required'.toLowerCase())) {
+          // don't set global error for this specific case
+          return;
+        }
         setError(json.error);
         return;
       }

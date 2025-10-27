@@ -295,7 +295,18 @@ const OrganizerEvents: React.FC = () => {
   const addEventToCollection = async (collectionId: string, eventId: string) => {
     await ensureApiBase();
     const attempts = [apiUrl(`/api/collection/${collectionId}/events`), `http://localhost:4000/api/collection/${collectionId}/events`];
-    for (const u of attempts) { try { await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId }) }); break; } catch {} }
+    for (const u of attempts) {
+      try {
+        const res = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId }) });
+        let json: any = null;
+        try { json = await res.json(); } catch (_) {}
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        return json;
+      } catch (e) {
+        // try next
+      }
+    }
+    throw new Error('Falha ao adicionar evento à coleção (todas as tentativas falharam)');
   };
   const removeEventFromCollection = async (collectionId: string, eventId: string) => {
     await ensureApiBase();
@@ -376,7 +387,7 @@ const OrganizerEvents: React.FC = () => {
                                 <div>
                                   <div className="text-[15px] text-slate-900 font-semibold leading-tight mb-0.5">{ev.name || 'Sem nome'}</div>
                                   <div className="text-slate-500 text-[11px]">{formatDate(ev.startDate)}</div>
-                                  <div className="text-red-500 text-[11px] font-medium mt-0.5">{ev.privacy === 'public' ? 'Público' : 'Privado'}</div>
+                                  <div className={`text-[11px] font-medium mt-0.5 ${ev.privacy === 'public' ? 'text-[#2A2AD7]' : 'text-[#EF4118]'}`}>{ev.privacy === 'public' ? 'Público' : 'Privado'}</div>
                                 </div>
                               </div>
                             </td>

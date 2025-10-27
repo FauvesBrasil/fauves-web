@@ -97,12 +97,12 @@ const AccountSettings: React.FC = () => {
   if (loading || loadingData) return <AccountSettingsSkeleton />;
   if (error) {
     return (
-      <div className="min-h-screen bg-white relative">
+      <div className="min-h-screen bg-white dark:bg-[#0b0b0b] dark:text-white relative">
         <Header />
         <div className="flex-1 flex flex-col items-center justify-start py-20 px-6">
-          <div className="max-w-md w-full bg-white border border-gray-200 rounded-xl shadow p-8 text-center">
-            <p className="text-[#091747] font-semibold mb-2">Não foi possível carregar as configurações</p>
-            <p className="text-sm text-gray-600 mb-6">{error}</p>
+          <div className="max-w-md w-full bg-white dark:bg-[#0b0b0b] border border-gray-200 dark:border-[#1F1F1F] rounded-xl shadow p-8 text-center">
+            <p className="text-[#091747] dark:text-white font-semibold mb-2">Não foi possível carregar as configurações</p>
+            <p className="text-sm text-gray-600 dark:text-slate-400 mb-6">{error}</p>
             {error === 'Usuário não autenticado' ? (
               <button
                 onClick={() => setShowLogin(true)}
@@ -188,15 +188,15 @@ const AccountSettings: React.FC = () => {
       MainContent = (
         <>
           <div className="flex justify-between items-center mb-2">
-            <h1 className="text-3xl font-bold text-[#091747]">Informações da conta</h1>
-            <span className="text-sm text-[#091747] opacity-70">
+            <h1 className="text-3xl font-bold text-[#091747] dark:text-white">Informações da conta</h1>
+            <span className="text-sm text-[#091747] dark:text-white opacity-70">
               Conta criada em: {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '--'}
             </span>
           </div>
           <hr className="my-6 border-gray-200" />
           {/* Foto do perfil */}
           <div className="mb-8">
-            <h2 className="text-lg font-bold text-[#091747] mb-3">Foto do perfil</h2>
+            <h2 className="text-lg font-bold text-[#091747] dark:text-white mb-3">Foto do perfil</h2>
             <div className="flex gap-6 items-center">
               <div
                 className="relative group w-[140px] h-[140px] bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors hover:border-[#2A2AD7]"
@@ -256,7 +256,7 @@ const AccountSettings: React.FC = () => {
                     }}
                   />
                 </div>
-                <p className="text-sm text-[#091747] opacity-80 max-w-[340px]">Clique ou arraste uma imagem quadrada. Máx 5MB. <a href="#" className="text-[#2A2AD7] underline">Saiba mais</a></p>
+                <p className="text-sm text-[#091747] dark:text-white opacity-80 max-w-[340px]">Clique ou arraste uma imagem quadrada. Máx 5MB. <a href="#" className="text-[#2A2AD7] underline">Saiba mais</a></p>
               </div>
               <div className="mt-3 min-h-[18px]">
                 {uploadError && <span className="text-xs text-red-600">{uploadError}</span>}
@@ -264,21 +264,21 @@ const AccountSettings: React.FC = () => {
               </div>
             </div>
             {/* Informações do usuário */}
-            <h2 className="text-lg font-bold text-[#091747] mb-3 mt-8">Informações do usuário</h2>
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <input type="text" placeholder="Nome" value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
-              <input type="text" placeholder="Sobrenome" value={editData.surname} onChange={e => setEditData({ ...editData, surname: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
+            <h2 className="text-lg font-bold text-[#091747] dark:text-white mb-3 mt-8">Informações do usuário</h2>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+              <input type="text" placeholder="Nome" value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
+              <input type="text" placeholder="Sobrenome" value={editData.surname} onChange={e => setEditData({ ...editData, surname: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
             </div>
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <input type="date" placeholder="Nascimento" value={editData.birth} onChange={e => setEditData({ ...editData, birth: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
-              <input type="text" placeholder="Celular" value={editData.phone} onChange={e => setEditData({ ...editData, phone: maskPhone(e.target.value) })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
+              <input type="date" placeholder="Nascimento" value={editData.birth} onChange={e => setEditData({ ...editData, birth: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
+              <input type="text" placeholder="Celular" value={editData.phone} onChange={e => setEditData({ ...editData, phone: maskPhone(e.target.value) })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
             </div>
             <div className="mb-6">
-              <input type="text" placeholder="CPF" value={editData.cpf} disabled={cpfLocked} onChange={e => setEditData({ ...editData, cpf: maskCPF(e.target.value) })} className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${cpfLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`} />
+              <input type="text" placeholder="CPF" value={editData.cpf} disabled={cpfLocked} onChange={e => setEditData({ ...editData, cpf: maskCPF(e.target.value) })} className={`w-full border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${cpfLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
               {cpfLocked && <p className="text-xs text-gray-500 mt-1">CPF já cadastrado e não pode ser alterado.</p>}
             </div>
             {/* Endereço */}
-            <h2 className="text-lg font-bold text-[#091747] mb-3 mt-8">Endereço</h2>
+            <h2 className="text-lg font-bold text-[#091747] dark:text-white mb-3 mt-8">Endereço</h2>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="relative col-span-1">
                 <input type="text" placeholder="CEP" value={editData.cep} disabled={addressLocked}
@@ -290,21 +290,21 @@ const AccountSettings: React.FC = () => {
                       if (raw.length === 8) fetchCEP(masked);
                     }
                   }}
-                  className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  className={`w-full border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`}
                 />
                 {cepStatus === 'loading' && <span className="absolute right-3 top-2 text-xs text-gray-500">Buscando...</span>}
                 {cepStatus === 'error' && <span className="absolute right-3 top-2 text-xs text-red-500">CEP inválido</span>}
                 {cepStatus === 'filled' && !addressLocked && <span className="absolute right-3 top-2 text-xs text-green-600">OK</span>}
               </div>
-              <input type="text" placeholder="Endereço" value={editData.address} disabled={addressLocked} onChange={e => setEditData({ ...editData, address: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`} />
+              <input type="text" placeholder="Endereço" value={editData.address} disabled={addressLocked} onChange={e => setEditData({ ...editData, address: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
             </div>
             <div className="mb-6">
-              <input type="text" placeholder="Complemento" value={editData.complement} onChange={e => setEditData({ ...editData, complement: e.target.value })} className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
+              <input type="text" placeholder="Complemento" value={editData.complement} onChange={e => setEditData({ ...editData, complement: e.target.value })} className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
             </div>
             <div className="grid grid-cols-3 gap-4 mb-8">
-              <input type="text" placeholder="Cidade" value={editData.city} disabled={addressLocked} onChange={e => setEditData({ ...editData, city: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`} />
-              <input type="text" placeholder="Estado" value={editData.state} disabled={addressLocked} onChange={e => setEditData({ ...editData, state: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`} />
-              <input type="text" placeholder="País" value={editData.country} disabled={addressLocked} onChange={e => setEditData({ ...editData, country: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 cursor-not-allowed' : ''}`} />
+              <input type="text" placeholder="Cidade" value={editData.city} disabled={addressLocked} onChange={e => setEditData({ ...editData, city: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
+              <input type="text" placeholder="Estado" value={editData.state} disabled={addressLocked} onChange={e => setEditData({ ...editData, state: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
+              <input type="text" placeholder="País" value={editData.country} disabled={addressLocked} onChange={e => setEditData({ ...editData, country: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
             </div>
             <div className="flex justify-end mt-6">
               <button
@@ -388,25 +388,27 @@ const AccountSettings: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-[#0b0b0b] dark:text-white">
       <Header />
       <div className="flex">
         {/* Sidebar */}
-        <div className="w-[280px] h-[100vh] bg-gray-50 border-r border-gray-100 max-md:w-[250px] max-sm:hidden">
+        <div className="w-[280px] h-[100vh] bg-gray-50 dark:bg-[#0b0b0b] border-r border-gray-100 dark:border-[#1F1F1F] max-md:w-[250px] max-sm:hidden">
           <div className="flex flex-col">
             <div className="flex flex-col gap-11 items-start p-8 pt-5">
               {menuItems.map((item) => (
                 <div key={item} className="flex justify-between items-center w-full">
                   <button
                     onClick={() => setActiveMenuItem(item)}
-                    className={`text-sm font-bold text-left ${
-                      activeMenuItem === item ? "text-[#2A2AD7]" : "text-[#091747]"
-                    } hover:text-[#2A2AD7] transition-colors`}
+                    className={`w-full text-sm font-bold text-left px-3 py-2 rounded transition-colors ${
+                      activeMenuItem === item
+                        ? 'text-[#2A2AD7] dark:text-[#EF4118] bg-gray-100 dark:bg-[#242424]'
+                        : 'text-[#091747] dark:text-white hover:text-[#2A2AD7] dark:hover:text-[#EF4118] hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
+                    }`}
                   >
                     {item}
                   </button>
                   {item === "FacePass" && (
-                    <AlertTriangle className="w-4 h-4 text-[#F9C900]" />
+                    <AlertTriangle className="w-4 h-4 text-[#F9C900] ml-2" />
                   )}
                 </div>
               ))}
@@ -414,8 +416,8 @@ const AccountSettings: React.FC = () => {
           </div>
         </div>
         {/* Conteúdo dinâmico */}
-        <div className="flex-1 flex justify-center items-start py-12 px-8 bg-[#F8F7FA]">
-          <div className="w-full max-w-[700px] bg-white rounded-3xl shadow-xl p-10 border border-gray-100">
+        <div className="flex-1 flex justify-center items-start py-12 px-8 bg-[#F8F7FA] dark:bg-[#0b0b0b]">
+          <div className="w-full max-w-[700px] bg-white dark:bg-[#0b0b0b] rounded-3xl shadow-xl p-10 border border-gray-100 dark:border-[#1F1F1F]">
             {MainContent}
           </div>
         </div>

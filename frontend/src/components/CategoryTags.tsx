@@ -107,8 +107,8 @@ const CategoryTags: React.FC<CategoryTagsProps> = ({
               onClick={() => toggleCategory(category)}
               className={`flex h-[40px] justify-center items-center px-6 py-2 rounded-full flex-shrink-0 transition-colors ${
                 selectedCategories.includes(category)
-                  ? 'bg-[#FFE5DF] text-[#EF4118] hover:bg-[#d63614] hover:text-white'
-                  : 'bg-[#FFE5DF] text-[#EF4118] hover:bg-[#d63614] hover:text-white'
+                  ? 'bg-[#FFE5DF] text-[#EF4118] hover:bg-[#d63614] hover:text-white dark:bg-[#24130F]'
+                  : 'bg-[#FFE5DF] text-[#EF4118] hover:bg-[#d63614] hover:text-white dark:bg-[#24130F]'
               }`}
             >
               <span className="text-sm font-bold whitespace-nowrap">
@@ -120,10 +120,10 @@ const CategoryTags: React.FC<CategoryTagsProps> = ({
       </div>
       {/* Fade overlays dinâmicos */}
       <div
-        className={`absolute left-0 top-0 bottom-2 w-12 pointer-events-none transition-opacity duration-300 bg-gradient-to-r from-white via-white/80 to-transparent ${showLeftFade ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute left-0 top-0 bottom-2 w-12 pointer-events-none transition-opacity duration-300 bg-gradient-to-r from-white via-white/80 to-transparent dark:from-[#24130F] dark:via-[#24130F]/80 ${showLeftFade ? 'opacity-100' : 'opacity-0'}`}
       ></div>
       <div
-        className={`absolute right-0 top-0 bottom-2 w-12 pointer-events-none transition-opacity duration-300 bg-gradient-to-l from-white via-white/80 to-transparent ${showRightFade ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute right-0 top-0 bottom-2 w-12 pointer-events-none transition-opacity duration-300 bg-gradient-to-l from-white via-white/80 to-transparent dark:from-[#24130F] dark:via-[#24130F]/80 ${showRightFade ? 'opacity-100' : 'opacity-0'}`}
       ></div>
     </div>
   );

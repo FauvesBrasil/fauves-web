@@ -11,6 +11,7 @@ interface TicketType {
   name: string;
   price: number;
   available: number;
+  isHalf?: boolean;
 }
 
 interface SelectedTicket extends TicketType {
@@ -143,7 +144,14 @@ const TicketSelectionModal: React.FC<TicketSelectionModalProps & { debug?: boole
                       >
                         <div className="flex gap-10 justify-between items-center w-full">
                           <div className="self-stretch my-auto text-lg font-semibold text-indigo-950 w-[160px] min-w-[120px] max-w-[200px] break-words">
-                            <div className="whitespace-normal leading-snug">{ticket.name}</div>
+                            <div className="flex items-center gap-2 whitespace-normal leading-snug">
+                              <div>{ticket.name}</div>
+                              {ticket.isHalf && (
+                                <span className="inline-block text-xs bg-indigo-100 text-indigo-800 font-semibold rounded-md px-2 py-0.5">
+                                  Meia-entrada
+                                </span>
+                              )}
+                            </div>
                             <div className="mt-5">{formatPrice(ticket.price)}</div>
                           </div>
                           <div className="self-stretch my-auto w-[103px] flex flex-col items-end">

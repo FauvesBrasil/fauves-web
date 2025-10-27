@@ -13,10 +13,10 @@ const ChangePassword: React.FC = () => {
   const strength = getPasswordStrength(password);
   return (
     <>
-      <h1 className="text-3xl font-bold text-[#091747] mb-2">A sua senha</h1>
+  <h1 className="text-3xl font-bold text-[#091747] dark:text-white mb-2">A sua senha</h1>
       <hr className="my-6 border-gray-200" />
       <form className="flex flex-col gap-4">
-        <label className="text-base font-bold text-[#091747] mb-2">Defina uma nova senha.</label>
+  <label className="text-base font-bold text-[#091747] dark:text-white mb-2">Defina uma nova senha.</label>
         <input type="password" placeholder="Senha atual *" className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
         <input type="password" placeholder="Nova senha *" className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" value={password} onChange={e => setPassword(e.target.value)} />
         <input type="password" placeholder="Confirmar senha *" className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
@@ -24,7 +24,7 @@ const ChangePassword: React.FC = () => {
           <div className="w-40 h-2 rounded bg-gray-200 overflow-hidden">
             <div style={{ width: `${strength.value}%`, background: strength.color }} className="h-2 rounded transition-all"></div>
           </div>
-          <span className="text-xs text-[#091747] font-semibold">{strength.label}</span>
+          <span className="text-xs text-[#091747] dark:text-white font-semibold">{strength.label}</span>
         </div>
         <button type="submit" className="bg-[#2A2AD7] text-white font-bold px-8 py-3 rounded-lg text-base shadow hover:bg-[#091747] transition-colors mt-4">Alterar senha</button>
       </form>

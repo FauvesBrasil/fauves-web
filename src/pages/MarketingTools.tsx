@@ -1,5 +1,23 @@
-// Diagnóstico de equipe do evento
-const EquipeDiagnostics: React.FC<{ eventId: string, visibleEvents: EventLite[] }> = ({ eventId, visibleEvents }) => {
+// MarketingTools (clean production baseline) - all debug & test artifacts removed
+import React, { useEffect, useRef, useState } from 'react';
+import { fetchApi, ensureApiBase, apiUrl } from '@/lib/apiBase';
+import SidebarMenu from '@/components/SidebarMenu';
+import AppHeader from '@/components/AppHeader';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose, DrawerTrigger, DrawerDescription } from '@/components/ui/drawer';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+// lightweight fallback for the X icon to avoid optional dependency on lucide-react
+const XIcon: React.FC<{className?:string}> = ({ className }) => (<span className={className}>✕</span>);
+import { useOrganization } from '@/context/OrganizationContext';
+
+interface EventLite { id:string; name:string; startDate?:string|null }
+interface CampaignRow { id:string; name:string; status:'rascunho'|'agendado'|'enviado'; openRate?:number|null; clickRate?:number|null }
+interface CouponRow { id:string; eventId:string; code:string; type:'PERCENT'|'FIXED'; value:number; maxUses?:number|null; usedCount?:number; status:'ACTIVE'|'INACTIVE'|'EXPIRED'; startsAt?:string|null; endsAt?:string|null; createdAt?:string }
+interface Toast { id:string; message:string; type?:'success'|'error' }
+
+// Diagnóstico de equipe do evento (lightweight, used in coupon drawer)
+const EquipeDiagnostics: React.FC<{ eventId?: string; visibleEvents: EventLite[] }> = ({ eventId, visibleEvents }) => {
   const [token, setToken] = useState<string|null>(null);
   useEffect(() => {
     setToken(window.localStorage.getItem('AUTH_TOKEN_V1'));
@@ -12,22 +30,6 @@ const EquipeDiagnostics: React.FC<{ eventId: string, visibleEvents: EventLite[] 
     </div>
   );
 };
-// MarketingTools (clean production baseline) - all debug & test artifacts removed
-import React, { useEffect, useRef, useState } from 'react';
-import { fetchApi, ensureApiBase, apiUrl } from '@/lib/apiBase';
-import SidebarMenu from '@/components/SidebarMenu';
-import AppHeader from '@/components/AppHeader';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose, DrawerTrigger, DrawerDescription } from '@/components/ui/drawer';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { X } from 'lucide-react';
-import { useOrganization } from '@/context/OrganizationContext';
-
-interface EventLite { id:string; name:string; startDate?:string|null }
-interface CampaignRow { id:string; name:string; status:'rascunho'|'agendado'|'enviado'; openRate?:number|null; clickRate?:number|null }
-interface CouponRow { id:string; eventId:string; code:string; type:'PERCENT'|'FIXED'; value:number; maxUses?:number|null; usedCount?:number; status:'ACTIVE'|'INACTIVE'|'EXPIRED'; startsAt?:string|null; endsAt?:string|null; createdAt?:string }
-interface Toast { id:string; message:string; type?:'success'|'error' }
 
 const tasks = [
   { key:'share', title:'Compartilhar nas redes sociais', desc:'Divulgue seu evento em várias redes.' },
@@ -474,7 +476,7 @@ const MarketingTools: React.FC = () => {
                   </select>
                 </div>
                 <div className="ml-auto">
-                  <Button onClick={()=> { setCampaignStartOpen(true); setCampaignName(''); }} size="lg" className="h-12 rounded-xl bg-[#D95323] hover:bg-[#C74214] text-white text-sm font-semibold">Nova campanha</Button>
+                  <Button onClick={()=> { setCampaignStartOpen(true); setCampaignName(''); }} className="h-12 rounded-xl bg-[#D95323] hover:bg-[#C74214] text-white text-sm font-semibold">Nova campanha</Button>
                 </div>
               </div>
               <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm">
@@ -523,7 +525,7 @@ const MarketingTools: React.FC = () => {
                 </div>
                 <Drawer open={couponDrawerOpen} onOpenChange={(o)=> { setCouponDrawerOpen(o); if(o){ setCouponForm(f=> ({...f,eventId: activeEventId||f.eventId})); } }}>
                   <DrawerTrigger asChild>
-                    <Button size="lg" className="ml-auto h-11 rounded-xl px-6 bg-[#2A2AD7] hover:bg-[#1E1EBE] text-white text-sm font-semibold">+ Criar cupom</Button>
+                    <Button className="ml-auto h-11 rounded-xl px-6 bg-[#2A2AD7] hover:bg-[#1E1EBE] text-white text-sm font-semibold">+ Criar cupom</Button>
                   </DrawerTrigger>
                   <DrawerContent>
                     <DrawerHeader className="p-6 pb-2 border-b border-gray-100">
@@ -552,7 +554,7 @@ const MarketingTools: React.FC = () => {
                     </div>
                     <DrawerFooter className="flex flex-row gap-4 justify-between p-6 border-t border-gray-100">
                       <DrawerClose asChild>
-                        <Button type="button" variant="outline" className="flex-1 h-11 rounded-xl text-sm">Cancelar</Button>
+                        <Button type="button" className="flex-1 h-11 rounded-xl text-sm">Cancelar</Button>
                       </DrawerClose>
                       <Button form="couponForm" disabled={savingCoupon} className="flex-1 h-11 rounded-xl bg-[#2A2AD7] hover:bg-[#1E1EBE] text-white text-sm font-bold shadow-sm disabled:opacity-60">{savingCoupon? 'Salvando...': (editingCouponId? 'Salvar':'Criar')}</Button>
                     </DrawerFooter>
@@ -765,7 +767,7 @@ const MarketingTools: React.FC = () => {
                   <div className="flex items-start justify-between">
                     <div className="text-lg font-semibold">{campaignSubject || 'preview'}</div>
                     <div>
-                      <Button variant="outline" onClick={()=> pushToast('E-mail de teste enviado (simulado)')}>Enviar e-mail de teste</Button>
+                      <Button onClick={()=> pushToast('E-mail de teste enviado (simulado)')}>Enviar e-mail de teste</Button>
                     </div>
                   </div>
                   <div className="mt-4 bg-white rounded-md shadow-inner p-6 max-h-[70vh] overflow-auto">
@@ -776,7 +778,7 @@ const MarketingTools: React.FC = () => {
                 </div>
               </div>
               <div className="border-t p-4 flex justify-end gap-3">
-                <Button variant="outline" onClick={()=> setCampaignModalOpen(false)}>Cancelar</Button>
+                <Button onClick={()=> setCampaignModalOpen(false)}>Cancelar</Button>
                 <Button className="bg-[#D95323] text-white" onClick={async ()=>{
                   // submit campaign (same as previous send)
                   if(!activeEventId){ pushToast('Selecione um evento para associar a campanha','error'); return; }
@@ -847,7 +849,7 @@ const MarketingTools: React.FC = () => {
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={()=> setCampaignStartOpen(false)}>Cancelar</Button>
+              <Button onClick={()=> setCampaignStartOpen(false)}>Cancelar</Button>
               <Button onClick={()=> { if(!campaignName.trim()){ pushToast('Nome obrigatório','error'); return; } setCampaignStartOpen(false); setCampaignModalOpen(true); setCampaignSubject(campaignName); }} className="bg-[#D95323] text-white">Comece agora</Button>
             </div>
           </div>

@@ -13,6 +13,11 @@ export default {
       },
     },
     extend: {
+      status: {
+        healthy: 'hsl(var(--status-healthy))',
+        attention: 'hsl(var(--status-attention))',
+        critical: 'hsl(var(--status-critical))',
+      },
       colors: {
         brand: {
           primary: 'hsl(var(--brand-primary))',

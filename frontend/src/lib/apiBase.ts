@@ -23,6 +23,13 @@ const isProd = import.meta.env.PROD;
 // This is a safe fallback during emergency; we can remove it once Vercel rewrites are stable.
 const DEFAULT_PROD_BACKEND = 'https://fauves-backend-production.up.railway.app';
 let finalEnvBase = envBase;
+// In dev, aggressively ignore any env base that mentions localhost:3000
+try {
+  if (!isProd && finalEnvBase && /localhost:3000/.test(finalEnvBase)) {
+    console.debug('[apiBase] stripping VITE_API_BASE containing localhost:3000 in dev (frontend copy):', finalEnvBase);
+    finalEnvBase = null;
+  }
+} catch (e) {}
 // In production we prefer the build-time env base. We used to force a hardcoded
 // default during the incident; remove the runtime forcing so the app relies on
 // Vercel rewrites / VITE_API_BASE and the resilient resolver below.
@@ -34,7 +41,7 @@ try {
     const origin = window.location.origin.replace(/\/$/, '');
     const norm = finalEnvBase.replace(/\/$/, '');
     if (norm === origin || norm.startsWith(origin + '/')) {
-      console.log('[apiBase] detected VITE_API_BASE pointing to frontend origin; switching to default backend');
+  console.debug('[apiBase] detected VITE_API_BASE pointing to frontend origin; switching to default backend');
       finalEnvBase = DEFAULT_PROD_BACKEND;
     }
   }
@@ -58,9 +65,52 @@ const failureCount: Record<string, number> = {}; // contador de falhas por base
 let lastResolutionTs = 0;
 let backendDownUntil = 0; // epoch ms até quando evitamos novas tentativas
 const BACKOFF_MS = 5000;
+let lastEnsureCall = 0; // ms - rate limit ensureApiBase
+
+// DEV: when running on localhost, patch window.fetch to rewrite relative /api
+// calls to the local backend at 127.0.0.1:4000 and remove any stored
+// API_BASE_WORKING pointing to localhost:3000. This prevents the frontend dev
+// server from causing probes to stale ports.
+try {
+  if (typeof window !== 'undefined' && window.location) {
+    const h = window.location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
+      if (!((window as any).__apiFetchPatchedDev)) {
+        const originalFetch = window.fetch.bind(window);
+        (window as any).__apiFetchPatchedDev = true;
+        window.fetch = async (input: RequestInfo, init?: RequestInit) => {
+          try {
+            if (typeof input === 'string') {
+              if (input === '/api' || input.startsWith('/api/') || /^\.?\/api\//.test(input) || /^api\//.test(input)) {
+                const path = input.startsWith('/') ? input : (input.startsWith('./') ? input.replace(/^\.\//, '/') : '/' + input);
+                input = 'http://127.0.0.1:4000' + path;
+              }
+            } else if (input instanceof Request) {
+              const reqUrl = new URL(input.url, window.location.origin);
+              if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
+                const newUrl = 'http://127.0.0.1:4000' + reqUrl.pathname + reqUrl.search;
+                input = new Request(newUrl, input);
+              }
+            }
+          } catch (e) {}
+          return originalFetch(input as any, init);
+        };
+        console.debug('[apiBase] fetch override (dev): rewriting /api -> http://127.0.0.1:4000');
+        try {
+          const s = window.localStorage.getItem(LS_KEY);
+          if (s && /localhost:3000/.test(s)) {
+            window.localStorage.removeItem(LS_KEY);
+            console.debug('[apiBase] removed stale API_BASE_WORKING pointing to localhost:3000');
+          }
+        } catch (e) {}
+      }
+    }
+  }
+} catch (e) {}
 
 async function probe(base: string): Promise<boolean> {
   try {
+    try { if (/(:\/\/|:)localhost:3000|:\s*3000\b|:\/\/127\.0\.0\.1:3000/.test(String(base))) return false; } catch (e) {}
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 1800);
     // Se base já for root (sem /api), testamos /api/health; se futuramente /health direto existir, aceitamos fallback.
@@ -87,8 +137,22 @@ export async function ensureApiBase(force = false): Promise<string> {
   try {
     if (typeof window !== 'undefined' && window.location && window.location.hostname === 'app.fauves.com.br') {
       resolvedBase = DEFAULT_PROD_BACKEND;
-      console.log('[apiBase] runtime override: using DEFAULT_PROD_BACKEND for app.fauves.com.br');
+  console.debug('[apiBase] runtime override: using DEFAULT_PROD_BACKEND for app.fauves.com.br');
       return resolvedBase;
+    }
+  } catch (e) {}
+  // Short-circuit when dev fetch override is active — prefer local backend to stop probing
+  try {
+    if (typeof window !== 'undefined' && (window as any).__apiFetchPatchedDev) {
+      const h = window.location && window.location.hostname;
+      if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
+        const wanted = 'http://127.0.0.1:4000';
+        if (resolvedBase !== wanted) {
+          resolvedBase = wanted;
+          console.debug('[apiBase] dev fetch override active (frontend) — short-circuiting resolution to', resolvedBase);
+        }
+        return resolvedBase;
+      }
     }
   } catch (e) {}
   // If an envBase is provided (build-time), prefer it. Previously we only auto-used it in production
@@ -100,7 +164,7 @@ export async function ensureApiBase(force = false): Promise<string> {
     // pointing the client to a VITE_API_BASE that is unreachable from the current environment.
     if (isProd) {
       resolvedBase = finalEnvBase;
-      console.log('[apiBase] using env VITE_API_BASE (production)');
+        console.debug('[apiBase] using env VITE_API_BASE (production)');
       return resolvedBase;
     }
     // Non-production: probe the envBase quickly. If it responds, use it; otherwise continue resolution.
@@ -108,16 +172,20 @@ export async function ensureApiBase(force = false): Promise<string> {
       // quick probe with a short timeout
       const ok = await probe(finalEnvBase);
       if (ok) {
-        resolvedBase = finalEnvBase;
-        console.log('[apiBase] using env VITE_API_BASE (build-time)');
+  resolvedBase = finalEnvBase;
+  console.debug('[apiBase] using env VITE_API_BASE (build-time)');
         return resolvedBase;
       }
-      console.log('[apiBase] env VITE_API_BASE did not respond, falling back to probing candidates');
+        console.debug('[apiBase] env VITE_API_BASE did not respond, falling back to probing candidates');
     } catch (e) {
-      console.log('[apiBase] probe of VITE_API_BASE failed, falling back to candidates');
+        console.debug('[apiBase] probe of VITE_API_BASE failed, falling back to candidates');
     }
   }
   const now = Date.now();
+  if (!force && now - lastEnsureCall < 1000 && resolvedBase) {
+    return resolvedBase;
+  }
+  lastEnsureCall = now;
   if (!force && resolvedBase && (now - lastResolutionTs) < 5000) return resolvedBase;
   if (!force && backendDownUntil && now < backendDownUntil && resolvedBase) return resolvedBase; // não reprobe durante backoff
   if (resolvingPromise) return resolvingPromise;
@@ -125,6 +193,7 @@ export async function ensureApiBase(force = false): Promise<string> {
   const doResolve = async () => {
     let picked: string | null = null;
     for (const base of [...candidates]) {
+      try { if (/(:\/\/|:)localhost:3000|:\s*3000\b|:\/\/127\.0\.0\.1:3000/.test(String(base))) { continue; } } catch(e) {}
       if (failureCount[base] && failureCount[base] >= 2) continue;
       const ok = await probe(base);
       if (ok) { picked = base; break; }
@@ -143,7 +212,7 @@ export async function ensureApiBase(force = false): Promise<string> {
       resolvedBase = picked;
       lastResolutionTs = Date.now();
       try { if (picked && Date.now() < backendDownUntil) { /* não persistir se sabemos que está down */ } else if (typeof window !== 'undefined') window.localStorage.setItem(LS_KEY, picked); } catch {}
-      if (changed) console.log('[apiBase] base resolvida', picked);
+      if (changed) console.debug('[apiBase] base resolvida', picked);
     }
     resolving = false;
     resolvingPromise = null;

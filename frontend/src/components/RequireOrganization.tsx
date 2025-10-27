@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import OrgLogoUpload from "./OrgLogoUpload";
 import { useAuth } from "@/context/AuthContext";
+import { getDisplayName } from '@/lib/user';
 import { useNavigate } from 'react-router-dom';
 
 interface RequireOrganizationProps {
@@ -95,7 +96,7 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
               name: orgName,
               userId: user.id,
               userEmail: user.email,
-              userName: user.name || user.email?.split('@')[0] || null,
+              userName: getDisplayName(user) || null,
               logoUrl: finalLogoUrl,
             }),
           });

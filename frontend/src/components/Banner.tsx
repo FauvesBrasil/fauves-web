@@ -1,48 +1,58 @@
-import bannerImg from '../assets/banner-facepassv2.jpg';
+import LogoFauves from '@/components/LogoFauves';
 
 const Banner: React.FC = () => {
-  const handleRegisterEvent = () => {
-    console.log('Registering event...');
-  };
+  const handlePrimary = () => { window.location.href = '/publish'; };
+  const handleSecondary = () => { window.location.href = '/how-it-works'; };
 
   return (
-    <section className="w-[1040px] h-[365px] relative mx-[156px] my-10 max-md:w-[calc(100%_-_40px)] max-md:mx-5 max-md:my-10 max-sm:w-[calc(100%_-_30px)] max-sm:h-[300px] max-sm:mx-[15px] max-sm:my-5">
-      <img
-        src={bannerImg}
-        alt="FacePass Security Banner"
-        className="w-[1040px] h-[365px] rounded-[20px] max-md:w-full max-sm:h-[300px] max-sm:object-cover"
-      />
-      <div className="absolute inset-0 flex flex-col justify-center px-16 py-14 max-md:px-[30px] max-md:py-10 max-sm:p-5">
-        <div className="max-w-[350px]">
-          <h2 className="text-white text-[26px] font-bold mb-4 leading-tight max-md:text-[28px] max-sm:text-2xl max-sm:mb-3">
-            Sua cara é seu ingresso. Literalmente.
-          </h2>
-          <p className="text-white text-[18px] font-medium mb-8 leading-relaxed max-md:text-base max-sm:text-sm max-sm:mb-6">
-            Chega de QR Code! A gente usa reconhecimento facial pra garantir segurança, só você entra com o seu rosto.
-          </p>
-          <button 
-            onClick={handleRegisterEvent}
-            className="w-[260px] h-[45px] flex items-center relative bg-[#F9C900] px-[17px] py-0 rounded-[5px] max-sm:w-full max-sm:max-w-[260px] hover:bg-[#e6b500] transition-colors group"
-          >
-            <span className="text-[#091747] text-sm font-bold">
-              Cadastrar meu evento
-            </span>
-            <svg 
-              width="6" 
-              height="10" 
-              viewBox="0 0 6 10" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="absolute right-[26px] group-hover:translate-x-1 transition-transform"
-            >
-              <path 
-                fillRule="evenodd" 
-                clipRule="evenodd" 
-                d="M5.76144 5.55547L1.15212 10L0 8.88906L4.03325 5L0 1.11094L1.15212 0L5.76144 4.44453C5.91419 4.59187 6 4.79167 6 5C6 5.20833 5.91419 5.40813 5.76144 5.55547Z" 
-                fill="#091747"
-              />
-            </svg>
-          </button>
+    <section className="max-w-[1100px] mx-auto px-6 py-8">
+
+  <div className="mt-8 rounded-2xl bg-[#EEF4FF] p-12 pt-12 shadow-sm flex items-center gap-8 max-md:flex-col max-md:items-start relative">
+      {/* Floating badge anchored to hero: sits half above the hero */}
+      <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-20">
+        <div className="inline-block bg-[#0f1724] text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+          <span className="inline-block leading-none">
+            <LogoFauves variant="white" width={36} className="block" />
+          </span>
+          <span className="ml-1">para produtores</span>
+        </div>
+      </div>
+      <div className="flex-1">
+          <h2 className="text-[#2A2AD7] text-4xl font-bold leading-tight mb-6">Crie eventos, divulgue e venda ingressos com facilidade</h2>
+
+          <div className="grid grid-cols-2 gap-6 max-sm:grid-cols-1">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center shadow-sm">
+                {/* icon: chat */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 15a2 2 0 0 1-2 2H8l-5 5V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" stroke="#2A2AD7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div>
+                <div className="text-lg font-semibold text-[#091747]">Da publicação à venda</div>
+                <div className="text-sm text-[#334155]">suporte em todas as etapas.</div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center shadow-sm">
+                {/* icon: coin */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1v22" stroke="#2A2AD7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="7" stroke="#2A2AD7" strokeWidth="1.5"/></svg>
+              </div>
+              <div>
+                <div className="text-lg font-semibold text-[#091747]">Publicação grátis</div>
+                <div className="text-sm text-[#334155]">sem taxa de adesão ou mensalidade.</div>
+              </div>
+            </div>
+          </div>
+    </div>
+      
+  <div className="w-[420px] flex-shrink-0 max-md:w-full">
+          {/* right side image (optional) - keeps previous image if available */}
+          <img src="/hero-producers.png" alt="hero" className="w-full h-[220px] object-cover rounded-lg shadow-md max-md:h-44" />
+
+          <div className="mt-4 flex gap-4">
+            <button onClick={handlePrimary} className="bg-[#2A2AD7] text-white px-5 py-2 rounded-md shadow">Crie seu evento</button>
+            <button onClick={handleSecondary} className="border border-[#2A2AD7] text-[#2A2AD7] px-4 py-2 rounded-md">Veja como funciona</button>
+          </div>
         </div>
       </div>
     </section>

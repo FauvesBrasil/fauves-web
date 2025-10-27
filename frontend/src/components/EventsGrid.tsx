@@ -20,7 +20,7 @@ const EventsGrid: React.FC<EventsGridProps> = ({ title, events, size = 'large' }
   
   return (
     <section className="px-[156px] py-5 max-md:p-5 max-sm:p-[15px]">
-      <h2 className="text-[#091747] text-lg font-bold mb-5 max-sm:text-base">
+      <h2 className="text-[#091747] dark:text-white text-lg font-bold mb-5 max-sm:text-base">
         {title}
       </h2>
       <div className={`grid gap-5 ${

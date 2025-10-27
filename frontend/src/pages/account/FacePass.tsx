@@ -4,11 +4,11 @@ const FacePass: React.FC = () => {
   const [success, setSuccess] = React.useState(false);
   return (
     <>
-      <h1 className="text-3xl font-bold text-[#091747] mb-2">FacePass</h1>
+  <h1 className="text-3xl font-bold text-[#091747] dark:text-white mb-2">FacePass</h1>
       <hr className="my-6 border-gray-200" />
       {!success ? (
         <>
-          <label className="text-base text-[#091747] mb-4 block">Cadastre sua foto para utilizar o FacePass</label>
+          <label className="text-base text-[#091747] dark:text-white mb-4 block">Cadastre sua foto para utilizar o FacePass</label>
           <div className="mb-8">
             <div className="w-[120px] h-[120px] bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center">
               <label htmlFor="facepass-upload" className="flex flex-col items-center justify-center cursor-pointer w-full h-full">

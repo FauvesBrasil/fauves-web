@@ -58,6 +58,7 @@ const OrganizerEvents: React.FC = () => {
 
   // Collections state
   const [collections, setCollections] = useState<CollectionItem[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
   const [collectionsSearch, setCollectionsSearch] = useState("");
   const [showCollections, setShowCollections] = useState(false);
   const [showCollectionDrawer, setShowCollectionDrawer] = useState(false);
@@ -76,6 +77,24 @@ const OrganizerEvents: React.FC = () => {
       if (map.size) setOrganizations(prev => prev.length ? prev : Array.from(map.values()));
     }
   }, [events, organizations]);
+
+  // Normalize collection list shapes from different API versions
+  const normalizeCollections = (list: any[] | null, oid?: string | null) => {
+    if (!Array.isArray(list)) return [] as CollectionItem[];
+    const hasOrgField = list.some((it: any) => it && ((it.organizerId) || (it.organizationId) || (it.organizer && it.organizer.id) || (it.organization && it.organization.id)));
+    return list.map((it: any) => {
+      const asAny = { ...(it || {}) };
+      // if the API didn't include organization/organizer ids, tag with provided oid so UI scoping works
+      if (!hasOrgField && oid) {
+        asAny.organizationId = asAny.organizationId || asAny.organizerId || oid;
+        asAny.organizerId = asAny.organizerId || asAny.organizationId || oid;
+      }
+      // If nested objects exist, prefer flattened ids
+      if (!asAny.organizerId && asAny.organizer && asAny.organizer.id) asAny.organizerId = asAny.organizer.id;
+      if (!asAny.organizationId && asAny.organization && asAny.organization.id) asAny.organizationId = asAny.organization.id;
+      return asAny as CollectionItem;
+    });
+  };
 
   // Enrich placeholder org names
   useEffect(() => {
@@ -96,9 +115,9 @@ const OrganizerEvents: React.FC = () => {
     const boot = async () => {
       setLoading(true);
       try {
-        try { const cached = sessionStorage.getItem('collections-cache'); if (cached) { const parsed = JSON.parse(cached); if (Array.isArray(parsed) && parsed.length) setCollections(parsed); } } catch {}
+  try { const cached = sessionStorage.getItem('collections-cache'); if (cached) { const parsed = JSON.parse(cached); if (Array.isArray(parsed) && parsed.length) setCollections(normalizeCollections(parsed, selectedOrg?.id || null)); } } catch {}
   const uid = userId;
-  if (!uid) { setEvents([]); setCollections([]); return; }
+  if (!uid) { setEvents([]); setCollections([]); setCollectionsLoading(false); return; }
         await ensureApiBase();
         const buildAttempts = (path: string) => {
           const attempts: string[] = [];
@@ -121,20 +140,26 @@ const OrganizerEvents: React.FC = () => {
   const orgsData = await resilientJson(`/api/organizations/by-user?userId=${uid}`) || [];
   if (Array.isArray(orgsData)) setOrganizations(orgsData);
   (window as any).__dbgOrgsByUser = orgsData;
-        const rawCollections = await resilientJson(`/api/collections/by-user/${uid}`);
-        if (Array.isArray(rawCollections) && rawCollections.length) {
-          setCollections(prev => prev.length ? prev : rawCollections);
-          try { sessionStorage.setItem('collections-cache', JSON.stringify(rawCollections)); } catch {}
+  setCollectionsLoading(true);
+  const rawCollections = await resilientJson(`/api/collections/by-user/${uid}`);
+  if (Array.isArray(rawCollections) && rawCollections.length) {
+          const norm = normalizeCollections(rawCollections, null);
+          setCollections(prev => prev.length ? prev : norm);
+          setCollectionsLoading(false);
+          try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch {}
         }
         const orgEquipe = await resilientJson(`/api/organization/equipe?userId=${uid}`);
         (window as any).__dbgOrgEquipe = orgEquipe;
         const oid = orgEquipe?.organizationId;
         if (oid) {
           setOrganizations(prev => prev.some(o => o.id === oid) ? prev : [...prev, { id: oid, name: 'Organização' }]);
+          setCollectionsLoading(true);
           const cols = await resilientJson(`/api/organization/${oid}/collections`);
             if (Array.isArray(cols) && cols.length) {
-              setCollections(prev => prev.length ? prev : cols);
-              try { sessionStorage.setItem('collections-cache', JSON.stringify(cols)); } catch {}
+              const normCols = normalizeCollections(cols, oid);
+              setCollections(prev => prev.length ? prev : normCols);
+              setCollectionsLoading(false);
+              try { sessionStorage.setItem('collections-cache', JSON.stringify(normCols)); } catch {}
             }
         }
         (window as any).__dbgCollections = { initial: rawCollections, afterOrg: (window as any).__dbgCollections?.afterOrg };
@@ -180,6 +205,42 @@ const OrganizerEvents: React.FC = () => {
     return () => { cancelled = true; };
   }, [selectedOrg?.id, userId]);
 
+  // Refetch collections when selected organization changes (enforce scope)
+  useEffect(() => {
+    if (!userId || !selectedOrg) return;
+    let cancelled = false;
+    const orgId = selectedOrg.id;
+    // Clear previous collections immediately to avoid showing collections from prior org
+  setCollections([]);
+  setCollectionsLoading(false);
+    (async () => {
+      try {
+        await ensureApiBase();
+        const attempts = [
+          apiUrl(`/api/organization/${orgId}/collections`),
+          `http://localhost:4000/api/organization/${orgId}/collections`
+        ];
+        let loaded: any[] | null = null;
+        for (const u of attempts) {
+          try {
+            const r = await fetch(u, { headers: { 'Accept':'application/json' } });
+            if (!r.ok) continue;
+            const j = await r.json();
+            if (Array.isArray(j)) { loaded = j; break; }
+          } catch {}
+        }
+        if (!cancelled && loaded) {
+          const norm = normalizeCollections(loaded, orgId);
+          setCollections(norm);
+          (window as any).__dbgCollectionsScoped = { orgId, loaded: norm };
+        }
+      } finally {
+        // no-op
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedOrg?.id, userId]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let base = events;
@@ -191,9 +252,41 @@ const OrganizerEvents: React.FC = () => {
 
   const filteredCollections = useMemo(() => {
     const q = collectionsSearch.trim().toLowerCase();
-    if (!q) return collections;
-    return collections.filter(c => c.title?.toLowerCase().includes(q));
-  }, [collections, collectionsSearch]);
+    let base = collections;
+    // enforce selected organization scope if available
+    if (selectedOrg) {
+      const oid = selectedOrg.id;
+      base = base.filter(c => {
+        // support multiple possible shapes returned by the API
+        return (
+          c.organizerId === oid ||
+          (c as any).organizationId === oid ||
+          (c as any).organizer?.id === oid ||
+          (c as any).organization?.id === oid ||
+          (c as any).organizer?.organizationId === oid
+        );
+      });
+    }
+    if (!q) return base;
+    return base.filter(c => c.title?.toLowerCase().includes(q));
+  }, [collections, collectionsSearch, selectedOrg?.id]);
+
+  // Skeletons for collections loading
+  const renderCollectionsSkeleton = () => (
+    <div className="grid grid-cols-2 gap-8 max-md:grid-cols-1">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="rounded-2xl border border-[#E5E7EB] overflow-hidden bg-white animate-pulse">
+          <div className="h-40 bg-zinc-200 flex items-center justify-center" />
+          <div className="p-5">
+            <div className="h-4 w-32 bg-zinc-200 rounded mb-2" />
+            <div className="h-3 w-20 bg-zinc-200 rounded mb-2" />
+            <div className="h-3 w-24 bg-zinc-200 rounded mb-2" />
+            <div className="h-3 w-16 bg-zinc-200 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   const refresh = async () => {
     if (!userId) return;
@@ -229,6 +322,7 @@ const OrganizerEvents: React.FC = () => {
   };
 
   const openCreateCollection = () => { setCollectionDrawerMode('create'); setEditingCollection(null); setShowCollectionDrawer(true); };
+  const [debugOpen, setDebugOpen] = useState(false);
 
   useEffect(() => {
     const fetchCollectionsIfNeeded = async () => {
@@ -240,20 +334,21 @@ const OrganizerEvents: React.FC = () => {
           for (const b of bases) { try { const r = await fetch(b); if (r.ok) return r.json(); } catch {} }
           return null;
         };
-        let oid: string | null = organizations[0]?.id || null;
-        if (!oid && userId) { const orgJ = await attempt(`/api/organization/equipe?userId=${userId}`); oid = orgJ?.organizationId || null; }
+  // Prefer explicit selectedOrg when present, otherwise fall back to discovered organizations
+  let oid: string | null = selectedOrg?.id || organizations[0]?.id || null;
+  if (!oid && userId) { const orgJ = await attempt(`/api/organization/equipe?userId=${userId}`); oid = orgJ?.organizationId || null; }
         if (collections.length === 0 && userId) {
           const allCols = await attempt(`/api/collections/by-user/${userId}`);
-          if (Array.isArray(allCols) && allCols.length) { setCollections(allCols); return; }
+          if (Array.isArray(allCols) && allCols.length) { const norm = normalizeCollections(allCols, oid); setCollections(norm); return; }
         }
         if (oid) {
           const list = await attempt(`/api/organization/${oid}/collections`);
-          if (Array.isArray(list) && list.length) { setCollections(prev => prev.length ? prev : list); try { sessionStorage.setItem('collections-cache', JSON.stringify(list)); } catch {} }
+          if (Array.isArray(list) && list.length) { const norm = normalizeCollections(list, oid); setCollections(prev => prev.length ? prev : norm); try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch {} }
         }
         if (collections.length === 0 && organizations.length > 1) {
           for (const o of organizations) {
             const ll = await attempt(`/api/organization/${o.id}/collections`);
-            if (Array.isArray(ll) && ll.length) { setCollections(prev => prev.length ? prev : ll); try { sessionStorage.setItem('collections-cache', JSON.stringify(ll)); } catch {}; break; }
+            if (Array.isArray(ll) && ll.length) { const norm = normalizeCollections(ll, o.id); setCollections(prev => prev.length ? prev : norm); try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch {}; break; }
           }
         }
       } catch (e) { console.warn('[OrganizerEvents] fetchCollectionsIfNeeded failed', e); }
@@ -273,19 +368,36 @@ const OrganizerEvents: React.FC = () => {
       }
       if (oid) {
         const attempts = [apiUrl(`/api/organization/${oid}/collections`), `http://localhost:4000/api/organization/${oid}/collections`];
-        for (const u of attempts) { try { const r = await fetch(u); if (r.ok) { const list = await r.json(); if (Array.isArray(list) && list.length) { setCollections(list); try { sessionStorage.setItem('collections-cache', JSON.stringify(list)); } catch {}; break; } } } catch {} }
+  for (const u of attempts) { try { const r = await fetch(u); if (r.ok) { const list = await r.json(); if (Array.isArray(list) && list.length) { const norm = normalizeCollections(list, oid); setCollections(norm); try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch {}; break; } } } catch {} }
       }
     } catch (e) { console.error('[OrganizerEvents] refresh collections after save failed', e); }
     finally { setShowCollections(true); setShowCollectionDrawer(false); }
   };
 
   const handleEditCollection = (col: any) => { setCollectionDrawerMode('edit'); setEditingCollection(col); setShowCollectionDrawer(true); };
-  const handleDeleteCollection = async (id: string) => {
-    if (!confirm('Excluir esta coleção?')) return;
-    await ensureApiBase();
-    const attempts = [apiUrl(`/api/collection/${id}`), `http://localhost:4000/api/collection/${id}`];
-    for (const u of attempts) { try { const res = await fetch(u, { method: 'DELETE' }); if (res.ok) { const j = await res.json(); if (j?.ok) { setCollections(prev => prev.filter(c => c.id !== id)); break; } } } catch {} }
+  const [deleteCollectionTarget, setDeleteCollectionTarget] = useState<string | null>(null);
+  const handleDeleteCollection = (id: string) => {
+    setDeleteCollectionTarget(id);
   };
+  const confirmDeleteCollection = async () => {
+    if (!deleteCollectionTarget) return;
+    await ensureApiBase();
+    const attempts = [apiUrl(`/api/collection/${deleteCollectionTarget}`), `http://localhost:4000/api/collection/${deleteCollectionTarget}`];
+    for (const u of attempts) {
+      try {
+        const res = await fetch(u, { method: 'DELETE' });
+        if (res.ok) {
+          const j = await res.json();
+          if (j?.ok) {
+            setCollections(prev => prev.filter(c => c.id !== deleteCollectionTarget));
+            break;
+          }
+        }
+      } catch {}
+    }
+    setDeleteCollectionTarget(null);
+  };
+  const cancelDeleteCollection = () => setDeleteCollectionTarget(null);
   const loadCollectionEvents = async (collectionId: string) => {
     await ensureApiBase();
     const attempts = [apiUrl(`/api/collection/${collectionId}/events`), `http://localhost:4000/api/collection/${collectionId}/events`];
@@ -304,7 +416,7 @@ const OrganizerEvents: React.FC = () => {
   };
   const togglePublish = async (c: CollectionItem) => { if (!c.id) return; try { const res = await fetch(`/api/collection/${c.id}/publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ published: !c.published }) }); const j = await res.json(); if (j?.collection?.id) { setCollections(prev => prev.map(p => p.id === c.id ? { ...p, published: j.collection.published } : p)); try { sessionStorage.setItem('collections-cache', JSON.stringify(collections.map(p => p.id === c.id ? { ...p, published: j.collection.published } : p))); } catch {} } } catch {} };
   const shareCollection = async (c: CollectionItem) => { if (!c.slug) return; const url = `${window.location.origin}/colecoes/${c.slug}`; if ((navigator as any).share) { try { await (navigator as any).share({ title: c.title, text: c.description || c.title, url }); return; } catch {} } try { await navigator.clipboard.writeText(url); } catch {} };
-  const deleteCollection = async (id: string) => { if (!confirm('Excluir esta coleção?')) return; const res = await fetch(`/api/collection/${id}`, { method: 'DELETE' }); const j = await res.json(); if (j?.ok) { if (!userId) return; const orgRes = await fetch(`/api/organization/equipe?userId=${userId}`); const orgJ = await orgRes.json(); const oid = orgJ?.organizationId; if (!oid) return; const r = await fetch(`/api/organization/${oid}/collections`); setCollections(await r.json()); } };
+  const deleteCollection = async (id: string) => { if (!confirm('Excluir esta coleção?')) return; const res = await fetch(`/api/collection/${id}`, { method: 'DELETE' }); const j = await res.json(); if (j?.ok) { if (!userId) return; const orgRes = await fetch(`/api/organization/equipe?userId=${userId}`); const orgJ = await orgRes.json(); const oid = orgJ?.organizationId; if (!oid) return; const r = await fetch(`/api/organization/${oid}/collections`); const list = await r.json(); setCollections(normalizeCollections(list, oid)); } };
 
   return (
     <div className="relative min-h-screen w-full bg-white flex justify-center items-start">{/* aligned with dashboard root */}
@@ -372,7 +484,7 @@ const OrganizerEvents: React.FC = () => {
                           <tr key={ev.id} className="hover:bg-[#F8F9FC] cursor-pointer transition" onClick={() => navigate(`/painel-evento/${ev.id}`)}>
                             <td className="py-4 px-6">
                               <div className="flex items-center gap-4">
-                                <div className="w-11 h-11 rounded-xl bg-zinc-200 flex-shrink-0" />
+                                <div className="w-11 h-11 rounded-[5px] bg-zinc-200 flex-shrink-0" />
                                 <div>
                                   <div className="text-[15px] text-slate-900 font-semibold leading-tight mb-0.5">{ev.name || 'Sem nome'}</div>
                                   <div className="text-slate-500 text-[11px]">{formatDate(ev.startDate)}</div>
@@ -410,7 +522,9 @@ const OrganizerEvents: React.FC = () => {
                 <input className="flex-1 h-[46px] px-5 rounded-xl border border-[#E5E7EB] focus:outline-none focus:ring-2 focus:ring-indigo-200 text-[15px]" placeholder="Pesquisar coleções por título" value={collectionsSearch} onChange={(e) => setCollectionsSearch(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-8 max-md:grid-cols-1">
-                {filteredCollections.map((c) => (
+                {collectionsLoading && collections.length === 0 ? (
+                  renderCollectionsSkeleton()
+                ) : filteredCollections.map((c) => (
                   <div key={c.id} className="rounded-2xl border border-[#E5E7EB] overflow-hidden cursor-pointer bg-white hover:shadow-sm transition" onClick={()=>handleEditCollection(c)}>
                     <div className="h-40 bg-zinc-200 flex items-center justify-center overflow-hidden">
                       {c.bannerImage ? (<img src={c.bannerImage} alt={c.title} className="w-full h-full object-cover" />) : (<span className="text-xs text-zinc-500">Sem banner</span>)}
@@ -432,20 +546,20 @@ const OrganizerEvents: React.FC = () => {
                     </div>
                   </div>
                 ))}
-                {filteredCollections.length === 0 && (<div className="text-slate-400">Nenhuma coleção encontrada</div>)}
+                {filteredCollections.length === 0 && !collectionsLoading && (<div className="text-slate-400">Nenhuma coleção encontrada</div>)}
               </div>
             </div>
           )}
         </div>
       </div>
-      {deleteTarget && (
+      {deleteCollectionTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">Excluir evento</h2>
-            <p className="text-sm text-slate-600">Tem certeza que deseja excluir este evento? Essa ação não pode ser desfeita.</p>
+            <h2 className="text-lg font-semibold text-slate-900">Excluir coleção</h2>
+            <p className="text-sm text-slate-600">Tem certeza que deseja excluir esta coleção? Essa ação não pode ser desfeita.</p>
             <div className="flex justify-end gap-3 pt-2">
-              <button onClick={()=>setDeleteTarget(null)} className="px-4 py-2 rounded-lg border border-zinc-300 text-slate-600 hover:bg-zinc-100 text-sm font-medium">Cancelar</button>
-              <button onClick={onDelete} className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-semibold">Excluir</button>
+              <button onClick={cancelDeleteCollection} className="px-4 py-2 rounded-lg border border-zinc-300 text-slate-600 hover:bg-zinc-100 text-sm font-medium">Cancelar</button>
+              <button onClick={confirmDeleteCollection} className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-semibold">Excluir</button>
             </div>
           </div>
         </div>

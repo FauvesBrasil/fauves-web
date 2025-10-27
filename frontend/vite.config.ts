@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from 'vite-plugin-svgr';
 import path from "path";
-import { componentTagger } from "lovable-tagger";
+// removed lovable-tagger import
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-  plugins: [react(), svgr({ svgrOptions: { icon: false } }), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react(), svgr({ svgrOptions: { icon: false } })].filter(Boolean),
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),

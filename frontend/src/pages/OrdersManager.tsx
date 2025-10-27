@@ -28,9 +28,13 @@ const OrdersManager: React.FC = () => {
     const ids = params.get('eventIds');
     return ids ? ids.split(',') : [];
   })();
-  // Se não houver eventos selecionados, mostra modal ao carregar
+  // If eventIds are provided in the query string, pre-select the first one.
   useEffect(() => {
-    if (eventIdsFromQuery.length === 0) setShowSelectModal(true);
+    if (eventIdsFromQuery.length > 0) {
+      // if multiple ids provided keep the first as active filter (UI supports single select)
+      setEventFilter(eventIdsFromQuery[0]);
+    }
+    // NOTE: we intentionally DO NOT auto-open the SelectEventModal on load anymore.
   }, []);
   // Ao confirmar seleção, atualiza a URL
   const handleSelectConfirm = (selectedIds) => {
@@ -294,28 +298,32 @@ const OrdersManager: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-white flex justify-center items-start">{/* root layout */}
+    <div className="relative min-h-screen w-full bg-white dark:bg-[#0b0b0b] dark:text-white flex justify-center items-start">{/* root layout */}
       <SidebarMenu activeKeyOverride="pedidos" />
-      <div className="rounded-3xl w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-32">{/* added bottom padding */}
+      <div className="rounded-3xl w-[1352px] bg-white dark:bg-[#0b0b0b] dark:border-[#1F1F1F] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-32">{/* added bottom padding */}
         <AppHeader />
         <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4">{/* content area */}
-          <h1 className="text-4xl font-bold text-slate-900 max-sm:text-3xl">Gerenciador de pedidos</h1>
-          <p className="text-slate-600 leading-relaxed text-[15px] -mt-3 max-sm:text-sm">Gerencie todos os pedidos, incluindo edição de informações do comprador, reenvio de ingressos e processamento de reembolsos. Para baixar uma lista de pedidos, visualize o Relatório de pedidos.</p>
-          <div className="grid grid-cols-3 gap-8 max-sm:grid-cols-1 mt-2">
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white max-sm:text-3xl">Gerenciador de pedidos</h1>
+          <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[15px] -mt-3 max-sm:text-sm">Gerencie todos os pedidos, incluindo edição de informações do comprador, reenvio de ingressos e processamento de reembolsos. Para baixar uma lista de pedidos, visualize o Relatório de pedidos.</p>
+          <div className="grid grid-cols-4 gap-8 max-sm:grid-cols-1 mt-2">
             <input
-              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] focus:outline-none focus:ring-2 focus:ring-indigo-200 text-[15px]"
+              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] focus:outline-none focus:ring-2 focus:ring-indigo-200 text-[15px] bg-white dark:bg-[#121212] dark:border-[#2b2b2b] dark:placeholder:text-slate-400 dark:text-white"
               placeholder="Pesquisar ID do pedido"
               value={search}
               onChange={e=>setSearch(e.target.value)}
             />
-            <button
-              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-orange-600 text-white font-bold flex items-center gap-2"
-              onClick={() => setShowSelectModal(true)}
-            >
-              <span className="material-icons">event</span> Selecionar eventos
-            </button>
             <select
-              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-white dark:bg-[#121212] dark:border-[#2b2b2b] dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              value={eventFilter}
+              onChange={e=> { setEventFilter(e.target.value); setPage(0); }}
+            >
+              <option value="all">Todos eventos</option>
+              {events.map(ev => (
+                <option key={ev.id} value={ev.id}>{ev.name}</option>
+              ))}
+            </select>
+            <select
+              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-white dark:bg-[#121212] dark:border-[#2b2b2b] dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
               value={statusFilter}
               onChange={e=> { setStatusFilter(e.target.value); setPage(0);} }
             >
@@ -325,45 +333,47 @@ const OrdersManager: React.FC = () => {
               <option value="CANCELED">Cancelado</option>
               <option value="REFUNDED">Reembolsado</option>
             </select>
-             <button
-               onClick={() => {
-                 const params = new URLSearchParams();
-                 if (userId) params.set('userId', userId);
-                 if (debounced) params.set('search', debounced);
-                 if (eventFilter !== 'all') params.set('eventId', eventFilter);
-                 const url = `/api/orders/export?${params.toString()}`;
-                 fetch(url)
-                   .then(async (r) => {
-                     if (!r.ok) throw new Error('Falha ao exportar');
-                     const blob = await r.blob();
-                     const a = document.createElement('a');
-                     a.href = URL.createObjectURL(blob);
-                     a.download = 'orders.csv';
-                     document.body.appendChild(a);
-                     a.click();
-                     a.remove();
-                   })
-                   .catch((err) => console.error(err));
-               }}
-               className="h-12 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-sm"
-             >
-               Exportar CSV
-             </button>
+            <button
+              title="Exportar CSV"
+              aria-label="Exportar CSV"
+              onClick={() => {
+                const params = new URLSearchParams();
+                if (userId) params.set('userId', userId);
+                if (debounced) params.set('search', debounced);
+                if (eventFilter !== 'all') params.set('eventId', eventFilter);
+                const url = `/api/orders/export?${params.toString()}`;
+                fetch(url)
+                  .then(async (r) => {
+                    if (!r.ok) throw new Error('Falha ao exportar');
+                    const blob = await r.blob();
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'orders.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                  })
+                  .catch((err) => console.error(err));
+              }}
+              className="h-[54px] w-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm"
+            >
+              <span className="material-icons text-base">file_download</span>
+            </button>
           </div>
           {/* Payment Status summary (server counts) */}
-          <div className="flex flex-wrap gap-3 text-[11px] text-slate-600 mt-1">
-            <div className="flex items-center gap-1 bg-zinc-50 px-3 py-1 rounded-full border border-zinc-200">Total <span className="font-semibold text-slate-800">{orders.length}</span></div>
+          <div className="flex flex-wrap gap-3 text-[11px] text-slate-600 dark:text-slate-300 mt-1">
+            <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-700">Total <span className="font-semibold text-slate-800 dark:text-white">{orders.length}</span></div>
             {['PENDING','PAID','CANCELED','REFUNDED'].map(s => {
               const sv = serverSummary.paymentStatus?.[s] ?? 0;
               return (
-              <div key={s} className="flex items-center gap-1 px-3 py-1 rounded-full border text-[11px] font-medium uppercase tracking-wide bg-white border-zinc-200 text-slate-600" title={`(Local: ${counts[s]||0})`}>
+              <div key={s} className="flex items-center gap-1 px-3 py-1 rounded-full border text-[11px] font-medium uppercase tracking-wide bg-white dark:bg-[#0b0b0b] dark:border-zinc-700 dark:text-slate-300 border-zinc-200 text-slate-600" title={`(Local: ${counts[s]||0})`}>
                 {s} <span className="font-bold">{sv}</span>
               </div>);
             })}
           </div>
           <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm mt-3">
             <table className="w-full text-left">
-              <thead className="bg-[#F6F7FB] text-slate-600 text-xs font-medium tracking-wide">
+              <thead className="bg-[#F6F7FB] dark:bg-[#0b0b0b] text-slate-600 dark:text-slate-300 text-xs font-medium tracking-wide">
                 <tr>
                   <th className="py-4 px-6">Pedido</th>
                   <th className="py-4 px-6">Evento</th>
@@ -374,54 +384,54 @@ const OrdersManager: React.FC = () => {
                   <th className="py-4 px-6 text-right">...</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100 text-[13px]">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-[13px]">
               {loading ? (
                 skeletonRows.map((_,i)=>(
                   <tr key={i} className="animate-pulse">
-                    <td className="py-4 px-6"><div className="h-4 w-24 bg-zinc-200 rounded" /></td>
-                    <td className="py-4 px-6"><div className="h-4 w-40 bg-zinc-200 rounded" /></td>
-                    <td className="py-4 px-6"><div className="h-4 w-10 bg-zinc-200 rounded" /></td>
-                    <td className="py-4 px-6"><div className="h-4 w-28 bg-zinc-200 rounded" /></td>
-                    <td className="py-4 px-6"><div className="h-4 w-16 bg-zinc-200 rounded" /></td>
-                    <td className="py-4 px-6"><div className="h-4 w-20 bg-zinc-200 rounded" /></td>
-                    <td className="py-4 px-6 text-right"><div className="h-4 w-6 bg-zinc-200 rounded ml-auto" /></td>
+                    <td className="py-4 px-6"><div className="h-4 w-24 bg-zinc-200 dark:bg-zinc-700 rounded" /></td>
+                    <td className="py-4 px-6"><div className="h-4 w-40 bg-zinc-200 dark:bg-zinc-700 rounded" /></td>
+                    <td className="py-4 px-6"><div className="h-4 w-10 bg-zinc-200 dark:bg-zinc-700 rounded" /></td>
+                    <td className="py-4 px-6"><div className="h-4 w-28 bg-zinc-200 dark:bg-zinc-700 rounded" /></td>
+                    <td className="py-4 px-6"><div className="h-4 w-16 bg-zinc-200 dark:bg-zinc-700 rounded" /></td>
+                    <td className="py-4 px-6"><div className="h-4 w-20 bg-zinc-200 dark:bg-zinc-700 rounded" /></td>
+                    <td className="py-4 px-6 text-right"><div className="h-4 w-6 bg-zinc-200 dark:bg-zinc-700 rounded ml-auto" /></td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <>
                   {staticExamples.map(o => (
-                    <tr key={o.id} className="bg-indigo-50/40 hover:bg-indigo-50 transition cursor-pointer" onClick={()=> openOrder(o)} title="Ver detalhes do exemplo">
-                      <td className="py-4 px-6 text-indigo-600 font-semibold underline">#{o.code}<span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-indigo-600 text-white align-middle">exemplo</span></td>
-                       <td className="py-4 px-6 text-slate-700">{o.eventName}</td>
-                       <td className="py-4 px-6 text-slate-700">{o.participantsCount}</td>
-                       <td className="py-4 px-6 text-slate-700">{formatDate(o.createdAt)}</td>
-                       <td className="py-4 px-6 text-slate-700">{formatMoney(o.totalAmount)}</td>
+                    <tr key={o.id} className="bg-indigo-50/40 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/20 hover:bg-indigo-50 transition cursor-pointer" onClick={()=> openOrder(o)} title="Ver detalhes do exemplo">
+                      <td className="py-4 px-6 text-indigo-600 dark:text-indigo-300 font-semibold underline">#{o.code}<span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-indigo-600 text-white align-middle">exemplo</span></td>
+                       <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.eventName}</td>
+                       <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.participantsCount}</td>
+                       <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatDate(o.createdAt)}</td>
+                       <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatMoney(o.totalAmount)}</td>
                        <td className="py-4 px-6 flex gap-1 items-center">
                          {renderPaymentBadge(o.paymentStatus)}
                          {o.refundStatus && o.refundStatus !== 'refunded' && renderRefundBadge(o.refundStatus)}
                          {o.refundStatus === 'refunded' && <span className="text-[10px] text-emerald-600">✔</span>}
                        </td>
-                       <td className="py-4 px-6 text-right text-slate-400">—</td>
+                       <td className="py-4 px-6 text-right text-slate-400 dark:text-slate-300">—</td>
                      </tr>
                    ))}
                   <tr>
-                    <td colSpan={6} className="py-6 px-6 text-center text-[12px] text-indigo-600 bg-indigo-50 border-t border-indigo-100">
+                    <td colSpan={6} className="py-6 px-6 text-center text-[12px] text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/10 border-t border-indigo-100 dark:border-indigo-800">
                       Exibindo exemplos estáticos porque nenhum pedido real foi retornado. Gere pedidos ou integre o backend para vê-los aqui.
                     </td>
                   </tr>
                 </>
               ) : filtered.map(o => (
-                <tr key={o.id} className="hover:bg-[#F8F9FC] transition cursor-pointer" onClick={() => openOrder(o)} title="Ver detalhes do pedido">
-                  <td className="py-4 px-6 text-indigo-600 font-semibold underline">#{o.code}</td>
-                  <td className="py-4 px-6 text-slate-700">{o.eventName || 'Evento'}</td>
-                  <td className="py-4 px-6 text-slate-700">{o.participantsCount}</td>
-                  <td className="py-4 px-6 text-slate-700">{formatDate(o.createdAt)}</td>
-                  <td className="py-4 px-6 text-slate-700">{formatMoney(o.totalAmount)} {refundIcon(o)}</td>
+                <tr key={o.id} className="hover:bg-[#F8F9FC] dark:hover:bg-[#0f0f0f] transition cursor-pointer" onClick={() => openOrder(o)} title="Ver detalhes do pedido">
+                  <td className="py-4 px-6 text-indigo-600 dark:text-indigo-300 font-semibold underline">#{o.code}</td>
+                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.eventName || 'Evento'}</td>
+                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.participantsCount}</td>
+                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatDate(o.createdAt)}</td>
+                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatMoney(o.totalAmount)} {refundIcon(o)}</td>
                   <td className="py-4 px-6 flex gap-1 items-center">{renderPaymentBadge(o.paymentStatus)} {o.refundStatus && o.refundStatus!=='refunded' && renderRefundBadge(o.refundStatus)} {o.refundStatus==='refunded' && <span className="text-[10px] text-emerald-600">✔</span>}</td>
-                  <td className="py-4 px-6 text-right text-slate-500 relative" data-row-menu onClick={(e)=> e.stopPropagation()}>
+                  <td className="py-4 px-6 text-right text-slate-500 dark:text-slate-300 relative" data-row-menu onClick={(e)=> e.stopPropagation()}>
                     <button onClick={()=> setOpenMenuId(m=> m===o.id? null : o.id)} className="px-2 py-1 rounded-lg hover:bg-zinc-100">⋮</button>
                     {openMenuId === o.id && (
-                      <div className="absolute right-4 top-10 w-48 bg-white rounded-xl shadow-lg border border-zinc-200 z-10 p-1 text-[12px]" data-row-menu>
+                      <div className="absolute right-4 top-10 w-48 bg-white dark:bg-[#0b0b0b] rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700 z-10 p-1 text-[12px]" data-row-menu>
                         <ul className="divide-y divide-zinc-100">
                           <li>
                             <button disabled={['PAID','REFUNDED'].includes(o.paymentStatus||'')} onClick={()=> performRowAction(o,'pay')} className="w-full text-left px-3 py-2 disabled:opacity-40 hover:bg-zinc-50 rounded-lg">Marcar como pago</button>
@@ -436,7 +446,7 @@ const OrdersManager: React.FC = () => {
                                 </div>
                               </div>
                             ) : (
-                              <button disabled={['CANCELED','REFUNDED'].includes(o.paymentStatus||'')} onClick={()=> performRowAction(o,'cancel')} className="w-full text-left px-3 py-2 disabled:opacity-40 hover:bg-zinc-50 rounded-lg">Cancelar</button>
+                              <button disabled={['CANCELED','REFUNDED'].includes(o.paymentStatus||'')} onClick={()=> performRowAction(o,'cancel')} className="w-full text-left px-3 py-2 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg">Cancelar</button>
                             )}
                           </li>
                           <li>
@@ -448,18 +458,18 @@ const OrdersManager: React.FC = () => {
                                   <button onClick={()=> setPendingConfirm({id:'',action:null})} className="px-2 py-1 text-[11px] rounded bg-white border">Não</button>
                                 </div>
                               </div>
-                            ) : (
-                              <button disabled={(o.paymentStatus!=='CANCELED')} onClick={()=> performRowAction(o,'reopen')} className="w-full text-left px-3 py-2 disabled:opacity-40 hover:bg-zinc-50 rounded-lg">Reabrir</button>
+                              ) : (
+                              <button disabled={(o.paymentStatus!=='CANCELED')} onClick={()=> performRowAction(o,'reopen')} className="w-full text-left px-3 py-2 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg">Reabrir</button>
                             )}
                           </li>
                           <li>
-                            <button disabled={!!o.refundStatus} onClick={()=> performRowAction(o,'refund')} className="w-full text-left px-3 py-2 disabled:opacity-40 hover:bg-zinc-50 rounded-lg">Iniciar reembolso</button>
+                            <button disabled={!!o.refundStatus} onClick={()=> performRowAction(o,'refund')} className="w-full text-left px-3 py-2 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg">Iniciar reembolso</button>
                           </li>
                           <li>
                             <button disabled={o.refundStatus!=='processing'} onClick={()=> performRowAction(o,'refund-complete')} className="w-full text-left px-3 py-2 disabled:opacity-40 hover:bg-zinc-50 rounded-lg">Concluir reembolso</button>
                           </li>
                           <li>
-                            <button onClick={()=> performRowAction(o,'resend')} className="w-full text-left px-3 py-2 hover:bg-zinc-50 rounded-lg">Reenviar ingressos</button>
+                            <button onClick={()=> performRowAction(o,'resend')} className="w-full text-left px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg">Reenviar ingressos</button>
                           </li>
                         </ul>
                         {rowActionLoading?.endsWith(o.id) && <div className="mt-1 text-[11px] text-zinc-400 px-2 pb-1">Processando...</div>}
@@ -476,8 +486,8 @@ const OrdersManager: React.FC = () => {
               Página {page + 1} de {totalPages} • {total} pedidos
             </div>
             <div className="flex gap-2">
-              <button disabled={!canPrev} onClick={()=> canPrev && setPage(p=>p-1)} className={`px-3 py-1 rounded-lg border text-sm font-medium ${canPrev ? 'bg-white hover:bg-zinc-50' : 'opacity-40 cursor-not-allowed'}`}>Anterior</button>
-              <button disabled={!canNext} onClick={()=> canNext && setPage(p=>p+1)} className={`px-3 py-1 rounded-lg border text-sm font-medium ${canNext ? 'bg-white hover:bg-zinc-50' : 'opacity-40 cursor-not-allowed'}`}>Próxima</button>
+              <button disabled={!canPrev} onClick={()=> canPrev && setPage(p=>p-1)} className={`px-3 py-1 rounded-lg border text-sm font-medium ${canPrev ? 'bg-white dark:bg-[#121212] hover:bg-zinc-50 dark:hover:bg-zinc-800' : 'opacity-40 cursor-not-allowed'}`}>Anterior</button>
+              <button disabled={!canNext} onClick={()=> canNext && setPage(p=>p+1)} className={`px-3 py-1 rounded-lg border text-sm font-medium ${canNext ? 'bg-white dark:bg-[#121212] hover:bg-zinc-50 dark:hover:bg-zinc-800' : 'opacity-40 cursor-not-allowed'}`}>Próxima</button>
             </div>
           </div>
         </div>
@@ -485,44 +495,44 @@ const OrdersManager: React.FC = () => {
   <SelectEventModal open={showSelectModal} onClose={() => setShowSelectModal(false)} onConfirm={handleSelectConfirm} />
     {selected && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={()=>setSelected(null)}>
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={e=>e.stopPropagation()}>
-          <div className="p-6 border-b border-zinc-100 flex items-start justify-between">
+        <div className="bg-white dark:bg-[#0b0b0b] dark:text-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={e=>e.stopPropagation()}>
+          <div className="p-6 border-b border-zinc-100 dark:border-zinc-700 flex items-start justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Pedido #{selected.code}</h2>
-              <p className="text-xs text-slate-500 mt-1">Criado em {new Date(selected.createdAt).toLocaleString('pt-BR')}</p>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Pedido #{selected.code}</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Criado em {new Date(selected.createdAt).toLocaleString('pt-BR')}</p>
             </div>
-            <button onClick={()=>setSelected(null)} className="text-zinc-400 hover:text-zinc-600 transition" aria-label="Fechar">✕</button>
+            <button onClick={()=>setSelected(null)} className="text-zinc-400 dark:text-slate-400 hover:text-zinc-600 transition" aria-label="Fechar">✕</button>
           </div>
           <div className="p-6 space-y-5 text-sm">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <span className="block text-[11px] uppercase tracking-wide text-zinc-500 mb-0.5">Evento</span>
-                <span className="font-medium text-zinc-800">{selected.eventName || 'Evento'}</span>
+                <span className="font-medium text-zinc-800 dark:text-white">{selected.eventName || 'Evento'}</span>
               </div>
               <div>
                 <span className="block text-[11px] uppercase tracking-wide text-zinc-500 mb-0.5">Participantes</span>
-                <span className="font-medium text-zinc-800">{selected.participantsCount}</span>
+                <span className="font-medium text-zinc-800 dark:text-white">{selected.participantsCount}</span>
               </div>
               <div>
                 <span className="block text-[11px] uppercase tracking-wide text-zinc-500 mb-0.5">Valor Total</span>
-                <span className="font-medium text-zinc-800">{formatMoney(selected.totalAmount)}</span>
+                <span className="font-medium text-zinc-800 dark:text-white">{formatMoney(selected.totalAmount)}</span>
               </div>
               <div>
                 <span className="block text-[11px] uppercase tracking-wide text-zinc-500 mb-0.5">ID</span>
-                <span className="font-mono text-[13px] text-zinc-700">{selected.id}</span>
+                <span className="font-mono text-[13px] text-zinc-700 dark:text-slate-300">{selected.id}</span>
               </div>
             </div>
             {/* Extended purchase + event block */}
             {detail && (
-              <div className="grid grid-cols-2 gap-4 bg-white/60 border border-zinc-100 rounded-xl p-4 text-[12px]">
+              <div className="grid grid-cols-2 gap-4 bg-white/60 dark:bg-[#121212]/60 border border-zinc-100 dark:border-zinc-700 rounded-xl p-4 text-[12px]">
                 <div>
                   <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-1">Comprador</div>
-                  <div className="font-medium text-zinc-800">{detail.purchaserName || '—'}</div>
-                  <div className="text-zinc-500 text-[11px]">{detail.purchaserEmail || ''}</div>
+                  <div className="font-medium text-zinc-800 dark:text-white">{detail.purchaserName || '—'}</div>
+                  <div className="text-zinc-500 dark:text-slate-400 text-[11px]">{detail.purchaserEmail || ''}</div>
                 </div>
                 <div>
                   <div className="text-[11px] uppercase tracking-wide text-zinc-500 mb-1">Pagamento</div>
-                  <div className="font-medium text-zinc-800">{detail.paymentMethod || 'PIX'}</div>
+                  <div className="font-medium text-zinc-800 dark:text-white">{detail.paymentMethod || 'PIX'}</div>
                   {detail.refundStatus && (
                     <div className="mt-1 text-[11px] text-amber-700 font-medium">Reembolso: {detail.refundStatus}{detail.refundAmount ? ` (R$${detail.refundAmount.toFixed(2).replace('.',',')})` : ''}</div>
                   )}
@@ -541,7 +551,7 @@ const OrdersManager: React.FC = () => {
                 </div>
               </div>
             )}
-            <div className="bg-zinc-50 border border-zinc-100 rounded-xl p-4 text-[12px] leading-relaxed text-zinc-600 min-h-[120px]">
+              <div className="bg-zinc-50 dark:bg-[#0b0b0b] border border-zinc-100 dark:border-zinc-700 rounded-xl p-4 text-[12px] leading-relaxed text-zinc-600 dark:text-slate-300 min-h-[120px]">
               {detailLoading && <div className="animate-pulse text-zinc-500">Carregando detalhes…</div>}
               {detailError && <div className="text-red-500 text-xs">{detailError}</div>}
               {!detailLoading && !detailError && detail && (
@@ -559,11 +569,11 @@ const OrdersManager: React.FC = () => {
                       </thead>
                       <tbody className="align-top">
                         {detail.tickets?.map((t:any)=> (
-                          <tr key={t.id} className="border-t border-zinc-100">
-                            <td className="py-1 pr-4 font-mono text-indigo-600">{t.code}</td>
-                            <td className="py-1 pr-4 text-zinc-700">{t.userEmail || '—'}</td>
-                            <td className="py-1 pr-4 text-zinc-700">{t.ticketTypeName || 'Pista'}</td>
-                            <td className="py-1 pr-2 text-right text-zinc-700">{t.pricePaid ? 'R$'+t.pricePaid.toFixed(2).replace('.',',') : '—'}</td>
+                          <tr key={t.id} className="border-t border-zinc-100 dark:border-zinc-700">
+                            <td className="py-1 pr-4 font-mono text-indigo-600 dark:text-indigo-300">{t.code}</td>
+                            <td className="py-1 pr-4 text-zinc-700 dark:text-slate-300">{t.userEmail || '—'}</td>
+                            <td className="py-1 pr-4 text-zinc-700 dark:text-slate-300">{t.ticketTypeName || 'Pista'}</td>
+                            <td className="py-1 pr-2 text-right text-zinc-700 dark:text-slate-300">{t.pricePaid ? 'R$'+t.pricePaid.toFixed(2).replace('.',',') : '—'}</td>
                           </tr>
                         ))}
                         {(!detail.tickets || detail.tickets.length===0) && <tr><td colSpan={4} className="py-2 text-zinc-500">Sem tickets</td></tr>}

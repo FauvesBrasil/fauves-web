@@ -339,7 +339,7 @@ const CreateTickets: React.FC = () => {
     : (endDateIsToday ? nowHm : undefined);
 
   return (
-    <div className="min-h-screen w-full bg-white flex">
+    <div className="min-h-screen w-full bg-white dark:bg-[#0b0b0b] flex">
       <SidebarMenu />
       <div className="fixed top-0 left-[70px] h-screen z-10">
         <EventDetailsSidebar
@@ -357,7 +357,7 @@ const CreateTickets: React.FC = () => {
           <div className="rounded-3xl w-full max-w-[800px] max-md:p-5 max-md:w-full max-md:max-w-screen-md max-sm:p-4 relative min-h-[600px]">
             <div className="flex flex-col gap-6 flex-1 mt-[67px] p-8">
               <div className="flex items-center justify-between mb-4">
-                <h1 className="text-[28px] font-bold text-indigo-950">Ingressos</h1>
+                <h1 className="text-[28px] font-bold text-indigo-950 dark:text-white">Ingressos</h1>
                 {ticketTypes.length > 0 && !ticketsLoading && (
                   <Button className="bg-[#2A2AD7] hover:bg-[#1E1EBE] text-white font-bold px-4 py-2 rounded-lg shadow h-[38px]" onClick={(e) => { (e.currentTarget as HTMLButtonElement).blur(); setEditingId(null); setTicketName(""); setMaxTickets(""); setPrice(""); setDescription(""); setIsAbsorbFee(false); setIsPrivate(false); setIsFacePass(false); setDrawerOpen(true); }}>
                     Adicionar mais ingressos
@@ -370,7 +370,7 @@ const CreateTickets: React.FC = () => {
               {ticketsLoading ? (
                 <>
                   <div className="relative w-full">
-                    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 mb-2 shadow-sm">
+                    <div className="bg-white dark:bg-[#242424] rounded-2xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-6 mb-2 shadow-sm">
                       <div className="flex justify-between items-start">
                         <div className="flex items-start gap-3">
                           <Skeleton className="h-4 w-4 rounded" />
@@ -393,7 +393,7 @@ const CreateTickets: React.FC = () => {
                     </div>
                   </div>
                   <div className="relative w-full">
-                    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 mb-4 shadow-sm" style={{ marginLeft: HALF_INDENT_PX, width: `calc(100% - ${HALF_INDENT_PX}px)` }}>
+                    <div className="bg-white dark:bg-[#242424] rounded-2xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-6 mb-4 shadow-sm" style={{ marginLeft: HALF_INDENT_PX, width: `calc(100% - ${HALF_INDENT_PX}px)` }}>
                       <div className="flex justify-between items-start">
                         <div className="flex items-start gap-3">
                           <div className="h-4 w-4" />
@@ -430,7 +430,7 @@ const CreateTickets: React.FC = () => {
                   <div key={t.id} className="relative w-full">
                     {/* Animated deletion effect */}
                     <div
-                      className={`bg-white rounded-2xl border p-6 transition-all duration-700 ${isParentWithHalf ? 'mb-1' : 'mb-4'} shadow-sm ${draggingId === t.id ? 'opacity-70' : ''} ${dragOverId === t.id ? 'ring-2 ring-indigo-200' : ''} ${deleteId === t.id ? 'border-red-300 animate-delete-ticket' : 'border-[#E5E7EB]'}`}
+                      className={`bg-white dark:bg-[#242424] rounded-2xl border p-6 transition-all duration-700 ${isParentWithHalf ? 'mb-1' : 'mb-4'} shadow-sm ${draggingId === t.id ? 'opacity-70' : ''} ${dragOverId === t.id ? 'ring-2 ring-indigo-200' : ''} ${deleteId === t.id ? 'border-red-300 animate-delete-ticket' : 'border-[#E5E7EB] dark:border-[#1F1F1F]'}`}
                       style={t.isHalf ? { marginLeft: HALF_INDENT_PX, width: `calc(100% - ${HALF_INDENT_PX}px)` } : undefined}
                       draggable={!t.isHalf}
                       onDragStart={(e) => {
@@ -468,7 +468,7 @@ const CreateTickets: React.FC = () => {
                     >
                       {/* Animated trash icon and message when deleting */}
                       {pendingDeleteId === t.id && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 z-10 rounded-2xl border-2 border-red-300 animate-fade-in">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-[#0b0b0b]/80 z-10 rounded-2xl border-2 border-red-300 animate-fade-in">
                           <svg className="w-16 h-16 text-red-400 animate-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6m5 10v-6" />
                           </svg>
@@ -476,7 +476,7 @@ const CreateTickets: React.FC = () => {
                         </div>
                       )}
                       <div className="flex justify-between items-start">
-                      <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-3">
                         {!t.isHalf && (
                           <div className="mt-0.5 text-gray-400 cursor-grab select-none" title="Arraste para reordenar">
                             <GripVertical className="w-4 h-4" />
@@ -484,7 +484,7 @@ const CreateTickets: React.FC = () => {
                         )}
                         <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <div className="text-lg font-bold text-[#091747]">{displayName}</div>
+                          <div className="text-lg font-bold text-[#091747] dark:text-white">{displayName}</div>
                           {t.isHalf && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[12px]">Meia-entrada</span>
                           )}
@@ -494,7 +494,7 @@ const CreateTickets: React.FC = () => {
                           <span className="text-emerald-600 font-medium">À venda</span>
                         </div>
                         {(t.salesStart || t.salesEnd) && (
-                          <div className="text-xs text-indigo-900/70 mb-2">
+                          <div className="text-xs text-indigo-900/70 dark:text-slate-300 mb-2">
                             {(() => {
                               try {
                                 const startStr = t.salesStart ? formatDateTimeShort(new Date(t.salesStart)) : null;
@@ -513,11 +513,11 @@ const CreateTickets: React.FC = () => {
                         <div className="text-[#EF4118] text-lg font-bold mr-1">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-indigo-700" aria-label="Ações do ingresso">
+                            <button className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-[#1F1F1F] text-gray-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white" aria-label="Ações do ingresso">
                               <MoreVertical className="w-5 h-5" />
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuContent align="end" className="w-40 bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
                             <DropdownMenuItem disabled={!!t.isHalf} onClick={() => {
                               setEditingId(t.id);
                               setTicketName(t.name || "");
@@ -565,9 +565,9 @@ const CreateTickets: React.FC = () => {
                         </DropdownMenu>
                       </div>
                     </div>
-                    <hr className={`border-gray-100 ${isParentWithHalf ? 'my-2' : 'my-4'}`} />
+                    <hr className={`border-gray-100 dark:border-[#1F1F1F] ${isParentWithHalf ? 'my-2' : 'my-4'}`} />
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-[#091747] font-semibold">Vendido <span className="font-bold">0/{t.maxQuantity}</span></span>
+                      <span className="text-[#091747] dark:text-white font-semibold">Vendido <span className="font-bold">0/{t.maxQuantity}</span></span>
                       {Number(t.price || 0) > 0 && (
                         <>
                           <span className="text-[#EF4118] font-semibold">Você recebe <span className="font-bold">{formatBRL(receive)}</span></span>
@@ -589,18 +589,18 @@ const CreateTickets: React.FC = () => {
                   <DrawerTrigger asChild>
                     <button
                       type="button"
-                      className="group bg-white rounded-xl shadow p-6 flex items-center gap-4 w-full transition-all duration-150 border border-transparent hover:border-indigo-200 hover:shadow-lg hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                      className="group bg-white dark:bg-[#242424] rounded-xl shadow p-6 flex items-center gap-4 w-full transition-all duration-150 border border-transparent dark:border-[#1F1F1F] hover:border-indigo-200 hover:shadow-lg hover:bg-indigo-50 dark:hover:bg-[#1F1F1F] focus:outline-none focus:ring-2 focus:ring-indigo-200"
                       style={{ cursor: 'pointer' }}
                     >
                       <span className="flex items-center justify-center w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 text-[26px] font-regular group-hover:bg-indigo-100 group-hover:text-indigo-700 transition-all">+</span>
-                      <span className="font-semibold text-indigo-950 group-hover:text-indigo-700 transition-colors">Criar novos ingressos</span>
+                      <span className="font-semibold text-indigo-950 dark:text-white group-hover:text-indigo-700 transition-colors">Criar novos ingressos</span>
                     </button>
                   </DrawerTrigger>
                 )}
                 <DrawerContent>
-                  <DrawerHeader className="p-6 pb-2 border-b border-gray-100">
-                    <DrawerTitle className="text-xl font-bold text-indigo-950">{editingId ? 'Editar ingresso' : 'Configurar ingresso'}</DrawerTitle>
-                    <DrawerDescription>Defina o período de vendas e as informações do ingresso.</DrawerDescription>
+                  <DrawerHeader className="p-6 pb-2 border-b border-gray-100 dark:border-[#1F1F1F]">
+                    <DrawerTitle className="text-xl font-bold text-indigo-950 dark:text-white">{editingId ? 'Editar ingresso' : 'Configurar ingresso'}</DrawerTitle>
+                    <DrawerDescription className="dark:text-slate-300">Defina o período de vendas e as informações do ingresso.</DrawerDescription>
                   </DrawerHeader>
                   <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
                     {/* Tabs Pago/Gratuito */}
@@ -618,13 +618,13 @@ const CreateTickets: React.FC = () => {
                       </TabsList>
                     </Tabs>
                     <Label className="mt-2">Nome do ingresso</Label>
-                    <Input placeholder="Nome do ingresso" value={ticketName} onChange={e => setTicketName(e.target.value)} />
+                    <Input placeholder="Nome do ingresso" value={ticketName} onChange={e => setTicketName(e.target.value)} className="dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" />
                     <Label>Quantidade máxima de ingressos</Label>
-                    <Input placeholder="Quantidade máxima de ingressos" type="number" min={1} value={maxTickets} onChange={e => setMaxTickets(e.target.value)} />
+                    <Input placeholder="Quantidade máxima de ingressos" type="number" min={1} value={maxTickets} onChange={e => setMaxTickets(e.target.value)} className="dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" />
                     {!isFree && (
                       <>
                         <Label>Preço</Label>
-                        <Input placeholder="Preço" type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} />
+                        <Input placeholder="Preço" type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} className="dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" />
                       </>
                     )}
                     <div className="flex items-center justify-between text-sm mt-1 mb-2">
@@ -632,7 +632,7 @@ const CreateTickets: React.FC = () => {
                       <a href="#" className="text-indigo-700 font-medium hover:underline">Ver detalhes</a>
                     </div>
                     <div className="flex items-center gap-3 bg-indigo-50 rounded-lg px-4 py-3">
-                      <span className="text-[#091747] text-sm flex-1">Absorver o valor da taxa, ou seja, o cliente não pagará pela taxa de serviço da Fauves.</span>
+                      <span className="text-[#091747] dark:text-white text-sm flex-1">Absorver o valor da taxa, ou seja, o cliente não pagará pela taxa de serviço da Fauves.</span>
                       <Switch checked={isAbsorbFee} onCheckedChange={setIsAbsorbFee} disabled={isFree} />
                     </div>
                     {/* Janela de vendas (data e hora lado a lado em cada grupo) */}
@@ -640,13 +640,13 @@ const CreateTickets: React.FC = () => {
                       <div className="w-full">
                         <Label className="mb-1 block">Início das vendas</Label>
                         <div className="flex gap-2 w-full">
-                          <Input
-                            className="flex-1"
-                            type="date"
-                            value={salesStartDate}
-                            min={todayYmd}
-                            onFocus={e => { (e.currentTarget as any).showPicker?.(); }}
-                            onChange={e => {
+              <Input
+                className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
+                type="date"
+                value={salesStartDate}
+                min={todayYmd}
+                onFocus={e => { (e.currentTarget as any).showPicker?.(); }}
+                onChange={e => {
                               let v = e.target.value;
                               if (v && v < todayYmd) v = todayYmd;
                               // Se término já existir e for anterior ao início, alinhar
@@ -658,7 +658,7 @@ const CreateTickets: React.FC = () => {
                             }}
                           />
                           <Input
-                            className="flex-1"
+                            className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
                             type="time"
                             value={salesStartTime}
                             min={startTimeMin}
@@ -671,7 +671,7 @@ const CreateTickets: React.FC = () => {
                         <Label className="mb-1 block">Término das vendas</Label>
                         <div className="flex gap-2 w-full">
                           <Input
-                            className="flex-1"
+                            className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
                             type="date"
                             value={salesEndDate}
                             min={endDateMin}
@@ -688,7 +688,7 @@ const CreateTickets: React.FC = () => {
                             }}
                           />
                           <Input
-                            className="flex-1"
+                            className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
                             type="time"
                             value={salesEndTime}
                             min={endTimeMin}
@@ -705,13 +705,13 @@ const CreateTickets: React.FC = () => {
                     </div>
                     <div className="font-semibold text-indigo-950 mt-2 mb-1">Configurações avançadas</div>
                     <Label>Descrição</Label>
-                    <Textarea placeholder="Explique para os participantes mais sobre esse ingresso." className="resize-none" value={description} onChange={e => setDescription(e.target.value)} />
+                    <Textarea placeholder="Explique para os participantes mais sobre esse ingresso." className="resize-none dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" value={description} onChange={e => setDescription(e.target.value)} />
                     <div className="text-xs text-indigo-900/80 mt-1 mb-2">A quantidade mínima por compra deste ingresso é definida em 1. Abaixo, a quantidade máxima que o usuário pode comprar deste ingresso.</div>
                     <Label>Quantidade máxima por usuário</Label>
-                    <Input placeholder="Ex.: 4" type="number" min={1} value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} />
+                    <Input placeholder="Ex.: 4" type="number" min={1} value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} className="dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" />
                     <div className="flex items-center gap-2 mt-2">
                       <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-                      <span className="text-indigo-900/90 text-sm flex items-center gap-1">
+                      <span className="text-indigo-900/90 dark:text-white text-sm flex items-center gap-1">
                         <span className="inline-block"><svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M17 17.5V17.5C17 15.0147 14.9853 13 12.5 13H11.5C9.01472 13 7 15.0147 7 17.5V17.5" stroke="#6366F1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="3" stroke="#6366F1" strokeWidth="1.5"/></svg></span>
                         Ingresso privado
                       </span>
@@ -724,7 +724,7 @@ const CreateTickets: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <DrawerFooter className="flex flex-row gap-4 justify-between p-6 border-t border-gray-100">
+                  <DrawerFooter className="flex flex-row gap-4 justify-between p-6 border-t border-gray-100 dark:border-[#1F1F1F]">
                     <DrawerClose asChild>
                       <Button variant="outline" className="flex-1">Cancelar</Button>
                     </DrawerClose>
@@ -741,20 +741,23 @@ const CreateTickets: React.FC = () => {
           </div>
         </div>
       </div>
-      {/* Botão fixo Continuar para publicar (mesmo estilo do CreateEditEvent) */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          onClick={() => {
-            setFlowStep(3);
-            setFlowVisible(true);
-            setTimeout(() => goToPublish(), 80);
-          }}
-          className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-12 min-w-[180px] rounded-md shadow-lg px-4 flex items-center justify-center gap-2 whitespace-nowrap"
-        >
-          <span>Continuar para publicar</span>
-          <svg className="ml-2 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-        </Button>
-      </div>
+      {/* Botão fixo Continuar para publicar (mesmo estilo do CreateEditEvent)
+          Não mostrar quando já publicamos a página e existe ao menos 1 ingresso criado */}
+      {!(eventStatus === 'Publicado' && ticketTypes.length > 0) && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            onClick={() => {
+              setFlowStep(3);
+              setFlowVisible(true);
+              setTimeout(() => goToPublish(), 80);
+            }}
+            className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-12 min-w-[180px] rounded-md shadow-lg px-4 flex items-center justify-center gap-2 whitespace-nowrap"
+          >
+            <span>Continuar para publicar</span>
+            <svg className="ml-2 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+          </Button>
+        </div>
+      )}
       <StepFlowOverlay visible={flowVisible} activeStep={flowStep} subtitle={flowStep === 2 ? "Preparando criação de ingressos…" : undefined} />
       {/* Modal único de confirmação de exclusão */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>

@@ -17,6 +17,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Card } from "../components/ui/card";
 import { Avatar, AvatarFallback } from "../components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import DateRangePicker from '@/components/DateRangePicker';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
 import RequireOrganization from '@/components/RequireOrganization';
@@ -104,15 +105,30 @@ function CreateEditEvent() {
 						setEndDate(d2.toISOString().slice(0,10));
 						setEndTime(d2.toTimeString().slice(0,5));
 					}
-					const loc = ev.location || (ev as any).locationDetails?.type || '';
-					setLocationType(loc || 'Local');
-					if (loc === 'Local') {
-						setLocationAddress(ev.locationAddress || (ev as any).locationDetails?.address || '');
-					} else if (loc === 'Evento online') {
-						setOnlineUrl(ev.onlineUrl || (ev as any).locationDetails?.url || '');
-					} else if (loc === 'Local será anunciado em breve') {
-						setTbdUf(ev.locationUf || (ev as any).locationDetails?.uf || '');
-						setTbdCity(ev.locationCity || (ev as any).locationDetails?.city || '');
+					// Prefer structured fields when deciding location type
+					const details = (ev as any).locationDetails || {};
+					const hasAddress = !!(ev.locationAddress || details.address);
+					const hasOnline = !!(ev.onlineUrl || details.url);
+					const hasTbd = !!(ev.locationUf || ev.locationCity || details.uf || details.city);
+					let locType = 'Local';
+					if (hasAddress) locType = 'Local';
+					else if (hasOnline) locType = 'Evento online';
+					else if (hasTbd) locType = 'Local será anunciado em breve';
+					else {
+						const raw = (ev.location || details.type || '').toString();
+						if (raw.includes('Local será anunciado')) locType = 'Local será anunciado em breve';
+						else if (raw.includes('Evento online')) locType = 'Evento online';
+						else if (raw.includes('Local')) locType = 'Local';
+						else locType = raw || 'Local';
+					}
+					setLocationType(locType);
+					if (locType === 'Local') {
+						setLocationAddress(ev.locationAddress || details.address || (typeof ev.location === 'string' ? ev.location : '') || '');
+					} else if (locType === 'Evento online') {
+						setOnlineUrl(ev.onlineUrl || details.url || (typeof ev.location === 'string' ? ev.location : '') || '');
+					} else if (locType === 'Local será anunciado em breve') {
+						setTbdUf(ev.locationUf || details.uf || '');
+						setTbdCity(ev.locationCity || details.city || '');
 					}
 					// image
 					if (ev.image) {
@@ -463,6 +479,13 @@ function CreateEditEvent() {
 						if (eventSubtitle) form.append('subtitle', eventSubtitle);
 						if (eventDescription) form.append('description', eventDescription);
 						if (locationVal) form.append('location', locationVal);
+						// include structured location fields so backend can persist address/online/tbd
+						if (locationType === 'Local' && locationAddress) form.append('locationAddress', locationAddress);
+						if (locationType === 'Evento online' && onlineUrl) form.append('onlineUrl', onlineUrl);
+						if (locationType === 'Local será anunciado em breve') {
+							if (tbdUf) form.append('tbdUf', tbdUf);
+							if (tbdCity) form.append('tbdCity', tbdCity);
+						}
 						// send both organizerId and organizationId to be safe
 						if (selectedOrganizer) { form.append('organizerId', selectedOrganizer); form.append('organizationId', selectedOrganizer); }
 						form.append('startDate', startISO);
@@ -479,6 +502,11 @@ function CreateEditEvent() {
 							subtitle: eventSubtitle || undefined,
 							description: eventDescription || undefined,
 							location: locationVal || undefined,
+							// structured location fields
+							locationAddress: locationType === 'Local' ? (locationAddress || undefined) : undefined,
+							onlineUrl: locationType === 'Evento online' ? (onlineUrl || undefined) : undefined,
+							tbdUf: locationType === 'Local será anunciado em breve' ? (tbdUf || undefined) : undefined,
+							tbdCity: locationType === 'Local será anunciado em breve' ? (tbdCity || undefined) : undefined,
 							organizerId: selectedOrganizer || undefined,
 							organizationId: selectedOrganizer || undefined,
 							startDate: startISO,
@@ -709,38 +737,76 @@ function CreateEditEvent() {
 															<div className="text-base mb-5" data-name="Data e hora">Data e hora</div>
 															<div className="flex gap-2.5 w-full text-xs">
 																<div className="flex-1">
-																	<Input ref={startDateRef} type="date" value={startDate} onChange={e => {
-																		const v = e.target.value;
-																		if (v < minStartDate()) return;
-																		setStartDate(v);
-																	}} placeholder="Data de início" min={minStartDate()} className={`w-full ${startDateError ? 'border-red-600' : ''}`} />
-																	{startDateError && <div className="text-xs text-red-600 mt-1">{startDateError}</div>}
+																	<div className="text-sm font-medium mb-2">Data e hora do início</div>
+																	<div className="flex gap-2">
+																		<div className="flex-1">
+																			<input
+																				ref={startDateRef}
+																				type="date"
+																				value={startDate}
+																				onChange={e => {
+																					const v = e.target.value;
+																					if (v < minStartDate()) return;
+																					setStartDate(v);
+																				}}
+																				min={minStartDate()}
+																				className={`w-full border rounded-md px-3 py-2 ${startDateError ? 'border-red-600' : ''}`}
+																			/>
+																			{startDateError && <div className="text-xs text-red-600 mt-1">{startDateError}</div>}
+																		</div>
+																		<div className="w-40">
+																			<input
+																				ref={startTimeRef}
+																				type="time"
+																				value={startTime}
+																				onChange={e => {
+																					const v = e.target.value;
+																					const minT = minStartTimeFor(startDate);
+																					if (v < minT) return;
+																					setStartTime(v);
+																				}}
+																				min={minStartTimeFor(startDate)}
+																				className={`w-full border rounded-md px-3 py-2 ${startTimeError ? 'border-red-600' : ''}`}
+																			/>
+																			{startTimeError && <div className="text-xs text-red-600 mt-1">{startTimeError}</div>}
+																		</div>
+																	</div>
 																</div>
 																<div className="flex-1">
-																	<Input ref={startTimeRef} type="time" value={startTime} onChange={e => {
-																		const v = e.target.value;
-																		const minT = minStartTimeFor(startDate);
-																		if (v < minT) return;
-																		setStartTime(v);
-																	}} placeholder="Hora de início" className={`w-full ${startTimeError ? 'border-red-600' : ''}`} min={minStartTimeFor(startDate)} />
-																	{startTimeError && <div className="text-xs text-red-600 mt-1">{startTimeError}</div>}
-																</div>
-																<div className="flex-1">
-																	<Input ref={endDateRef} type="date" value={endDate} onChange={e => {
-																		const v = e.target.value;
-																		if (v < startDate) return;
-																		setEndDate(v);
-																	}} placeholder="Data de término" min={startDate || minStartDate()} className={`w-full ${endDateError ? 'border-red-600' : ''}`} />
-																	{endDateError && <div className="text-xs text-red-600 mt-1">{endDateError}</div>}
-																</div>
-																<div className="flex-1">
-																	<Input ref={endTimeRef} type="time" value={endTime} onChange={e => {
-																		const v = e.target.value;
-																		const minEnd = minEndTimeFor(endDate, startDate, startTime);
-																		if (v < minEnd) return;
-																		setEndTime(v);
-																	}} placeholder="Hora de término" className={`w-full ${endTimeError ? 'border-red-600' : ''}`} min={minEndTimeFor(endDate, startDate, startTime)} />
-																	{endTimeError && <div className="text-xs text-red-600 mt-1">{endTimeError}</div>}
+																	<div className="text-sm font-medium mb-2">Data e hora do término</div>
+																	<div className="flex gap-2">
+																		<div className="flex-1">
+																			<input
+																				ref={endDateRef}
+																				type="date"
+																				value={endDate}
+																				onChange={e => {
+																					const v = e.target.value;
+																					if (v && startDate && v < startDate) return;
+																					setEndDate(v);
+																				}}
+																				min={startDate || minStartDate()}
+																				className={`w-full border rounded-md px-3 py-2 ${endDateError ? 'border-red-600' : ''}`}
+																			/>
+																			{endDateError && <div className="text-xs text-red-600 mt-1">{endDateError}</div>}
+																		</div>
+																		<div className="w-40">
+																			<input
+																				ref={endTimeRef}
+																				type="time"
+																				value={endTime}
+																				onChange={e => {
+																					const v = e.target.value;
+																					const minEnd = minEndTimeFor(endDate, startDate, startTime);
+																					if (v < minEnd) return;
+																					setEndTime(v);
+																				}}
+																				min={minEndTimeFor(endDate, startDate, startTime)}
+																				className={`w-full border rounded-md px-3 py-2 ${endTimeError ? 'border-red-600' : ''}`}
+																			/>
+																			{endTimeError && <div className="text-xs text-red-600 mt-1">{endTimeError}</div>}
+																		</div>
+																	</div>
 																</div>
 															</div>
 														</div>

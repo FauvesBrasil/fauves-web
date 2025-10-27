@@ -6,14 +6,14 @@ export default function RecentActivitiesCard() {
     { name: 'Amazon', date: '5 dias atrás', value: '-$39.40' },
   ];
   return (
-    <div style={{background:'#fff',padding:20,borderRadius:8,boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
-      <h4 style={{marginTop:0}}>Recent Activities</h4>
-      <ul style={{listStyle:'none',padding:0,margin:0}}>
+    <div className="bg-white p-4 rounded-md shadow-sm">
+      <h4 className="mt-0">Recent Activities</h4>
+      <ul className="list-none p-0 m-0">
         {activities.map((a,i)=>(
-          <li key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:i<activities.length-1?'1px solid #eee':'none'}}>
+          <li key={i} className={`flex justify-between items-center py-2 ${i<activities.length-1 ? 'border-b border-slate-100' : ''}`}>
             <span>{a.name}</span>
-            <span style={{opacity:0.7}}>{a.date}</span>
-            <span style={{fontWeight:600}}>{a.value}</span>
+            <span className="opacity-70">{a.date}</span>
+            <span className="font-semibold">{a.value}</span>
           </li>
         ))}
       </ul>

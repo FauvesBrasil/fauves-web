@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import DateRangePicker from '@/components/DateRangePicker';
 
 // Lista de UFs do Brasil para seleção rápida
 const BRAZIL_UFS = [
@@ -287,40 +288,26 @@ function CriarEditarEvento() {
                 </div>
                 <div className="flex gap-2.5 w-full text-xs">
                   <div className="flex-1">
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      placeholder="Data de início"
-                      className="w-full"
-                    />
+                    <div className="text-sm font-medium mb-2">Data e hora do início</div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full border rounded-md px-3 py-2" />
+                      </div>
+                      <div className="w-40">
+                        <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className="w-full border rounded-md px-3 py-2" />
+                      </div>
+                    </div>
                   </div>
                   <div className="flex-1">
-                    <Input
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      placeholder="Hora de início"
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      placeholder="Data de término"
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Input
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      placeholder="Hora de término"
-                      className="w-full"
-                    />
+                    <div className="text-sm font-medium mb-2">Data e hora do término</div>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full border rounded-md px-3 py-2" />
+                      </div>
+                      <div className="w-40">
+                        <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="w-full border rounded-md px-3 py-2" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

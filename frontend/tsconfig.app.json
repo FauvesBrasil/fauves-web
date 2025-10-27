@@ -29,6 +29,6 @@
     }
   },
   "include": ["src"],
-  "types": ["vite/client", "node"],
+  "types": ["vite/client", "node", "vitest/globals", "vitest"],
   "typeRoots": ["./node_modules/@types"]
 }

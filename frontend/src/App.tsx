@@ -4,7 +4,7 @@ import { TooltipProvider } from "./components/ui/tooltip";
 import { AuthProvider } from '@/context/AuthContext';
 import { OrganizationProvider } from '@/context/OrganizationContext';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import React from 'react';
+import React, { Suspense } from 'react';
 
 import Index from "./pages/Index";
 import OrganizerReportsPage from "./pages/ReportsPage";
@@ -16,6 +16,8 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import TestSupabase from "./pages/TestSupabase"; // <-- importe o componente de teste
 import OrganizerDashboard from "./pages/OrganizerDashboard";
+import ProducerJourneyDemo from './pages/ProducerJourneyDemo';
+import SearchResults from './pages/SearchResults';
 import AccountSettings from "./pages/AccountSettings";
 import CreateEditEvent from "./pages/CreateEditEvent";
 import CreateTickets from "./pages/CreateTickets";
@@ -24,6 +26,7 @@ import CreateOrganization from "./pages/CreateOrganization";
 import EventPanel from "./pages/EventPanel";
 import OrganizerEvents from "./pages/OrganizerEvents";
 import PublicCollection from "./pages/PublicCollection";
+import OrganizationPublicProfile from "./pages/OrganizationPublicProfile";
 import OrdersManager from "./pages/OrdersManager";
 import MarketingTools from "./pages/MarketingTools";
 import MarketingLink from "./pages/MarketingLink";
@@ -33,12 +36,14 @@ import CheckoutPix from "./pages/CheckoutPix";
 import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
 import { initApiDetection } from '@/lib/apiBase';
+import { LocationProvider } from '@/context/LocationContext';
 import OrganizationTransitionOverlay from '@/components/OrganizationTransitionOverlay';
 import OrganizerSettingsPage from './pages/OrganizerSettingsPage';
 import AdminLayout from './pages/Admin';
 import AdminUsers from './pages/AdminUsers';
 import AdminEvents from './pages/AdminEvents';
 import AdminOrders from './pages/AdminOrders';
+const AdminCategoriesLazy = React.lazy(() => import('./pages/AdminCategories'));
 import ParticipantesPedidos from "./pages/ParticipantesPedidos";
 import ParticipantesLista from "./pages/ParticipantesLista";
 import ParticipantesCheckin from "./pages/ParticipantesCheckin";
@@ -71,6 +76,8 @@ const AppInner = () => {
           <Route path="/event/:slugOrId" element={<Event />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+          <Route path="/producer-journey-demo" element={<ProducerJourneyDemo />} />
+          <Route path="/search" element={<SearchResults />} />
           <Route path="/create-event" element={<CreateEditEvent />} />
           <Route path="/account-settings" element={<AccountSettings />} />
           <Route path="/create-tickets" element={<CreateTickets />} />
@@ -86,6 +93,7 @@ const AppInner = () => {
           <Route path="/marketing/pixels" element={<MarketingPixels />} />
           <Route path="/marketing/pixels/:id" element={<MarketingPixels />} />
           <Route path="/colecoes/:slug" element={<PublicCollection />} />
+          <Route path="/org/:slug" element={<OrganizationPublicProfile />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/pix" element={<CheckoutPix />} />
           <Route path="/organizer-settings" element={<OrganizerSettingsPage />} />
@@ -100,6 +108,7 @@ const AppInner = () => {
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="users" element={<AdminUsers />} />
             <Route path="events" element={<AdminEvents />} />
+            <Route path="categories" element={<Suspense fallback={<div>Carregando...</div>}><AdminCategoriesLazy /></Suspense>} />
             <Route path="orders" element={<AdminOrders />} />
           </Route>
           <Route path="*" element={<NotFound />} />
@@ -120,10 +129,12 @@ const App = () => (
     <Sonner />
     <AuthProvider>
       <OrganizationProvider>
-  <Bootstrap />
-        <AppErrorBoundary>
-          <AppInner />
-        </AppErrorBoundary>
+        <LocationProvider>
+          <Bootstrap />
+          <AppErrorBoundary>
+            <AppInner />
+          </AppErrorBoundary>
+        </LocationProvider>
       </OrganizationProvider>
     </AuthProvider>
   </TooltipProvider>

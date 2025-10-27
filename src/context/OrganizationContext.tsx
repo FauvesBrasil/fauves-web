@@ -45,6 +45,9 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [fromOrgName, setFromOrgName] = useState<string | null>(null);
   const userIdRef = useRef<string | null>(null);
   const orgsRef = useRef<Organization[]>(orgs);
+  const refreshingRef = useRef(false);
+  const lastRefreshTsRef = useRef<number>(0);
+  const refreshPromiseRef = useRef<Promise<void> | null>(null);
   useEffect(() => { orgsRef.current = orgs; }, [orgs]);
 
   const applySelection = useCallback((list: Organization[], preferredId?: string | null) => {
@@ -59,10 +62,41 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const prevOrgs = orgsRef.current || [];
     try {
+      // diagnostics: count and record stack for callers in dev
+      try {
+        (window as any).__ORG_REFRESH_COUNT__ = ((window as any).__ORG_REFRESH_COUNT__ || 0) + 1;
+        (window as any).__ORG_REFRESH_LAST__ = { ts: Date.now(), userId: user?.id || null, stack: (new Error()).stack };
+      } catch (e) {}
+      console.debug('[OrganizationContext] refresh() called', { count: (window as any).__ORG_REFRESH_COUNT__ });
+    } catch (e) {}
+    // If a refresh is already in progress, return the same promise so callers can await it
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+    const now = Date.now();
+    const MIN_INTERVAL = 3000; // ms - ignore refreshes that happen faster than this (increased to reduce spam)
+    // Aggressive short-circuit: if we have cached orgs recently loaded, skip refresh to avoid spam
+    try {
+      const cached = JSON.parse(window.localStorage.getItem(ORG_CACHE_KEY) || 'null');
+      const age = cached?.ts ? (now - cached.ts) : Infinity;
+      if (Array.isArray(cached?.orgs) && cached.orgs.length && age < (1000 * 60 * 1)) {
+        // if cache is younger than 1 minute, don't refresh
+        return Promise.resolve();
+      }
+    } catch (e) {}
+    if (now - lastRefreshTsRef.current < MIN_INTERVAL) {
+      // If a recent refresh happened and no active promise, return a resolved promise to avoid spam
+      return Promise.resolve();
+    }
+    lastRefreshTsRef.current = now;
+    // create and store the promise so concurrent callers get the same one
+    const p = (async () => {
+      // prevent concurrent refresh calls
+      if (refreshingRef.current) return;
+      refreshingRef.current = true;
+      setLoading(true);
+      setError(null);
+      const prevOrgs = orgsRef.current || [];
+      try {
       // Busca userId do usuário logado via AuthContext
       const userId = user?.id;
       if (!userId) {
@@ -156,6 +190,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           diag.push({ ok: false, note: 'no data' });
         }
       }
+      try { (window as any).__ORG_LAST_FETCH_DIAG__ = { ts: Date.now(), attempts: attempts.slice(), diag }; } catch (e) {}
 
       for (const d of diag) {
         if (d?.unauth) {
@@ -194,8 +229,16 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       } else {
         console.warn('[OrganizationContext] refresh threw but preserving previous orgs', e);
       }
+      } finally {
+        setLoading(false);
+        refreshingRef.current = false;
+      }
+    })();
+    refreshPromiseRef.current = p;
+    try {
+      await p;
     } finally {
-      setLoading(false);
+      refreshPromiseRef.current = null;
     }
   }, [applySelection, user, userLoading]);
 
@@ -254,21 +297,21 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
       }
     } catch (e) {}
-
-    if (orgs.length === 0) {
-      refresh();
-    } else {
-      // still refresh in background to get fresh data
-      refresh();
+    // Only call refresh on mount or when the user changes. Avoid depending on orgs.length
+    // which would cause a refresh -> setOrgs -> effect loop.
+    // Only trigger refresh once the auth state is settled to avoid repeated probes while
+    // the AuthContext is still initializing (userLoading=true).
+    if (!userLoading) {
+      const uid = user?.id || null;
+      // avoid re-fetching when the user object identity changes but id is the same
+      if (userIdRef.current !== uid) {
+        userIdRef.current = uid;
+        void refresh();
+      }
     }
     // Atualiza organizações quando usuário muda
     // Não precisa listener do supabase
-  }, [refresh, clear, orgs.length, user]);
-
-  // Expose a dev-only helper to force a refresh from the console for diagnostics
-  useEffect(() => {
-    return () => {};
-  }, [refresh]);
+  }, [user, userLoading]);
 
   const value = useMemo<OrganizationContextValue>(() => ({
     orgs, selectedOrg, loading, error, setSelectedOrgById, refresh, addOrganization, clear,

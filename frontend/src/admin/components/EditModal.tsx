@@ -1,26 +1,68 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export default function EditModal({ open, title, fields, values, onChange, onSave, onClose }) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const firstInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    // focus first input when modal opens
+    const timer = setTimeout(() => {
+      firstInputRef.current?.focus();
+    }, 0);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose?.();
+      if (e.key === 'Tab' && dialogRef.current) {
+        // Simple focus trap: keep focus inside dialog
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>('a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          (last as HTMLElement).focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          (first as HTMLElement).focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('keydown', handleKey);
+      prev?.focus();
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
-    <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.25)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
-      <div style={{background:'#fff',padding:32,borderRadius:12,minWidth:320,boxShadow:'0 2px 16px rgba(0,0,0,0.15)'}}>
-        <h3 style={{marginTop:0}}>{title}</h3>
-        <form onSubmit={e=>{e.preventDefault();onSave();}}>
-          {fields.map(f=>(
-            <div key={f.name} style={{marginBottom:16}}>
-              <label style={{fontWeight:600}}>{f.label}</label>
+    <div className="fixed inset-0 bg-black/25 flex items-center justify-center z-50" role="presentation">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-modal-title"
+        className="bg-white p-8 rounded-lg min-w-[320px] shadow-lg"
+      >
+        <h3 id="edit-modal-title" className="mt-0 mb-4">{title}</h3>
+        <form onSubmit={e => { e.preventDefault(); onSave(); }}>
+          {fields.map((f, idx) => (
+            <div key={f.name} className="mb-4">
+              <label className="font-semibold">{f.label}</label>
               <input
-                type={f.type||'text'}
-                value={values[f.name]||''}
-                onChange={e=>onChange(f.name, e.target.value)}
-                style={{width:'100%',padding:8,borderRadius:6,border:'1px solid #eee',marginTop:4}}
+                ref={idx === 0 ? firstInputRef : undefined}
+                type={f.type || 'text'}
+                value={values[f.name] || ''}
+                onChange={e => onChange(f.name, e.target.value)}
+                className="w-full p-2 rounded-md border border-slate-100 mt-1"
               />
             </div>
           ))}
-          <div style={{display:'flex',gap:12,marginTop:16}}>
-            <button type="submit" style={{padding:'8px 20px',background:'#0ea5e9',color:'#fff',border:'none',borderRadius:6}}>Salvar</button>
-            <button type="button" style={{padding:'8px 20px',background:'#eee',border:'none',borderRadius:6}} onClick={onClose}>Cancelar</button>
+          <div className="flex gap-3 mt-4">
+            <button type="submit" className="px-4 py-2 bg-sky-500 text-white rounded">Salvar</button>
+            <button type="button" className="px-4 py-2 bg-slate-100 rounded" onClick={onClose}>Cancelar</button>
           </div>
         </form>
       </div>

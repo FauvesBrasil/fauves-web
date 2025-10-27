@@ -20,7 +20,7 @@ export default function ParticipantesLista() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white">
+    <div className="min-h-screen w-full bg-white dark:bg-[#0b0b0b]">
       <SidebarMenu />
       <EventDetailsSidebar
         eventIdOverride={eventId || null}
@@ -34,15 +34,15 @@ export default function ParticipantesLista() {
       <AppHeader />
       <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 min-h-screen relative">
         <div className="mt-24 max-w-[900px]">
-          <h1 className="text-3xl font-bold text-indigo-950 mb-3">Participantes</h1>
-          <p className="text-gray-700 mb-6">Visualize e baixe a lista de seus participantes para check-in e adicione manualmente informações de participantes para ingressos gratuitos ou pagamentos off-line</p>
+          <h1 className="text-3xl font-bold text-indigo-950 dark:text-white mb-3">Participantes</h1>
+          <p className="text-gray-700 dark:text-slate-300 mb-6">Visualize e baixe a lista de seus participantes para check-in e adicione manualmente informações de participantes para ingressos gratuitos ou pagamentos off-line</p>
           <div className="flex items-center justify-between mb-4">
-            <input type="text" placeholder="Pesquisar por nome" className="border rounded-lg px-4 py-2 text-sm w-72" />
+            <input type="text" placeholder="Pesquisar por nome" className="border rounded-lg px-4 py-2 text-sm w-72 dark:bg-[#121212] dark:border-transparent dark:text-white" />
           </div>
-          <div className="border rounded-xl overflow-hidden bg-white">
+          <div className="border rounded-xl overflow-hidden bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="bg-zinc-100 text-zinc-700">
+                <tr className="bg-zinc-100 text-zinc-700 dark:bg-[#1F1F1F] dark:text-slate-300">
                   <th className="px-6 py-3 text-left">Nome</th>
                   <th className="px-6 py-3 text-left">Email</th>
                 </tr>
@@ -53,9 +53,9 @@ export default function ParticipantesLista() {
                   { name: 'Levy Câmara', email: 'levycamara@hotmail.com' },
                   { name: 'Levy Câmara', email: 'levycamara@hotmail.com' },
                 ].map((p, idx) => (
-                  <tr key={idx} className="border-t">
-                    <td className="px-6 py-3">{p.name}</td>
-                    <td className="px-6 py-3">{p.email}</td>
+                  <tr key={idx} className="border-t dark:border-[#1F1F1F]">
+                    <td className="px-6 py-3 dark:text-white">{p.name}</td>
+                    <td className="px-6 py-3 dark:text-white">{p.email}</td>
                   </tr>
                 ))}
               </tbody>
@@ -71,7 +71,7 @@ export default function ParticipantesLista() {
             >
               <UserPlus className="w-8 h-8 text-white" />
             </button>
-            <span className="absolute right-20 top-1/2 -translate-y-1/2 bg-white text-[#2A2AD7] font-bold px-4 py-2 rounded-xl shadow text-base opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Adicionar participante</span>
+            <span className="absolute right-20 top-1/2 -translate-y-1/2 bg-white dark:bg-[#1F1F1F] text-[#2A2AD7] dark:text-[#2A2AD7] font-bold px-4 py-2 rounded-xl shadow text-base opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Adicionar participante</span>
           </div>
           {showModal && (
             <AdicionarPessoaEquipeModal open={showModal} onClose={() => setShowModal(false)} onAdd={handleAddParticipante} />

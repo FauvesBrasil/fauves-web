@@ -30,17 +30,16 @@ const EmailPreferences: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex justify-center items-start py-12 px-8 bg-[#F8F7FA]">
-      <div className="w-full max-w-[700px] bg-white rounded-3xl shadow-xl p-10 border border-gray-100">
-        <h1 className="text-3xl font-bold text-[#091747] mb-6">Preferências de e-mail</h1>
-        <hr className="my-6 border-gray-200" />
-        <form className="flex flex-col gap-10">
+    <>
+  <h1 className="text-3xl font-bold text-[#091747] dark:text-white mb-6">Preferências de e-mail</h1>
+      <hr className="my-6 border-gray-200" />
+      <form className="flex flex-col gap-10">
           {/* Participando de eventos */}
           <div>
-            <h2 className="text-xl font-bold text-[#091747] mb-2">Participando de eventos</h2>
-            <p className="text-base text-[#091747] mb-4">Notícias e atualizações sobre eventos criados por organizadores de eventos</p>
+            <h2 className="text-xl font-bold text-[#091747] dark:text-white mb-2">Participando de eventos</h2>
+            <p className="text-base text-[#091747] dark:text-white mb-4">Notícias e atualizações sobre eventos criados por organizadores de eventos</p>
             <div className="mb-4">
-              <h3 className="text-base font-bold text-[#091747] mb-2">Receber E-mails</h3>
+              <h3 className="text-base font-bold text-[#091747] dark:text-white mb-2">Receber E-mails</h3>
               <div className="flex flex-col gap-2 ml-2">
                 <CustomCheckbox checked={prefs.participante_novos_recursos} onChange={v => handleChange("participante_novos_recursos", v)} label="Atualizações sobre novos recursos e anúncios da Fauves" />
                 <CustomCheckbox checked={prefs.participante_guia_semanal} onChange={v => handleChange("participante_guia_semanal", v)} label="Guia de eventos semanal da Fauves: Um resumo das nossas recomendações personalizadas de eventos" />
@@ -49,7 +48,7 @@ const EmailPreferences: React.FC = () => {
               </div>
             </div>
             <div className="mb-4">
-              <h3 className="text-base font-bold text-[#091747] mb-2">Notificações</h3>
+              <h3 className="text-base font-bold text-[#091747] dark:text-white mb-2">Notificações</h3>
               <div className="flex flex-col gap-2 ml-2">
                 <CustomCheckbox checked={prefs.participante_amigos_eventos} onChange={v => handleChange("participante_amigos_eventos", v)} label="Quando amigos comprarem ingressos ou se inscreverem em eventos perto de mim" />
                 <CustomCheckbox checked={prefs.participante_organizador_novo} onChange={v => handleChange("participante_organizador_novo", v)} label="Quando um organizador que você segue anunciar um novo evento." />
@@ -61,10 +60,10 @@ const EmailPreferences: React.FC = () => {
           </div>
           {/* Organizando eventos */}
           <div>
-            <h2 className="text-xl font-bold text-[#091747] mb-2">Organizando eventos</h2>
-            <p className="text-base text-[#091747] mb-4">Atualizações e dicas úteis para organizar eventos na Fauves</p>
+            <h2 className="text-xl font-bold text-[#091747] dark:text-white mb-2">Organizando eventos</h2>
+            <p className="text-base text-[#091747] dark:text-white mb-4">Atualizações e dicas úteis para organizar eventos na Fauves</p>
             <div className="mb-4">
-              <h3 className="text-base font-bold text-[#091747] mb-2">Receber E-mails</h3>
+              <h3 className="text-base font-bold text-[#091747] dark:text-white mb-2">Receber E-mails</h3>
               <div className="flex flex-col gap-2 ml-2">
                 <CustomCheckbox checked={prefs.organizador_novos_recursos} onChange={v => handleChange("organizador_novos_recursos", v)} label="Atualizações sobre novos recursos e anúncios da Fauves" />
                 <CustomCheckbox checked={prefs.organizador_dicas_mensais} onChange={v => handleChange("organizador_dicas_mensais", v)} label="Dicas e ferramentas mensais para a organização de eventos" />
@@ -73,7 +72,7 @@ const EmailPreferences: React.FC = () => {
               </div>
             </div>
             <div className="mb-4">
-              <h3 className="text-base font-bold text-[#091747] mb-2">Notificações</h3>
+              <h3 className="text-base font-bold text-[#091747] dark:text-white mb-2">Notificações</h3>
               <div className="flex flex-col gap-2 ml-2">
                 <CustomCheckbox checked={prefs.organizador_lembretes} onChange={v => handleChange("organizador_lembretes", v)} label="Lembretes importantes para o seu próximo evento" />
                 <CustomCheckbox checked={prefs.organizador_confirmacoes} onChange={v => handleChange("organizador_confirmacoes", v)} label="Confirmações de pedidos dos meus participantes" />
@@ -84,8 +83,7 @@ const EmailPreferences: React.FC = () => {
             <button type="submit" className="bg-[#2A2AD7] text-white font-bold px-8 py-3 rounded-lg text-lg shadow hover:bg-[#091747] transition-colors">Salvar preferências</button>
           </div>
         </form>
-      </div>
-    </div>
+    </>
   );
 };
 

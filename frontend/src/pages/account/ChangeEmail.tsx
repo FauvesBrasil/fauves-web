@@ -9,14 +9,13 @@ const ChangeEmail: React.FC = () => {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string|null>(null);
   const [success, setSuccess] = React.useState<string|null>(null);
-  // Simula email atual vindo do backend/context
+
   React.useEffect(() => {
-  setEmail(user?.email || '');
-  }, []);
+    setEmail(user?.email || '');
+  }, [user]);
 
   async function handleSave() {
     setError(null); setSuccess(null);
-    // Validação de formato
     const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
     if (!emailRegex.test(newEmail)) {
       setError('Digite um e-mail válido.');
@@ -26,10 +25,7 @@ const ChangeEmail: React.FC = () => {
     try {
       const res = await fetch('/api/account-settings', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          // Adicione o token JWT se necessário
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: newEmail })
       });
       if (!res.ok) {
@@ -49,14 +45,17 @@ const ChangeEmail: React.FC = () => {
       setSaving(false);
     }
   }
+
   return (
     <>
-      <h1 className="text-3xl font-bold text-[#091747] mb-2">Alterar e-mail</h1>
+      <h1 className="text-3xl font-bold text-[#091747] dark:text-white mb-2">Alterar e-mail</h1>
       <hr className="my-6 border-gray-200" />
+
       <div className="mb-6">
-        <h2 className="text-base font-bold text-[#091747] mb-2">Endereço de e-mail da conta</h2>
+        <h2 className="text-base font-bold text-[#091747] dark:text-white mb-2">Endereço de e-mail da conta</h2>
+
         {!editing ? (
-          <span className="text-base text-[#091747]">{email}</span>
+          <span className="text-base text-[#091747] dark:text-white">{email}</span>
         ) : (
           <input
             type="email"
@@ -69,6 +68,7 @@ const ChangeEmail: React.FC = () => {
           />
         )}
       </div>
+
       {!editing ? (
         <button type="button" className="bg-[#2A2AD7] text-white font-bold px-6 py-2 rounded-lg text-base shadow hover:bg-[#091747] transition-colors" onClick={() => { setEditing(true); setNewEmail(email); setError(null); }}>
           Alterar
@@ -79,11 +79,12 @@ const ChangeEmail: React.FC = () => {
             {saving ? <span className="animate-spin mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> : null}
             Salvar
           </button>
-          <button type="button" className="bg-gray-200 text-[#091747] font-bold px-6 py-2 rounded-lg text-base shadow hover:bg-gray-300 transition-colors" disabled={saving} onClick={() => { setEditing(false); setError(null); }}>
+          <button type="button" className="bg-gray-200 text-[#091747] dark:text-white font-bold px-6 py-2 rounded-lg text-base shadow hover:bg-gray-300 transition-colors" disabled={saving} onClick={() => { setEditing(false); setError(null); }}>
             Cancelar
           </button>
         </div>
       )}
+
       {error && <div className="text-red-500 mt-2 text-sm">{error}</div>}
       {success && <div className="text-green-600 mt-2 text-sm">{success}</div>}
     </>
@@ -91,3 +92,4 @@ const ChangeEmail: React.FC = () => {
 };
 
 export default ChangeEmail;
+

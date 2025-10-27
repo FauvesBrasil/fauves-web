@@ -178,7 +178,7 @@ const EventPanel: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white">
+    <div className="min-h-screen w-full bg-white dark:bg-[#0b0b0b]">
       {/* Fixed main sidebar */}
       <SidebarMenu />
   {/* Fixed event details sidebar */}
@@ -212,46 +212,46 @@ const EventPanel: React.FC = () => {
             <>
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h1 className="text-[38px] font-bold text-[#091747]">Painel</h1>
+                  <h1 className="text-[38px] font-bold text-[#091747] dark:text-white">Painel</h1>
                 </div>
               </div>
               {/* Cards topo */}
               <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                  <div className="text-sm text-[#091747]/70">Vendas líquidas</div>
-                  <div className="text-2xl font-bold text-[#091747] mt-1">{formatBRL(netSales)}</div>
-                  <button className="text-xs text-[#2A2AD7] mt-2 hover:underline">Abrir o detalhamento de vendas do evento</button>
+                <div className="bg-white dark:bg-[#242424] rounded-2xl border border-gray-200 dark:border-[#1F1F1F] p-5">
+                  <div className="text-sm text-[#091747]/70 dark:text-slate-300">Vendas líquidas</div>
+                  <div className="text-2xl font-bold text-[#091747] dark:text-white mt-1">{formatBRL(netSales)}</div>
+                  <button className="text-xs text-[#2A2AD7] dark:text-white mt-2 hover:underline">Abrir o detalhamento de vendas do evento</button>
                 </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                  <div className="text-sm text-[#091747]/70">Ingressos vendidos</div>
-                  <div className="text-2xl font-bold text-[#091747] mt-1">{soldCount}/{capacity}</div>
-                  <div className="text-xs text-[#091747]/70 mt-1">—</div>
+                <div className="bg-white dark:bg-[#242424] rounded-2xl border border-gray-200 dark:border-[#1F1F1F] p-5">
+                  <div className="text-sm text-[#091747]/70 dark:text-slate-300">Ingressos vendidos</div>
+                  <div className="text-2xl font-bold text-[#091747] dark:text-white mt-1">{soldCount}/{capacity}</div>
+                  <div className="text-xs text-[#091747]/70 dark:text-slate-300 mt-1">—</div>
                 </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                  <div className="text-sm text-[#091747]/70">Visualizações de página</div>
-                  <div className="text-2xl font-bold text-[#091747] mt-1">{pageViews}</div>
-                  <button className="text-xs text-[#2A2AD7] mt-2 hover:underline">Abrir relatório de visualizações de página</button>
+                <div className="bg-white dark:bg-[#242424] rounded-2xl border border-gray-200 dark:border-[#1F1F1F] p-5">
+                  <div className="text-sm text-[#091747]/70 dark:text-slate-300">Visualizações de página</div>
+                  <div className="text-2xl font-bold text-[#091747] dark:text-white mt-1">{pageViews}</div>
+                  <button className="text-xs text-[#2A2AD7] dark:text-white mt-2 hover:underline">Abrir relatório de visualizações de página</button>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-6">
                 {/* Emitir cortesia */}
-                <div className="col-span-2 bg-white rounded-2xl border-2 border-[#F15A29] p-6">
+                <div className="col-span-2 bg-white dark:bg-[#242424] rounded-2xl border-2 border-[#F15A29] p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-[#EF4118]">🎫</span>
                     <div className="text-[#091747] font-semibold text-lg">Emitir cortesia</div>
                   </div>
-                  <div className="text-xs text-[#091747]/70 mb-3">Use para convidados, parceiros e VIPs sem cobrança.</div>
+                  <div className="text-xs text-[#091747]/70 dark:text-slate-300 mb-3">Use para convidados, parceiros e VIPs sem cobrança.</div>
                   <div className="flex flex-col gap-3 mb-4">
                     <Input
                       value={courtesyEmail}
                       onChange={(e) => setCourtesyEmail(e.target.value)}
                       placeholder="E-mail do participante"
                       aria-invalid={emailInvalid}
-                      className={`h-11 ${emailInvalid ? 'border-red-500 focus-visible:ring-red-300' : ''}`}
+                      className={`h-11 ${emailInvalid ? 'border-red-500 focus-visible:ring-red-300' : ''} dark:bg-[#121212] dark:border-transparent dark:text-white`}
                     />
                     <Select value={courtesyTicketTypeId} onValueChange={setCourtesyTicketTypeId}>
-                      <SelectTrigger className="h-11">
+                      <SelectTrigger className="h-11 dark:bg-[#121212] dark:border-transparent dark:text-white">
                         <SelectValue placeholder="Tipo do ingresso" />
                       </SelectTrigger>
                       <SelectContent>
@@ -267,18 +267,18 @@ const EventPanel: React.FC = () => {
                   </Button>
                 </div>
                 {/* Compartilhar */}
-                <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6">
-                  <div className="text-[#091747] font-semibold mb-2">Compartilhar</div>
-                  <div className="text-xs text-[#091747]/70 mb-2">Link do evento</div>
+                <div className="bg-white dark:bg-[#242424] rounded-2xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-6">
+                  <div className="text-[#091747] font-semibold mb-2 dark:text-white">Compartilhar</div>
+                  <div className="text-xs text-[#091747]/70 mb-2 dark:text-slate-300">Link do evento</div>
                   <div className="flex items-center gap-2">
-                    <Input readOnly value={eventLink} />
-                    <Button variant="outline" onClick={copyLink} className="flex items-center gap-2">
+                    <Input readOnly value={eventLink} className="dark:bg-[#121212] dark:border-transparent dark:text-white" />
+                    <Button variant="outline" onClick={copyLink} className="flex items-center gap-2 dark:text-white">
                       {copyOk ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
                       {copyOk ? 'Copiado' : 'Copiar'}
                     </Button>
                   </div>
-                  <div className="text-xs text-[#091747]/70 mt-3">Compartilhar no</div>
-                  <div className="flex items-center gap-2 mt-2 text-[#2A2AD7]">
+                  <div className="text-xs text-[#091747]/70 mt-3 dark:text-slate-300">Compartilhar no</div>
+                  <div className="flex items-center gap-2 mt-2 text-[#2A2AD7] dark:text-white">
                     <button aria-label="E-mail">✉️</button>
                     <button aria-label="WhatsApp">🟢</button>
                     <button aria-label="Facebook">f</button>
@@ -290,8 +290,8 @@ const EventPanel: React.FC = () => {
               </div>
 
               {/* Vendas por tipo de ingresso */}
-              <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 mt-6">
-                <div className="font-semibold text-[#091747] mb-3">Vendas por tipo de ingresso</div>
+              <div className="bg-white dark:bg-[#242424] rounded-2xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-6 mt-6">
+                <div className="font-semibold text-[#091747] mb-3 dark:text-white">Vendas por tipo de ingresso</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
@@ -303,14 +303,14 @@ const EventPanel: React.FC = () => {
                     </thead>
                     <tbody>
                       {ticketTypes.filter(t => !t.isHalf).map((t) => (
-                        <tr key={t.id} className="border-t border-gray-100">
+                        <tr key={t.id} className="border-t border-gray-100 dark:border-[#1F1F1F]">
                           <td className="py-2">{t.name}</td>
                           <td className="py-2">{Number(t.price) > 0 ? formatBRL(Number(t.price)) : 'R$0,00'}</td>
                           <td className="py-2">{t.soldCount ?? 0}</td>
                         </tr>
                       ))}
                       {ticketTypes.filter(t => !t.isHalf).length === 0 && (
-                        <tr><td colSpan={3} className="py-4 text-center text-[#091747]/60">Nenhum ingresso cadastrado ainda</td></tr>
+                        <tr><td colSpan={3} className="py-4 text-center text-[#091747]/60 dark:text-slate-300">Nenhum ingresso cadastrado ainda</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -321,12 +321,12 @@ const EventPanel: React.FC = () => {
               <RecentCourtesies eventId={id!} onReady={setCourtesiesFetcher} />
 
               {/* Pedidos recentes */}
-              <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 mt-6">
-                <div className="font-semibold text-[#091747] mb-3">Pedidos recentes</div>
+              <div className="bg-white dark:bg-[#242424] rounded-2xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-6 mt-6">
+                <div className="font-semibold text-[#091747] mb-3 dark:text-white">Pedidos recentes</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="text-[#091747]/70">
+                      <tr className="text-[#091747]/70 dark:text-slate-300">
                         <th className="py-2">Pedido n.º</th>
                         <th className="py-2">Nome</th>
                         <th className="py-2">Quantidade</th>
@@ -337,16 +337,16 @@ const EventPanel: React.FC = () => {
                     <tbody>
                       {/* Static examples since backend not wired yet */}
                       {[1,2,3].map(i => (
-                        <tr key={i} className="border-t border-gray-100 bg-indigo-50/30">
-                          <td className="py-2 font-medium text-indigo-600">EXEMPLO{i}<span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-indigo-600 text-white">demo</span></td>
-                          <td className="py-2">Participante {i}</td>
-                          <td className="py-2">{i+1}</td>
-                          <td className="py-2">R${(i*120).toFixed(2).replace('.', ',')}</td>
-                          <td className="py-2">{new Date(Date.now()-i*3600000).toLocaleDateString('pt-BR')}</td>
+                        <tr key={i} className="border-t border-gray-100 bg-indigo-50/30 dark:border-[#1F1F1F] dark:bg-indigo-900/10">
+                          <td className="py-2 font-medium text-indigo-600 dark:text-indigo-300">EXEMPLO{i}<span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-indigo-600 text-white">demo</span></td>
+                          <td className="py-2 dark:text-slate-300">Participante {i}</td>
+                          <td className="py-2 dark:text-slate-300">{i+1}</td>
+                          <td className="py-2 dark:text-slate-300">R${(i*120).toFixed(2).replace('.', ',')}</td>
+                          <td className="py-2 dark:text-slate-300">{new Date(Date.now()-i*3600000).toLocaleDateString('pt-BR')}</td>
                         </tr>
                       ))}
                       <tr>
-                        <td colSpan={5} className="py-3 text-[11px] text-indigo-600 text-center bg-indigo-50 border-t border-indigo-100">Exibindo exemplos estáticos. Integre pedidos reais para substituir.</td>
+                        <td colSpan={5} className="py-3 text-[11px] text-indigo-600 text-center bg-indigo-50 border-t border-indigo-100 dark:text-slate-300 dark:bg-indigo-900/10 dark:border-[#1F1F1F]">Exibindo exemplos estáticos. Integre pedidos reais para substituir.</td>
                       </tr>
                     </tbody>
                   </table>
@@ -388,27 +388,27 @@ const RecentCourtesies: React.FC<{ eventId: string, onReady?: (fn: () => void) =
   }, [fetchCourtesies]);
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 mt-6">
-      <div className="font-semibold text-[#091747] mb-3">Cortesias recentes</div>
+    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 mt-6 dark:bg-[#242424] dark:border-[#1F1F1F]">
+      <div className="font-semibold text-[#091747] mb-3 dark:text-white">Cortesias recentes</div>
       {loading ? (
         <div className="space-y-2">
           {Array.from({length:4}).map((_,i)=>(
-            <div key={i} className="h-6 w-full bg-gray-200 rounded animate-pulse" />
+            <div key={i} className="h-6 w-full bg-gray-200 rounded animate-pulse dark:bg-[#1F1F1F]" />
           ))}
         </div>
       ) : error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : rows.length === 0 ? (
         <>
-          <div className="text-sm text-[#091747]/70">Sem cortesias ainda</div>
+          <div className="text-sm text-[#091747]/70 dark:text-slate-300">Sem cortesias ainda</div>
           <div className="mt-4 space-y-2">
             {[1,2].map(i => (
-              <div key={i} className="p-3 rounded-lg bg-indigo-50/40 border border-indigo-100 text-[12px] flex justify-between">
-                <span className="font-medium text-indigo-700">CORTESIA_EXEMPLO_{i}</span>
-                <span className="text-indigo-600">{new Date().toLocaleDateString('pt-BR')}</span>
+              <div key={i} className="p-3 rounded-lg bg-indigo-50/40 border border-indigo-100 text-[12px] flex justify-between dark:bg-indigo-900/10 dark:border-[#1F1F1F]">
+                <span className="font-medium text-indigo-700 dark:text-indigo-300">CORTESIA_EXEMPLO_{i}</span>
+                <span className="text-indigo-600 dark:text-slate-300">{new Date().toLocaleDateString('pt-BR')}</span>
               </div>
             ))}
-            <div className="text-[11px] text-indigo-500">Exemplos estáticos para layout.</div>
+            <div className="text-[11px] text-indigo-500 dark:text-slate-300">Exemplos estáticos para layout.</div>
           </div>
         </>
       ) : (
@@ -424,11 +424,11 @@ const RecentCourtesies: React.FC<{ eventId: string, onReady?: (fn: () => void) =
             </thead>
             <tbody>
               {rows.map((r: any) => (
-                <tr key={r.id} className="border-t border-gray-100">
-                  <td className="py-2">{r.userEmail || r.guestEmail || '—'}</td>
-                  <td className="py-2">{r.ticketTypeName || '—'}</td>
-                  <td className="py-2">{r.issuerEmail || '—'}</td>
-                  <td className="py-2">{r.createdAt ? new Date(r.createdAt).toLocaleString('pt-BR') : '—'}</td>
+                <tr key={r.id} className="border-t border-gray-100 dark:border-[#1F1F1F]">
+                  <td className="py-2 dark:text-slate-300">{r.userEmail || r.guestEmail || '—'}</td>
+                  <td className="py-2 dark:text-slate-300">{r.ticketTypeName || '—'}</td>
+                  <td className="py-2 dark:text-slate-300">{r.issuerEmail || '—'}</td>
+                  <td className="py-2 dark:text-slate-300">{r.createdAt ? new Date(r.createdAt).toLocaleString('pt-BR') : '—'}</td>
                 </tr>
               ))}
             </tbody>

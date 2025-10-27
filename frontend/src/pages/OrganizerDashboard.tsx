@@ -1,6 +1,7 @@
 import * as React from "react";
 import OrganizerEditDrawer from '@/components/OrganizerEditDrawer';
 import { useAuth } from "@/context/AuthContext";
+import { getFirstName, getDisplayName } from '@/lib/user';
 import { ensureApiBase, apiUrl } from '@/lib/apiBase';
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import NextEventCardSkeleton from "../components/skeletons/NextEventCardSkeleton
 import OrgProfileCardSkeleton from "../components/skeletons/OrgProfileCardSkeleton";
 import { useOrganization } from '@/context/OrganizationContext';
 import RequireOrganization from '@/components/RequireOrganization';
+import ProducerJourneyCard from '@/components/ProducerJourneyCard';
 interface UserDropdownProps {
   userName: string;
   userEmail: string;
@@ -95,8 +97,9 @@ const OrganizerDashboard = () => {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const openEditDrawer = () => {
-    if (orgInfo && orgInfo.id) {
-      setForm({ ...orgInfo });
+    const target = orgInfo || selectedOrg;
+    if (target && target.id) {
+      setForm({ ...target });
       setDrawerOpen(true);
     } else {
       setSaveError('Selecione uma organização válida para editar.');
@@ -161,7 +164,27 @@ const OrganizerDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedOrg, loading: loadingOrgs, orgs, refresh } = useOrganization();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+
+  // Ensure we fetch authoritative user data from the server on mount so
+  // profile changes made server-side (name, etc.) are picked up without
+  // requiring the user to re-login. This calls the `refreshUser` exposed by
+  // AuthContext which fetches /api/auth/me if a token exists.
+  React.useEffect(() => {
+    if (typeof refreshUser !== 'function') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await refreshUser();
+      } catch (err) {
+        // Non-fatal: log and continue. We don't want to crash the dashboard if
+        // the call fails (network, 401, etc.).
+        // eslint-disable-next-line no-console
+        console.warn('[OrganizerDashboard] refreshUser failed', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [refreshUser]);
   const [nextEvent, setNextEvent] = React.useState<any>(null);
   const [orgInfo, setOrgInfo] = React.useState<any>(null);
   const [orgEventCount, setOrgEventCount] = React.useState<number>(0);
@@ -210,7 +233,11 @@ const OrganizerDashboard = () => {
     loadOrgScopedData();
     return () => { cancelled = true; };
   }, [selectedOrg?.id]);
-  const userName = user?.name ? user.name.split(' ')[0] : (user?.email ? user.email.split('@')[0] : "Visitante");
+  // compute a normalized display name (prefer first name, fall back to display name)
+  const _rawName = (getFirstName(user) || getDisplayName(user) || 'Visitante') as string;
+  // extract a single token and normalize capitalization
+  const _token = String(_rawName).trim().split(/[\s._\-+@]/)[0] || 'Visitante';
+  const userName = _token.charAt(0).toUpperCase() + _token.slice(1).toLowerCase();
   const userEmail = user?.email || "";
   // Modal para criar organização se não houver nenhuma
   const [showCreateOrgModal, setShowCreateOrgModal] = useState(false);
@@ -234,20 +261,20 @@ const OrganizerDashboard = () => {
   }, [user, loadingOrgs, orgs]);
 
   return (
-    <div className="relative min-h-screen w-full bg-white flex justify-center items-start">
+    <div className="relative min-h-screen w-full bg-white dark:bg-[#0b0b0b] dark:text-white flex justify-center items-start">
       {/* When modal is open, show a simple translucent cover; keep detailed skeleton only when modal is NOT open */}
       {(!loadingOrgs && Array.isArray(orgs) && orgs.length === 0 && user && !showCreateOrgModal) && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-white">
+  <div className="fixed inset-0 z-40 flex items-center justify-center bg-white dark:bg-[#0b0b0b]">
           <div className="w-full max-w-4xl p-6">
             <div className="mb-6">
               <div className="text-2xl font-bold text-center text-slate-900">Crie o perfil da sua organização</div>
               <div className="text-sm text-center text-slate-600 mt-2">Você precisa de uma organização para acessar o painel de organizador.</div>
             </div>
             <div className="grid grid-cols-2 gap-6">
-              <div className="p-4 bg-white rounded-xl shadow-sm">
+                <div className="p-4 bg-white dark:bg-[#242424] rounded-xl shadow-sm">
                 <OrgProfileCardSkeleton />
               </div>
-              <div className="p-4 bg-white rounded-xl shadow-sm">
+              <div className="p-4 bg-white dark:bg-[#242424] rounded-xl shadow-sm">
                 <NextEventCardSkeleton />
               </div>
             </div>
@@ -260,10 +287,10 @@ const OrganizerDashboard = () => {
         </div>
       )}
       <SidebarMenu />
-      <div className="rounded-3xl h-[852px] w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
+  <div className="rounded-3xl h-[852px] w-[1352px] bg-white dark:bg-[#0b0b0b] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
         <AppHeader />
         <div className="flex absolute flex-col gap-6 items-start left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:px-0 max-md:py-5 max-md:w-full max-sm:px-0 max-sm:py-4">
-          <div className="mb-6 text-4xl font-bold text-slate-900 max-sm:text-3xl">Olá, {userName}!</div>
+          <div className="mb-6 text-4xl font-bold text-slate-900 dark:text-white max-sm:text-3xl">Olá, {userName}!</div>
           {showCreateOrgModal && (
             <RequireOrganization
               onCreated={(org) => {
@@ -289,12 +316,12 @@ const OrganizerDashboard = () => {
                   else if (diffDays <= 15) fase = 2;
                   // Card clicável
                   return (
-                    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-8 w-full flex flex-col gap-6 shadow-sm">
-                      <div className="text-2xl font-bold text-[#091747] mb-2">
+                    <div className="bg-white dark:bg-[#242424] rounded-2xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-8 w-full flex flex-col gap-6 shadow-sm">
+                      <div className="text-2xl font-bold text-[#091747] dark:text-white mb-2">
                         Seu próximo evento acontecerá daqui a <span className="text-[#2A2AD7]">{diffDays} {diffDays === 1 ? 'dia' : 'dias'}</span>
                       </div>
-                      <div
-                        className="flex items-center bg-[#F6F7FB] rounded-xl px-6 py-5 gap-6 cursor-pointer hover:shadow-md transition"
+                        <div
+                        className="flex items-center bg-[#F6F7FB] dark:bg-[#1A1A1A] rounded-xl px-6 py-5 gap-6 cursor-pointer hover:shadow-md transition"
                         onClick={() => navigate(`/painel-evento/${nextEvent.id}`)}
                         role="button"
                         tabIndex={0}
@@ -303,39 +330,39 @@ const OrganizerDashboard = () => {
                           <div className="text-[15px] font-bold text-[#EF4118] uppercase mb-0 leading-none">
                             {startDate.toLocaleString('pt-BR', { month: 'short' }).toUpperCase()}
                           </div>
-                          <div className="text-3xl font-bold text-[#091747] leading-none">
+                          <div className="text-3xl font-bold text-[#091747] dark:text-white leading-none">
                             {startDate.getDate().toString().padStart(2, '0')}
                           </div>
                         </div>
-                        <div className="flex-1 flex flex-col gap-1">
-                          <div className="font-bold text-lg text-[#091747]">{nextEvent.name}</div>
-                          <div className="text-sm text-[#091747]">Inicia {startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                          <div className="flex-1 flex flex-col gap-1">
+                          <div className="font-bold text-lg text-[#091747] dark:text-white">{nextEvent.name}</div>
+                          <div className="text-sm text-[#091747] dark:text-slate-300">Inicia {startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
                           <div className="text-xs text-[#EF4118] font-bold mt-1">À venda</div>
                         </div>
                         <div className="flex flex-col items-end min-w-[120px]">
-                          <div className="text-lg font-bold text-[#091747]">0 / 100</div>
-                          <div className="text-xs text-[#091747]">Ingressos vendidos</div>
+                          <div className="text-lg font-bold text-[#091747] dark:text-white">0 / 100</div>
+                          <div className="text-xs text-[#091747] dark:text-slate-300">Ingressos vendidos</div>
                         </div>
                         <span className="ml-4 text-[#091747] text-2xl font-bold">&gt;</span>
                       </div>
                       {/* Fases do evento dinâmicas */}
-                      <div className="mt-4">
+                        <div className="mt-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-bold text-[#091747]">Fase do evento</span>
+                          <span className="text-sm font-bold text-[#091747] dark:text-white">Fase do evento</span>
                           <HelpCircle className="w-4 h-4 text-[#A0A3BD]" />
                         </div>
                         <div className="flex items-center gap-0 w-full">
                           <div className="flex-1 flex flex-col items-center">
                             <div className={`h-1 w-full rounded-t-full ${fase >= 1 ? 'bg-[#2A2AD7]' : 'bg-[#E5E7EB]'}`} />
-                            <span className={`text-xs font-bold mt-2 ${fase >= 1 ? 'text-[#2A2AD7]' : 'text-[#A0A3BD]'}`}>Compra antecipada</span>
+                            <span className={`text-xs font-bold mt-2 ${fase >= 1 ? 'text-[#2A2AD7]' : 'text-[#A0A3BD]'} dark:text-slate-400`}>Compra antecipada</span>
                           </div>
                           <div className="flex-1 flex flex-col items-center">
                             <div className={`h-1 w-full rounded-t-full ${fase >= 2 ? 'bg-[#2A2AD7]' : 'bg-[#E5E7EB]'}`} />
-                            <span className={`text-xs font-bold mt-2 ${fase >= 2 ? 'text-[#2A2AD7]' : 'text-[#A0A3BD]'}`}>Quase lá</span>
+                            <span className={`text-xs font-bold mt-2 ${fase >= 2 ? 'text-[#2A2AD7]' : 'text-[#A0A3BD]'} dark:text-slate-400`}>Quase lá</span>
                           </div>
                           <div className="flex-1 flex flex-col items-center">
                             <div className={`h-1 w-full rounded-t-full ${fase === 3 ? 'bg-[#2A2AD7]' : 'bg-[#E5E7EB]'}`} />
-                            <span className={`text-xs font-bold mt-2 ${fase === 3 ? 'text-[#2A2AD7]' : 'text-[#A0A3BD]'}`}>Última chamada</span>
+                            <span className={`text-xs font-bold mt-2 ${fase === 3 ? 'text-[#2A2AD7]' : 'text-[#A0A3BD]'} dark:text-slate-400`}>Última chamada</span>
                           </div>
                         </div>
                       </div>
@@ -343,9 +370,9 @@ const OrganizerDashboard = () => {
                   );
                 })()
               ) : (
-                <div className="flex flex-col gap-4 items-center px-10 py-16 bg-gray-50 rounded-xl w-full max-md:px-5 max-md:py-10 max-md:w-full max-sm:px-4 max-sm:py-8">
-                  <div className="text-lg font-bold text-center text-slate-900 max-sm:text-base">Crie seu evento</div>
-                  <div className="text-sm text-center text-slate-700 w-full max-md:w-full max-md:max-w-[400px] max-sm:text-sm">Adicionar todos os detalhes do seu evento, criar novos ingressos e configurar eventos recorrentes</div>
+                <div className="flex flex-col gap-4 items-center px-10 py-16 bg-gray-50 dark:bg-[#121212] rounded-xl w-full max-md:px-5 max-md:py-10 max-md:w-full max-sm:px-4 max-sm:py-8">
+                  <div className="text-lg font-bold text-center text-slate-900 dark:text-white max-sm:text-base">Crie seu evento</div>
+                  <div className="text-sm text-center text-slate-700 dark:text-slate-300 w-full max-md:w-full max-md:max-w-[400px] max-sm:text-sm">Adicionar todos os detalhes do seu evento, criar novos ingressos e configurar eventos recorrentes</div>
                   <Button
                     className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-[45px] w-[120px] rounded-md"
                     onClick={() => navigate("/create-event")}
@@ -355,10 +382,10 @@ const OrganizerDashboard = () => {
                 </div>
               )}
               {/* Help Section */}
-              <Card className="p-5 bg-white rounded-xl border border-solid border-zinc-200 w-full">
+              <Card className="p-5 bg-white dark:bg-[#242424] rounded-xl border border-solid border-zinc-200 dark:border-[#1F1F1F] w-full">
                 <CardContent className="p-0">
                   <div className="flex flex-col gap-1.5 items-start mb-4 w-full">
-                    <div className="text-2xl font-bold text-slate-800 max-sm:text-2xl">Como podemos ajudar?</div>
+                    <div className="text-2xl font-bold text-slate-800 dark:text-white max-sm:text-2xl">Como podemos ajudar?</div>
                     <div className="text-base text-indigo-700 cursor-pointer hover:text-indigo-800 transition-colors">Ir para Central de Ajuda</div>
                   </div>
                   <div className="flex gap-6 items-center max-md:flex-wrap max-md:gap-4 max-sm:flex-col max-sm:gap-4">
@@ -368,23 +395,24 @@ const OrganizerDashboard = () => {
                       "Comercializando um evento",
                       "Pagamentos e impostos"
                     ].map((title, index) => (
-                      <div key={index} className="flex flex-col gap-4 items-center px-7 py-6 bg-white rounded-xl border border-solid border-zinc-200 h-[140px] w-[156px] max-md:w-[calc(50%_-_7.5px)] max-sm:p-5 max-sm:w-full cursor-pointer hover:shadow-md transition-shadow">
+                      <div key={index} className="flex flex-col gap-4 items-center px-7 py-6 bg-white dark:bg-[#242424] rounded-xl border border-solid border-zinc-200 dark:border-[#1F1F1F] h-[140px] w-[156px] max-md:w-[calc(50%_-_7.5px)] max-sm:p-5 max-sm:w-full cursor-pointer hover:shadow-md transition-shadow">
                         <div className="w-[43px] h-[43px] bg-blue-50 rounded-full flex items-center justify-center">
                           <div className="w-6 h-6 bg-indigo-200 rounded-full"></div>
                         </div>
-                        <div className="text-sm font-bold text-center text-slate-800 w-[100px]">{title}</div>
+                        <div className="text-sm font-bold text-center text-slate-800 dark:text-white w-[100px]">{title}</div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             </div>
-            {/* Right Section - Profile Card */}
-            <div className="h-[283px] w-[259px] max-md:w-full">
-              {loadingOrg ? (
-                <OrgProfileCardSkeleton />
-              ) : (
-              <Card className="flex flex-col justify-between p-5 bg-white rounded-xl border border-solid border-zinc-200 h-[283px] w-[259px] max-md:w-full">
+            {/* Right Section - Profile Card + Producer Journey */}
+            <div className="flex flex-col gap-4 w-[259px] max-md:w-full">
+              <div className="h-[283px] w-[259px] max-md:w-full">
+                {loadingOrg ? (
+                  <OrgProfileCardSkeleton />
+                ) : (
+                <Card className="flex flex-col justify-between p-5 bg-white dark:bg-[#242424] rounded-xl border border-solid border-zinc-200 dark:border-[#1F1F1F] h-[283px] w-[259px] max-md:w-full">
                 <CardContent className="p-0">
                   {selectedOrg ? (
                     orgInfo ? (
@@ -398,7 +426,7 @@ const OrganizerDashboard = () => {
                             </AvatarFallback>
                           </Avatar>
                         )}
-                        <div className="text-2xl font-bold text-slate-900 max-sm:text-2xl">{orgInfo.name || selectedOrg.name}</div>
+                        <div className="text-2xl font-bold text-slate-900 dark:text-white max-sm:text-2xl">{orgInfo.name || selectedOrg.name}</div>
                         <div className="flex gap-5 items-center max-sm:flex-col max-sm:gap-2.5 max-sm:items-start">
                           <a href={orgInfo.publicUrl || '#'} target="_blank" rel="noopener noreferrer" className="text-base text-indigo-700 cursor-pointer hover:text-indigo-800 transition-colors">Ver página</a>
                           <button type="button" className="text-base text-indigo-700 cursor-pointer hover:text-indigo-800 transition-colors" onClick={openEditDrawer}>Editar</button>
@@ -417,12 +445,46 @@ const OrganizerDashboard = () => {
                       </div>
                     ) : (
                       <div className="flex flex-col gap-3 items-start">
-                        <div className="text-sm text-slate-900">Carregando informações da organização...</div>
+                        {/* If selector already provided a lightweight selectedOrg, show it as a fallback while the full orgInfo loads */}
+                        {selectedOrg ? (
+                          <>
+                            {selectedOrg.logoUrl ? (
+                              <img src={selectedOrg.logoUrl} alt="Logo da organização" className="w-[50px] h-[50px] rounded-full object-cover" />
+                            ) : (
+                              <Avatar className="w-[50px] h-[50px]">
+                                <AvatarFallback className="bg-gray-300">
+                                  <div className="w-full h-full rounded-full bg-gray-300"></div>
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            <div className="text-2xl font-bold text-slate-900 max-sm:text-2xl">{selectedOrg.name}</div>
+                            <div className="flex gap-5 items-center max-sm:flex-col max-sm:gap-2.5 max-sm:items-start">
+                              <a href={(orgInfo && (orgInfo.publicUrl as string)) || selectedOrg.site || '#'} target="_blank" rel="noopener noreferrer" className="text-base text-indigo-700 cursor-pointer hover:text-indigo-800 transition-colors">Ver página</a>
+                              <button type="button" className="text-base text-indigo-700 cursor-pointer hover:text-indigo-800 transition-colors" onClick={openEditDrawer}>Editar</button>
+                              <OrganizerEditDrawer
+                                open={drawerOpen}
+                                onOpenChange={setDrawerOpen}
+                                org={orgInfo || selectedOrg}
+                                isNew={false}
+                                onSave={handleSave}
+                                saving={saving}
+                                saveError={saveError}
+                                form={form}
+                                setForm={setForm}
+                              />
+                            </div>
+                            {loadingOrg ? (
+                              <div className="text-sm text-slate-700 dark:text-slate-300">Carregando informações detalhadas...</div>
+                            ) : null}
+                          </>
+                        ) : (
+                          <div className="text-sm text-slate-900">Carregando informações da organização...</div>
+                        )}
                       </div>
                     )
                   ) : (
                     <div className="flex flex-col gap-3 items-start">
-                      <div className="text-sm text-slate-900">Nenhuma organização selecionada.</div>
+                      <div className="text-sm text-slate-900 dark:text-white">Nenhuma organização selecionada.</div>
                       {(!loadingOrgs && orgs.length === 0) && (
                         <Button
                           className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-[38px] px-3 rounded-md"
@@ -434,12 +496,27 @@ const OrganizerDashboard = () => {
                     </div>
                   )}
                   <div className="flex flex-col items-start mt-8">
-                    <div className="text-base font-bold text-slate-900">{orgEventCount}</div>
-                    <div className="text-sm text-slate-900">Total de eventos</div>
+                    <div className="text-base font-bold text-slate-900 dark:text-white">{orgEventCount}</div>
+                    <div className="text-sm text-slate-900 dark:text-slate-300">Total de eventos</div>
                   </div>
                 </CardContent>
               </Card>
-              )}
+                )}
+              </div>
+
+              {/* Producer Journey card shown below the org profile */}
+              <div className="w-[259px] max-md:w-full">
+                {selectedOrg ? (
+                  <ProducerJourneyCard
+                    currentLevel={{ id: (orgInfo?.currentLevel || 'EXPLORADOR'), title: (orgInfo?.currentLevel || 'Produtor'), threshold: 0 }}
+                    sold={orgInfo?.lifetimeTicketsSold || 0}
+                    progressPercent={orgInfo && orgInfo.nextLevelThreshold ? Math.min(100, Math.round((orgInfo.lifetimeTicketsSold || 0) / orgInfo.nextLevelThreshold * 100)) : 0}
+                    nextLevel={orgInfo?.nextLevel ? { id: orgInfo.nextLevel.id || 'NEXT', title: orgInfo.nextLevel.title || orgInfo.nextLevelName || 'Próximo', threshold: orgInfo.nextLevel.threshold || orgInfo.nextLevelThreshold || 0 } : null}
+                  />
+                ) : (
+                  <div />
+                )}
+              </div>
             </div>
           </div>
         </div>

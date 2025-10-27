@@ -8,21 +8,69 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fauves</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <meta name="description" content="Fauves - Eventos e Vendas" />
+    <meta name="author" content="Fauves" />
 
-    <meta property="og:title" content="figma-to-pixel-perfection-6368" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:title" content="Fauves - Eventos e Vendas" />
+    <meta property="og:description" content="Plataforma para venda de ingressos e gestão de eventos" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  <meta property="og:image" content="/favicon.jpg" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:site" content="@fauves" />
+  <meta name="twitter:image" content="/favicon.jpg" />
+  <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   </head>
 
   <body>
+    <!-- Initial splash shown immediately while JS bundles load -->
+    <div id="initial-splash" aria-hidden="true">
+      <div class="splash-inner">
+        <!-- Circular frame around the GIF with animated arc -->
+        <div class="splash-circle" aria-hidden="true">
+          <svg class="splash-ring" viewBox="0 0 120 120" width="192" height="192" aria-hidden="true">
+            <defs>
+              <linearGradient id="arcGrad" x1="0%" x2="100%">
+                <stop offset="0%" stop-color="#d63b2e" />
+                <stop offset="100%" stop-color="#e65a2f" />
+              </linearGradient>
+            </defs>
+            <!-- base ring -->
+            <circle cx="60" cy="60" r="52" stroke="#e6e9ee" stroke-width="5" fill="none" />
+            <!-- animated arc (spinning segment while loading) -->
+            <circle cx="60" cy="60" r="52" stroke="url(#arcGrad)" stroke-width="5" stroke-linecap="round" fill="none" class="splash-arc" />
+            <!-- dedicated completion circle (hidden until reveal) for smooth full-circle draw -->
+            <circle cx="60" cy="60" r="52" stroke="url(#arcGrad)" stroke-width="5" stroke-linecap="round" fill="none" class="splash-complete" />
+          </svg>
+          <img src="/src/assets/loading-fauves.gif" alt="Carregando Fauves" class="splash-gif" />
+        </div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <style>
+      /* Minimal, inline styles so splash appears before CSS bundles */
+      #initial-splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);z-index:9999;transition:opacity .45s ease,transform .45s ease}
+      #initial-splash .splash-inner{display:flex;flex-direction:column;align-items:center;gap:12px;font-family:DM Sans,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+      .splash-logo{border-radius:8px;box-shadow:0 6px 20px rgba(2,6,23,.08)}
+  .splash-circle{width:192px;height:192px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:transparent}
+  .splash-ring{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .splash-circle{position:relative}
+  /* keep GIF proportional and centered inside the circular frame */
+  .splash-gif{max-width:72%;max-height:72%;width:auto;height:auto;border-radius:9999px;display:block;object-fit:contain}
+  /* spinning segment while loading (visible segment + gap) */
+  .splash-arc{stroke-dasharray:88 238.7;stroke-dashoffset:0;transform-box:fill-box;transform-origin:center;transform:rotate(-90deg);animation:arcSpin 1s linear infinite}
+  @keyframes arcSpin{to{transform:rotate(270deg)}}
+  /* when we complete loading, we'll reveal the dedicated complete circle which draws smoothly */
+  .splash-arc.complete{animation:none;opacity:.35;transition:opacity .35s ease}
+  .splash-complete{stroke-dasharray:326.7;stroke-dashoffset:326.7;transform-box:fill-box;transform-origin:center;opacity:0;transition:opacity .18s linear, stroke-dashoffset .85s cubic-bezier(.22,.9,.33,1)}
+  .splash-complete.reveal{opacity:1}
+      @keyframes dot{0%{transform:translateY(0);opacity:.6}50%{transform:translateY(-8px);opacity:1}100%{transform:translateY(0);opacity:.6}}
+      /* fade-out helper, removed from DOM after transition */
+      #initial-splash.fade-out{opacity:0;transform:scale(.98);pointer-events:none}
+      @media (prefers-reduced-motion: reduce){ .splash-dots span{animation:none} }
+    </style>
   </body>
 </html>

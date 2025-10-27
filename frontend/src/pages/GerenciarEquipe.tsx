@@ -29,7 +29,7 @@ export default function GerenciarEquipe() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white">
+    <div className="min-h-screen w-full bg-white dark:bg-[#0b0b0b]">
       <SidebarMenu />
       <EventDetailsSidebar
         eventIdOverride={eventId || null}
@@ -43,21 +43,21 @@ export default function GerenciarEquipe() {
       <AppHeader />
       <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 min-h-screen relative">
         <div className="mt-24 max-w-[900px]">
-          <h1 className="text-3xl font-bold text-indigo-950 mb-3">Gerenciar equipe</h1>
-          <p className="text-gray-700 mb-6">Adicione pessoas ao gerenciamento do seu evento aqui na Fauves.</p>
-          <div className="border rounded-xl bg-white overflow-hidden">
+          <h1 className="text-3xl font-bold text-indigo-950 dark:text-white mb-3">Gerenciar equipe</h1>
+          <p className="text-gray-700 dark:text-slate-300 mb-6">Adicione pessoas ao gerenciamento do seu evento aqui na Fauves.</p>
+          <div className="border rounded-xl bg-white overflow-hidden dark:bg-[#242424] dark:border-[#1F1F1F]">
             {equipe.map((m, idx) => (
-              <div key={idx} className="flex items-center gap-4 px-6 py-5 border-b last:border-b-0">
+              <div key={idx} className="flex items-center gap-4 px-6 py-5 border-b last:border-b-0 dark:border-[#1F1F1F]">
                 <img src={m.avatar} alt={m.nome} className="w-10 h-10 rounded-full object-cover" />
                 <div className="flex flex-col">
-                  <span className="font-semibold text-indigo-950">{m.nome}</span>
+                  <span className="font-semibold text-indigo-950 dark:text-white">{m.nome}</span>
                   <span className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-600 mt-1">
-                    <span className="bg-zinc-100 text-zinc-700 px-2 py-1 rounded">{m.papel}</span>
+                    <span className="bg-zinc-100 text-zinc-700 px-2 py-1 rounded dark:bg-[#1F1F1F] dark:text-slate-300">{m.papel}</span>
                   </span>
-                  <span className="text-sm text-zinc-500">{m.email}</span>
+                  <span className="text-sm text-zinc-500 dark:text-slate-300">{m.email}</span>
                 </div>
                 <div className="ml-auto">
-                  <button className="text-zinc-500 hover:text-red-600">
+                  <button className="text-zinc-500 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-500">
                     <Trash2 size={20} />
                   </button>
                 </div>
@@ -74,7 +74,7 @@ export default function GerenciarEquipe() {
             >
               <UserPlus className="w-8 h-8 text-white" />
             </button>
-            <span className="absolute right-20 top-1/2 -translate-y-1/2 bg-white text-[#2A2AD7] font-bold px-4 py-2 rounded-xl shadow text-base opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Adicionar pessoa à equipe</span>
+            <span className="absolute right-20 top-1/2 -translate-y-1/2 bg-white dark:bg-[#1F1F1F] text-[#2A2AD7] dark:text-[#2A2AD7] font-bold px-4 py-2 rounded-xl shadow text-base opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Adicionar pessoa à equipe</span>
           </div>
           {showModal && (
             <AdicionarPessoaEquipeModal open={showModal} onClose={() => setShowModal(false)} onAdd={handleAddPessoa} />

@@ -7,25 +7,25 @@ export default function ReferralCard() {
     { name: 'Anna Peterson', date: '3 May', status: 'Completed', value: '$109.03' },
   ];
   return (
-    <div style={{background:'#fff',padding:20,borderRadius:8,boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
-      <h4 style={{marginTop:0}}>Earnings by Referral</h4>
-      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
-        <input style={{flex:1,padding:8}} defaultValue={'https://example.com/ref/1044'} />
-        <button>Copy</button>
+    <div className="bg-white p-4 rounded-md shadow-sm">
+      <h4 className="mt-0">Earnings by Referral</h4>
+      <div className="flex items-center gap-2 mb-2">
+        <input className="flex-1 p-2 border border-slate-100 rounded" defaultValue={'https://example.com/ref/1044'} />
+        <button className="px-3 py-2 bg-slate-100 rounded">Copy</button>
       </div>
-      <div style={{marginBottom:8}}>
-        <span style={{fontSize:12,marginRight:8}}>SaaS</span>
-        <span style={{fontSize:12,marginRight:8}}>Ecommerce</span>
-        <span style={{fontSize:12,marginRight:8}}>Pharmacy</span>
-        <span style={{fontSize:12}}>AI</span>
+      <div className="mb-2">
+        <span className="text-xs mr-2">SaaS</span>
+        <span className="text-xs mr-2">Ecommerce</span>
+        <span className="text-xs mr-2">Pharmacy</span>
+        <span className="text-xs">AI</span>
       </div>
-      <ul style={{listStyle:'none',padding:0,margin:0}}>
+      <ul className="list-none p-0 m-0">
         {referrals.map((r,i)=>(
-          <li key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:i<referrals.length-1?'1px solid #eee':'none'}}>
+          <li key={i} className={`flex justify-between items-center py-2 ${i<referrals.length-1 ? 'border-b border-slate-100' : ''}`}>
             <span>{r.name}</span>
-            <span style={{opacity:0.7}}>{r.date}</span>
-            <span style={{fontSize:12,padding:'2px 8px',borderRadius:4,background:r.status==='Completed'?'#d1fae5':'#fee2e2',color:r.status==='Completed'?'#065f46':'#991b1b'}}>{r.status}</span>
-            <span style={{fontWeight:600}}>{r.value}</span>
+            <span className="opacity-70">{r.date}</span>
+            <span className={`text-xs px-2 py-0.5 rounded ${r.status==='Completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>{r.status}</span>
+            <span className="font-semibold">{r.value}</span>
           </li>
         ))}
       </ul>

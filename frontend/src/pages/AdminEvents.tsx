@@ -1,50 +1,65 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import EventFilters from '@/admin/components/EventFilters';
+import EventCard from '@/admin/components/EventCard';
+import EventDrawer from '@/admin/components/EventDrawer';
 
 export default function AdminEvents(){
   const { token } = useAuth();
   const [events, setEvents] = useState<any[]>([]);
-  const [page, setPage] = useState(1);
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState('all');
+  const [selected, setSelected] = useState<any>(null);
+
 
   useEffect(()=>{(async ()=>{
     if(!token) return;
-    const res = await fetch(`/api/admin/events?page=${page}&perPage=20`, { headers: { Authorization: `Bearer ${token}` } });
+    // fetch list of events (only basic fields)
+    const res = await fetch(`/api/admin/events?page=1&perPage=100`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) return;
     const data = await res.json();
-    setEvents(data.events || []);
-  })()},[token,page]);
+    const evs = (data.events||[]).map((e:any)=> ({ ...e, ticketsSold:0, checkins:0, revenue:0, hasAlerts:false }));
+    setEvents(evs);
 
-  const editEvent = async (e:any)=>{
-    if(!token) return;
-    const newName = prompt('Nome do evento:', e.name) || undefined;
-    const newStatus = prompt('Status (published,draft,deleted):', e.status) || undefined;
-    const newDate = prompt('Start date (ISO):', e.startDate) || undefined;
-    const body: any = { eventId: e.id };
-    if(newName) body.name = newName;
-    if(newStatus) body.status = newStatus;
-    if(newDate) body.startDate = newDate;
-    const res = await fetch('/api/admin/update-event', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify(body) });
-    if(!res.ok) return alert('Falha ao editar evento');
-    const j = await res.json();
-    if(j.ok) setEvents(prev=> prev.map(x=> x.id===e.id ? j.event : x));
-  };
+    // fetch summaries per event in parallel (lightweight)
+    await Promise.all(evs.slice(0,50).map(async (ev:any)=>{
+      try{
+        const sRes = await fetch(`/api/admin/event-summary?eventId=${ev.id}`, { headers: { Authorization: `Bearer ${token}` } });
+        if(!sRes.ok) return;
+        const j = await sRes.json();
+        if(j.ok && j.summary) {
+          setEvents(prev=> prev.map(x=> x.id===ev.id ? { ...x, ...j.summary } : x));
+        }
+      }catch(e){/* ignore per-event failure */}
+    }));
+  })()},[token]);
 
-  const deleteEvent = async (e:any)=>{
-    if(!token) return;
-    if(!confirm('Apagar evento (marcar como deleted)?')) return;
-    const res = await fetch('/api/admin/delete-event', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${token}` }, body: JSON.stringify({ eventId: e.id }) });
-    if(!res.ok) return alert('Falha ao apagar evento');
-    const j = await res.json();
-    if(j.ok) setEvents(prev=> prev.filter(x=> x.id!==e.id));
-  };
+  const filtered = events.filter(e=>{
+    if(q){ const s = (e.name+ (e.organizationName||'') + (e.organizer||'')).toLowerCase(); if(!s.includes(q.toLowerCase())) return false; }
+    if(status==='all') return true;
+    if(status==='alerts') return e.hasAlerts;
+    if(status==='pre-sale') return e.status==='pre-sale' || e.status==='draft';
+    if(status==='live') return e.status==='published' || e.status==='active';
+    if(status==='finished') return e.status==='finished' || e.status==='deleted';
+    return true;
+  });
 
-  return <div>
-    <h1>Eventos</h1>
-    <table style={{width:'100%'}}>
-      <thead><tr><th>Nome</th><th>Slug</th><th>Data</th><th>Status</th></tr></thead>
-      <tbody>
-        {events.map(e=> <tr key={e.id}><td>{e.name}</td><td>{e.slug}</td><td>{new Date(e.startDate).toLocaleString()}</td><td>{e.status}</td><td style={{display:'flex',gap:8}}><button onClick={()=>editEvent(e)}>Editar</button><button onClick={()=>deleteEvent(e)} style={{color:'crimson'}}>Apagar</button></td></tr>)}
-      </tbody>
-    </table>
-  </div>;
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-semibold">Eventos & Vendas</h1>
+        <div>
+          <button className="px-4 py-2 bg-sky-600 text-white rounded">+ Criar Novo Evento</button>
+        </div>
+      </div>
+
+      <EventFilters q={q} setQ={setQ} status={status} setStatus={setStatus} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {filtered.map(e=> <EventCard key={e.id} event={e} onDetails={(ev:any)=> setSelected(ev)} />)}
+      </div>
+
+      {selected && <EventDrawer event={selected} token={token} onClose={()=>setSelected(null)} />}
+    </div>
+  );
 }

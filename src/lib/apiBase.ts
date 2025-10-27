@@ -8,7 +8,21 @@
 // 6. Persiste a base saudável (chave localStorage 'API_BASE_WORKING').
 
 const LS_KEY = 'API_BASE_WORKING';
-const stored = (typeof window !== 'undefined') ? window.localStorage.getItem(LS_KEY) : null;
+// Read stored candidate but drop/remove it immediately if it points to localhost
+let stored = (typeof window !== 'undefined') ? window.localStorage.getItem(LS_KEY) : null;
+try {
+  if (stored && typeof window !== 'undefined') {
+    // If stored candidate is localhost (any port, including :3000) it's very likely
+    // a stale dev value that should not be probed from other environments.
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(stored) || /:\s*3000\b/.test(stored) || /:\/\/localhost:3000/.test(stored)) {
+      try { window.localStorage.removeItem(LS_KEY); } catch (e) {}
+      console.debug('[apiBase] ignored and removed stored API_BASE_WORKING pointing to localhost', stored);
+      stored = null;
+    }
+  }
+} catch (e) {
+  // ignore any localStorage access errors
+}
 // Normaliza env base removendo barras finais e um sufixo /api (para evitar construir /api/api/* em probes)
 let _rawEnv = (import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL) || '';
 _rawEnv = _rawEnv.replace(/\/$/, '');
@@ -28,6 +42,22 @@ let finalEnvBase = envBase;
 if (isProd) {
   finalEnvBase = DEFAULT_PROD_BACKEND;
 }
+// In development, ignore build-time env bases that point to localhost (they often
+// come from CI or incorrect configs and cause the client to probe a non-existent
+// host like :3000). Keep this only for non-production to avoid breaking intended setups.
+try {
+  if (!isProd && finalEnvBase && /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(finalEnvBase)) {
+    console.debug('[apiBase] ignoring VITE_API_BASE pointing to localhost in dev:', finalEnvBase);
+    finalEnvBase = null;
+  }
+} catch (e) {}
+// Also ignore env values that contain localhost:3000 even if they lack protocol
+try {
+  if (!isProd && finalEnvBase && /localhost:3000/.test(finalEnvBase)) {
+    console.debug('[apiBase] stripping VITE_API_BASE containing localhost:3000 in dev:', finalEnvBase);
+    finalEnvBase = null;
+  }
+} catch (e) {}
 // Runtime fetch override: rewrite any relative /api requests to the known backend host
 // This ensures 3rd-party libraries or legacy calls that do direct fetch('/api/...')
 // are routed to the backend instead of being served by Vercel (index.html -> 405).
@@ -42,21 +72,21 @@ if (typeof window !== 'undefined') {
           if (typeof input === 'string') {
             if (input.startsWith('/api/') || input === '/api' || input.startsWith('/api?')) {
               const rewritten = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + input;
-              console.log('[apiBase] fetch override: rewriting', input, '->', rewritten);
+              console.debug('[apiBase] fetch override: rewriting', input, '->', rewritten);
               input = rewritten;
             }
             // also handle relative paths that start with './api' or without leading slash
             else if (/^\.?\/?api\//.test(input)) {
               const path = input.replace(/^\.?\//, '/');
               const rewritten = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + path;
-              console.log('[apiBase] fetch override: rewriting', input, '->', rewritten);
+              console.debug('[apiBase] fetch override: rewriting', input, '->', rewritten);
               input = rewritten;
             }
           } else if (input instanceof Request) {
             const reqUrl = new URL(input.url, window.location.origin);
             if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
               const newUrl = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + reqUrl.pathname + reqUrl.search;
-              console.log('[apiBase] fetch override: rewriting Request ->', newUrl);
+              console.debug('[apiBase] fetch override: rewriting Request ->', newUrl);
               input = new Request(newUrl, input);
             }
           }
@@ -67,22 +97,65 @@ if (typeof window !== 'undefined') {
       };
     }
   } catch (e) {}
+  // DEV: also patch fetch while developing locally so any relative /api calls
+  // are routed to the local backend (127.0.0.1:4000). This avoids the browser
+  // hitting stale frontend origins (ex: localhost:3000) when the frontend dev
+  // server doesn't serve /api and prevents noisy probes.
+  try {
+    if (!((window as any).__apiFetchPatchedDev) && window.location) {
+      const h = window.location.hostname;
+      if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
+        const originalFetchDev = window.fetch.bind(window);
+        (window as any).__apiFetchPatchedDev = true;
+        window.fetch = async (input: RequestInfo, init?: RequestInit) => {
+          try {
+            if (typeof input === 'string') {
+              // rewrite /api, /api/whatever or api/whatever
+              if (input === '/api' || input.startsWith('/api/') || /^\.?\/api\//.test(input) || /^api\//.test(input)) {
+                const path = input.startsWith('/') ? input : (input.startsWith('./') ? input.replace(/^\.\//, '/') : '/' + input);
+                input = 'http://127.0.0.1:4000' + path;
+              }
+            } else if (input instanceof Request) {
+              const reqUrl = new URL(input.url, window.location.origin);
+              if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
+                const newUrl = 'http://127.0.0.1:4000' + reqUrl.pathname + reqUrl.search;
+                input = new Request(newUrl, input);
+              }
+            }
+          } catch (e) {
+            // swallow
+          }
+          return originalFetchDev(input as any, init);
+        };
+        console.debug('[apiBase] fetch override (dev): rewriting /api -> http://127.0.0.1:4000');
+        // Also proactively remove any stored API_BASE_WORKING that points to localhost:3000
+        try {
+          const s = window.localStorage.getItem(LS_KEY);
+          if (s && /localhost:3000/.test(s)) {
+            window.localStorage.removeItem(LS_KEY);
+            console.debug('[apiBase] removed stale API_BASE_WORKING pointing to localhost:3000');
+            stored = null;
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
 }
 // If the configured env base equals the current frontend origin (e.g. VERCEL set to the site URL),
 // ignore it because that causes the app to call itself (leading to 405). Use default backend instead.
 try {
-  if (typeof window !== 'undefined' && finalEnvBase) {
+    if (typeof window !== 'undefined' && finalEnvBase) {
     const origin = window.location.origin.replace(/\/$/, '');
     const norm = finalEnvBase.replace(/\/$/, '');
     if (norm === origin || norm.startsWith(origin + '/')) {
-      console.log('[apiBase] detected VITE_API_BASE pointing to frontend origin; switching to default backend');
+      console.debug('[apiBase] detected VITE_API_BASE pointing to frontend origin; switching to default backend');
       finalEnvBase = DEFAULT_PROD_BACKEND;
     }
   }
 } catch (e) {}
 
 // Ordem montada dinamicamente
-const candidates: string[] = [];
+let candidates: string[] = [];
 // In non-production prefer local candidates first and leave envBase as a last-resort candidate.
 if (stored && !candidates.includes(stored)) candidates.push(stored);
 ['http://localhost:4000','http://127.0.0.1:4000']
@@ -92,16 +165,40 @@ if (finalEnvBase) {
   else if (!candidates.includes(finalEnvBase)) candidates.push(finalEnvBase); // dev: keep envBase as fallback
 }
 
+// Defensive filter: never try to probe localhost:3000 — it's a common stale value
+try {
+  candidates = candidates.filter(c => {
+    if (!c) return false;
+    try {
+      // normalize
+      const s = String(c).trim();
+      if (/https?:\/\/localhost:3000\b/i.test(s) || /https?:\/\/127\.0\.0\.1:3000\b/.test(s) || /:\/\/\[::1\]:3000/.test(s)) {
+        console.debug('[apiBase] filtered out candidate pointing to localhost:3000', s);
+        try { if (typeof window !== 'undefined') window.localStorage.removeItem(LS_KEY); } catch (e) {}
+        return false;
+      }
+      return true;
+    } catch (e) { return true; }
+  });
+} catch (e) {}
+
 let resolvedBase: string | null = null; // base atual saudável
 let resolving = false;                 // lock de resolução
 let resolvingPromise: Promise<string> | null = null; // promessa compartilhada para evitar tempestade
 const failureCount: Record<string, number> = {}; // contador de falhas por base
+const candidateBackoffUntil: Record<string, number> = {}; // timestamp ms até quando não devemos reprobar um candidato
 let lastResolutionTs = 0;
 let backendDownUntil = 0; // epoch ms até quando evitamos novas tentativas
 const BACKOFF_MS = 5000;
+const CANDIDATE_BACKOFF_MS = 10000; // se um candidato falhar, não tentamos de novo por 10s
+let envBaseBackoffUntil = 0; // epoch ms até quando não tentamos usar finalEnvBase
+const ENVBASE_BACKOFF_MS = 60 * 1000; // 60s
+let lastEnsureCall = 0; // ms - rate limit multiple callers
 
 async function probe(base: string): Promise<boolean> {
   try {
+    // Never probe stale frontend dev server on port 3000 — skip quickly.
+    try { if (/(:\/\/|:)localhost:3000|:\s*3000\b|:\/\/127\.0\.0\.1:3000/.test(String(base))) return false; } catch (e) {}
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 1800);
     // Se base já for root (sem /api), testamos /api/health; se futuramente /health direto existir, aceitamos fallback.
@@ -127,9 +224,25 @@ export async function ensureApiBase(force = false): Promise<string> {
   // while Vercel rewrites or envs are being fixed. Temporary emergency measure.
   try {
     if (typeof window !== 'undefined' && window.location && window.location.hostname === 'app.fauves.com.br') {
-      resolvedBase = DEFAULT_PROD_BACKEND;
-      console.log('[apiBase] runtime override: using DEFAULT_PROD_BACKEND for app.fauves.com.br');
+  resolvedBase = DEFAULT_PROD_BACKEND;
+  console.debug('[apiBase] runtime override: using DEFAULT_PROD_BACKEND for app.fauves.com.br');
       return resolvedBase;
+    }
+  } catch (e) {}
+  // If the development fetch override is active, short-circuit resolution and
+  // use the local backend. This avoids probing build-time envs or stale
+  // localStorage values and stops repeated requests to localhost:3000.
+  try {
+    if (typeof window !== 'undefined' && (window as any).__apiFetchPatchedDev) {
+      const h = window.location && window.location.hostname;
+      if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
+        const wanted = 'http://127.0.0.1:4000';
+        if (resolvedBase !== wanted) {
+          resolvedBase = wanted;
+          console.debug('[apiBase] dev fetch override active — short-circuiting resolution to', resolvedBase);
+        }
+        return resolvedBase;
+      }
     }
   } catch (e) {}
   // If an envBase is provided (build-time), prefer it. Previously we only auto-used it in production
@@ -140,25 +253,39 @@ export async function ensureApiBase(force = false): Promise<string> {
     // and if it doesn't respond we fall back to probing candidates (localhost). This avoids
     // pointing the client to a VITE_API_BASE that is unreachable from the current environment.
     if (isProd) {
-      resolvedBase = finalEnvBase;
-      console.log('[apiBase] using env VITE_API_BASE (production)');
+  resolvedBase = finalEnvBase;
+  console.debug('[apiBase] using env VITE_API_BASE (production)');
       return resolvedBase;
     }
     // Non-production: probe the envBase quickly. If it responds, use it; otherwise continue resolution.
     try {
-      // quick probe with a short timeout
-      const ok = await probe(finalEnvBase);
-      if (ok) {
-        resolvedBase = finalEnvBase;
-        console.log('[apiBase] using env VITE_API_BASE (build-time)');
-        return resolvedBase;
+      // If we've recently seen envBase fail, skip re-probing for a while
+      if (Date.now() < envBaseBackoffUntil) {
+        console.debug('[apiBase] skipping env VITE_API_BASE probe due to backoff');
+      } else {
+        // quick probe with a short timeout
+        const ok = await probe(finalEnvBase);
+        if (ok) {
+          resolvedBase = finalEnvBase;
+          console.debug('[apiBase] using env VITE_API_BASE (build-time)');
+          return resolvedBase;
+        }
+        // env base failed -> set backoff so we don't spam it
+        envBaseBackoffUntil = Date.now() + ENVBASE_BACKOFF_MS;
+        console.debug('[apiBase] env VITE_API_BASE did not respond, falling back to probing candidates and backing off for', ENVBASE_BACKOFF_MS, 'ms');
       }
-      console.log('[apiBase] env VITE_API_BASE did not respond, falling back to probing candidates');
     } catch (e) {
-      console.log('[apiBase] probe of VITE_API_BASE failed, falling back to candidates');
+      console.log('[apiBase] probe of VITE_API_BASE failed, falling back to candidates', e);
+      envBaseBackoffUntil = Date.now() + ENVBASE_BACKOFF_MS;
     }
   }
   const now = Date.now();
+  // simple rate limit: if many callers call ensureApiBase in a tight loop, avoid
+  // re-triggering full resolution more than once per second unless forced.
+  if (!force && now - lastEnsureCall < 1000 && resolvedBase) {
+    return resolvedBase;
+  }
+  lastEnsureCall = now;
   if (!force && resolvedBase && (now - lastResolutionTs) < 5000) return resolvedBase;
   if (!force && backendDownUntil && now < backendDownUntil && resolvedBase) return resolvedBase; // não reprobe durante backoff
   if (resolvingPromise) return resolvingPromise;
@@ -166,10 +293,21 @@ export async function ensureApiBase(force = false): Promise<string> {
   const doResolve = async () => {
     let picked: string | null = null;
     for (const base of [...candidates]) {
-      if (failureCount[base] && failureCount[base] >= 2) continue;
+      // Skip known-bad localhost:3000 candidates immediately
+      try { if (/(:\/\/|:)localhost:3000|:\s*3000\b|:\/\/127\.0\.0\.1:3000/.test(String(base))) { continue; } } catch(e) {}
+        // skip candidate temporarily if it failed recently
+        const backoffUntil = candidateBackoffUntil[base] || 0;
+        if (Date.now() < backoffUntil) continue;
+        if (failureCount[base] && failureCount[base] >= 2) {
+          // mark shorter backoff for aggressively failing hosts
+          candidateBackoffUntil[base] = Date.now() + CANDIDATE_BACKOFF_MS;
+          continue;
+        }
       const ok = await probe(base);
       if (ok) { picked = base; break; }
-      failureCount[base] = (failureCount[base] || 0) + 1;
+        failureCount[base] = (failureCount[base] || 0) + 1;
+        // if it just failed, avoid immediate re-probing of this same candidate
+        candidateBackoffUntil[base] = Date.now() + CANDIDATE_BACKOFF_MS;
       if (failureCount[base] >= 2 && base === stored) {
         try { window.localStorage.removeItem(LS_KEY); } catch {}
       }
@@ -184,7 +322,7 @@ export async function ensureApiBase(force = false): Promise<string> {
       resolvedBase = picked;
       lastResolutionTs = Date.now();
       try { if (picked && Date.now() < backendDownUntil) { /* não persistir se sabemos que está down */ } else if (typeof window !== 'undefined') window.localStorage.setItem(LS_KEY, picked); } catch {}
-      if (changed) console.log('[apiBase] base resolvida', picked);
+  if (changed) console.debug('[apiBase] base resolvida', picked);
     }
     resolving = false;
     resolvingPromise = null;
@@ -272,5 +410,30 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
 
 // Chamar cedo (ex.: em App.tsx) para já resolver a base antes dos primeiros hooks.
 export function initApiDetection() {
-  ensureApiBase().catch(()=>{});
+  (async () => {
+    try {
+      // If we have a stored candidate, probe it once and remove if it's unreachable.
+      if (typeof window !== 'undefined') {
+        try {
+          const storedCandidate = window.localStorage.getItem(LS_KEY);
+          if (storedCandidate) {
+            // Force-remove any stored candidate that points at localhost:3000 or similar
+            if (/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(storedCandidate)) {
+              try { window.localStorage.removeItem(LS_KEY); } catch (e) {}
+              console.debug('[apiBase] forcibly removed stored API_BASE_WORKING pointing to localhost', storedCandidate);
+            } else {
+              const ok = await probe(storedCandidate).catch(() => false);
+              if (!ok) {
+                try { window.localStorage.removeItem(LS_KEY); } catch (e) {}
+                console.debug('[apiBase] removed stored API_BASE_WORKING because probe failed', storedCandidate);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (e) {}
+    ensureApiBase().catch(()=>{});
+  })();
 }

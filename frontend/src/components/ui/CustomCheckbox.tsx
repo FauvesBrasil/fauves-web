@@ -24,7 +24,7 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ checked, onChange, labe
           )}
         </span>
       </span>
-      <span className="text-base text-[#091747]">{label}</span>
+      <span className="text-base text-[#091747] dark:text-white">{label}</span>
     </label>
   );
 };

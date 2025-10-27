@@ -4,7 +4,7 @@ import React from "react";
 import SidebarMenu from "@/components/SidebarMenu";
 import EventDetailsSidebar from "@/components/EventDetailsSidebar";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ExternalLink, Users, EyeOff, ArrowRight, Ticket } from "lucide-react";
+import { ExternalLink, Users, EyeOff, ArrowRight, Ticket, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { supabase } from "@/lib/supabaseClient";
@@ -30,6 +30,8 @@ const PublishDetails: React.FC = () => {
   const [categories, setCategories] = React.useState<Array<{ name: string; slug?: string }>>([]);
   const [organizerId, setOrganizerId] = React.useState<string | "">("");
   const [organizerOptions, setOrganizerOptions] = React.useState<Array<{id:string; name:string; logoUrl?: string | null}>>([]);
+  const [eventOrganizerName, setEventOrganizerName] = React.useState<string | null>(null);
+  const [eventOrganizerLogo, setEventOrganizerLogo] = React.useState<string | null>(null);
   const [selected, setSelected] = React.useState<string[]>([]);
   const toggle = (id: string) => setSelected(sel => sel.includes(id) ? sel.filter(i => i !== id) : [...sel, id]);
   const eventId = React.useMemo(() => {
@@ -72,9 +74,12 @@ const PublishDetails: React.FC = () => {
           const evOrgId = ev.organizerId || ev.organizationId || '';
           setOrganizerId(evOrgId || "");
           setPublicUrl(getEventPath({ id: ev.id, slug: ev.slug }));
-          // If the event payload directly includes the organization name, add it now
+          // If the event payload directly includes the organization name/logo, store them as fallbacks
           const evOrgName = ev.organization?.name || ev.organizationName || ev.organizerName || '';
           const evOrgLogo = ev.organization?.logoUrl || ev.organization?.logo || ev.logoUrl || ev.logo || '';
+          if (evOrgName) setEventOrganizerName(evOrgName);
+          if (evOrgLogo) setEventOrganizerLogo(evOrgLogo || null);
+          // Also add to organizerOptions when we have an id so lists/dropdowns can show it
           if (evOrgName && evOrgId) {
             setOrganizerOptions(prev => {
               if (prev.find(p => p.id === evOrgId)) return prev;
@@ -108,15 +113,21 @@ const PublishDetails: React.FC = () => {
             setEventDateStr(`${dia} ${mes} ${ano} às ${hh}:${mi}`);
           }
         }
-      } catch (_) {}
+      } catch (err) {
+        console.error('[PublishDetails] failed to load event', { eventId, err });
+      }
       // Load categories from backend
       try {
   const catRes = await fetchApi('/api/categories');
         if (catRes.ok) {
           const list = await catRes.json();
           setCategories(Array.isArray(list) ? list.map((c: any) => ({ name: c.name, slug: c.slug })) : []);
+        } else {
+          console.error('[PublishDetails] /api/categories responded with', { status: catRes.status });
         }
-      } catch (_) {}
+      } catch (err) {
+        console.error('[PublishDetails] failed to load categories', { err });
+      }
       // Load ticket types to compute price-from and audience
       try {
   const ttRes = await fetchApi(`/api/ticket-type/event/${eventId}`);
@@ -129,8 +140,12 @@ const PublishDetails: React.FC = () => {
             const total = list.reduce((acc: number, t: any) => acc + (Number(t.maxQuantity) || 0), 0);
             setTotalAudience(total || null);
           }
+        } else {
+          console.error('[PublishDetails] /api/ticket-type/event responded with', { status: ttRes.status });
         }
-      } catch (_) {}
+      } catch (err) {
+        console.error('[PublishDetails] failed to load ticket types', { err });
+      }
       try {
         const { data: userData } = await supabase.auth.getUser();
         const uid = userData?.user?.id;
@@ -139,9 +154,13 @@ const PublishDetails: React.FC = () => {
           if (or.ok) {
             const list = await or.json();
             setOrganizerOptions((list || []).map((o: any) => ({ id: o.id, name: o.name, logoUrl: o.logoUrl || o.logo || null })));
+          } else {
+            console.error('[PublishDetails] /api/organization/user responded with', { status: or.status });
           }
         }
-      } catch (_) {}
+      } catch (err) {
+        console.error('[PublishDetails] failed to load organizations for user', { err });
+      }
       // If organizer for the event isn't present in organizerOptions, try fetching it by id
       try {
         const oid = (typeof organizerId === 'string' && organizerId) ? organizerId : null;
@@ -157,16 +176,27 @@ const PublishDetails: React.FC = () => {
                   return [...prev, { id: orgObj.id, name: orgObj.name, logoUrl: orgObj.logoUrl || orgObj.logo || null }];
                 });
               }
+            } else {
+              // log non-ok responses so upstream 500s are visible in the browser console
+              try {
+                const text = await orgRes.text();
+                console.error('[PublishDetails] /api/organization/:id non-ok response', { oid, status: orgRes.status, body: text });
+              } catch (e) {
+                console.error('[PublishDetails] /api/organization/:id non-ok response (failed reading body)', { oid, status: orgRes.status, err: e });
+              }
             }
           }
         }
-      } catch (_) {}
+      } catch (err) {
+        console.error('[PublishDetails] failed to fetch organization by id', { organizerId, err });
+      }
     };
     load();
   }, [eventId]);
   const organizerName = React.useMemo(() => {
-    return organizerOptions.find(o => o.id === organizerId)?.name || '';
-  }, [organizerOptions, organizerId]);
+    return organizerOptions.find(o => o.id === organizerId)?.name || (eventOrganizerName || '');
+  }, [organizerOptions, organizerId, eventOrganizerName]);
+  const foundOrg = React.useMemo(() => organizerOptions.find(o => o.id === organizerId) || null, [organizerOptions, organizerId]);
   const organizerInitials = React.useMemo(() => {
     if (!organizerName) return '';
     return organizerName.split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
@@ -247,8 +277,9 @@ const PublishDetails: React.FC = () => {
                   )}
                 </div>
                 <div className="font-bold text-lg text-[#091747]">{eventName}</div>
-                <div className="flex items-center gap-2 text-[#091747] text-sm">
-                  <span>📅 {eventDateStr}</span>
+                <div className="flex items-center gap-2 text-[#091747] text-sm mb-4">
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <span>{eventDateStr}</span>
                 </div>
                 {/* Removed textual summary; footer below will show numeric values only */}
                 <div className="flex-grow" />
@@ -294,8 +325,8 @@ const PublishDetails: React.FC = () => {
                   {/* Show the already-selected organization (no dropdown) */}
                   <div className="flex items-center gap-3 mt-2">
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center text-sm font-semibold text-zinc-700">
-                      {organizerOptions.find(o => o.id === organizerId && o.logoUrl) ? (
-                        <img src={organizerOptions.find(o => o.id === organizerId)!.logoUrl as string} alt={organizerName || 'org'} className="w-full h-full object-cover" />
+                      {foundOrg?.logoUrl || eventOrganizerLogo ? (
+                        <img src={(foundOrg?.logoUrl || eventOrganizerLogo) as string} alt={organizerName || 'org'} className="w-full h-full object-cover" />
                       ) : (
                         <div className="text-sm font-semibold text-zinc-700">{organizerInitials || '??'}</div>
                       )}

@@ -141,16 +141,16 @@ const EditOrgModal: React.FC<EditOrgModalProps> = ({ org, open, onClose, onUpdat
   }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl px-8 py-8 flex flex-col items-center border border-[#E5E7EB]" style={{maxWidth: 420, minWidth: 340}}>
+      <div className="bg-white dark:bg-[#0b0b0b] rounded-2xl shadow-xl px-8 py-8 flex flex-col items-center border border-[#E5E7EB] dark:border-[#1F1F1F]" style={{maxWidth: 420, minWidth: 340}}>
         <div className="w-full flex justify-end mb-2">
-          <button type="button" className="text-[#2A2AD7] text-xl font-bold px-2 py-1 rounded hover:bg-[#F3F4FE] focus:outline-none" onClick={onClose} aria-label="Fechar modal">×</button>
+          <button type="button" className="text-[#2A2AD7] dark:text-white text-xl font-bold px-2 py-1 rounded hover:bg-[#F3F4FE] dark:hover:bg-[#111827] focus:outline-none" onClick={onClose} aria-label="Fechar modal">×</button>
         </div>
-        <span className="text-[18px] font-bold text-[#091747] text-center mb-7 leading-snug">Editar organização</span>
+        <span className="text-[18px] font-bold text-[#091747] dark:text-white text-center mb-7 leading-snug">Editar organização</span>
         <div className="flex items-center gap-4 w-full justify-center mb-7">
           <OrgLogoUpload logoUrl={logoUrl} onSelect={handleLogoSelect} />
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nome da organização" className="flex-1 h-14 rounded-full border border-[#E5E7EB] bg-white px-6 text-base text-[#091747] font-medium shadow-sm focus:ring-2 focus:ring-indigo-200 focus:border-[#2A2AD7]" style={{maxWidth: 260, minWidth: 180}} />
+          <Input value={name} onChange={e => setName(e.target.value)} placeholder="Nome da organização" className="flex-1 h-14 rounded-full border border-[#E5E7EB] dark:border-[#1F1F1F] bg-white dark:bg-[#242424] px-6 text-base text-[#091747] dark:text-white font-medium shadow-sm focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500 focus:border-[#2A2AD7]" style={{maxWidth: 260, minWidth: 180}} />
         </div>
-        <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição da organização" className="w-full h-14 rounded-full border border-[#E5E7EB] bg-white px-6 text-base text-[#091747] font-medium shadow-sm focus:ring-2 focus:ring-indigo-200 focus:border-[#2A2AD7] mb-4" />
+        <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Descrição da organização" className="w-full h-14 rounded-full border border-[#E5E7EB] dark:border-[#1F1F1F] bg-white dark:bg-[#242424] px-6 text-base text-[#091747] dark:text-white font-medium shadow-sm focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500 focus:border-[#2A2AD7] mb-4" />
   {error && <div className="text-red-600 text-sm mb-2 text-center w-full">{error}</div>}
   {!logoFile && <div className="text-yellow-600 text-xs mb-2 text-center w-full">Nenhuma imagem nova selecionada. O logo atual será mantido.</div>}
         <Button onClick={handleSave} disabled={loading || !name.trim()} className="w-full mt-0 shadow bg-[#2A2AD7] hover:bg-[#1e1eb8] text-white font-bold rounded-full py-4 text-base text-center" style={{minHeight: 56, fontSize: 18, background:'#2A2AD7'}}>

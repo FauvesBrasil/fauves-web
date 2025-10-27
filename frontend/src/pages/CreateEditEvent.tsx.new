@@ -49,6 +49,32 @@ function CreateEditEvent() {
 
   const addProgramacaoItem = () => setProgramacaoItems(prev => [...prev, { id: Math.random().toString(36).slice(2), name: '' }]);
 
+  // Banner (square preview) state and handlers
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [bannerSize, setBannerSize] = useState<number>(360); // px, adjustable but clamped
+
+  const openFilePicker = () => fileInputRef.current && (fileInputRef.current as HTMLInputElement).click();
+
+  const onBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    setBannerFile(f);
+    const url = URL.createObjectURL(f);
+    setBannerPreview(url);
+  };
+
+  const removeBanner = () => {
+    if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+    setBannerFile(null);
+    setBannerPreview(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (bannerPreview) URL.revokeObjectURL(bannerPreview);
+    };
+  }, [bannerPreview]);
   return (
     <div className="min-h-screen w-full bg-white flex relative">
       <SidebarMenu />
@@ -90,6 +116,57 @@ function CreateEditEvent() {
                   </div>
                   <div>
                     <Button type="button" onClick={() => setShowBomSaber(v => !v)}>{showBomSaber ? 'Fechar' : 'Editar'}</Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                {/* Banner upload / preview - square and adjustable */}
+                <div className="p-4 border rounded">
+                  <div className="font-bold mb-2">Banner do evento</div>
+                  <div className="flex flex-col md:flex-row items-start gap-4">
+                    <div style={{ width: bannerSize }} className="aspect-square bg-gray-50 rounded overflow-hidden flex items-center justify-center border">
+                      {bannerPreview ? (
+                        // preview image constrained to cover the square
+                        <img src={bannerPreview} alt="Banner preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-sm text-gray-500 px-4 text-center">Nenhum banner selecionado<br />Tamanho visual: {bannerSize}px</div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-[220px]">
+                      <input ref={fileInputRef} type="file" accept="image/*" onChange={onBannerChange} className="hidden" />
+                      <div className="flex gap-2 mb-3">
+                        <Button type="button" onClick={openFilePicker}>{bannerPreview ? 'Trocar imagem' : 'Enviar imagem'}</Button>
+                        <Button type="button" variant="outline" onClick={removeBanner} disabled={!bannerPreview}>Remover</Button>
+                      </div>
+
+                      <div className="mb-2">
+                        <label className="text-sm font-medium block mb-1">Tamanho visual (px)</label>
+                        <input
+                          type="range"
+                          min={240}
+                          max={480}
+                          step={4}
+                          value={bannerSize}
+                          onChange={e => setBannerSize(Number(e.target.value))}
+                          className="w-full"
+                        />
+                        <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                          <span>240</span>
+                          <span>{bannerSize}px</span>
+                          <span>480</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={() => setBannerSize(280)}>Pequeno</Button>
+                        <Button type="button" variant="outline" onClick={() => setBannerSize(360)}>Médio</Button>
+                        <Button type="button" variant="outline" onClick={() => setBannerSize(440)}>Grande</Button>
+                      </div>
+
+                      <div className="text-xs text-gray-400 mt-3">Dica: use imagens quadradas ou com área centralizada. A pré-visualização mantém proporção quadrada e você pode ajustar o tamanho visual sem alterar o arquivo.</div>
+                    </div>
                   </div>
                 </div>
               </div>

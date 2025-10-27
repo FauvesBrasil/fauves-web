@@ -47,9 +47,9 @@ export default function OrganizerReportsOrders() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
   return (
-    <div className="relative min-h-screen w-full bg-white flex justify-center items-start">
+    <div className="relative min-h-screen w-full bg-white dark:bg-[#0b0b0b] flex justify-center items-start">
       <SidebarMenu activeKeyOverride="relatorios" />
-      <div className="rounded-3xl w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-32">
+      <div className="rounded-3xl w-[1352px] bg-white dark:bg-[#0b0b0b] dark:border-[#1F1F1F] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-32">
         <AppHeader />
         <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4">
           <button
@@ -58,20 +58,20 @@ export default function OrganizerReportsOrders() {
           >
             ← Voltar para relatórios
           </button>
-          <h1 className="text-4xl font-bold text-slate-900 max-sm:text-3xl">Pedidos</h1>
-          <p className="text-slate-600 leading-relaxed text-[15px] -mt-3 max-sm:text-sm">Para gerenciar seus pedidos, vá para a área de trabalho de pedidos.</p>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white max-sm:text-3xl">Pedidos</h1>
+          <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-[15px] -mt-3 max-sm:text-sm">Para gerenciar seus pedidos, vá para a área de trabalho de pedidos.</p>
           <div className="flex gap-4 mb-8">
             <button className="bg-orange-600 text-white font-bold px-5 py-3 rounded-lg flex items-center gap-2" onClick={() => setShowSelectModal(true)}>
               <Calendar className="w-5 h-5 mr-2" /> Selecionar eventos
             </button>
-            <button className="bg-zinc-100 text-zinc-700 font-bold px-5 py-3 rounded-lg flex items-center gap-2" onClick={handleExportCSV}>
+            <button className="bg-zinc-100 dark:bg-[#1F1F1F] text-zinc-700 dark:text-white font-bold px-5 py-3 rounded-lg flex items-center gap-2" onClick={handleExportCSV}>
               Exportar CSV
             </button>
           </div>
           {eventIds.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16">
                   <img src={reportsSvg} alt="Selecione eventos" className="w-32 h-32 mb-4" />
-              <div className="text-lg font-bold text-center text-slate-900 mb-2">Crie um relatório ao selecionar os seus eventos.</div>
+              <div className="text-lg font-bold text-center text-slate-900 dark:text-white mb-2">Crie um relatório ao selecionar os seus eventos.</div>
               <button className="bg-orange-600 text-white font-bold px-5 py-3 rounded-lg flex items-center gap-2" onClick={() => setShowSelectModal(true)}>
                 <span className="material-icons">event</span> Selecionar eventos
               </button>
@@ -79,132 +79,132 @@ export default function OrganizerReportsOrders() {
           ) : (
             <React.Fragment>
               <div className="flex gap-8 mb-6">
-                <div className="bg-white rounded-xl shadow-sm border px-6 py-5 flex flex-col gap-2">
-                  <span className="font-bold text-[#231942] text-lg">Eventos</span>
-                  <span className="text-[#231942] text-sm">{eventIds.length}</span>
+                <div className="bg-white dark:bg-[#242424] rounded-xl shadow-sm border dark:border-[#1F1F1F] px-6 py-5 flex flex-col gap-2">
+                  <span className="font-bold text-[#231942] dark:text-white text-lg">Eventos</span>
+                  <span className="text-[#231942] dark:text-white text-sm">{eventIds.length}</span>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border px-6 py-5 flex flex-col gap-2">
-                  <span className="font-bold text-[#231942] text-lg">Total de pedidos</span>
-                  <span className="text-[#231942] text-sm">1</span>
+                <div className="bg-white dark:bg-[#242424] rounded-xl shadow-sm border dark:border-[#1F1F1F] px-6 py-5 flex flex-col gap-2">
+                  <span className="font-bold text-[#231942] dark:text-white text-lg">Total de pedidos</span>
+                  <span className="text-[#231942] dark:text-white text-sm">1</span>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border px-6 py-5 flex flex-col gap-2">
-                  <span className="font-bold text-[#231942] text-lg">Vendas líquidas</span>
-                  <span className="text-[#231942] text-sm">0,00</span>
+                <div className="bg-white dark:bg-[#242424] rounded-xl shadow-sm border dark:border-[#1F1F1F] px-6 py-5 flex flex-col gap-2">
+                  <span className="font-bold text-[#231942] dark:text-white text-lg">Vendas líquidas</span>
+                  <span className="text-[#231942] dark:text-white text-sm">0,00</span>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border px-6 py-5 flex flex-col gap-2">
-                  <span className="font-bold text-[#231942] text-lg">Localização principal do comprador</span>
-                  <span className="text-[#231942] text-sm">Fortaleza, CE, BR</span>
+                <div className="bg-white dark:bg-[#242424] rounded-xl shadow-sm border dark:border-[#1F1F1F] px-6 py-5 flex flex-col gap-2">
+                  <span className="font-bold text-[#231942] dark:text-white text-lg">Localização principal do comprador</span>
+                  <span className="text-[#231942] dark:text-white text-sm">Fortaleza, CE, BR</span>
                 </div>
               </div>
-              <div className="overflow-auto rounded-xl border shadow-sm mb-8">
+              <div className="overflow-auto rounded-xl border shadow-sm mb-8 dark:border-[#1F1F1F]">
                 <table className="min-w-full text-xs md:text-sm">
-                  <thead className="bg-zinc-50">
+                  <thead className="bg-zinc-50 dark:bg-[#0b0b0b]">
                     <tr>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">ID do pedido</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Data do pedido</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Nome do comprador</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Sobrenome do comprador</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">E-mail do comprador</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Número de telefone</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Cidade do comprador</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Estado do comprador</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">País do comprador</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">CEP de cobrança</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">País de cobrança</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Nome do evento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">ID do evento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Data de início do evento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Hora de início do evento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Fuso horário do evento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Localização do evento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Quantidade de ingressos</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Quantidade de complementos</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Moeda</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Status de pagamento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Tipo de pagamento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Dados de pagamento</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Vendas brutas</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Taxa de serviço da Eventbrite</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Taxa de processamento de pagamentos da Eventbrite</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Imposto da Eventbrite</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Imposto do organizador</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Royalty</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Receita de ingressos</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Receita de complementos</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Receita de ingressos + complementos</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Vendas líquidas</th>
-                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap">Convidado(a)</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">ID do pedido</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Data do pedido</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Nome do comprador</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Sobrenome do comprador</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">E-mail do comprador</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Número de telefone</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Cidade do comprador</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Estado do comprador</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">País do comprador</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">CEP de cobrança</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">País de cobrança</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Nome do evento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">ID do evento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Data de início do evento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Hora de início do evento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Fuso horário do evento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Localização do evento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Quantidade de ingressos</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Quantidade de complementos</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Moeda</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Status de pagamento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Tipo de pagamento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Dados de pagamento</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Vendas brutas</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Taxa de serviço da Eventbrite</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Taxa de processamento de pagamentos da Eventbrite</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Imposto da Eventbrite</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Imposto do organizador</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Royalty</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Receita de ingressos</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Receita de complementos</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Receita de ingressos + complementos</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Vendas líquidas</th>
+                      <th className="px-6 py-2 font-bold text-left whitespace-nowrap dark:text-white">Convidado(a)</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b">
-                      <td className="px-6 py-2">8679654629</td>
-                      <td className="px-6 py-2">2024-01-11 16:33:55</td>
-                      <td className="px-6 py-2">Levy</td>
-                      <td className="px-6 py-2">Camara</td>
-                      <td className="px-6 py-2">levycamara@hotmail.com</td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2">Fortaleza</td>
-                      <td className="px-6 py-2">CE</td>
-                      <td className="px-6 py-2">BR</td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2">Menos é mais</td>
-                      <td className="px-6 py-2">796162612807</td>
-                      <td className="px-6 py-2">2024-06-20</td>
-                      <td className="px-6 py-2">16:00:00</td>
-                      <td className="px-6 py-2">America/Sao_Paulo</td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2">2</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">BRL</td>
-                      <td className="px-6 py-2">Free Order</td>
-                      <td className="px-6 py-2">Free</td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">Não</td>
+                      <td className="px-6 py-2 dark:text-white">8679654629</td>
+                      <td className="px-6 py-2 dark:text-white">2024-01-11 16:33:55</td>
+                      <td className="px-6 py-2 dark:text-white">Levy</td>
+                      <td className="px-6 py-2 dark:text-white">Camara</td>
+                      <td className="px-6 py-2 dark:text-white">levycamara@hotmail.com</td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white">Fortaleza</td>
+                      <td className="px-6 py-2 dark:text-white">CE</td>
+                      <td className="px-6 py-2 dark:text-white">BR</td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white">Menos é mais</td>
+                      <td className="px-6 py-2 dark:text-white">796162612807</td>
+                      <td className="px-6 py-2 dark:text-white">2024-06-20</td>
+                      <td className="px-6 py-2 dark:text-white">16:00:00</td>
+                      <td className="px-6 py-2 dark:text-white">America/Sao_Paulo</td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white">2</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">BRL</td>
+                      <td className="px-6 py-2 dark:text-white">Free Order</td>
+                      <td className="px-6 py-2 dark:text-white">Free</td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">Não</td>
                     </tr>
-                    <tr className="font-bold bg-zinc-50">
-                      <td className="px-6 py-2">TOTAIS</td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2">2</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2"></td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2">0</td>
-                      <td className="px-6 py-2"></td>
+                    <tr className="font-bold bg-zinc-50 dark:bg-[#1F1F1F]">
+                      <td className="px-6 py-2 dark:text-white">TOTAIS</td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white">2</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white"></td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white">0</td>
+                      <td className="px-6 py-2 dark:text-white"></td>
                     </tr>
                   </tbody>
                 </table>

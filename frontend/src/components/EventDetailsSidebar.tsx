@@ -5,6 +5,8 @@ import { useLocation } from "react-router-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import { getEventPath } from '@/lib/eventUrl';
 import { ChevronLeft, ChevronDown, ExternalLink } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
 import './event-sidebar-scrollbar.css';
 
 interface Step {
@@ -88,7 +90,8 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   fixed = false,
   fixedLeft = 70,
   fixedWidth = 300,
-  fixedTop = 0
+  // default top offset to account for global header height so sidebar doesn't sit under the header
+  fixedTop = 64
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -110,6 +113,83 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
     return params.get("eventId");
   }, [location.search, eventIdOverride, routeParams]);
 
+  const { toast } = useToast();
+
+  const [statusLocal, setStatusLocal] = React.useState<typeof eventStatus>(eventStatus);
+  React.useEffect(() => setStatusLocal(eventStatus), [eventStatus]);
+
+  // Local copies of event name/date so the sidebar can fetch and display details
+  const [nameLocal, setNameLocal] = React.useState<string | undefined>(eventName);
+  const [dateLocal, setDateLocal] = React.useState<string | undefined>(eventDate);
+  React.useEffect(() => setNameLocal(eventName), [eventName]);
+  React.useEffect(() => setDateLocal(eventDate), [eventDate]);
+
+  // Fetch event details when we have an eventId but parent didn't provide full props
+  React.useEffect(() => {
+    let mounted = true;
+    if (!eventId) return;
+    (async () => {
+      try {
+        const res = await fetchApi(`/api/event/${eventId}`);
+        if (!res || !res.ok) return;
+        const ev = await res.json().catch(() => null);
+        if (!ev || !mounted) return;
+        // set sensible fallbacks
+        const title = ev.name || ev.title || ev.eventName || ev.title || eventName;
+        const dateVal = ev.startDate ? (ev.startDate + (ev.startTime ? ` às ${ev.startTime}` : '')) : (ev.date || eventDate);
+        const status = typeof ev.isPublished === 'boolean' ? (ev.isPublished ? 'Publicado' : 'Rascunho') : (ev.status || eventStatus);
+        setNameLocal(title);
+        setDateLocal(dateVal);
+        setStatusLocal(status as typeof eventStatus);
+      } catch (e) {
+        // ignore fetch errors — sidebar is best-effort
+      }
+    })();
+    return () => { mounted = false; };
+  }, [eventId, eventName, eventDate, eventStatus]);
+
+  // internal publish/unpublish handler if parent didn't provide one
+  const internalChangeStatus = React.useCallback(async (newStatus: "Rascunho" | "Publicado") => {
+    if (!eventId) return false;
+    try {
+      const body: any = { isPublished: newStatus === 'Publicado', status: newStatus };
+      const res = await fetchApi(`/api/event/${eventId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        let msg = `Falha ao atualizar status (${res.status})`;
+        try {
+          const j = await res.json().catch(() => null);
+          if (j && (j.error || j.message)) msg = j.error || j.message;
+        } catch {}
+        toast?.({ title: 'Erro', description: msg, variant: 'destructive' });
+        return false;
+      }
+      // Confirm by reloading the event and updating local state
+      try {
+        const getRes = await fetchApi(`/api/event/${eventId}`);
+        if (getRes.ok) {
+          const ev = await getRes.json().catch(() => null);
+          const published = !!(ev && ev.isPublished);
+          setStatusLocal(published ? 'Publicado' : 'Rascunho');
+          toast?.({ title: published ? 'Evento publicado' : 'Evento despublicado' });
+          // dispatch a window event so parent pages can listen and refresh
+          try { window.dispatchEvent(new CustomEvent('fauves:eventStatusChanged', { detail: { eventId, isPublished: published } })); } catch {}
+          return true;
+        }
+      } catch (e) {
+        // ignore get error, still show success
+      }
+      toast?.({ title: newStatus === 'Publicado' ? 'Evento publicado' : 'Evento despublicado' });
+      setStatusLocal(newStatus);
+      try { window.dispatchEvent(new CustomEvent('fauves:eventStatusChanged', { detail: { eventId, isPublished: newStatus === 'Publicado' } })); } catch {}
+      return true;
+    } catch (e) {
+      toast?.({ title: 'Erro', description: 'Erro de conexão ao atualizar status', variant: 'destructive' });
+      return false;
+    }
+  }, [eventId, toast]);
+
   // Paths base de cada etapa (sem query string) para detectar etapa ativa
   const stepPaths: Record<string, string> = {
     "create-page": "/create-event",
@@ -118,8 +198,9 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   };
   // Rotas completas para navegação (anexando eventId quando disponível)
   const stepRoutes: Record<string, string> = {
-    // when we already have an eventId, take the user to the public event page
-    "create-page": eventId ? getEventPath({ id: String(eventId) }) : "/create-event",
+    // when we already have an eventId, take the user to the edit page instead of public event page
+    // (we don't want 'Criar página do evento' to navigate to the public event page and allow accidental edits)
+    "create-page": eventId ? `/create-event?eventId=${eventId}` : "/create-event",
     "configure-ticket": eventId ? `/create-tickets?eventId=${eventId}` : "/create-tickets",
     "publish": eventId ? `/publish-details?eventId=${eventId}` : "/publish-details",
   };
@@ -141,10 +222,12 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
     const run = async () => {
       if (!eventId) { setTicketCount(null); return; }
       try {
-  const res = await fetchApi(`/api/ticket-type/event/${eventId}/count`);
-        if (!res.ok) return;
+  // The backend exposes a list endpoint for ticket types; request that and use its length
+  const res = await fetchApi(`/api/ticket-type/event/${eventId}`);
+        if (!res.ok) { setTicketCount(0); return; }
         const data = await res.json();
-        setTicketCount(typeof data.count === 'number' ? data.count : 0);
+        if (Array.isArray(data)) setTicketCount(data.length);
+        else setTicketCount(0);
       } catch (_) { /* ignore */ }
     };
     run();
@@ -156,9 +239,9 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
     const isOnPublish = location.pathname.startsWith('/publish-details');
 
     // Completed logic independent of current route (editing keeps check)
-    const isCreateCompleted = !!eventId; // criou evento => ok
+  const isCreateCompleted = !!eventId; // criou evento => ok
     const isTicketsCompleted = !!eventId && (ticketCount ?? 0) > 0; // tem ao menos 1 ingresso => ok
-    const isPublishCompleted = eventStatus === 'Publicado';
+  const isPublishCompleted = statusLocal === 'Publicado';
 
     const createStatus: Step['status'] = isCreateCompleted ? 'completed' : (isOnCreate ? 'active' : 'inactive');
     const ticketsStatus: Step['status'] = isTicketsCompleted ? 'completed' : (!eventId ? 'inactive' : (isOnTickets ? 'active' : 'inactive'));
@@ -167,7 +250,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
     return [
       {
         id: 'create-page',
-        title: 'Criar página do evento',
+        title: isCreateCompleted ? 'Editar página do evento' : 'Criar página do evento',
         description: 'Adicionar todos os detalhes do seu evento e comunicar aos participantes o que esperar',
         status: createStatus,
       },
@@ -184,7 +267,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
         status: publishStatus,
       },
     ];
-  }, [eventId, ticketCount, location.pathname, eventStatus]);
+  }, [eventId, ticketCount, location.pathname, statusLocal]);
 
   // Show event menus only if we have a valid eventId
   const showEventMenus = !!eventId;
@@ -267,9 +350,9 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   // Trigger confetti when eventStatus transitions to 'Publicado'
   React.useEffect(() => {
     const prev = prevStatusRef.current;
-    prevStatusRef.current = eventStatus;
+    prevStatusRef.current = statusLocal;
     if (prev === 'Publicado') return; // already published before
-    if (eventStatus !== 'Publicado') return;
+    if (statusLocal !== 'Publicado') return;
 
     // Launch confetti animation
     const canvas = confettiCanvasRef.current;
@@ -362,7 +445,27 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
       clearTimeout(cleanupTimeout);
       try { ctx.clearRect(0, 0, canvas.width, canvas.height); } catch (e) { /**/ }
     };
-  }, [eventStatus]);
+  }, [statusLocal]);
+
+  // Update statusLocal when other parts of the app dispatch the global event status change
+  React.useEffect(() => {
+    const handler = (ev: Event) => {
+      try {
+        const ce = ev as CustomEvent;
+        const d = ce.detail as { eventId?: string; isPublished?: boolean } | undefined;
+        if (!d) return;
+        if (!eventId) return;
+        if (d.eventId && String(d.eventId) !== String(eventId)) return;
+        if (typeof d.isPublished === 'boolean') {
+          setStatusLocal(d.isPublished ? 'Publicado' : 'Rascunho');
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    window.addEventListener('fauves:eventStatusChanged', handler as EventListener);
+    return () => window.removeEventListener('fauves:eventStatusChanged', handler as EventListener);
+  }, [eventId]);
   return (
   <div
     ref={containerRef}
@@ -370,9 +473,9 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
     style={fixed ? { position: 'fixed', top: fixedTop, left: fixedLeft, width: fixedWidth, height: '100vh', zIndex: 30 } : { height: '100vh', maxWidth: 280 }}
     data-sidebar-detail={fixed ? 'true' : undefined}
   >
-      <div className="pb-32 w-full bg-gray-50 border-r border-gray-100">
+      <div className="pb-32 w-full bg-gray-50 dark:bg-[#0b0b0b] border-r border-gray-100 dark:border-[#1F1F1F]">
         {/* Header */}
-        <div className="flex gap-4 items-center px-3.5 py-4 text-sm text-indigo-700 bg-gray-50 border-b border-neutral-300 min-h-[59px]">
+    <div className="flex gap-4 items-center px-3.5 py-4 text-sm text-indigo-700 dark:text-white bg-gray-50 dark:bg-[#0b0b0b] border-b border-neutral-300 dark:border-[#1F1F1F] min-h-[59px]">
           <div className="object-contain shrink-0 self-stretch my-auto aspect-[0.56] w-[5px]">
             <ChevronLeft className="w-[13px]" />
           </div>
@@ -384,38 +487,68 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-col px-3 mt-3 w-full text-indigo-950">
+    <div className="flex flex-col px-3 mt-3 w-full text-indigo-950 dark:text-white">
           {/* Event Card */}
-          <div className="flex flex-col items-start px-7 py-7 w-full bg-white rounded-xl min-h-[218px] shadow-[4px_4px_10px_rgba(0,0,0,0.05)]">
-            <div className="max-w-full w-[159px]">
-              <div className="text-xl font-semibold">
-                {eventName}
+          <div className="flex flex-col items-start px-7 py-7 w-full bg-white dark:bg-[#242424] rounded-xl min-h-[218px] shadow-[4px_4px_10px_rgba(0,0,0,0.05)]">
+              <div className="max-w-full w-[159px]">
+              <div className="text-xl font-semibold dark:text-white">
+                {nameLocal}
               </div>
               <div className="flex gap-2.5 items-center mt-7 w-full text-xs">
                 <div className="self-stretch my-auto">
-                  {formatEventDate(eventDate)}
+                  {formatEventDate(dateLocal)}
                 </div>
               </div>
             </div>
             <div className="flex gap-10 items-center mt-8 text-sm font-semibold whitespace-nowrap">
-              <div className="self-stretch my-auto rounded-[100px] w-[137px]">
-                <div className="relative flex items-center px-0 py-0 min-h-[42px]">
-                  <select
-                    value={eventStatus}
-                    onChange={(e) => onStatusChange?.(e.target.value as "Rascunho" | "Publicado")}
-                    className="appearance-none pl-5 pr-10 py-3 border border-stone-300 rounded-full bg-white text-sm font-semibold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all w-[137px]"
-                    style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                  >
-                    <option value="Rascunho">Rascunho</option>
-                    <option value="Publicado">Publicado</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 flex items-center">
-                    <ChevronDown className="w-4 h-4 text-indigo-700" />
-                  </span>
+                <div className="self-stretch my-auto rounded-[100px] w-[137px]">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="relative flex items-center justify-between px-5 py-3 border border-stone-300 rounded-full bg-white dark:bg-[#242424] text-sm font-semibold text-indigo-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500 transition-all w-[137px]">
+                        <span>{statusLocal}</span>
+                        <ChevronDown className="w-4 h-4 text-indigo-700 dark:text-white ml-2" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44 bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
+                      {statusLocal === 'Publicado' ? (
+                        <DropdownMenuItem onSelect={async () => {
+                          // always attempt internal API update to ensure persistence
+                          try { if (onStatusChange) onStatusChange('Rascunho'); } catch (e) {}
+                          const ok = await internalChangeStatus('Rascunho');
+                          if (ok) setStatusLocal('Rascunho');
+                        }}>Despublicar evento</DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onSelect={async () => {
+                          try { if (onStatusChange) onStatusChange('Publicado'); } catch (e) {}
+                          const ok = await internalChangeStatus('Publicado');
+                          if (ok) setStatusLocal('Publicado');
+                        }}>Publicar evento</DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              </div>
               <button 
-                onClick={onViewEvent}
+                onClick={async () => {
+                  try { if (onViewEvent) onViewEvent(); } catch (e) {}
+                  // open public event path in a new tab using slug when available
+                  try {
+                    if (!eventId) return;
+                    // try to fetch event to get slug
+                    let slug: string | undefined;
+                    try {
+                      const r = await fetchApi(`/api/event/${eventId}`);
+                      if (r.ok) {
+                        const ev = await r.json().catch(() => null);
+                        if (ev && ev.slug) slug = ev.slug;
+                      }
+                    } catch (e) {
+                      // ignore fetch error and fallback to id
+                    }
+                    const path = getEventPath({ id: String(eventId) as any, slug: slug ?? undefined } as any);
+                    const origin = window.location.origin || '';
+                    window.open(origin + path, '_blank', 'noopener,noreferrer');
+                  } catch (e) { /* ignore */ }
+                }}
                 className="object-contain shrink-0 self-stretch my-auto aspect-square w-[18px] hover:opacity-70 transition-opacity"
                 title="Ver evento"
               >
@@ -442,7 +575,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                 key={step.id}
                 className={
                   `flex flex-col justify-center items-start px-6 py-7 w-full min-h-[70px] transition ` +
-                  (isDisabled ? 'cursor-not-allowed opacity-60 bg-gray-50' : (isActive ? 'cursor-pointer bg-white' : 'cursor-pointer bg-gray-50 hover:bg-indigo-50'))
+                  (isDisabled ? 'cursor-not-allowed opacity-60 bg-gray-50 dark:bg-[#0b0b0b]' : (isActive ? 'cursor-pointer bg-white dark:bg-[#242424]' : 'cursor-pointer bg-gray-50 dark:bg-[#0b0b0b] hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]'))
                 }
                 onClick={() => handleStepClick(step.id, isDisabled)}
                 tabIndex={0}
@@ -452,11 +585,11 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                   {/* Círculo do step */}
                   <div className={
                     `flex items-center justify-center rounded-full border h-[16px] w-[16px] transition-all ` +
-                    (isCompleted ? 'border-indigo-700 bg-white' : (isActive ? 'border-indigo-700 bg-white' : 'border-indigo-700 bg-white'))
+                    (isCompleted ? 'border-indigo-700 bg-white dark:bg-[#64CB9E]/20 text-indigo-700 dark:text-[#64CB9E] dark:border-[#64CB9E]' : (isActive ? 'border-indigo-700 bg-white dark:bg-[#242424]' : 'border-indigo-700 bg-white dark:bg-[#242424]'))
                   }>
                     {isCompleted ? (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
-                        <path d="M20 6L9 17l-5-5" stroke="#2A2AD7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="w-2.5 h-2.5">
+                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     ) : isActive ? (
                       <div className="bg-indigo-700 rounded-full h-[10px] w-[10px]" />
@@ -465,7 +598,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                   <div className="flex items-center gap-2">
                     <div className={
                       `self-stretch my-auto text-sm font-semibold transition-colors ` +
-                      (isCompleted ? 'text-indigo-700' : (isActive ? 'text-indigo-700' : (isDisabled ? 'text-indigo-950/60' : 'text-indigo-950')))
+                      (isCompleted ? 'text-indigo-700 dark:text-white' : (isActive ? 'text-indigo-700 dark:text-white' : (isDisabled ? 'text-indigo-950/60 dark:text-slate-400' : 'text-indigo-950 dark:text-slate-300')))
                     }>
                       {step.title}
                     </div>
@@ -477,7 +610,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                   </div>
                 </div>
                 {step.description && step.id === currentStepId && (
-                  <div className={`mt-2 text-xs w-[220px] text-indigo-700`}>
+                  <div className={`mt-2 text-xs w-[220px] text-indigo-700 dark:text-slate-300`}>
                     {step.description}
                   </div>
                 )}
@@ -491,7 +624,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
 
         {/* Menu: only visible when published */}
         {showEventMenus && (
-          <div className="-mb-6 w-full text-sm font-semibold text-indigo-950">
+          <div className="-mb-6 w-full text-sm font-semibold text-indigo-950 dark:text-white">
             {menuItems.map((item, index) => {
               const active = (item.title === 'Painel' && isPanelActive) || (item.title === 'Gerenciar equipe' && isOnEquipe);
               const isPanelItem = item.title === 'Painel';
@@ -502,7 +635,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                   {item.hasSubmenu ? (
                     <div>
                       <div
-                        className={`flex gap-10 justify-between items-center p-6 w-full whitespace-nowrap min-h-[65px] ${active ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-50'} cursor-pointer`}
+                        className={`flex gap-10 justify-between items-center p-6 w-full whitespace-nowrap min-h-[65px] ${active ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'bg-gray-50 dark:bg-[#0b0b0b]'} cursor-pointer`}
                         onClick={() => handleMenuClick(item.title)}
                         role="button"
                         tabIndex={0}
@@ -512,20 +645,20 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                       </div>
                       {/* Submenu items (only for Marketing right now) */}
                       {expandedMenu === item.title && isMarketing && (
-                        <div className="bg-white border-t border-gray-100">
+                        <div className="bg-white dark:bg-[#242424] border-t border-gray-100 dark:border-[#1F1F1F]">
                           {(() => {
                             const linkActive = location.pathname.startsWith('/marketing/link-rastreamento');
                             const pixelsActive = location.pathname.startsWith('/marketing/pixels');
                             return (
                               <>
                                 <div
-                                  className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${linkActive ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-indigo-50'}`}
+                                  className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${linkActive ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
                                   onClick={() => navigate(eventId ? `/marketing/link-rastreamento/${eventId}` : '/marketing/link-rastreamento')}
                                 >
                                   Link de rastreamento
                                 </div>
                                 <div
-                                  className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${pixelsActive ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-indigo-50'}`}
+                                  className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${pixelsActive ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
                                   onClick={() => navigate(eventId ? `/marketing/pixels/${eventId}` : '/marketing/pixels')}
                                 >
                                   Pixels de rastreamento
@@ -537,21 +670,21 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                       )}
                       {/* Submenu items for Gerenciar participantes */}
                       {expandedMenu === item.title && item.title === 'Gerenciar participantes' && (
-                        <div className="bg-white border-t border-gray-100">
+                        <div className="bg-white dark:bg-[#242424] border-t border-gray-100 dark:border-[#1F1F1F]">
                           <div
-                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center${location.pathname.startsWith('/participantes/pedidos') ? ' bg-indigo-50 text-indigo-700' : ' hover:bg-indigo-50'}`}
+                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${location.pathname.startsWith('/participantes/pedidos') ? ' bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : ' hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
                             onClick={() => navigate(eventId ? `/participantes/pedidos/${eventId}` : '/participantes/pedidos')}
                           >
                             Gerenciar pedidos
                           </div>
                           <div
-                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center${location.pathname.startsWith('/participantes/lista') ? ' bg-indigo-50 text-indigo-700' : ' hover:bg-indigo-50'}`}
+                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${location.pathname.startsWith('/participantes/lista') ? ' bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : ' hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
                             onClick={() => navigate(eventId ? `/participantes/lista/${eventId}` : '/participantes/lista')}
                           >
                             Lista de Participantes
                           </div>
                           <div
-                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center${location.pathname.startsWith('/participantes/checkin') ? ' bg-indigo-50 text-indigo-700' : ' hover:bg-indigo-50'}`}
+                            className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${location.pathname.startsWith('/participantes/checkin') ? ' bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : ' hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
                             onClick={() => navigate(eventId ? `/participantes/checkin/${eventId}` : '/participantes/checkin')}
                           >
                             Check-in
@@ -561,7 +694,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                     </div>
                   ) : (
                     <div
-                      className={`flex gap-2.5 items-center p-6 w-full min-h-[65px] transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-50'} ${isPanelItem ? (eventId ? 'cursor-pointer hover:bg-indigo-100' : 'opacity-60 cursor-not-allowed') : ''} ${isEquipe ? (eventId ? 'cursor-pointer hover:bg-indigo-100' : 'opacity-60 cursor-not-allowed') : ''}`}
+                      className={`flex gap-2.5 items-center p-6 w-full min-h-[65px] transition-colors ${active ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'bg-gray-50 dark:bg-[#0b0b0b]'} ${isPanelItem ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isEquipe ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''}`}
                       onClick={
                         isPanelItem ? (eventId ? () => navigate(panelRoute) : undefined)
                         : isEquipe ? (eventId ? () => navigate(`/gerenciar-equipe/${eventId}`) : undefined)

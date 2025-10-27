@@ -1,17 +1,3 @@
-// Diagnóstico de equipe do evento
-const EquipeDiagnostics: React.FC<{ eventId: string, visibleEvents: EventLite[] }> = ({ eventId, visibleEvents }) => {
-  const [token, setToken] = useState<string|null>(null);
-  useEffect(() => {
-    setToken(window.localStorage.getItem('AUTH_TOKEN_V1'));
-  }, []);
-  const status: 'sim'|'não'|'desconhecido' = !eventId ? 'desconhecido' : (visibleEvents.some(ev => ev.id === eventId) ? 'sim' : 'não');
-  return (
-    <div className="mb-3 p-2 rounded bg-zinc-50 border border-zinc-200 text-xs text-slate-600">
-      <div><b>Token JWT:</b> <span style={{wordBreak:'break-all'}}>{token || <span className="text-red-600">(não encontrado)</span>}</span></div>
-      <div><b>Usuário na equipe do evento:</b> <span className={status==='sim'?"text-emerald-700":status==='não'?"text-red-600":"text-slate-400"}>{status}</span></div>
-    </div>
-  );
-};
 // MarketingTools (clean production baseline) - all debug & test artifacts removed
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchApi, ensureApiBase, apiUrl } from '@/lib/apiBase';
@@ -351,34 +337,17 @@ const MarketingTools: React.FC = () => {
   const formatDate = (iso?:string|null)=> { if(!iso) return '—'; try { return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});} catch { return '—'; } };
 
   return (
-    <div className="relative min-h-screen w-full bg-white flex justify-center items-start">
+    <div className="relative min-h-screen w-full bg-white dark:bg-[#0b0b0b] dark:text-white flex justify-center items-start">
       <SidebarMenu activeKeyOverride="marketing" />
-      <div className="rounded-3xl w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
+      <div className="rounded-3xl w-[1352px] bg-white dark:bg-[#0b0b0b] dark:border-[#1F1F1F] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
         <AppHeader />
-        {/* Diagnóstico rápido do JWT */}
-        <div className="mb-2 p-2 rounded bg-zinc-50 border border-zinc-200 text-xs text-slate-600 max-w-xl">
-          <div><b>Token JWT:</b> <span style={{wordBreak:'break-all'}}>{window.localStorage.getItem('AUTH_TOKEN_V1') || <span className="text-red-600">(não encontrado)</span>}</span></div>
-          {/* Se o token for JWT padrão, mostra expiração */}
-          {(() => {
-            const token = window.localStorage.getItem('AUTH_TOKEN_V1');
-            if (!token) return null;
-            try {
-              const payload = JSON.parse(atob(token.split('.')[1]));
-              if (payload && payload.exp) {
-                const expDate = new Date(payload.exp * 1000);
-                return <div><b>Expira em:</b> {expDate.toLocaleString()}</div>;
-              }
-            } catch {}
-            return null;
-          })()}
-        </div>
         <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4 pb-32">
           <div className="flex flex-col gap-1">
-            <span className="text-[18px] font-semibold text-[#0205D3]">FauvesBoost</span>
-            <h1 className="text-4xl font-bold text-slate-900">Ferramentas de marketing</h1>
+            <span className="text-[18px] font-semibold text-[#0205D3] dark:text-indigo-300">FauvesBoost</span>
+            <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Ferramentas de marketing</h1>
           </div>
           {/* Eventos list removed in production UI */}
-          <div className="flex items-center gap-6 border-b border-zinc-200 -mb-2">
+          <div className="flex items-center gap-6 border-b border-zinc-200 dark:border-zinc-700 -mb-2">
             <button
               onClick={()=> setTab('painel')}
               className={`pb-2 text-base font-bold transition ${tab==='painel' ? 'border-b-2 border-indigo-600 text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
@@ -390,52 +359,52 @@ const MarketingTools: React.FC = () => {
                 // campaigns tab temporarily disabled
                 onClick={(e)=> { e.preventDefault(); /* ignore - disabled */ }}
                 aria-disabled="true"
-                className={`pb-2 text-base font-bold transition cursor-not-allowed text-slate-400`}>
+                  className={`pb-2 text-base font-bold transition cursor-not-allowed text-slate-400 dark:text-slate-600`}>
                 Campanhas de e-mail
               </button>
               <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded bg-yellow-100 text-yellow-800 align-middle">em breve</span>
             </div>
             <button
               onClick={()=> setTab('promocoes')}
-              className={`pb-2 text-base font-bold transition ${tab==='promocoes' ? 'border-b-2 border-indigo-600 text-indigo-700' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`pb-2 text-base font-bold transition ${tab==='promocoes' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:border-indigo-400 dark:text-indigo-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
             >
               Promoções
             </button>
           </div>
           {tab==='painel' && (
-            <div className="bg-[#F6F7FB] rounded-xl border border-zinc-200 px-8 pt-8 pb-8 flex flex-col gap-6">
+            <div className="bg-[#F6F7FB] dark:bg-[#0b0b0b] rounded-xl border border-zinc-200 dark:border-zinc-700 px-8 pt-8 pb-8 flex flex-col gap-6">
               <div className="flex flex-col gap-1">
                 {loadingEvents ? (
                   <div className="animate-pulse space-y-2"><div className="h-4 w-72 bg-zinc-200 rounded" /><div className="h-3 w-96 bg-zinc-200 rounded" /></div>
                 ) : (
                   <>
-                    {daysUntil!==null && <p className="text-[22px] font-medium text-slate-900">Seu próximo evento acontecerá em <span className="text-indigo-700 font-semibold underline decoration-2 underline-offset-[3px]">{daysUntil} {daysUntil===1?'dia':'dias'}</span></p>}
-                    <p className="text-[14px] text-slate-500">Use essas ferramentas para promover seu evento e vender mais ingressos.</p>
+                    {daysUntil!==null && <p className="text-[22px] font-medium text-slate-900 dark:text-white">Seu próximo evento acontecerá em <span className="text-indigo-700 dark:text-indigo-300 font-semibold underline decoration-2 underline-offset-[3px]">{daysUntil} {daysUntil===1?'dia':'dias'}</span></p>}
+                    <p className="text-[14px] text-slate-500 dark:text-slate-400">Use essas ferramentas para promover seu evento e vender mais ingressos.</p>
                   </>
                 )}
               </div>
-              <div className="bg-white border border-zinc-200 rounded-lg p-5 relative" ref={selectorRef}>
+              <div className="bg-white dark:bg-[#121212] border border-zinc-200 dark:border-zinc-700 rounded-lg p-5 relative" ref={selectorRef}>
                 {/* status removed from UI */}
                 {loadingEvents ? (
                   <div className="animate-pulse flex items-center gap-4"><div className="w-12 h-12 rounded-md bg-zinc-200" /><div className="flex-1 space-y-2"><div className="h-4 w-56 bg-zinc-200 rounded" /><div className="h-3 w-40 bg-zinc-200 rounded" /></div></div>
                 ) : (
                   <button onClick={()=> setSelectorOpen(o=> !o)} className="flex items-center gap-4 w-full text-left">
-                    <div className="w-14 h-14 rounded-md bg-zinc-300" />
+                    <div className="w-14 h-14 rounded-md bg-zinc-300 dark:bg-zinc-700" />
                     <div className="flex flex-col">
-                      <div className="text-[13px] font-medium text-slate-900">{activeEvent?.name || 'Selecione um evento'}</div>
+                      <div className="text-[13px] font-medium text-slate-900 dark:text-white">{activeEvent?.name || 'Selecione um evento'}</div>
                       <div className="text-[11px] text-orange-600 mt-0.5">{activeEvent?.startDate ? `Inicia ${formatDate(activeEvent?.startDate)}` : ''}</div>
                     </div>
-                    <span className={`ml-auto text-slate-700 text-sm transition-transform ${selectorOpen? 'rotate-180':''}`}>▾</span>
+                    <span className={`ml-auto text-slate-700 dark:text-slate-300 text-sm transition-transform ${selectorOpen? 'rotate-180':''}`}>▾</span>
                   </button>
                 )}
                 {!loadingEvents && selectorOpen && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden z-20">
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white dark:bg-[#121212] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg overflow-hidden z-20">
                     {visibleEvents.length === 0 ? (
-                      <div className="p-4 text-sm text-slate-500">Nenhum evento disponível para esta organização.</div>
+                      <div className="p-4 text-sm text-slate-500 dark:text-slate-400">Nenhum evento disponível para esta organização.</div>
                     ) : (
-                      <ul className="max-h-64 overflow-auto divide-y divide-zinc-100 text-sm">
+                      <ul className="max-h-64 overflow-auto divide-y divide-zinc-100 dark:divide-zinc-700 text-sm">
                         {visibleEvents.map(ev => (
-                          <li key={ev.id}><button onClick={()=> { setActiveEventId(ev.id); setSelectorOpen(false); }} className={`w-full text-left px-4 py-3 hover:bg-indigo-50 ${ev.id===activeEventId? 'bg-indigo-50/60 font-medium text-indigo-800':'text-slate-700'}`}>{ev.name}</button></li>
+                          <li key={ev.id}><button onClick={()=> { setActiveEventId(ev.id); setSelectorOpen(false); }} className={`w-full text-left px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 ${ev.id===activeEventId? 'bg-indigo-50/60 dark:bg-indigo-900/20 font-medium text-indigo-800 dark:text-indigo-300':'text-slate-700 dark:text-slate-300'}`}>{ev.name}</button></li>
                         ))}
                       </ul>
                     )}
@@ -446,12 +415,12 @@ const MarketingTools: React.FC = () => {
                 {tasks.map(t => {
                   const done = isTaskDone(activeEventId, t.key);
                   return (
-                    <div key={t.key} className={`p-5 border ${done? 'border-emerald-200 bg-emerald-50':'border-zinc-200 bg-white'} rounded-xl flex flex-col gap-2 hover:shadow-sm transition`}>
+                    <div key={t.key} className={`p-5 border ${done? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-900':'border-zinc-200 bg-white dark:bg-[#121212]'} rounded-xl flex flex-col gap-2 hover:shadow-sm transition`}>
                       <div className="flex items-start gap-3">
                         <input type="checkbox" checked={done} onChange={e=> setTaskDone(activeEventId, t.key, e.target.checked)} className="mt-1" />
                         <div>
-                          <div className="text-[14px] font-semibold text-slate-900">{t.title}</div>
-                          <div className="text-[12px] text-slate-600 leading-relaxed">{t.desc}</div>
+                          <div className="text-[14px] font-semibold text-slate-900 dark:text-white">{t.title}</div>
+                          <div className="text-[12px] text-slate-600 dark:text-slate-400 leading-relaxed">{t.desc}</div>
                         </div>
                       </div>
                       <button onClick={()=> { setTaskDone(activeEventId, t.key, true); /* TODO: open a modal or navigate to tool */ }} className="mt-auto self-start text-[12px] text-indigo-700 font-medium hover:underline">Abrir</button>
@@ -531,15 +500,34 @@ const MarketingTools: React.FC = () => {
                       <DrawerDescription className="text-[13px] text-slate-500">Configure código, desconto e validade.</DrawerDescription>
                     </DrawerHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
-                      {/* Diagnóstico de autenticação e permissão */}
-                      <EquipeDiagnostics eventId={couponForm.eventId} visibleEvents={visibleEvents} />
                       <form id="couponForm" onSubmit={submitCoupon} className="flex flex-col gap-5 text-[13px]">
-                        {/* ...existing code... */}
                         <div className="flex flex-col gap-2">
                           <Label className="text-[12px] font-medium text-slate-600">Código</Label>
                           <Input value={couponForm.code} onChange={e=> setCouponForm(f=> ({...f,code:e.target.value.toUpperCase()}))} placeholder="EXEMPLO10" className="h-11 rounded-xl text-sm" />
                         </div>
-                        {/* ...existing code... */}
+                        <div className="flex flex-row gap-2">
+                          <div className="flex-1 flex flex-col gap-2">
+                            <Label className="text-[12px] font-medium text-slate-600">Desconto</Label>
+                            <Input type="number" min="0" value={couponForm.value} onChange={e=> setCouponForm(f=> ({...f,value:e.target.value}))} placeholder="10" className="h-11 rounded-xl text-sm" />
+                          </div>
+                          <div className="flex flex-col gap-2 justify-end">
+                            <Label className="text-[12px] font-medium text-slate-600 invisible">Tipo</Label>
+                            <div className="flex flex-row gap-1 h-11">
+                              <Button type="button" variant={couponForm.type==='FIXED'?'default':'outline'} className={`rounded-l-xl rounded-r-none h-11 px-4 text-sm ${couponForm.type==='FIXED'?'bg-indigo-600 text-white':'bg-white text-indigo-700 border-indigo-600'}`} onClick={()=> setCouponForm(f=> ({...f,type:'FIXED'}))}>Valor</Button>
+                              <Button type="button" variant={couponForm.type==='PERCENT'?'default':'outline'} className={`rounded-r-xl rounded-l-none h-11 px-4 text-sm ${couponForm.type==='PERCENT'?'bg-indigo-600 text-white':'bg-white text-indigo-700 border-indigo-600'}`} onClick={()=> setCouponForm(f=> ({...f,type:'PERCENT'}))}>Porcentagem</Button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-row gap-2">
+                          <div className="flex-1 flex flex-col gap-2">
+                            <Label className="text-[12px] font-medium text-slate-600">Validade do cupom</Label>
+                            <Input type="date" value={couponForm.endsAt?.slice(0,10) || ''} onChange={e=> setCouponForm(f=> ({...f,endsAt:e.target.value}))} className="h-11 rounded-xl text-sm" />
+                          </div>
+                          <div className="flex-1 flex flex-col gap-2">
+                            <Label className="text-[12px] font-medium text-slate-600">Qtd. máxima de cupons</Label>
+                            <Input type="number" min="1" value={couponForm.maxUses} onChange={e=> setCouponForm(f=> ({...f,maxUses:e.target.value}))} placeholder="100" className="h-11 rounded-xl text-sm" />
+                          </div>
+                        </div>
                         <div className="flex flex-col gap-2">
                           <Label className="text-[12px] font-medium text-slate-600">Evento</Label>
                           <select value={couponForm.eventId} onChange={e=> setCouponForm(f=> ({...f,eventId:e.target.value}))} className="h-11 rounded-xl border border-input bg-background px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
