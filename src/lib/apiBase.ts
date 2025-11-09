@@ -188,6 +188,7 @@ let resolvingPromise: Promise<string> | null = null; // promessa compartilhada p
 const failureCount: Record<string, number> = {}; // contador de falhas por base
 const candidateBackoffUntil: Record<string, number> = {}; // timestamp ms até quando não devemos reprobar um candidato
 let lastResolutionTs = 0;
+const HEALTH_CACHE_TTL_MS = 300000; // 5 min
 let backendDownUntil = 0; // epoch ms até quando evitamos novas tentativas
 const BACKOFF_MS = 5000;
 const CANDIDATE_BACKOFF_MS = 10000; // se um candidato falhar, não tentamos de novo por 10s
@@ -286,7 +287,7 @@ export async function ensureApiBase(force = false): Promise<string> {
     return resolvedBase;
   }
   lastEnsureCall = now;
-  if (!force && resolvedBase && (now - lastResolutionTs) < 5000) return resolvedBase;
+  if (!force && resolvedBase && (now - lastResolutionTs) < HEALTH_CACHE_TTL_MS) return resolvedBase;
   if (!force && backendDownUntil && now < backendDownUntil && resolvedBase) return resolvedBase; // não reprobe durante backoff
   if (resolvingPromise) return resolvingPromise;
   resolving = true;

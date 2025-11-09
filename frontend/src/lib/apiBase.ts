@@ -1,304 +1,109 @@
-// Centraliza a base da API com detecção resiliente.
-// Estratégia revisada:
-// 1. Usa VITE_BACKEND_URL se definido e responder 200 OK.
-// 2. Usa base previamente persistida (localStorage) se ainda responde.
-// 3. Prioriza portas do backend conhecido: 4000 primeiro; só tenta 4001 depois.
-// 4. Ignora respostas 500 (trata como não saudável) e conexões recusadas.
-// 5. Evita spam: remove candidato após 2 falhas consecutivas.
-// 6. Persiste a base saudável (chave localStorage 'API_BASE_WORKING').
+// Centraliza a base da API com detecção resiliente e exports estáveis.
 
 const LS_KEY = 'API_BASE_WORKING';
-const stored = (typeof window !== 'undefined') ? window.localStorage.getItem(LS_KEY) : null;
-// Normaliza env base removendo barras finais e um sufixo /api (para evitar construir /api/api/* em probes)
-let _rawEnv = (import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL) || '';
-_rawEnv = _rawEnv.replace(/\/$/, '');
-if (/\/api$/i.test(_rawEnv)) {
-  _rawEnv = _rawEnv.replace(/\/api$/i, '');
-}
+let resolvedBase: string | null = null;
+let lastResolutionTs = 0;
+let lastEnsureCall = 0;
+const HEALTH_CACHE_TTL_MS = 300000; // 5 min
+
+// Normaliza env
+let _rawEnv = (import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+if (/\/api$/i.test(_rawEnv)) _rawEnv = _rawEnv.replace(/\/api$/i, '');
 const envBase = _rawEnv || null;
 const isProd = import.meta.env.PROD;
-
-// Fallback production backend (hardcoded) to guarantee API calls work even if VITE_API_BASE
-// was not set in the build environment or Vercel rewrite is not yet applied.
-// This is a safe fallback during emergency; we can remove it once Vercel rewrites are stable.
 const DEFAULT_PROD_BACKEND = 'https://fauves-backend-production.up.railway.app';
-let finalEnvBase = envBase;
-// In dev, aggressively ignore any env base that mentions localhost:3000
-try {
-  if (!isProd && finalEnvBase && /localhost:3000/.test(finalEnvBase)) {
-    console.debug('[apiBase] stripping VITE_API_BASE containing localhost:3000 in dev (frontend copy):', finalEnvBase);
-    finalEnvBase = null;
-  }
-} catch (e) {}
-// In production we prefer the build-time env base. We used to force a hardcoded
-// default during the incident; remove the runtime forcing so the app relies on
-// Vercel rewrites / VITE_API_BASE and the resilient resolver below.
-// (DEFAULT_PROD_BACKEND remains defined as a safe constant but is not forced.)
-// If the configured env base equals the current frontend origin (e.g. VERCEL set to the site URL),
-// ignore it because that causes the app to call itself (leading to 405). Use default backend instead.
-try {
-  if (typeof window !== 'undefined' && finalEnvBase) {
-    const origin = window.location.origin.replace(/\/$/, '');
-    const norm = finalEnvBase.replace(/\/$/, '');
-    if (norm === origin || norm.startsWith(origin + '/')) {
-  console.debug('[apiBase] detected VITE_API_BASE pointing to frontend origin; switching to default backend');
-      finalEnvBase = DEFAULT_PROD_BACKEND;
-    }
-  }
-} catch (e) {}
 
-// Ordem montada dinamicamente
-const candidates: string[] = [];
-// In non-production prefer local candidates first and leave envBase as a last-resort candidate.
-if (stored && !candidates.includes(stored)) candidates.push(stored);
-['http://localhost:4000','http://127.0.0.1:4000']
-  .forEach(b => { if (!candidates.includes(b)) candidates.push(b); });
-if (finalEnvBase) {
-  if (isProd) candidates.unshift(finalEnvBase); // production: envBase (or default) is authoritative
-  else if (!candidates.includes(finalEnvBase)) candidates.push(finalEnvBase); // dev: keep envBase as fallback
+const candidates: string[] = [
+  'http://localhost:4000',
+  'http://127.0.0.1:4000',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:5000',
+  'http://127.0.0.1:8080',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5000',
+  'http://localhost:8080',
+];
+
+try {
+  const stored = (typeof window !== 'undefined') ? window.localStorage.getItem(LS_KEY) : null;
+  if (stored && !candidates.includes(stored)) candidates.unshift(stored);
+} catch {}
+
+if (envBase) {
+  if (isProd) candidates.unshift(envBase);
+  else if (!candidates.includes(envBase)) candidates.push(envBase);
 }
 
-let resolvedBase: string | null = null; // base atual saudável
-let resolving = false;                 // lock de resolução
-let resolvingPromise: Promise<string> | null = null; // promessa compartilhada para evitar tempestade
-const failureCount: Record<string, number> = {}; // contador de falhas por base
-let lastResolutionTs = 0;
-let backendDownUntil = 0; // epoch ms até quando evitamos novas tentativas
-const BACKOFF_MS = 5000;
-let lastEnsureCall = 0; // ms - rate limit ensureApiBase
-
-// DEV: when running on localhost, patch window.fetch to rewrite relative /api
-// calls to the local backend at 127.0.0.1:4000 and remove any stored
-// API_BASE_WORKING pointing to localhost:3000. This prevents the frontend dev
-// server from causing probes to stale ports.
-try {
-  if (typeof window !== 'undefined' && window.location) {
-    const h = window.location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
-      if (!((window as any).__apiFetchPatchedDev)) {
-        const originalFetch = window.fetch.bind(window);
-        (window as any).__apiFetchPatchedDev = true;
-        window.fetch = async (input: RequestInfo, init?: RequestInit) => {
-          try {
-            if (typeof input === 'string') {
-              if (input === '/api' || input.startsWith('/api/') || /^\.?\/api\//.test(input) || /^api\//.test(input)) {
-                const path = input.startsWith('/') ? input : (input.startsWith('./') ? input.replace(/^\.\//, '/') : '/' + input);
-                input = 'http://127.0.0.1:4000' + path;
-              }
-            } else if (input instanceof Request) {
-              const reqUrl = new URL(input.url, window.location.origin);
-              if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
-                const newUrl = 'http://127.0.0.1:4000' + reqUrl.pathname + reqUrl.search;
-                input = new Request(newUrl, input);
-              }
-            }
-          } catch (e) {}
-          return originalFetch(input as any, init);
-        };
-        console.debug('[apiBase] fetch override (dev): rewriting /api -> http://127.0.0.1:4000');
-        try {
-          const s = window.localStorage.getItem(LS_KEY);
-          if (s && /localhost:3000/.test(s)) {
-            window.localStorage.removeItem(LS_KEY);
-            console.debug('[apiBase] removed stale API_BASE_WORKING pointing to localhost:3000');
-          }
-        } catch (e) {}
-      }
-    }
-  }
-} catch (e) {}
-
-async function probe(base: string): Promise<boolean> {
+async function isBackendHealthy(base: string): Promise<boolean> {
   try {
-    try { if (/(:\/\/|:)localhost:3000|:\s*3000\b|:\/\/127\.0\.0\.1:3000/.test(String(base))) return false; } catch (e) {}
     const ctrl = new AbortController();
-    const to = setTimeout(() => ctrl.abort(), 1800);
-    // Se base já for root (sem /api), testamos /api/health; se futuramente /health direto existir, aceitamos fallback.
-    const healthUrls = [base + '/api/health', base + '/health'];
+    const to = setTimeout(() => ctrl.abort(), 1500);
+    const urls = [base + '/api/health', base + '/health'];
     let r: Response | null = null;
-    for (const u of healthUrls) {
-      try {
-        r = await fetch(u, { signal: ctrl.signal });
-        if (r.ok) break;
-      } catch {
-        // tenta próxima
-      }
+    for (const u of urls) {
+      try { r = await fetch(u, { signal: ctrl.signal }); if (r.ok) break; } catch {}
     }
     clearTimeout(to);
-    if (r && r.ok) return true; // somente 2xx/3xx considerados saudáveis
+    if (r && r.ok) {
+      try { const j = await r.clone().json(); if (j && typeof j.time === 'string') return true; } catch {}
+    }
   } catch {}
   return false;
 }
 
 export async function ensureApiBase(force = false): Promise<string> {
-  // Runtime override: if we're running on the public app domain, force the known Railway backend
-  // This ensures the running bundle does not attempt to call the frontend origin and receive 405s
-  // while Vercel rewrites or envs are being fixed. Temporary emergency measure.
+  // Produção: confiar no backend conhecido se o env apontar para o próprio frontend
   try {
-    if (typeof window !== 'undefined' && window.location && window.location.hostname === 'app.fauves.com.br') {
-      resolvedBase = DEFAULT_PROD_BACKEND;
-  console.debug('[apiBase] runtime override: using DEFAULT_PROD_BACKEND for app.fauves.com.br');
-      return resolvedBase;
-    }
-  } catch (e) {}
-  // Short-circuit when dev fetch override is active — prefer local backend to stop probing
-  try {
-    if (typeof window !== 'undefined' && (window as any).__apiFetchPatchedDev) {
-      const h = window.location && window.location.hostname;
-      if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
-        const wanted = 'http://127.0.0.1:4000';
-        if (resolvedBase !== wanted) {
-          resolvedBase = wanted;
-          console.debug('[apiBase] dev fetch override active (frontend) — short-circuiting resolution to', resolvedBase);
-        }
-        return resolvedBase;
+    if (isProd && typeof window !== 'undefined') {
+      const origin = window.location.origin.replace(/\/$/, '');
+      const base = (envBase || '').replace(/\/$/, '');
+      if (base && (base === origin || base.startsWith(origin + '/'))) {
+        resolvedBase = DEFAULT_PROD_BACKEND; return resolvedBase;
       }
     }
-  } catch (e) {}
-  // If an envBase is provided (build-time), prefer it. Previously we only auto-used it in production
-  // to allow local development probes; but in hosted previews/envs we want to trust the build-time value
-  // to avoid resolving to localhost. This reduces cases where the app tries http://localhost:4000 in deployed sites.
-  if (finalEnvBase) {
-    // In production we trust the build-time env base. In development/preview, probe it briefly
-    // and if it doesn't respond we fall back to probing candidates (localhost). This avoids
-    // pointing the client to a VITE_API_BASE that is unreachable from the current environment.
-    if (isProd) {
-      resolvedBase = finalEnvBase;
-        console.debug('[apiBase] using env VITE_API_BASE (production)');
-      return resolvedBase;
-    }
-    // Non-production: probe the envBase quickly. If it responds, use it; otherwise continue resolution.
-    try {
-      // quick probe with a short timeout
-      const ok = await probe(finalEnvBase);
-      if (ok) {
-  resolvedBase = finalEnvBase;
-  console.debug('[apiBase] using env VITE_API_BASE (build-time)');
-        return resolvedBase;
-      }
-        console.debug('[apiBase] env VITE_API_BASE did not respond, falling back to probing candidates');
-    } catch (e) {
-        console.debug('[apiBase] probe of VITE_API_BASE failed, falling back to candidates');
-    }
-  }
+  } catch {}
+
   const now = Date.now();
-  if (!force && now - lastEnsureCall < 1000 && resolvedBase) {
-    return resolvedBase;
-  }
+  if (!force && resolvedBase && (now - lastResolutionTs) < HEALTH_CACHE_TTL_MS) return resolvedBase;
+  if (!force && now - lastEnsureCall < 500 && resolvedBase) return resolvedBase;
   lastEnsureCall = now;
-  if (!force && resolvedBase && (now - lastResolutionTs) < 5000) return resolvedBase;
-  if (!force && backendDownUntil && now < backendDownUntil && resolvedBase) return resolvedBase; // não reprobe durante backoff
-  if (resolvingPromise) return resolvingPromise;
-  resolving = true;
-  const doResolve = async () => {
-    let picked: string | null = null;
-    for (const base of [...candidates]) {
-      try { if (/(:\/\/|:)localhost:3000|:\s*3000\b|:\/\/127\.0\.0\.1:3000/.test(String(base))) { continue; } } catch(e) {}
-      if (failureCount[base] && failureCount[base] >= 2) continue;
-      const ok = await probe(base);
-      if (ok) { picked = base; break; }
-      failureCount[base] = (failureCount[base] || 0) + 1;
-      if (failureCount[base] >= 2 && base === stored) {
-        try { window.localStorage.removeItem(LS_KEY); } catch {}
-      }
+
+  for (const base of candidates) {
+    const ok = await isBackendHealthy(base);
+    if (ok) {
+      resolvedBase = base; lastResolutionTs = Date.now();
+      try { if (typeof window !== 'undefined') window.localStorage.setItem(LS_KEY, base); } catch {}
+      return resolvedBase;
     }
-    if (!picked) {
-      // nenhum saudável agora; mantém resolvedBase anterior ou assume preferida 4000 sem novos probes até backoff expirar
-      if (!resolvedBase) picked = 'http://localhost:4000';
-      backendDownUntil = Date.now() + BACKOFF_MS;
-    }
-    if (picked) {
-      const changed = picked !== resolvedBase;
-      resolvedBase = picked;
-      lastResolutionTs = Date.now();
-      try { if (picked && Date.now() < backendDownUntil) { /* não persistir se sabemos que está down */ } else if (typeof window !== 'undefined') window.localStorage.setItem(LS_KEY, picked); } catch {}
-      if (changed) console.debug('[apiBase] base resolvida', picked);
-    }
-    resolving = false;
-    resolvingPromise = null;
-    return resolvedBase!;
-  };
-  resolvingPromise = doResolve();
-  return resolvingPromise;
+  }
+  if (!resolvedBase) resolvedBase = 'http://localhost:4000';
+  return resolvedBase;
 }
 
 export function apiUrl(path: string): string {
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  if (path.startsWith('http')) return path;
   if (!path.startsWith('/')) path = '/' + path;
-  // Se já resolvido, retorna direto — senão usa primeiro candidato até ensureApiBase substituir posteriormente
-  return (resolvedBase || candidates[0]) + path;
+  return (resolvedBase || 'http://localhost:4000') + path;
 }
 
-// Expor diagnósticos para painéis DEV sem permitir mutação externa
 export function getApiDiagnostics() {
-  return {
-    resolvedBase,
-    candidates: [...candidates],
-    failureCount: { ...failureCount },
-    backendDownUntil,
-    backoffRemainingMs: backendDownUntil ? Math.max(backendDownUntil - Date.now(), 0) : 0,
-    lastResolutionTs,
-  };
+  return { resolvedBase, candidates: [...candidates], lastResolutionTs };
 }
 
-// Helper para fazer fetch com fallback automático se a base falhar na primeira tentativa.
 export async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
-  const now = Date.now();
-  // Se estamos em período de backoff porque nada respondeu, devolve resposta fake 503 para evitar spam de network errors.
-  if (backendDownUntil && now < backendDownUntil) {
-    return new Response(JSON.stringify({ error: 'backend_offline', hint: 'API indisponível (cache). Tentando novamente em breve.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
-  }
   await ensureApiBase();
-  let finalUrl = apiUrl(path);
-  // Adiciona Authorization se houver token salvo (lazy, sem depender de contexto React aqui)
-  let authToken: string | null = null;
-  try { authToken = (typeof window !== 'undefined') ? window.localStorage.getItem('AUTH_TOKEN_V1') : null; } catch {}
+  const url = apiUrl(path);
   const headers = new Headers(init?.headers || {});
-  if (authToken && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + authToken);
-  const finalInit: RequestInit = { ...init, headers };
-  // Apply a request timeout so slow endpoints don't hang forever. Default 4s.
-  const TIMEOUT_MS = 4000;
-  const ctrl = new AbortController();
-  const userSignal = init && (init as any).signal;
-  // If caller passed a signal, propagate its abort to our controller
-  if (userSignal) {
-    if ((userSignal as AbortSignal).aborted) ctrl.abort();
-    else (userSignal as AbortSignal).addEventListener('abort', () => ctrl.abort());
-  }
-  const to = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-  const reqStart = Date.now();
   try {
-    const finalInitWithSignal: RequestInit = { ...finalInit, signal: ctrl.signal };
-    const r = await fetch(finalUrl, finalInitWithSignal);
-  if (!r.ok && (r.status >= 500 || r.status === 404) && /\/api\/health$/.test(path)) {
-      failureCount[resolvedBase!] = (failureCount[resolvedBase!] || 0) + 1;
-      if (failureCount[resolvedBase!] >= 2) {
-        backendDownUntil = Date.now() + BACKOFF_MS;
-      }
-    }
-    clearTimeout(to);
-    // no-op diagnostics removed for production cleanliness
-    return r;
-  } catch (e) {
-    clearTimeout(to);
-    if (resolvedBase) {
-      failureCount[resolvedBase] = (failureCount[resolvedBase] || 0) + 1;
-      if (failureCount[resolvedBase] >= 2) {
-        backendDownUntil = Date.now() + BACKOFF_MS;
-      }
-    }
-    const isAbort = (e && (e.name === 'AbortError' || e instanceof DOMException && e.name === 'AbortError')) || (ctrl.signal && ctrl.signal.aborted);
-    // Differentiate timeout/abort from network refused
-  // no-op diagnostics removed for production cleanliness
-    if (isAbort) {
-      return new Response(JSON.stringify({ error: 'request_aborted', base: resolvedBase, hint: 'request aborted or timed out' }), { status: 504, headers: { 'Content-Type': 'application/json' } });
-    }
-    // Resposta offline controlada
-    return new Response(JSON.stringify({ error: 'network_refused', base: resolvedBase, hint: 'API não acessível agora. Repetiremos automaticamente.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
-  }
+    const token = (typeof window !== 'undefined') ? window.localStorage.getItem('AUTH_TOKEN_V1') : null;
+    if (token && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + token);
+  } catch {}
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 4000);
+  try { const res = await fetch(url, { ...init, headers, signal: ctrl.signal }); clearTimeout(to); return res; }
+  catch (e) { clearTimeout(to); throw e; }
 }
 
-// Chamar cedo (ex.: em App.tsx) para já resolver a base antes dos primeiros hooks.
-export function initApiDetection() {
-  ensureApiBase().catch(()=>{});
-}
+export function initApiDetection() { try { ensureApiBase().catch(()=>{}); } catch {} }
