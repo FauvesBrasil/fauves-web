@@ -23,6 +23,7 @@ const Header: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
+  const [mobileSearchActive, setMobileSearchActive] = useState(false);
   const { refresh, addOrganization } = useOrganization();
 
   // Notifications state & refs
@@ -77,24 +78,27 @@ const Header: React.FC = () => {
   }
 
   return (
-  <header className="w-full flex items-center bg-background px-4 py-2 border-b border-border dark:border-[#161616] justify-between" style={{ boxSizing: 'border-box' }}>
-      <div className="flex items-center gap-4">
-    <Link to="/" className="flex items-center" aria-label="Ir para início">
-      <LogoFauves width={80} className={`cursor-pointer ${isDark ? 'logo-fauves-white' : 'logo-fauves-mono'}`} />
-    </Link>
+  <header className="w-full bg-background px-4 py-2 border-b border-border dark:border-[#161616] overflow-visible" style={{ boxSizing: 'border-box' }}>
+      {/* Top row: logo + nav (compact) */}
+      <div className="w-full flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link to="/" className="flex items-center" aria-label="Ir para início">
+            <LogoFauves width={80} className={`cursor-pointer ${isDark ? 'logo-fauves-white' : 'logo-fauves-mono'}`} />
+          </Link>
 
-        <div className="flex items-center gap-4 ml-10">
-          <LocationSelector />
-          <SearchBar />
+          {/* Desktop/tablet: show selectors inline next to logo; hide on small screens */}
+          <div className="flex items-center gap-4 ml-10 max-sm:hidden">
+            <LocationSelector />
+            <SearchBar />
+          </div>
         </div>
-      </div>
 
-      <nav className="flex items-center gap-6 max-md:gap-4">
+        <nav className="flex items-center gap-6 max-md:gap-4">
     <Link to="/" className="max-sm:hidden">
       <button className={`${headerTextClass} text-sm font-bold max-md:text-xs hover:text-[#EF4118] focus:text-[#EF4118] transition-colors`}>Explorar</button>
     </Link>
 
-    <Link to="/create-event">
+    <Link to="/create-event" className="max-sm:hidden">
       <button className={`${headerTextClass} text-sm font-bold max-md:text-xs hover:text-[#EF4118] focus:text-[#EF4118] transition-colors`}>Criar evento</button>
     </Link>
 
@@ -156,6 +160,21 @@ const Header: React.FC = () => {
         )}
         </div>
       </nav>
+    </div>
+
+      {/* Divider + second row: Location selector and SearchBar (mobile only) */}
+      <div className="hidden max-sm:block w-full border-t border-border dark:border-[#161616] mt-2 pt-3">
+        <div className="flex items-center gap-4 px-[0px]">
+          <div className={`transition-all duration-200 ease-in-out flex-shrink-0 overflow-visible ${mobileSearchActive ? 'max-w-0 opacity-0 -translate-x-3 pointer-events-none' : 'max-w-[220px] opacity-100 translate-x-0'}`}>
+            <div className="w-full">
+              <LocationSelector />
+            </div>
+          </div>
+          <div className="flex-1 transition-all duration-200 transform" style={{ transform: mobileSearchActive ? 'scaleX(1.02)' : 'none' }}>
+            <SearchBar mobile onMobileFocus={() => setMobileSearchActive(true)} onMobileBlur={() => setMobileSearchActive(false)} />
+          </div>
+        </div>
+      </div>
 
       <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
 

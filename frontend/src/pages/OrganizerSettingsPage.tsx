@@ -207,7 +207,7 @@ const OrganizerSettingsPage: React.FC = () => {
       <SidebarMenu />
       <div className="rounded-3xl w-[1352px] bg-white dark:bg-[#0b0b0b] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
         <AppHeader />
-        <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4 pb-32">
+        <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4 pb-[100px] mb-[100px]">
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white max-sm:text-3xl">Configurações do organizador</h1>
           <h2 className="text-lg font-bold text-[#091747] dark:text-white mb-2">Perfis de organizador</h2>
           <p className="text-[#091747] dark:text-slate-300 mb-6">Cada perfil descreve um organizador exclusivo e mostra todos os seus eventos em uma página. Ter um perfil completo pode incentivar os participantes a segui-lo.</p>

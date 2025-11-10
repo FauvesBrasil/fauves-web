@@ -34,7 +34,7 @@ const EventCard: React.FC<EventCardProps> = ({
       <article
         className={`${
           isLarge 
-            ? 'w-[245px] max-md:w-full max-md:max-w-[245px] max-md:justify-self-center max-sm:w-full max-sm:max-w-[300px]'
+            ? 'w-[245px] max-md:w-full max-md:max-w-[245px] max-md:justify-self-center max-sm:w-full max-sm:max-w-none'
             : 'w-[156px] max-md:w-full max-md:max-w-[156px] max-md:justify-self-center max-sm:w-full'
   } ${isDark ? 'relative bg-card rounded-[14px] hover:shadow-lg transition-shadow cursor-pointer' : 'border relative bg-card rounded-[14px] border-solid border-border hover:shadow-lg transition-shadow cursor-pointer'}`}
         style={style}

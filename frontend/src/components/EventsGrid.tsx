@@ -19,7 +19,7 @@ const EventsGrid: React.FC<EventsGridProps> = ({ title, events, size = 'large' }
   const isLarge = size === 'large';
   
   return (
-    <section className="px-[156px] py-5 max-md:p-5 max-sm:p-[15px]">
+  <section className="px-[156px] py-5 max-md:p-5 max-sm:px-[30px] max-sm:py-5">
       <h2 className="text-[#091747] dark:text-white text-lg font-bold mb-5 max-sm:text-base">
         {title}
       </h2>

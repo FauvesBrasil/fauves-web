@@ -238,6 +238,17 @@ const OrganizerDashboard = () => {
   // extract a single token and normalize capitalization
   const _token = String(_rawName).trim().split(/[\s._\-+@]/)[0] || 'Visitante';
   const userName = _token.charAt(0).toUpperCase() + _token.slice(1).toLowerCase();
+  // Time-based greeting (Bom dia / Boa tarde / Boa noite) with emoji
+  const [greetingText, greetingEmoji] = React.useMemo(() => {
+    try {
+      const hour = new Date().getHours();
+      if (hour >= 5 && hour < 12) return ['Bom dia', '🌤️'];
+      if (hour >= 12 && hour < 18) return ['Boa tarde', '☀️'];
+      return ['Boa noite', '🌖'];
+    } catch (e) {
+      return ['Olá', ''];
+    }
+  }, []);
   const userEmail = user?.email || "";
   // Modal para criar organização se não houver nenhuma
   const [showCreateOrgModal, setShowCreateOrgModal] = useState(false);
@@ -290,7 +301,7 @@ const OrganizerDashboard = () => {
   <div className="rounded-3xl h-[852px] w-[1352px] bg-white dark:bg-[#0b0b0b] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">
         <AppHeader />
         <div className="flex absolute flex-col gap-6 items-start left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:px-0 max-md:py-5 max-md:w-full max-sm:px-0 max-sm:py-4">
-          <div className="mb-6 text-4xl font-bold text-slate-900 dark:text-white max-sm:text-3xl">Olá, {userName}!</div>
+          <div className="mb-6 text-4xl font-bold text-slate-900 dark:text-white max-sm:text-3xl">{greetingText}, {userName}! <span className="ml-2">{greetingEmoji}</span></div>
           {showCreateOrgModal && (
             <RequireOrganization
               onCreated={(org) => {

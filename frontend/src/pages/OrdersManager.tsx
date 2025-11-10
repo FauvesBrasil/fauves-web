@@ -22,27 +22,76 @@ interface OrderRow {
 const OrdersManager: React.FC = () => {
   // Modal de seleção de eventos
   const [showSelectModal, setShowSelectModal] = useState(false);
-  // Pega eventIds da query string
+  // Pega eventIds ou eventId da query string (aceita ambos para compatibilidade)
   const eventIdsFromQuery = (() => {
     const params = new URLSearchParams(window.location.search);
-    const ids = params.get('eventIds');
+    const ids = params.get('eventIds') || params.get('eventId');
     return ids ? ids.split(',') : [];
   })();
+  // selected event ids (may be multiple) persisted from query or selection
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>(eventIdsFromQuery);
+
   // If eventIds are provided in the query string, pre-select the first one.
   useEffect(() => {
     if (eventIdsFromQuery.length > 0) {
       // if multiple ids provided keep the first as active filter (UI supports single select)
       setEventFilter(eventIdsFromQuery[0]);
+      setSelectedEventIds(eventIdsFromQuery);
     }
     // NOTE: we intentionally DO NOT auto-open the SelectEventModal on load anymore.
   }, []);
-  // Ao confirmar seleção, atualiza a URL
-  const handleSelectConfirm = (selectedIds) => {
+  // If the page was opened with eventIds in the querystring, try to fetch the event name
+  useEffect(() => {
+    if (!selectedEventIds || !selectedEventIds.length) return;
+    const first = selectedEventIds[0];
+    if (events.find(ev => ev.id === first)) return;
+    (async () => {
+      try {
+        const r = await fetch(`/api/events/${first}`);
+        if (r.ok) {
+          const ev = await r.json();
+          if (ev && ev.id) setEvents(prev => [ ...prev.filter(p=>p.id!==ev.id), { id: ev.id, name: ev.name || ev.title || ev.id }]);
+        }
+      } catch (e) {}
+    })();
+  }, [selectedEventIds]);
+  // Ao confirmar seleção, atualiza a URL (grava eventIds + eventId para compatibilidade)
+  const handleSelectConfirm = (selectedIds: string[], selectedEvent?: { id: string; name?: string }) => {
     setShowSelectModal(false);
     if (selectedIds.length > 0) {
-      const params = new URLSearchParams(window.location.search);
-      params.set('eventIds', selectedIds.join(','));
-      window.location.search = params.toString();
+      // update local state immediately so UI shows selection
+      setSelectedEventIds(selectedIds);
+      setEventFilter(selectedIds[0]);
+
+      // update URL without reloading so the view is shareable
+      try {
+        const params = new URLSearchParams(window.location.search);
+        params.set('eventIds', selectedIds.join(','));
+        params.set('eventId', selectedIds[0]);
+        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+      } catch (e) {
+        // ignore
+      }
+
+      // ensure we have the event name available to display in the top selector
+      const firstId = selectedIds[0];
+      if (selectedEvent && selectedEvent.id) {
+        setEvents(prev => [ ...prev.filter(p=>p.id!==selectedEvent.id), { id: selectedEvent.id, name: selectedEvent.name || selectedEvent.id }]);
+      } else if (!events.find(ev => ev.id === firstId)) {
+        // try to fetch the event name from the API as a fallback
+        (async () => {
+          try {
+            const r = await fetch(`/api/events/${firstId}`);
+            if (r.ok) {
+              const ev = await r.json();
+              if (ev && ev.id) setEvents(prev => [ ...prev.filter(p=>p.id!==ev.id), { id: ev.id, name: ev.name || ev.title || ev.id }]);
+            }
+          } catch (err) {
+            // ignore missing name
+          }
+        })();
+      }
     }
   };
   const [userId, setUserId] = useState<string | null>(null);
@@ -58,6 +107,22 @@ const OrdersManager: React.FC = () => {
   const [refundMessage, setRefundMessage] = useState<string>('');
   const [events, setEvents] = useState<{id:string; name:string}[]>([]);
   const [search, setSearch] = useState('');
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showTagsPanel, setShowTagsPanel] = useState(false);
+  const tagsBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  const tagsPanelRef = React.useRef<HTMLDivElement | null>(null);
+  // single selected tag id (null = no tag selected)
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const tagOptions: { id: string; label: string; color: string }[] = [
+    { id: 'ingresso', label: 'Ingresso', color: 'bg-amber-600' },
+    { id: 'cortesia', label: 'Cortesia', color: 'bg-violet-600' },
+    { id: 'doacao', label: 'Doação', color: 'bg-emerald-600' },
+    { id: 'merch', label: 'Merchandising', color: 'bg-amber-500' },
+    { id: 'promoter', label: 'Promoter', color: 'bg-rose-600' },
+    { id: 'distribuidor', label: 'Distribuidor', color: 'bg-cyan-700' },
+    { id: 'offline', label: 'Offline', color: 'bg-zinc-600' },
+    { id: 'bilheteria', label: 'Bilheteria', color: 'bg-fuchsia-600' }
+  ];
   const [eventFilter, setEventFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [debounced, setDebounced] = useState(search);
@@ -65,7 +130,6 @@ const OrdersManager: React.FC = () => {
   const pageSize = 25;
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [serverSummary, setServerSummary] = useState<{paymentStatus?:Record<string,number>; refundStatus?:Record<string,number>}>({});
   const [logs, setLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -135,6 +199,7 @@ const OrdersManager: React.FC = () => {
       if (eventFilter !== 'all') qs.set('eventId', eventFilter);
   if (debounced) qs.set('search', debounced);
   if (statusFilter !== 'all') qs.set('paymentStatus', statusFilter);
+  if (tagFilter) qs.set('tags', tagFilter);
       const r = await fetch(`/api/orders?${qs.toString()}`);
       const j = await r.json();
   setOrders(j.items || []);
@@ -155,16 +220,25 @@ const OrdersManager: React.FC = () => {
   useEffect(() => { fetchData(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, debounced, eventFilter, page]);
 
-  // Fetch server summary when filters or user change
-  useEffect(()=> {
-    if (!userId) return;
-    const qs = new URLSearchParams({ userId });
-    if (eventFilter !== 'all') qs.set('eventId', eventFilter);
-    fetch(`/api/orders/summary?${qs.toString()}`)
-      .then(r=> r.json())
-      .then(s => setServerSummary(s||{}))
-      .catch(()=>{});
-  }, [userId, eventFilter]);
+  // Keep eventFilter in the URL so the view can be shared / reloaded with the same scope
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (eventFilter && eventFilter !== 'all') {
+        params.set('eventId', eventFilter);
+        params.set('eventIds', eventFilter);
+      } else {
+        params.delete('eventId');
+        params.delete('eventIds');
+      }
+      const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+    } catch (e) {
+      // ignore
+    }
+  }, [eventFilter]);
+
+  // server summary removed (counts panel and server-side summary were intentionally removed)
 
   // Fetch audit logs when detail loads
   useEffect(()=> {
@@ -266,6 +340,19 @@ const OrdersManager: React.FC = () => {
     return () => window.removeEventListener('click', handler);
   }, []);
 
+  // Close tags panel when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!showTagsPanel) return;
+      if (tagsPanelRef.current && tagsPanelRef.current.contains(t)) return;
+      if (tagsBtnRef.current && tagsBtnRef.current.contains(t as HTMLElement)) return;
+      setShowTagsPanel(false);
+    };
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, [showTagsPanel]);
+
   const performRowAction = async (o: OrderRow, action: string) => {
     if ((action === 'cancel' || action === 'reopen') && !(pendingConfirm.id === o.id && pendingConfirm.action === action)) {
       setPendingConfirm({ id: o.id, action: action as any });
@@ -300,88 +387,74 @@ const OrdersManager: React.FC = () => {
   return (
     <div className="relative min-h-screen w-full bg-white dark:bg-[#0b0b0b] dark:text-white flex justify-center items-start">{/* root layout */}
       <SidebarMenu activeKeyOverride="pedidos" />
-      <div className="rounded-3xl w-[1352px] bg-white dark:bg-[#0b0b0b] dark:border-[#1F1F1F] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-32">{/* added bottom padding */}
+      <div className="rounded-3xl w-[1352px] bg-white dark:bg-[#0b0b0b] dark:border-[#1F1F1F] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-[100px]">{/* added bottom padding */}
         <AppHeader />
         <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4">{/* content area */}
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white max-sm:text-3xl">Gerenciador de pedidos</h1>
           <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[15px] -mt-3 max-sm:text-sm">Gerencie todos os pedidos, incluindo edição de informações do comprador, reenvio de ingressos e processamento de reembolsos. Para baixar uma lista de pedidos, visualize o Relatório de pedidos.</p>
-          <div className="grid grid-cols-4 gap-8 max-sm:grid-cols-1 mt-2">
-            <input
-              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] focus:outline-none focus:ring-2 focus:ring-indigo-200 text-[15px] bg-white dark:bg-[#121212] dark:border-[#2b2b2b] dark:placeholder:text-slate-400 dark:text-white"
-              placeholder="Pesquisar ID do pedido"
-              value={search}
-              onChange={e=>setSearch(e.target.value)}
-            />
-            <select
-              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-white dark:bg-[#121212] dark:border-[#2b2b2b] dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-              value={eventFilter}
-              onChange={e=> { setEventFilter(e.target.value); setPage(0); }}
-            >
-              <option value="all">Todos eventos</option>
-              {events.map(ev => (
-                <option key={ev.id} value={ev.id}>{ev.name}</option>
-              ))}
-            </select>
-            <select
-              className="h-[54px] px-5 rounded-xl border border-[#E5E7EB] text-[15px] bg-white dark:bg-[#121212] dark:border-[#2b2b2b] dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
-              value={statusFilter}
-              onChange={e=> { setStatusFilter(e.target.value); setPage(0);} }
-            >
-              <option value="all">Todos pagamentos</option>
-              <option value="PENDING">Aguardando</option>
-              <option value="PAID">Pago</option>
-              <option value="CANCELED">Cancelado</option>
-              <option value="REFUNDED">Reembolsado</option>
-            </select>
-            <button
-              title="Exportar CSV"
-              aria-label="Exportar CSV"
-              onClick={() => {
-                const params = new URLSearchParams();
-                if (userId) params.set('userId', userId);
-                if (debounced) params.set('search', debounced);
-                if (eventFilter !== 'all') params.set('eventId', eventFilter);
-                const url = `/api/orders/export?${params.toString()}`;
-                fetch(url)
-                  .then(async (r) => {
-                    if (!r.ok) throw new Error('Falha ao exportar');
-                    const blob = await r.blob();
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = 'orders.csv';
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                  })
-                  .catch((err) => console.error(err));
-              }}
-              className="h-[54px] w-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-sm"
-            >
-              <span className="material-icons text-base">file_download</span>
-            </button>
+          {/* Top row: Actions on left, event selector, search on right */}
+          <div className="flex items-center justify-between gap-4 mt-2">
+            <div className="relative flex items-center gap-3">
+              <div className="relative">
+                <button onClick={() => setShowActionsMenu(s => !s)} className="px-3 py-2 rounded-lg border bg-white dark:bg-[#121212]">Ações ▾</button>
+                {showActionsMenu && (
+                  <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-[#0b0b0b] rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 z-40 p-2 text-sm">
+                    <ul className="divide-y divide-zinc-100">
+                      <li>
+                        <button onClick={() => {
+                          const params = new URLSearchParams(); if (userId) params.set('userId', userId); if (debounced) params.set('search', debounced); if (selectedEventIds && selectedEventIds.length) { params.set('eventIds', selectedEventIds.join(',')); params.set('eventId', selectedEventIds[0]); } else if (eventFilter !== 'all') params.set('eventId', eventFilter); if (tagFilter) params.set('tags', tagFilter); params.set('valid','1'); const url = `/api/orders/export?${params.toString()}`; window.location.href = url;
+                        }} className="w-full text-left px-3 py-2 hover:bg-zinc-50 rounded">Baixar pedidos válidos (.csv)<div className="text-xs text-zinc-400">Somente pedidos válidos</div></button>
+                      </li>
+                      <li>
+                        <button onClick={() => {
+                          const params = new URLSearchParams(); if (userId) params.set('userId', userId); if (debounced) params.set('search', debounced); if (selectedEventIds && selectedEventIds.length) { params.set('eventIds', selectedEventIds.join(',')); params.set('eventId', selectedEventIds[0]); } else if (eventFilter !== 'all') params.set('eventId', eventFilter); if (tagFilter) params.set('tags', tagFilter); const url = `/api/orders/export?${params.toString()}`; window.location.href = url;
+                        }} className="w-full text-left px-3 py-2 hover:bg-zinc-50 rounded">Baixar todos os pedidos (.csv)<div className="text-xs text-zinc-400">Incluir pedidos reembolsados</div></button>
+                      </li>
+                      <li>
+                        <button onClick={() => { setShowSelectModal(true); setShowActionsMenu(false); }} className="w-full text-left px-3 py-2 hover:bg-zinc-50 rounded">Selecione com uma lista<div className="text-xs text-zinc-400">ex: Encontrar e reembolsar usando uma lista</div></button>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Event selector aligned with actions */}
+              <div className="flex items-center gap-2">
+                <div className="h-[40px] px-3 rounded-lg border bg-white dark:bg-[#121212] dark:border-[#2b2b2b] dark:text-white flex items-center">
+                  {eventFilter === 'all' ? 'Todos eventos' : (events.find(ev => ev.id === eventFilter)?.name || eventFilter)}
+                </div>
+                <button onClick={()=> setShowSelectModal(true)} title="Selecionar eventos" className="h-[40px] px-3 rounded-lg border border-[#E5E7EB] bg-white dark:bg-[#121212] dark:border-[#2b2b2b] text-sm">Selecionar</button>
+                {eventFilter !== 'all' && (
+                  <button onClick={() => { setEventFilter('all'); setPage(0);} } className="h-9 px-3 rounded-full border border-zinc-200 text-sm">Limpar</button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1" />
+
+            <div className="min-w-[300px]">
+              <input
+                className="w-full h-[54px] px-5 rounded-xl border border-[#E5E7EB] focus:outline-none focus:ring-2 focus:ring-indigo-200 text-[15px] bg-white dark:bg-[#121212] dark:border-[#2b2b2b] dark:placeholder:text-slate-400 dark:text-white"
+                placeholder="Pesquisar por número de pedido, código de sequência..."
+                value={search}
+                onChange={e=>{ setSearch(e.target.value); setPage(0); }}
+              />
+            </div>
           </div>
-          {/* Payment Status summary (server counts) */}
-          <div className="flex flex-wrap gap-3 text-[11px] text-slate-600 dark:text-slate-300 mt-1">
-            <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-800 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-700">Total <span className="font-semibold text-slate-800 dark:text-white">{orders.length}</span></div>
-            {['PENDING','PAID','CANCELED','REFUNDED'].map(s => {
-              const sv = serverSummary.paymentStatus?.[s] ?? 0;
-              return (
-              <div key={s} className="flex items-center gap-1 px-3 py-1 rounded-full border text-[11px] font-medium uppercase tracking-wide bg-white dark:bg-[#0b0b0b] dark:border-zinc-700 dark:text-slate-300 border-zinc-200 text-slate-600" title={`(Local: ${counts[s]||0})`}>
-                {s} <span className="font-bold">{sv}</span>
-              </div>);
-            })}
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm mt-3">
+
+          {/* Duplicate filters row removed - event selector is in the top row and tags panel is triggered from the table header. */}
+          {/* Payment summary removed as requested */}
+          <div className="relative overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm mt-3">
             <table className="w-full text-left">
               <thead className="bg-[#F6F7FB] dark:bg-[#0b0b0b] text-slate-600 dark:text-slate-300 text-xs font-medium tracking-wide">
                 <tr>
-                  <th className="py-4 px-6">Pedido</th>
-                  <th className="py-4 px-6">Evento</th>
-                  <th className="py-4 px-6">Participantes</th>
-                  <th className="py-4 px-6">Data do pedido</th>
-                  <th className="py-4 px-6">Total</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6 text-right">...</th>
+                  <th className="py-4 px-6">#</th>
+                  <th className="py-4 px-6">Comprador</th>
+                  <th className="py-4 px-6">Data</th>
+                  <th className="py-4 px-6">Ingressos</th>
+                  <th className="py-4 px-6">Preço</th>
+                  <th className="py-4 px-6">Tags <button ref={tagsBtnRef} onClick={() => setShowTagsPanel(s=>!s)} className="ml-2 text-xs px-2 py-1 rounded border">Filtrar</button></th>
+                  <th className="py-4 px-6 text-right">Ingresso</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-[13px]">
@@ -402,20 +475,16 @@ const OrdersManager: React.FC = () => {
                   {staticExamples.map(o => (
                     <tr key={o.id} className="bg-indigo-50/40 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/20 hover:bg-indigo-50 transition cursor-pointer" onClick={()=> openOrder(o)} title="Ver detalhes do exemplo">
                       <td className="py-4 px-6 text-indigo-600 dark:text-indigo-300 font-semibold underline">#{o.code}<span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-indigo-600 text-white align-middle">exemplo</span></td>
-                       <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.eventName}</td>
-                       <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.participantsCount}</td>
-                       <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatDate(o.createdAt)}</td>
-                       <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatMoney(o.totalAmount)}</td>
-                       <td className="py-4 px-6 flex gap-1 items-center">
-                         {renderPaymentBadge(o.paymentStatus)}
-                         {o.refundStatus && o.refundStatus !== 'refunded' && renderRefundBadge(o.refundStatus)}
-                         {o.refundStatus === 'refunded' && <span className="text-[10px] text-emerald-600">✔</span>}
-                       </td>
-                       <td className="py-4 px-6 text-right text-slate-400 dark:text-slate-300">—</td>
-                     </tr>
-                   ))}
+                      <td className="py-4 px-6 text-slate-700 dark:text-slate-300">—</td>
+                      <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatDate(o.createdAt)}</td>
+                      <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.participantsCount}</td>
+                      <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatMoney(o.totalAmount)}</td>
+                      <td className="py-4 px-6 text-slate-700 dark:text-slate-300">—</td>
+                      <td className="py-4 px-6 text-right text-slate-400 dark:text-slate-300">—</td>
+                    </tr>
+                  ))}
                   <tr>
-                    <td colSpan={6} className="py-6 px-6 text-center text-[12px] text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/10 border-t border-indigo-100 dark:border-indigo-800">
+                    <td colSpan={7} className="py-6 px-6 text-center text-[12px] text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/10 border-t border-indigo-100 dark:border-indigo-800">
                       Exibindo exemplos estáticos porque nenhum pedido real foi retornado. Gere pedidos ou integre o backend para vê-los aqui.
                     </td>
                   </tr>
@@ -423,11 +492,17 @@ const OrdersManager: React.FC = () => {
               ) : filtered.map(o => (
                 <tr key={o.id} className="hover:bg-[#F8F9FC] dark:hover:bg-[#0f0f0f] transition cursor-pointer" onClick={() => openOrder(o)} title="Ver detalhes do pedido">
                   <td className="py-4 px-6 text-indigo-600 dark:text-indigo-300 font-semibold underline">#{o.code}</td>
-                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.eventName || 'Evento'}</td>
-                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.participantsCount}</td>
+                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{(o as any).purchaserName || (o as any).purchaserEmail || '—'}</td>
                   <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatDate(o.createdAt)}</td>
+                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{o.participantsCount}</td>
                   <td className="py-4 px-6 text-slate-700 dark:text-slate-300">{formatMoney(o.totalAmount)} {refundIcon(o)}</td>
-                  <td className="py-4 px-6 flex gap-1 items-center">{renderPaymentBadge(o.paymentStatus)} {o.refundStatus && o.refundStatus!=='refunded' && renderRefundBadge(o.refundStatus)} {o.refundStatus==='refunded' && <span className="text-[10px] text-emerald-600">✔</span>}</td>
+                  <td className="py-4 px-6 text-slate-700 dark:text-slate-300">
+                    {(() => {
+                      const tags = Array.isArray((o as any).tags) ? (o as any).tags : typeof (o as any).tags === 'string' && (o as any).tags ? (o as any).tags.split(',') : [];
+                      if (!tags.length) return <span className="text-zinc-400">—</span>;
+                      return <div className="flex flex-wrap gap-2">{tags.slice(0,3).map((t:any,idx:number)=>(<span key={idx} className="text-[12px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700">{t}</span>))}</div>;
+                    })()}
+                  </td>
                   <td className="py-4 px-6 text-right text-slate-500 dark:text-slate-300 relative" data-row-menu onClick={(e)=> e.stopPropagation()}>
                     <button onClick={()=> setOpenMenuId(m=> m===o.id? null : o.id)} className="px-2 py-1 rounded-lg hover:bg-zinc-100">⋮</button>
                     {openMenuId === o.id && (
@@ -480,6 +555,29 @@ const OrdersManager: React.FC = () => {
               ))}
               </tbody>
             </table>
+            {showTagsPanel && (
+              <div ref={tagsPanelRef} className="absolute top-14 right-6 z-50 w-72 bg-white dark:bg-[#0b0b0b] border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg p-3">
+                <div className="text-sm font-medium mb-2">Filtrar tags</div>
+                <div className="flex flex-col gap-3 max-h-40 overflow-auto mb-3">
+                  {tagOptions.map(t => (
+                    <label key={t.id} className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        name="tags-filter"
+                        checked={tagFilter === t.id}
+                        onChange={() => { setTagFilter(t.id); setPage(0); }}
+                        className="w-4 h-4"
+                      />
+                      <span className={`text-[13px] px-2 py-0.5 rounded-full ${t.color} text-white`}>{t.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => { setTagFilter(null); setShowTagsPanel(false); }} className="px-3 py-1 rounded-lg border text-sm">Limpar</button>
+                  <button onClick={() => setShowTagsPanel(false)} className="px-3 py-1 rounded-lg bg-indigo-600 text-white text-sm">OK</button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between mt-4 text-sm text-slate-600">
             <div>

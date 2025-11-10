@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import SidebarMenu from '@/components/SidebarMenu';
@@ -6,47 +6,47 @@ import EventDetailsSidebar from '@/components/EventDetailsSidebar';
 import { useLayoutOffsets } from '@/context/LayoutOffsetsContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
 import { fetchApi } from '@/lib/apiBase';
-// Removido: GoogleAdsPixelModal
+import { Eye, MoreHorizontal, Ticket, TrendingUp, Link2, Copy, QrCode, Trash2 } from 'lucide-react';
 
-export default function MarketingLink(){
+type TrackLink = { id: string; alias: string; url: string; views: number; sold: number; revenue: number };
+
+export default function MarketingLink() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [alias, setAlias] = useState('');
   const [generated, setGenerated] = useState('');
   const [copied, setCopied] = useState(false);
-  const [links, setLinks] = useState<Array<any>>([]);
+  const [links, setLinks] = useState<TrackLink[]>([]);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const [showCreateBelow, setShowCreateBelow] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [eventName, setEventName] = useState('Nome do evento');
   const [eventDate, setEventDate] = useState('Data não definida');
   const [eventStatus, setEventStatus] = useState<'Rascunho' | 'Publicado'>('Rascunho');
-  // removed Google Ads modal state
 
-  // load event info
+  // load event info only in event context
   useEffect(() => {
     let mounted = true;
-    async function load(){
+    async function load() {
       if (!id) return;
       try {
         const res = await fetchApi(`/api/event/${id}`);
-        if (!res || !res.ok) return;
+        if (!res?.ok) return;
         const ev = await res.json();
         if (!mounted) return;
         setEventName(ev?.name || ev?.title || 'Nome do evento');
         if (ev?.startDate) {
           const d = new Date(ev.startDate);
           const datePart = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-          const timePart = d.toTimeString().slice(0,5);
+          const timePart = d.toTimeString().slice(0, 5);
           setEventDate(`${datePart} às ${timePart}`);
-        } else {
-          setEventDate('Data não definida');
         }
         setEventStatus(ev?.status === 'Publicado' ? 'Publicado' : 'Rascunho');
-      } catch(e) {
-        // ignore
-      }
+      } catch {}
     }
     load();
     return () => { mounted = false; };
@@ -57,200 +57,178 @@ export default function MarketingLink(){
     try {
       const raw = localStorage.getItem('marketing_links');
       if (raw) setLinks(JSON.parse(raw));
-    } catch (e) { /* ignore */ }
+    } catch {}
   }, []);
-
-  // update generated preview when alias or id changes
-  useEffect(() => {
-    const base = id ? `${window.location.origin}/event/${id}` : `${window.location.origin}/`;
-    setGenerated(base + (alias ? `?aff=${encodeURIComponent(alias)}` : ''));
-  }, [alias, id]);
 
   // persist links whenever they change
   useEffect(() => {
-    try { localStorage.setItem('marketing_links', JSON.stringify(links)); } catch (e) {}
+    try { localStorage.setItem('marketing_links', JSON.stringify(links)); } catch {}
   }, [links]);
 
-  // close actions menu when clicking outside
+  // generated preview
   useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!activeMenu) return;
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-action-menu]') && !target.closest('[data-action-toggle]')) {
-        setActiveMenu(null);
-      }
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [activeMenu]);
+    const base = id ? `${window.location.origin}/event/${id}` : `${window.location.origin}/`;
+    const source = alias.trim();
+    setGenerated(base + (source ? `?utm_source=${encodeURIComponent(source)}` : `?utm_source=`));
+  }, [alias, id]);
 
-  function validateAlias(a: string){
-    if (!a || a.trim().length === 0) return { ok: false, msg: 'Informe um nome para o link' };
-    if (!/^[a-zA-Z0-9_-]{3,40}$/.test(a)) return { ok: false, msg: 'Use 3-40 caracteres, apenas letras, números, - ou _' };
-    if (links.find(l => l.alias === a)) return { ok: false, msg: 'Já existe um link com esse nome' };
+  function normalize(s: string) {
+    return s.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+  }
+  function validateAlias(a: string) {
+    const v = normalize(a || '');
+    if (!v) return { ok: false, msg: 'Informe um nome para o link' };
+    if (v.length < 3) return { ok: false, msg: 'Use 3-40 caracteres (letras, números, - ou _)' };
+    if (links.find(l => l.alias === v)) return { ok: false, msg: 'Já existe um link com esse nome' };
     return { ok: true };
   }
 
-  async function handleCreate(){
-    const trimmed = alias.trim();
+  async function handleCreate() {
+    const trimmed = normalize(alias);
     const v = validateAlias(trimmed);
-    if (!v.ok) {
-      alert(v.msg);
-      return;
-    }
+    if (!v.ok) { toast({ variant: 'destructive' as any, title: 'Nome inválido', description: v.msg }); return; }
     const base = id ? `${window.location.origin}/event/${id}` : `${window.location.origin}/`;
-    const url = `${base}${trimmed ? `?aff=${encodeURIComponent(trimmed)}` : ''}`;
-
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch(e) { }
-
-    const idForRow = trimmed || `link_${Date.now()}`;
-    const next = [{ id: idForRow, alias: trimmed, url, views: 0, sold: 0, revenue: 0 }, ...links];
-    setLinks(next);
-    setAlias('');
-    setShowCreateBelow(false);
+    const url = `${base}?utm_source=${encodeURIComponent(trimmed)}`;
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); toast({ title: 'Link copiado', description: url }); } catch {}
+    const row: TrackLink = { id: trimmed || `link_${Date.now()}`, alias: trimmed, url, views: 0, sold: 0, revenue: 0 };
+    setLinks(prev => [row, ...prev]);
+    setAlias(''); setCreateOpen(false);
   }
 
-  function handleCopyRow(url: string){
-    try { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1200); } catch(e) {}
+  function handleCopyRow(url: string) {
+    try { navigator.clipboard.writeText(url); toast({ title: 'Link copiado', description: url }); } catch {}
+    setActiveMenu(null);
+  }
+  function handleDeleteRow(rowId: string) {
+    setLinks(prev => prev.filter(l => l.id !== rowId));
     setActiveMenu(null);
   }
 
-  function handleDeleteRow(rowId: string){
-    const next = links.filter(l => l.id !== rowId);
-    setLinks(next);
-    setActiveMenu(null);
+  async function handleDownloadQr(url: string, alias: string) {
+    try {
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(url)}`;
+      const res = await fetch(qrUrl);
+      const blob = await res.blob();
+      const dl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = dl;
+      a.download = `link-${alias || 'rastreamento'}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(dl);
+      toast({ title: 'QR Code baixado' });
+    } catch {
+      toast({ variant: 'destructive' as any, title: 'Falha ao baixar QR Code' });
+    } finally {
+      setActiveMenu(null);
+    }
   }
 
   const { totalLeft } = useLayoutOffsets();
+  const totalSold = useMemo(() => links.reduce((acc, l) => acc + (Number(l.sold) || 0), 0), [links]);
+  const totalRevenue = useMemo(() => links.reduce((acc, l) => acc + (Number(l.revenue) || 0), 0), [links]);
 
   return (
-  <div className="min-h-screen bg-white dark:bg-[#0b0b0b] w-full">
-      {/* Fixed main sidebar */}
+    <div className="bg-white dark:bg-[#0b0b0b] w-full">
       <SidebarMenu />
-
-      {/* Fixed event details sidebar (registered with LayoutOffsets) */}
-      <EventDetailsSidebar
-        eventName={eventName}
-        eventDate={eventDate}
-        eventStatus={eventStatus}
-        onBack={() => navigate(-1)}
-        onStatusChange={() => {}}
-        onViewEvent={() => { if (id) navigate(`/event/${id}`); }}
-        eventIdOverride={id || null}
-        fixed
-        fixedLeft={70}
-        fixedWidth={300}
-        fixedTop={0}
-      />
-
-      {/* Global header (full width) */}
+      {id && (
+        <EventDetailsSidebar
+          eventName={eventName}
+          eventDate={eventDate}
+          eventStatus={eventStatus}
+          onBack={() => navigate(-1)}
+          onStatusChange={() => {}}
+          onViewEvent={() => { if (id) navigate(`/event/${id}`); }}
+          eventIdOverride={id || null}
+          fixed
+          fixedLeft={70}
+          fixedWidth={300}
+          fixedTop={0}
+        />
+      )}
       <AppHeader />
 
-      {/* Content with left margin for both sidebars */}
-      <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 min-h-screen relative">
+      <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 pb-16 relative">
         <div className="mt-24 max-w-4xl">
-          <h1 className="text-3xl font-bold text-indigo-950 dark:text-white mb-3">Link de Rastreamento</h1>
-          <p className="text-sm text-gray-600 dark:text-slate-300 mb-6">Use links personalizados para monitorar o sucesso de seus e-mails promocionais, folhetos e muito mais.</p>
-
-          {/* removed Google Ads Pixel button (not needed) */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-indigo-950 dark:text-white mb-3">Links Rastreáveis</h1>
+            <Button onClick={() => setCreateOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">Novo link rastreável</Button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 mt-2">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-4">
+              <div className="text-xs text-slate-500">QUANTIDADE VENDIDA</div>
+              <div className="mt-1 flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white"><Ticket size={18} /> {totalSold}</div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-4">
+              <div className="text-xs text-slate-500">RECEITA</div>
+              <div className="mt-1 flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white"><TrendingUp size={18} /> R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            </div>
+          </div>
 
           {links.length === 0 ? (
-            <div className="bg-white border border-zinc-200 rounded-xl p-6 dark:bg-[#242424] dark:border-[#1F1F1F]">
-              <h2 className="text-xl font-semibold mb-4 dark:text-white">Utilize o campo a seguir para criar um novo link de rastreamento:</h2>
-
-              <label className="block text-sm mb-2 dark:text-slate-300">Nome Do Seu Link De Rastreamento:</label>
-              <Input value={alias} onChange={e => setAlias((e.target as HTMLInputElement).value)} placeholder="affiliate1" className="mb-3 dark:bg-[#121212] dark:border-transparent dark:text-white" />
-              <div className="text-xs text-gray-500 dark:text-slate-300 mb-4">São permitidos apenas letras e números. (Exemplos: comprasespecial, apenasmembros, dc121232, etc.)</div>
-
-              <label className="block text-sm mb-2 dark:text-slate-300">Enviar Este Link Para Seus AFILIADOS:</label>
-              <div className="flex gap-2 items-center">
-                <Input value={generated} readOnly className="flex-1 dark:bg-[#121212] dark:border-transparent dark:text-white" />
-                <Button onClick={() => { navigator.clipboard?.writeText(generated); setCopied(true); setTimeout(() => setCopied(false), 1500); }} variant="ghost">{copied ? 'Copiado' : 'Copiar'}</Button>
-              </div>
-
-              <div className="mt-6">
-                <Button onClick={handleCreate}>Criar Link</Button>
-              </div>
-
-              <div className="mt-6 text-sm text-gray-600 dark:text-slate-300 inline-flex items-center gap-2"><svg className="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg> <a className="text-indigo-700 underline dark:text-white" href="https://help.example.com">Learn more about tracking links</a></div>
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-10 text-center">
+              <div className="w-10 h-10 rounded-full bg-indigo-600/10 text-indigo-600 grid place-items-center mx-auto"><Link2 size={18} /></div>
+              <div className="mt-3 text-lg font-semibold text-slate-900 dark:text-white">Sem link de rastreamento ainda</div>
+              <div className="text-sm text-slate-600 dark:text-slate-300">Rastreie o sucesso de seus e‑mails promocionais, folhetos, promoters e muito mais</div>
+              <div className="mt-4"><Button onClick={() => setCreateOpen(true)}>Adicionar novo link rastreável</Button></div>
             </div>
           ) : (
-            <>
-              <div className="bg-white border border-zinc-200 rounded-xl p-6 dark:bg-[#242424] dark:border-[#1F1F1F]">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-sm font-semibold dark:text-white">Ver</div>
-                  <div>
-                    <select className="border rounded px-3 py-2 dark:bg-[#121212] dark:border-transparent dark:text-white">
-                      <option>Todos</option>
-                      <option>Ontem</option>
-                      <option>Últimos 7 dias</option>
-                      <option>Este mês</option>
-                    </select>
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] divide-y divide-zinc-100 dark:divide-zinc-800">
+              {links.map((link) => (
+                <div key={link.id} className="px-5 py-4 flex items-center gap-4 hover:bg-zinc-50 dark:hover:bg-[#191919] transition">
+                  <div className="w-8 h-8 rounded-full bg-indigo-600/10 text-indigo-600 grid place-items-center"><Link2 size={16} /></div>
+                  <div className="flex-1">
+                    <div className="text-slate-900 dark:text-white font-medium">{link.alias}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Event</div>
+                  </div>
+                  <div className="text-sm text-slate-600 dark:text-slate-300 inline-flex items-center gap-1 mr-4"><Eye size={16} /> {link.views}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-300 inline-flex items-center gap-1 mr-4"><Ticket size={16} /> {link.sold}</div>
+                  <div className="text-sm text-slate-900 dark:text-white font-medium mr-2">R$ {Number(link.revenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                  <div className="relative">
+                    <button data-action-toggle className="p-2 rounded hover:bg-zinc-100 dark:hover:bg-[#1a1a1a]" onClick={() => setActiveMenu(link.id)}><MoreHorizontal size={18} /></button>
+                    {activeMenu === link.id && (
+                      <div data-action-menu className="absolute right-0 mt-2 w-52 bg-white dark:bg-[#121212] border border-zinc-200 dark:border-zinc-700 rounded-md shadow-md z-10 flex flex-col py-1">
+                        <button type="button" className="px-3 py-2 text-sm text-left hover:bg-zinc-50 dark:hover:bg-[#1a1a1a] cursor-pointer flex items-center gap-2 w-full" onClick={() => handleCopyRow(link.url)}><Copy size={14} /> Copiar link</button>
+                        <button type="button" className="px-3 py-2 text-sm text-left hover:bg-zinc-50 dark:hover:bg-[#1a1a1a] cursor-pointer flex items-center gap-2 w-full" onClick={() => handleDownloadQr(link.url, link.alias)}><QrCode size={14} /> QR Code</button>
+                        <button type="button" className="px-3 py-2 text-sm text-left text-red-600 hover:bg-zinc-50 dark:hover:bg-[#1a1a1a] cursor-pointer flex items-center gap-2 w-full" onClick={() => handleDeleteRow(link.id)}><Trash2 size={14} /> Apagar</button>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-zinc-500 border-b dark:text-slate-300 dark:border-[#1F1F1F]">
-                      <th className="py-3">Nome Do Link</th>
-                      <th className="py-3">Visualizações de página</th>
-                      <th className="py-3">Ingressos Vendidos</th>
-                      <th className="py-3">Vendas</th>
-                      <th className="py-3 text-right">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {links.map(link => (
-                      <tr key={link.id} className="border-b hover:bg-gray-50 dark:border-[#1F1F1F] dark:hover:bg-[#1F1F1F]">
-                        <td className="py-3"><a className="text-indigo-700 underline dark:text-white" href={link.url} target="_blank" rel="noreferrer">{link.alias}</a></td>
-                        <td className="py-3 dark:text-slate-300">{link.views}</td>
-                        <td className="py-3 dark:text-slate-300">{link.sold}</td>
-                        <td className="py-3 dark:text-slate-300">R${String(link.revenue.toFixed(2)).replace('.',',')}</td>
-                        <td className="py-3 text-right">
-                          <div className="inline-flex items-center relative overflow-visible">
-                            <button data-action-toggle onClick={() => setActiveMenu(link.id)} className="px-3 py-2 border rounded dark:text-white">Ações rápidas...</button>
-                            {activeMenu === link.id && (
-                              <div data-action-menu className="absolute right-0 mt-10 w-48 bg-white border rounded shadow z-50 pointer-events-auto dark:bg-[#242424] dark:border-[#1F1F1F]">
-                                <div className="p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1F1F1F]" onClick={() => handleCopyRow(link.url)}>Copiar link</div>
-                                <div className="p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1F1F1F]">Relatório de links de rastreamento</div>
-                                <div className="p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1F1F1F] text-red-600" onClick={() => handleDeleteRow(link.id)}>Apagar link</div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div className="mt-6 flex gap-3 items-center">
-                  <Button onClick={() => { setShowCreateBelow(true); setActiveMenu(null); }}>Criar novo</Button>
-                </div>
-
-                {showCreateBelow && (
-                  <div className="mt-6 border-t pt-6 dark:border-[#1F1F1F]">
-                    <h3 className="text-lg font-semibold mb-3 dark:text-white">Criar link</h3>
-                    <label className="block text-sm mb-2 dark:text-slate-300">Nome Do Seu Link De Rastreamento:</label>
-                    <Input value={alias} onChange={e => setAlias((e.target as HTMLInputElement).value)} placeholder="affiliate1" className="mb-3 dark:bg-[#121212] dark:border-transparent dark:text-white" />
-                    <div className="text-xs text-gray-500 dark:text-slate-300 mb-4">São permitidos apenas letras e números.</div>
-                    <div className="flex gap-2 items-center mb-4">
-                      <Input value={generated} readOnly className="flex-1 dark:bg-[#121212] dark:border-transparent dark:text-white" />
-                      <Button onClick={() => { navigator.clipboard?.writeText(generated); setCopied(true); setTimeout(() => setCopied(false), 1500); }} variant="ghost">{copied ? 'Copiado' : 'Copiar'}</Button>
-                    </div>
-                    <div>
-                      <Button onClick={handleCreate}>Criar Link</Button>
-                      <Button variant="ghost" onClick={() => setShowCreateBelow(false)} className="ml-3">Cancelar</Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
+              ))}
+            </div>
           )}
-
         </div>
       </div>
-  {/* Removido: GoogleAdsPixelModal */}
+
+      {/* Modal: criar link rastreável */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>Novo link rastreável</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input value={alias} onChange={(e) => setAlias(normalize(e.target.value))} placeholder="Nome do seu link de rastreamento" className="dark:bg-[#121212] dark:border-zinc-800 dark:text-white" />
+            {!!alias && (
+              <div className="rounded-lg p-4 bg-violet-600/10 text-violet-800 dark:text-violet-200 border border-violet-600/20">
+                <div className="font-medium">Você está criando um link rastreável para um promoter?</div>
+                <div className="text-sm mt-1">Adicione pessoas diretamente à sua equipe que ajudem você a promover o evento: cupons automaticamente gerados, links rastreáveis personalizados e monitoramento detalhado de vendas. Essas pessoas podem acessar todas as informações relevantes diretamente do portal de promoters.</div>
+                <a className="text-violet-700 dark:text-violet-300 underline mt-2 inline-block" href={id ? `/gerenciar-equipe/${id}` : '/gerenciar-equipe'} target="_blank" rel="noreferrer">Adicionar promoters à minha equipe</a>
+              </div>
+            )}
+            <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-[#1a1a1a] p-4">
+              <div className="font-medium text-slate-900 dark:text-white mb-1">Seu Link de Rastreamento</div>
+              <div className="text-sm text-slate-600 dark:text-slate-300 mb-3">Você pode enviar este link para seus promoters ou usá‑lo para rastrear o desempenho de um newsletter, um post no Facebook e muito mais.</div>
+              <Input value={generated} readOnly className="dark:bg-[#121212] dark:border-transparent dark:text-white" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={!validateAlias(alias).ok}>Criar link</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-

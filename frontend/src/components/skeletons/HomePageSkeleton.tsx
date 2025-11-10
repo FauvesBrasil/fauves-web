@@ -14,7 +14,7 @@ const HomePageSkeleton: React.FC = () => {
     <div className="w-full relative bg-white my-0 rounded-[20px]">
       <div className="max-w-[1352px] mx-auto">
         <main>
-          <section className="relative px-[156px] py-5 max-md:p-5 max-sm:p-[15px]">
+          <section className="relative px-[156px] py-5 max-md:p-5 max-sm:px-[30px] max-sm:py-5">
             <div className="flex items-center gap-4 max-md:flex-col max-md:items-start">
               <Skeleton className="h-6 w-56" />
               <Skeleton className="h-10 w-48 rounded-xl" />

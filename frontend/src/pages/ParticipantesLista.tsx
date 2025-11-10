@@ -1,22 +1,287 @@
-import React, { useState } from 'react';
+﻿import React from 'react';
 import { useLayoutOffsets } from '@/context/LayoutOffsetsContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import EventDetailsSidebar from '@/components/EventDetailsSidebar';
 import SidebarMenu from '@/components/SidebarMenu';
 import AppHeader from '@/components/AppHeader';
-import AdicionarPessoaEquipeModal from '@/components/AdicionarPessoaEquipeModal';
-import { UserPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ArrowLeft, List, ListPlus, UploadCloud, Trash2, Users, MoreHorizontal, Pencil, Plus, X } from 'lucide-react';
+
+type Guest = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  quantity: number;
+  checkedIn: number;
+};
+
+type GuestList = {
+  id: string;
+  name: string;
+  updatedAt: string;
+  guests: Guest[];
+};
+
+const initialLists: GuestList[] = [];
 
 export default function ParticipantesLista() {
   const { totalLeft } = useLayoutOffsets();
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const [showModal, setShowModal] = useState(false);
 
-  const handleAddParticipante = (novoParticipante) => {
-    // Lógica para adicionar participante
-    console.log('Novo participante adicionado:', novoParticipante);
-    setShowModal(false);
+  const [lists, setLists] = React.useState<GuestList[]>(initialLists);
+  const [selectedListId, setSelectedListId] = React.useState<string | null>(null);
+  const [createListOpen, setCreateListOpen] = React.useState(false);
+  const [newListName, setNewListName] = React.useState('');
+  const [addGuestOpen, setAddGuestOpen] = React.useState(false);
+  const [guestTab, setGuestTab] = React.useState<'manual' | 'csv'>('manual');
+  const [manualGuests, setManualGuests] = React.useState([{ firstName: '', lastName: '', quantity: 1 }]);
+  const [editingList, setEditingList] = React.useState<GuestList | null>(null);
+  const [editingListName, setEditingListName] = React.useState('');
+  const [listPendingDeletion, setListPendingDeletion] = React.useState<GuestList | null>(null);
+  const manualTotalGuests = manualGuests.reduce((acc, g) => acc + (Number(g.quantity) || 0), 0);
+  const manualGuestsReady = manualGuests.filter((g) => g.firstName.trim());
+  const canSubmitManual = manualGuestsReady.length > 0;
+
+  const activeList = lists.find((l) => l.id === selectedListId) || null;
+
+  const handleCreateList = () => {
+    const name = newListName.trim();
+    if (!name) return;
+    setLists((prev) => [
+      ...prev,
+      { id: `list_${Date.now()}`, name, updatedAt: new Date().toISOString(), guests: [] },
+    ]);
+    setNewListName('');
+    setCreateListOpen(false);
+  };
+
+  const handleAddManualRows = () => setManualGuests((prev) => [...prev, { firstName: '', lastName: '', quantity: 1 }]);
+
+  const handleManualChange = (idx: number, key: keyof (typeof manualGuests)[0], value: string | number) => {
+    setManualGuests((prev) => prev.map((row, i) => (i === idx ? { ...row, [key]: value } : row)));
+  };
+
+  const handleRemoveManualRow = (idx: number) => {
+    setManualGuests((prev) => {
+      if (prev.length === 1) return prev;
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
+  const handleAddGuests = () => {
+    if (!activeList) return;
+    if (guestTab === 'manual') {
+      const newGuests: Guest[] = manualGuests
+        .filter((g) => g.firstName.trim())
+        .map((g, idx) => ({
+          id: `guest_${Date.now()}_${idx}`,
+          firstName: g.firstName.trim(),
+          lastName: g.lastName.trim(),
+          quantity: Number(g.quantity) || 1,
+          checkedIn: 0,
+        }));
+      if (!newGuests.length) return;
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === activeList.id
+            ? { ...list, guests: [...list.guests, ...newGuests], updatedAt: new Date().toISOString() }
+            : list,
+        ),
+      );
+    }
+    setManualGuests([{ firstName: '', lastName: '', quantity: 1 }]);
+    setAddGuestOpen(false);
+  };
+
+  const handleRemoveGuest = (guestId: string) => {
+    if (!activeList) return;
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === activeList.id
+          ? { ...list, guests: list.guests.filter((g) => g.id !== guestId), updatedAt: new Date().toISOString() }
+          : list,
+      ),
+    );
+  };
+
+  const renderListCards = () => {
+    if (!lists.length) {
+      return (
+        <div className="space-y-4">
+          <div className="text-xs font-semibold tracking-[0.3em] text-zinc-500 dark:text-zinc-400">
+            LISTA DE CONVIDADOS (0)
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-12 text-center shadow-sm dark:border-zinc-800 dark:bg-[#111111] dark:shadow-none">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50 text-zinc-500 dark:border-zinc-800 dark:bg-[#1a1a1a] dark:text-zinc-300">
+              <List className="w-7 h-7" />
+            </div>
+            <div className="mt-6 text-lg font-semibold text-zinc-900 dark:text-white">Ainda não há lista de convidados</div>
+            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+              Uma vez criada, sua lista de convidados aparecerá aqui
+            </p>
+            <button
+              className="mt-6 text-sm font-semibold text-[#7C3AED] transition-colors hover:text-[#6C2BD9] dark:text-[#A78BFA] dark:hover:text-[#C4B5FD]"
+              onClick={() => setCreateListOpen(true)}
+            >
+              Adicionar lista de convidados
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="text-xs font-semibold tracking-[0.3em] text-zinc-500 dark:text-zinc-400">
+          LISTA DE CONVIDADOS ({lists.length})
+        </div>
+        {lists.map((list) => {
+          const checked = list.guests.reduce((acc, g) => acc + g.checkedIn, 0);
+          const total = list.guests.reduce((acc, g) => acc + g.quantity, 0);
+          const percentage = total ? Math.min(100, Math.round((checked / total) * 100)) : 0;
+          const formattedUpdatedAt = new Intl.DateTimeFormat("pt-BR", {
+            weekday: "short",
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }).format(new Date(list.updatedAt));
+
+          return (
+            <div
+              key={list.id}
+              className="flex items-center gap-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-[#17171a]"
+            >
+              <div className="flex-1">
+                <div className="text-lg font-semibold text-zinc-900 dark:text-white">{list.name}</div>
+                <button
+                  className="mt-1 flex items-center gap-1 text-sm font-semibold text-[#7C3AED] transition-colors hover:text-[#5b21b6] dark:text-[#C4B5FD] dark:hover:text-white"
+                  onClick={() => setSelectedListId(list.id)}
+                >
+                  Ver lista de convidados <span aria-hidden="true">&rarr;</span>
+                </button>
+                <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  Última alteração feita no dia {formattedUpdatedAt}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    Checked in
+                  </div>
+                  <div className="text-2xl font-semibold text-zinc-900 dark:text-white">
+                    {checked} / {total}
+                  </div>
+                  <div className="mt-2 h-1.5 w-16 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#7C3AED] to-[#9F7AEA]"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-white"
+                      aria-label="Ações da lista"
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-40 border-zinc-200 bg-white p-1 shadow-lg dark:border-[#1F1F1F] dark:bg-[#1f1f22]"
+                  >
+                    <DropdownMenuItem
+                      onSelect={() => openEditListDialog(list)}
+                      className="flex items-center gap-2 text-sm text-zinc-700 focus:bg-zinc-100 dark:text-zinc-200 dark:focus:bg-[#2a2a2f]"
+                    >
+                      <Pencil className="h-4 w-4" /> Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => setListPendingDeletion(list)}
+                      className="flex items-center gap-2 text-sm text-red-600 focus:bg-red-50 focus:text-red-700 dark:text-red-400 dark:focus:bg-[#2a1d1d]"
+                    >
+                      <Trash2 className="h-4 w-4" /> Deletar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+  const renderGuestTable = () => {
+    if (!activeList) return null;
+    const guests = activeList.guests;
+    const hasGuests = guests.length > 0;
+
+    return (
+      <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-sm dark:border-zinc-800 dark:bg-[#111111]">
+        <table className="min-w-full text-sm">
+          <thead className="bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:bg-[#1f1f22] dark:text-zinc-400">
+            <tr>
+              <th className="px-6 py-3 text-left">Nome</th>
+              <th className="px-6 py-3 text-left">Sobrenome</th>
+              <th className="px-6 py-3 text-left"># Convidados</th>
+              <th className="px-6 py-3 text-left">Checked in</th>
+              <th className="px-6 py-3 text-center">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {!hasGuests ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-16">
+                  <div className="flex flex-col items-center gap-3 text-center text-zinc-500 dark:text-zinc-300">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-600 dark:text-zinc-400">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <div className="text-base font-semibold text-zinc-900 dark:text-white">Ainda não há convidados</div>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                      Uma vez criados, seus convidados aparecerão aqui
+                    </p>
+                    <button
+                      className="text-sm font-semibold text-[#7C3AED] transition-colors hover:text-[#5b21b6] dark:text-[#C4B5FD] dark:hover:text-white"
+                      onClick={() => setAddGuestOpen(true)}
+                    >
+                      Adicionar convidado
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              guests.map((guest) => (
+                <tr key={guest.id} className="border-t border-zinc-100 text-zinc-900 dark:border-[#1f1f1f] dark:text-white">
+                  <td className="px-6 py-3">{guest.firstName}</td>
+                  <td className="px-6 py-3">{guest.lastName}</td>
+                  <td className="px-6 py-3">{guest.quantity}</td>
+                  <td className="px-6 py-3">
+                    {guest.checkedIn} / {guest.quantity}
+                  </td>
+                  <td className="px-6 py-3 text-center">
+                    <button
+                      onClick={() => handleRemoveGuest(guest.id)}
+                      className="text-zinc-500 transition-colors hover:text-red-500 dark:text-zinc-400"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return (
@@ -32,52 +297,279 @@ export default function ParticipantesLista() {
         onBack={() => navigate('/organizer-events')}
       />
       <AppHeader />
-      <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 min-h-screen relative">
-        <div className="mt-24 max-w-[900px]">
-          <h1 className="text-3xl font-bold text-indigo-950 dark:text-white mb-3">Participantes</h1>
-          <p className="text-gray-700 dark:text-slate-300 mb-6">Visualize e baixe a lista de seus participantes para check-in e adicione manualmente informações de participantes para ingressos gratuitos ou pagamentos off-line</p>
-          <div className="flex items-center justify-between mb-4">
-            <input type="text" placeholder="Pesquisar por nome" className="border rounded-lg px-4 py-2 text-sm w-72 dark:bg-[#121212] dark:border-transparent dark:text-white" />
-          </div>
-          <div className="border rounded-xl overflow-hidden bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-zinc-100 text-zinc-700 dark:bg-[#1F1F1F] dark:text-slate-300">
-                  <th className="px-6 py-3 text-left">Nome</th>
-                  <th className="px-6 py-3 text-left">Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: 'Levy Câmara', email: 'levycamara@hotmail.com' },
-                  { name: 'Levy Câmara', email: 'levycamara@hotmail.com' },
-                  { name: 'Levy Câmara', email: 'levycamara@hotmail.com' },
-                ].map((p, idx) => (
-                  <tr key={idx} className="border-t dark:border-[#1F1F1F]">
-                    <td className="px-6 py-3 dark:text-white">{p.name}</td>
-                    <td className="px-6 py-3 dark:text-white">{p.email}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Botão flutuante para adicionar participante no estilo organizer-settings */}
-          <div className="fixed bottom-8 right-8 z-50 group flex items-center gap-3">
-            <button
-              className="w-16 h-16 rounded-full bg-[#2A2AD7] shadow-lg flex items-center justify-center hover:bg-[#1E1EBE] transition-all"
-              aria-label="Adicionar participante"
-              style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
-              onClick={() => setShowModal(true)}
-            >
-              <UserPlus className="w-8 h-8 text-white" />
-            </button>
-            <span className="absolute right-20 top-1/2 -translate-y-1/2 bg-white dark:bg-[#1F1F1F] text-[#2A2AD7] dark:text-[#2A2AD7] font-bold px-4 py-2 rounded-xl shadow text-base opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Adicionar participante</span>
-          </div>
-          {showModal && (
-            <AdicionarPessoaEquipeModal open={showModal} onClose={() => setShowModal(false)} onAdd={handleAddParticipante} />
+      <div
+        style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }}
+        className="flex flex-col pl-8 pr-8 min-h-screen relative"
+      >
+        <div className="mt-24 max-w-[1100px] w-full space-y-6">
+          {!selectedListId ? (
+            <>
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-indigo-950 dark:text-white">Lista de convidados</h1>
+                <Button onClick={() => setCreateListOpen(true)} className="bg-[#7C3AED] hover:bg-[#6C2BD9]">
+                  <ListPlus className="w-4 h-4 mr-2" /> Nova lista de convidados
+                </Button>
+              </div>
+              {renderListCards()}
+            </>
+          ) : (
+            <>
+              <button className="flex items-center gap-2 text-sm text-zinc-500" onClick={() => setSelectedListId(null)}>
+                <ArrowLeft className="w-4 h-4" /> Todas as listas de convidados
+              </button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-indigo-950 dark:text-white">{activeList?.name}</h1>
+                  <div className="text-xs font-semibold tracking-[0.3em] text-zinc-500 mt-2 dark:text-zinc-400">
+                    CONVIDADOS ({activeList?.guests.length || 0})
+                  </div>
+                </div>
+                <Button className="bg-[#7C3AED] hover:bg-[#6C2BD9]" onClick={() => setAddGuestOpen(true)}>
+                  <Users className="w-4 h-4 mr-2" /> Adicionar convidado
+                </Button>
+              </div>
+              {renderGuestTable()}
+            </>
           )}
         </div>
       </div>
+
+      <Dialog open={createListOpen} onOpenChange={setCreateListOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Nova lista de convidados</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input placeholder="Nome da lista (ex: Lista VIP)" value={newListName} onChange={(e) => setNewListName(e.target.value)} />
+            <p className="text-xs text-zinc-500">VocÃª poderÃ¡ adicionar convidados manualmente ou via CSV depois.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateListOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreateList} className="bg-[#7C3AED] hover:bg-[#6C2BD9]">Criar lista</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editingList}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingList(null);
+            setEditingListName('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl font-semibold text-zinc-900 dark:text-white">
+              Atualizar uma lista de convidados
+            </DialogTitle>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Adicione participantes ao seu evento sem afetar a quantidade de ingressos disponíveis ou a capacidade do
+              evento.
+            </p>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">
+              Nome da lista
+            </label>
+            <Input
+              placeholder="Nome da lista"
+              value={editingListName}
+              onChange={(e) => setEditingListName(e.target.value)}
+              className="border border-[#C4B5FD] bg-white text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-[#7C3AED] dark:border-[#7C3AED] dark:bg-[#18181b] dark:text-white"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              className="w-full border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-[#2b2b30] dark:bg-[#1d1d21] dark:text-white dark:hover:bg-[#27272f] sm:w-auto"
+              onClick={() => {
+                setEditingList(null);
+                setEditingListName('');
+              }}
+            >
+              Voltar
+            </Button>
+            <Button
+              onClick={handleUpdateListName}
+              className="w-full bg-[#7C3AED] hover:bg-[#6C2BD9] sm:w-auto"
+              disabled={!editingListName.trim()}
+            >
+              Atualizar lista
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!listPendingDeletion}
+        onOpenChange={(open) => {
+          if (!open) {
+            setListPendingDeletion(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Deletar lista</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-zinc-500">
+            Tem certeza que deseja deletar{' '}
+            <span className="font-semibold text-zinc-900 dark:text-white">{listPendingDeletion?.name}</span>? Essa ação
+            não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setListPendingDeletion(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleDeleteList} className="bg-red-600 hover:bg-red-700">
+              Deletar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addGuestOpen} onOpenChange={setAddGuestOpen}>
+        <DialogContent className="sm:max-w-[720px] overflow-hidden border border-zinc-200 bg-white p-0 dark:border-[#1f1f22] dark:bg-[#0f0f10]">
+          <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-[#1f1f22]">
+            <DialogTitle className="text-lg font-semibold text-zinc-900 dark:text-white">Novos convidados</DialogTitle>
+            <DialogClose className="rounded-full p-1 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-[#1c1c22] dark:hover:text-white">
+              <X className="h-4 w-4" />
+            </DialogClose>
+          </div>
+          <Tabs value={guestTab} onValueChange={(val) => setGuestTab(val as 'manual' | 'csv')} className="w-full">
+            <TabsList className="flex gap-8 border-b border-zinc-200 px-6 text-sm font-medium text-zinc-500 dark:border-[#1f1f22] dark:text-zinc-400">
+              <TabsTrigger
+                value="manual"
+                className="relative -mb-[1px] pb-3 data-[state=active]:text-[#7C3AED] data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full data-[state=active]:after:bg-[#7C3AED]"
+              >
+                Manualmente
+              </TabsTrigger>
+              <TabsTrigger
+                value="csv"
+                className="relative -mb-[1px] pb-3 data-[state=active]:text-[#7C3AED] data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:h-0.5 data-[state=active]:after:w-full data-[state=active]:after:bg-[#7C3AED]"
+              >
+                Importar arquivo CSV
+              </TabsTrigger>
+            </TabsList>
+            <div className="px-6 py-6">
+              <TabsContent value="manual" className="space-y-4">
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 shadow-sm dark:border-[#2a2a30] dark:bg-[#17171b]">
+                  <div className="flex items-center justify-between border-b border-zinc-200 pb-4 dark:border-[#24242a]">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-200">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#7C3AED] dark:bg-[#1f1f24]">
+                        <List className="h-4 w-4" />
+                      </div>
+                      Total de convidados: {manualTotalGuests}
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {manualGuests.map((row, idx) => (
+                      <div key={idx} className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr_120px_40px]">
+                        <Input
+                          placeholder="Nome"
+                          value={row.firstName}
+                          onChange={(e) => handleManualChange(idx, 'firstName', e.target.value)}
+                          className="h-11 rounded-lg border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-[#7C3AED] dark:border-[#2a2a30] dark:bg-[#1b1b20] dark:text-white"
+                        />
+                        <Input
+                          placeholder="Sobrenome"
+                          value={row.lastName}
+                          onChange={(e) => handleManualChange(idx, 'lastName', e.target.value)}
+                          className="h-11 rounded-lg border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-[#7C3AED] dark:border-[#2a2a30] dark:bg-[#1b1b20] dark:text-white"
+                        />
+                        <Input
+                          type="number"
+                          min={1}
+                          value={row.quantity}
+                          onChange={(e) => handleManualChange(idx, 'quantity', Number(e.target.value))}
+                          className="h-11 rounded-lg border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-[#7C3AED] dark:border-[#2a2a30] dark:bg-[#1b1b20] dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveManualRow(idx)}
+                          disabled={manualGuests.length === 1}
+                          className="flex h-11 items-center justify-center rounded-lg border border-transparent text-zinc-400 transition hover:text-red-500 disabled:cursor-not-allowed disabled:text-zinc-600 dark:text-zinc-500 dark:disabled:text-zinc-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={handleAddManualRows}
+                      className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-[#7C3AED] text-[#7C3AED] transition hover:bg-[#7C3AED] hover:text-white"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="csv">
+                <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-10 text-center text-zinc-500 dark:border-[#2d2d33] dark:bg-[#141419] dark:text-zinc-300">
+                  <div className="flex flex-col items-center gap-3">
+                    <UploadCloud className="w-10 h-10 text-[#7C3AED]" />
+                    <div className="text-sm">Arraste seu arquivo CSV aqui</div>
+                    <button className="text-sm font-semibold text-[#7C3AED] hover:text-[#5b21b6] dark:text-[#C4B5FD]">
+                      Baixe um modelo
+                    </button>
+                  </div>
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+          <DialogFooter className="border-t border-zinc-200 px-6 py-4 dark:border-[#1f1f22]">
+            <Button
+              variant="outline"
+              onClick={() => setAddGuestOpen(false)}
+              className="border-zinc-300 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:border-[#2b2b30] dark:bg-[#17171b] dark:text-white"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAddGuests}
+              className="bg-[#7C3AED] hover:bg-[#6C2BD9]"
+              disabled={guestTab === 'manual' ? !canSubmitManual : true}
+            >
+              {guestTab === 'manual'
+                ? `Adicionar ${manualTotalGuests} convidado${manualTotalGuests === 1 ? '' : 's'}`
+                : 'Adicionar convidados'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+
+  const openEditListDialog = (list: GuestList) => {
+    setEditingList(list);
+    setEditingListName(list.name);
+  };
+
+  const handleUpdateListName = () => {
+    const updatedName = editingListName.trim();
+    if (!editingList || !updatedName) return;
+    setLists((prev) =>
+      prev.map((list) =>
+        list.id === editingList.id ? { ...list, name: updatedName, updatedAt: new Date().toISOString() } : list,
+      ),
+    );
+    setEditingList(null);
+    setEditingListName('');
+  };
+
+  const handleDeleteList = () => {
+    if (!listPendingDeletion) return;
+    setLists((prev) => prev.filter((list) => list.id !== listPendingDeletion.id));
+    if (selectedListId === listPendingDeletion.id) {
+      setSelectedListId(null);
+    }
+    setListPendingDeletion(null);
+  };
+
+
+
+

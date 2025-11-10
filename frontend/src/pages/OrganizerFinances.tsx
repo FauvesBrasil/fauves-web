@@ -1,78 +1,145 @@
-import React, { useState } from 'react';
+import React from 'react';
 import SidebarMenu from '@/components/SidebarMenu';
 import AppHeader from '@/components/AppHeader';
-import reportsSvg from '@/assets/reports.svg';
+import { useNavigate } from 'react-router-dom';
+import { ensureApiBase, apiUrl } from '@/lib/apiBase';
+import { useOrganization } from '@/context/OrganizationContext';
 
-const sideMenu = [
-  { label: 'Pagamentos', active: true },
-  { label: 'Despesas e créditos' },
-  { label: 'Notas Fiscais e Faturas' },
-  { label: 'Configurações' },
-];
+interface EventRow { id: string; name: string; startDate?: string|null; image?: string|null; status?: string|null; published?: boolean|null }
 
-const tabs = [
-  'Por data de pagamento',
-  'Por data de evento',
-];
+const formatDateTimePt = (iso?: string|null) => {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', { weekday:'short', day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  } catch { return ''; }
+};
 
 export default function OrganizerFinances() {
-  const [activeMenu, setActiveMenu] = useState(0);
-  const [activeTab, setActiveTab] = useState(0);
-  // Estado vazio para exemplo
-  const hasPayments = false;
+  const { selectedOrg } = useOrganization();
+  const navigate = useNavigate();
+  const [events, setEvents] = React.useState<EventRow[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [filter, setFilter] = React.useState<'active'|'inactive'>('active');
+  const [search, setSearch] = React.useState('');
 
-  const menuTabs = [
-    'Pagamentos',
-    'Despesas e créditos',
-    'Notas Fiscais e Faturas',
-    'Configurações',
-  ];
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!selectedOrg?.id) { setEvents([]); return; }
+      setLoading(true);
+      try {
+        await ensureApiBase().catch(() => {});
+        const path = `/api/organization/${selectedOrg.id}/events`;
+        const attempts = [ apiUrl(path), `http://localhost:4000${path}` ];
+        let loaded: any[] | null = null;
+        for (const u of attempts) {
+          try {
+            const r = await fetch(u, { headers: { 'Accept':'application/json' } });
+            if (!r.ok) continue;
+            const j = await r.json();
+            if (Array.isArray(j)) { loaded = j; break; }
+          } catch {}
+        }
+        if (cancelled) return;
+        const mapped: EventRow[] = (loaded||[]).map((e:any) => ({
+          id: e.id,
+          name: e.name || e.title || 'Evento',
+          startDate: e.startDate || e.startDateUtc || e.startsAt || null,
+          image: e.image || e.bannerImage || e.coverUrl || null,
+          status: e.status || null,
+          published: typeof e.published === 'boolean' ? e.published : (e.privacy ? e.privacy === 'public' : null),
+        }));
+        setEvents(mapped);
+      } finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedOrg?.id]);
+
+  const isActive = (e: EventRow) => {
+    const s = (e.status||'').toLowerCase();
+    if (['active','published','open'].includes(s)) return true;
+    if (['inactive','draft','closed','archived'].includes(s)) return false;
+    if (typeof e.published === 'boolean') return e.published;
+    // fallback: future events considered active
+    if (e.startDate) return new Date(e.startDate).getTime() >= Date.now() - 86400000;
+    return false;
+  };
+
+  const activeCount = events.filter(isActive).length;
+  const inactiveCount = events.length - activeCount;
+
+  const filtered = events.filter(e => (filter==='active'? isActive(e) : !isActive(e)))
+    .filter(e => !search.trim() || e.name.toLowerCase().includes(search.trim().toLowerCase()));
 
   return (
     <div className="relative min-h-screen w-full bg-white dark:bg-[#0b0b0b] flex justify-center items-start">
       <SidebarMenu activeKeyOverride="financas" />
-      <div className="rounded-3xl w-[1352px] bg-white dark:bg-[#0b0b0b] dark:border-[#1F1F1F] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-32">
+      <div className="rounded-3xl w-[1352px] bg-white dark:bg-[#0b0b0b] dark:border-[#1F1F1F] max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-[100px]">
         <AppHeader />
         <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4">
-          <h1 className="text-5xl font-extrabold text-[#231942] dark:text-white mb-2">Finanças</h1>
-          <div className="flex items-center gap-6 border-b border-zinc-200 dark:border-[#1F1F1F] -mb-2">
-            {menuTabs.map((tab, i) => (
-              <button
-                key={tab}
-                onClick={() => setActiveMenu(i)}
-                className={`pb-2 text-base font-bold transition ${activeMenu === i ? 'border-b-2 border-indigo-600 text-indigo-700 dark:border-white dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-300 hover:dark:text-white'}`}
-              >
-                {tab}
-              </button>
-            ))}
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Finanças</h1>
+
+          <div className="flex items-start justify-between gap-6">
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-6 w-72">
+              <div className="text-sm font-semibold text-slate-600 dark:text-slate-300">Balanço Global</div>
+              <div className="text-3xl font-bold text-slate-900 dark:text-white mt-3">R$ 0,00</div>
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="relative">
+                <button className="h-10 px-4 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#121212] text-sm font-semibold text-slate-700 dark:text-white flex items-center gap-2">Ações ▾</button>
+              </div>
+              <input value={search} onChange={e=> setSearch(e.target.value)} placeholder="Inserir nome do evento" className="h-10 w-72 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#121212] text-sm px-3 text-slate-700 dark:text-white" />
+            </div>
           </div>
-          <div className="flex gap-2 mb-4">
-            {tabs.map((tab, i) => (
-              <button
-                key={tab}
-                className={`px-6 py-2 rounded-lg font-bold text-base ${activeTab === i ? 'bg-blue-100 text-blue-700' : 'bg-zinc-100 text-zinc-700'} transition`}
-                onClick={() => setActiveTab(i)}
-              >
-                {tab}
-              </button>
-            ))}
+
+          <div className="flex items-center gap-6 mt-2">
+            <div className="text-xs font-semibold tracking-widest text-slate-500 dark:text-slate-400">EVENTOS</div>
+            <div className="flex items-center gap-4 text-sm">
+              <button onClick={()=> setFilter('active')} className={`text-slate-700 dark:text-slate-200 ${filter==='active'?'font-semibold':''}`}>Ativo <span className="ml-1 px-1.5 rounded bg-zinc-200 dark:bg-zinc-700 text-xs">{activeCount}</span></button>
+              <button onClick={()=> setFilter('inactive')} className={`text-slate-700 dark:text-slate-200 ${filter==='inactive'?'font-semibold':''}`}>Inativo <span className="ml-1 px-1.5 rounded bg-zinc-200 dark:bg-zinc-700 text-xs">{inactiveCount}</span></button>
+            </div>
           </div>
-          <div className="text-zinc-500 dark:text-slate-300 mb-4 text-sm">Veja a lista de pagamentos que foram enviados para sua conta bancária</div>
-          <div className="flex gap-4 mb-6">
-            <button className="border px-5 py-2 rounded-lg font-bold text-zinc-700 dark:text-white flex items-center gap-2 hover:bg-indigo-50 dark:hover:bg-[#1A1A1A] transition">
-              <span className="material-icons">filter_alt</span> Filtros
-            </button>
-            <button className="bg-zinc-100 dark:bg-[#1F1F1F] dark:text-white text-zinc-700 font-bold px-5 py-2 rounded-lg">Exportar</button>
-          </div>
-          <div className="bg-white dark:bg-[#242424] rounded-xl border dark:border-[#1F1F1F] shadow-sm flex flex-col items-center justify-center py-24 mt-4">
-            {!hasPayments && (
-              <>
-                <img src={reportsSvg} alt="Sem pagamentos" className="w-32 h-32 mb-4" />
-                <div className="text-lg font-bold text-center text-slate-900 dark:text-white mb-2">Você ainda não tem pagamentos</div>
-              </>
-            )}
-            {/* Quando houver pagamentos, renderizar cards e tabela aqui */}
-          </div>
+
+          {loading ? (
+            <div className="mt-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-16 text-center">Carregando...</div>
+          ) : filtered.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-16 flex flex-col items-center justify-center text-center">
+              <div className="text-lg font-semibold text-slate-900 dark:text-white">Sem eventos {filter==='active'? 'ativos':'inativos'}</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">Eventos {filter==='active'? 'ativos':'inativos'} aparecerão aqui</div>
+              {filter==='active' && <a href="/create-event" className="mt-4 text-sm font-semibold text-indigo-700 hover:text-indigo-800">Criar um evento</a>}
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {filtered.map(ev => (
+                <div
+                  key={ev.id}
+                  onClick={() => navigate(`/organizer-finances/${ev.id}`)}
+                  className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] overflow-hidden flex cursor-pointer hover:bg-zinc-50 dark:hover:bg-[#191919] transition"
+                  role="button"
+                  aria-label={`Abrir finanças de ${ev.name}`}
+                >
+                  <div className="w-56 h-40 bg-zinc-200 dark:bg-[#1f1f1f] flex-shrink-0">
+                    {ev.image ? <img src={ev.image} alt={ev.name} className="w-full h-full object-cover" /> : null}
+                  </div>
+                  <div className="flex-1 p-5 grid grid-cols-5 gap-4 items-center">
+                    <div className="col-span-3">
+                      <div className="text-lg font-semibold text-slate-900 dark:text-white">{ev.name}</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">{formatDateTimePt(ev.startDate)}</div>
+                    </div>
+                    <div className="text-right col-span-1">
+                      <div className="text-[11px] tracking-widest text-slate-500 dark:text-slate-400">DISPONÍVEL</div>
+                      <div className="text-lg font-bold text-slate-900 dark:text-white">R$ 0</div>
+                    </div>
+                    <div className="text-right col-span-1">
+                      <div className="text-sm text-slate-700 dark:text-slate-200">Receita: R$ 0,00</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">Já enviado: R$ 0,00</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

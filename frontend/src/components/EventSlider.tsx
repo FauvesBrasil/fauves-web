@@ -22,13 +22,37 @@ const EventSlider: React.FC<EventSliderProps> = ({ slides }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // layout constants (kept here so arrows and slides share same values)
-  // shrink active slide so slider uses less vertical space and more side slides are visible
-  const ACTIVE_WIDTH = 380; // active slide width
+  // Use responsive sizes: desktop keeps the larger original sizes, tablet uses medium,
+  // and mobile reduces sizes so the active slide fits the viewport.
+  const [windowWidth, setWindowWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    function onResize() { setWindowWidth(window.innerWidth); }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }
+    return () => {};
+  }, []);
+
+  // breakpoints: mobile (<640), tablet (<1024), desktop (>=1024)
+  const isMobile = windowWidth < 640;
+  const isTablet = windowWidth >= 640 && windowWidth < 1024;
+
+  let ACTIVE_WIDTH = 380; // desktop default (original larger size)
+  let SIDE_WIDTH = 390;
+  let GAP_BETWEEN = -200;
+
+  if (isTablet) {
+    ACTIVE_WIDTH = 320; SIDE_WIDTH = 300; GAP_BETWEEN = -80;
+  }
+  if (isMobile) {
+    ACTIVE_WIDTH = 260; SIDE_WIDTH = 220; GAP_BETWEEN = -40;
+  }
+
   // force square slides: height == width
   const ACTIVE_HEIGHT = ACTIVE_WIDTH;
-  const SIDE_WIDTH = 390; // side card size
   const SIDE_HEIGHT = SIDE_WIDTH; // make sides square as well
-  const GAP_BETWEEN = -200; // spacing between slides
 
   // how many slides each side should be visible (0 = only adjacent)
   const VISIBLE_RANGE = 3;
@@ -41,6 +65,10 @@ const EventSlider: React.FC<EventSliderProps> = ({ slides }) => {
   const ARROW_OUTWARD_OFFSET = 0; // how much to push arrows further outside the card
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const touchDelta = useRef<number>(0);
+  const isTouching = useRef<boolean>(false);
 
   const goTo = useCallback((idx: number) => {
     // wrap index so the carousel behaves infinitely
@@ -76,12 +104,66 @@ const EventSlider: React.FC<EventSliderProps> = ({ slides }) => {
 
   if (total === 0) return null;
 
+  // Touch handlers: enable swipe on mobile. We implement a lightweight drag
+  // detection and allow swipe left/right to change slides. We also apply a
+  // temporary transform on the wrapper so the slides follow the finger.
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!wrapperRef.current) return;
+    const t = e.touches[0];
+    touchStartX.current = t.clientX;
+    touchStartY.current = t.clientY;
+    touchDelta.current = 0;
+    isTouching.current = true;
+    setPaused(true);
+    // disable transition while dragging
+    wrapperRef.current.style.transition = 'none';
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isTouching.current || touchStartX.current === null) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touchStartX.current;
+    const dy = touchStartY.current ? Math.abs(t.clientY - touchStartY.current) : 0;
+    touchDelta.current = dx;
+    // if horizontal move dominates, prevent vertical scroll so swipe feels native
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
+      e.preventDefault();
+    }
+    if (wrapperRef.current) {
+      wrapperRef.current.style.transform = `translateX(${dx}px)`;
+    }
+  };
+
+  const onTouchEnd = () => {
+    if (!isTouching.current) return;
+    isTouching.current = false;
+    const dx = touchDelta.current;
+    const threshold = 60; // px required to trigger slide change
+    if (Math.abs(dx) > threshold) {
+      if (dx > 0) {
+        prev();
+      } else {
+        next();
+      }
+    }
+    // snap back animation
+    if (wrapperRef.current) {
+      wrapperRef.current.style.transition = 'transform 220ms ease';
+      wrapperRef.current.style.transform = 'translateX(0)';
+    }
+    // resume autoplay shortly after snap
+    setTimeout(() => setPaused(false), 300);
+  };
+
   return (
     <div
-      className="w-full flex flex-col items-center py-6"
+      className="w-full flex flex-col items-center py-6 overflow-x-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onKeyDown={handleKey}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
       tabIndex={0}
       ref={containerRef}
       role="region"
@@ -113,7 +195,7 @@ const EventSlider: React.FC<EventSliderProps> = ({ slides }) => {
 
         <div className="w-full flex justify-center">
           {/* relative wrapper to contain absolutely-positioned slides for smooth animation */}
-          <div ref={wrapperRef} style={{ position: 'relative', width: WRAPPER_WIDTH, height: ACTIVE_HEIGHT + 40 }}>
+          <div ref={wrapperRef} style={{ position: 'relative', width: WRAPPER_WIDTH, height: ACTIVE_HEIGHT + 40, overflow: 'visible', maxWidth: '100%' }}>
             {slides.map((slide, idx) => {
               const step = SIDE_WIDTH + GAP_BETWEEN; // spacing between slides
 

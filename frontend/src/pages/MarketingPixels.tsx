@@ -175,7 +175,7 @@ export default function MarketingPixels(){
   const { totalLeft } = useLayoutOffsets();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0b0b0b] w-full">
+    <div className="bg-white dark:bg-[#0b0b0b] w-full">
       {/* Fixed main sidebar */}
       <SidebarMenu />
 
@@ -198,8 +198,8 @@ export default function MarketingPixels(){
       <AppHeader />
 
       {/* Content with left margin for both sidebars */}
-      <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 min-h-screen relative">
-        <div className="mt-24 max-w-6xl">
+      <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 pb-16 relative">
+        <div className="mt-24 max-w-4xl">
           <h1 className="text-3xl font-bold text-indigo-950 dark:text-white mb-3">Pixels de rastreamento</h1>
           <p className="text-sm text-gray-600 dark:text-slate-300 mb-6">O rastreamento de pixels pode ajudar você a medir o impacto de seu marketing, publicidade e análise.</p>
 

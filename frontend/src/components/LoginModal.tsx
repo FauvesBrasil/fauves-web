@@ -6,9 +6,9 @@ import { ArrowLeft } from 'lucide-react';
 import LogoSquare from '@/assets/logo-square-fauves.svg?react';
 import GoogleIco from '@/assets/googleico.svg?react';
 import MailIco from '@/assets/mailico.svg?react';
-import Guitarrista from '@/assets/guitarrista 1.svg?react';
-import Vermelho3 from '@/assets/vermelho 3.svg?react';
-import Raio1 from '@/assets/raio 1.svg?react';
+const Guitarrista = React.lazy(() => import('@/assets/guitarrista 1.svg?react'));
+const Vermelho3 = React.lazy(() => import('@/assets/vermelho 3.svg?react'));
+const Raio1 = React.lazy(() => import('@/assets/raio 1.svg?react'));
 import TextLink from './TextLink';
 
 interface LoginModalProps {
@@ -49,7 +49,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
     setPassword('');
     setNome('');
     setSobrenome('');
-    setTimeout(() => overlayRef.current?.focus(), 50);
+    // focus quickly when modal opens
+    setTimeout(() => overlayRef.current?.focus(), 10);
   }, [open]);
 
   // Focus inputs when step changes (safe focus even when panels are transformed)
@@ -57,9 +58,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
     if (!open) return;
     if (step === 1) {
       // small timeout so element is visible after transform
-      setTimeout(() => emailRef.current?.focus(), 160);
+      setTimeout(() => emailRef.current?.focus(), 10);
     } else if (step === 2) {
-      setTimeout(() => nomeRef.current?.focus(), 160);
+      setTimeout(() => nomeRef.current?.focus(), 10);
     }
   }, [step, open]);
 
@@ -72,11 +73,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
   }, [open]);
 
   const handleClose = () => {
+    // trigger close state and remove quickly; keep small timeout for any CSS exit animation
     setIsClosing(true);
     setTimeout(() => {
       setIsClosing(false);
       onClose();
-    }, 320);
+    }, 120);
   };
 
   const doGoogle = async () => {
@@ -185,41 +187,48 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
 
   if (!open) return null;
 
-  return (
+    return (
     <div
       ref={overlayRef}
       tabIndex={-1}
       aria-modal
       role="dialog"
-      className={`fixed inset-0 flex items-center justify-center bg-black/40 ${isClosing ? 'pointer-events-none' : 'pointer-events-auto'}`}
+      className={`fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm ${isClosing ? 'pointer-events-none' : 'pointer-events-auto'}`}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
       style={{ zIndex: 9999 }}
     >
   <div className="relative w-[320px] sm:w-[520px] max-w-[95vw]">
-        {/* floating guitarist only on initial step */}
+        {/* floating guitarist only on initial step (lazy-loaded to avoid blocking modal mount) */}
         {step === 0 && (
-          <Guitarrista className="pointer-events-none absolute right-10 -top-[140px] w-44 sm:w-52" style={{ zIndex: 3 }} />
+          <React.Suspense fallback={null}>
+            <Guitarrista className="pointer-events-none absolute right-10 -top-[140px] w-44 sm:w-52" style={{ zIndex: 3 }} />
+          </React.Suspense>
         )}
         {step === 1 && (
-          <Vermelho3 className="pointer-events-none absolute right-12 -top-[135px] w-44 sm:w-52" style={{ zIndex: 3 }} />
+          <React.Suspense fallback={null}>
+            <Vermelho3 className="pointer-events-none absolute right-12 -top-[135px] w-44 sm:w-52" style={{ zIndex: 3 }} />
+          </React.Suspense>
         )}
         {step === 2 && (
           /* decorative lightning on signup step */
-          <Raio1 className="pointer-events-none absolute right-12 -top-[155px] w-28 sm:w-36" style={{ zIndex: 3 }} />
+          <React.Suspense fallback={null}>
+            <Raio1 className="pointer-events-none absolute right-12 -top-[155px] w-28 sm:w-36" style={{ zIndex: 3 }} />
+          </React.Suspense>
         )}
         <div className="absolute -inset-6 rounded-2xl bg-gradient-to-tr from-[#000000] to-[#000000] blur-[18px] opacity-10" style={{ zIndex: 1 }} />
 
-        <div className={`relative bg-white rounded-2xl shadow-2xl p-4 overflow-hidden`} style={{ zIndex: 2 }}>
+  <div className={`relative bg-card text-card-foreground rounded-2xl shadow-brand-lg p-4 overflow-hidden`} style={{ zIndex: 2 }}>
+          {/* modal content */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               {step !== 0 && (
-                <button aria-label="Voltar" onClick={() => setStep(0)} className="p-1 rounded-md hover:bg-gray-100">
-                  <ArrowLeft className="w-5 h-5 text-slate-700" />
+                <button aria-label="Voltar" onClick={() => setStep(0)} className="p-1 rounded-md hover:bg-card">
+                  <ArrowLeft className="w-5 h-5 text-muted-foreground" />
                 </button>
               )}
               {/* title removed from top of modal as requested */}
             </div>
-            <button aria-label="Fechar" onClick={handleClose} className="w-10 h-10 flex items-center justify-center rounded-full text-slate-500 hover:bg-gray-100">
+            <button aria-label="Fechar" onClick={handleClose} className="w-10 h-10 flex items-center justify-center rounded-full text-muted-foreground hover:bg-card">
               <span className="text-2xl leading-none">×</span>
             </button>
           </div>
@@ -232,25 +241,25 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
                     <div className="w-12 h-12 flex items-center justify-center">
                       <LogoSquare className="w-12 h-12 block" />
                     </div>
-                    <div className="text-slate-800 font-regular text-[22px]">Entre no ritmo.<br/>Entre na Fauves.</div>
+                    <div className="text-card-foreground font-regular text-[22px]">Entre no ritmo.<br/>Entre na Fauves.</div>
                     <div className="w-full flex flex-col gap-3">
                       <button
                         onClick={doGoogle}
-                        className="flex items-center gap-3 justify-center border border-slate-300 rounded-full h-12 px-4 bg-white hover:shadow-md transition w-full"
+                        className="flex items-center gap-3 justify-center border border-border rounded-full h-12 px-4 bg-brand-surface hover:shadow-brand-md transition w-full text-card-foreground"
                       >
                         <GoogleIco className="w-5 h-5" />
                         <span className="font-medium">Continuar com o Google</span>
                       </button>
                       <button
                         onClick={() => setStep(1)}
-                        className="flex items-center gap-3 justify-center rounded-full h-12 px-4 bg-indigo-600 text-white hover:bg-indigo-700 transition w-full"
+                        className="flex items-center gap-3 justify-center rounded-full h-12 px-4 bg-brand-primary text-brand-primary-foreground hover:opacity-95 transition w-full"
                       >
                         <MailIco className="w-5 h-5 stroke-white" />
                         <span className="font-medium">Continuar com o e-mail</span>
                       </button>
                     </div>
                   </div>
-                  <div className="pt-10 text-[12px] text-slate-400 text-center">Ao continuar, você concorda com os Termos de uso e confirma que leu nossa Política de privacidade e cookies.<br/><br/>Este site é protegido por reCAPTCHA e sujeito à Política de privacidade e aos Termos de serviço do Google.</div>
+                  <div className="pt-10 text-[12px] text-muted-foreground text-center">Ao continuar, você concorda com os Termos de uso e confirma que leu nossa Política de privacidade e cookies.<br/><br/>Este site é protegido por reCAPTCHA e sujeito à Política de privacidade e aos Termos de serviço do Google.</div>
                 </div>
               </div>
             )}
@@ -262,7 +271,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
                     <div className="w-12 h-12 flex items-center justify-center">
                       <LogoSquare className="w-12 h-12 block" />
                     </div>
-                    <div className="text-slate-800 font-regular text-[22px]">Olha quem tá de volta pro rolê.</div>
+                    <div className="text-card-foreground font-regular text-[22px]">Olha quem tá de volta pro rolê.</div>
                   </div>
 
                   <form className="flex-1 flex flex-col justify-center gap-3 overflow-y-auto" onSubmit={submitLogin}>
@@ -272,7 +281,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
                       placeholder="Endereço de e-mail"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-3 py-3 w-full"
+                      className="border border-border bg-input text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-3 w-full"
                     />
 
                     <input
@@ -281,7 +290,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
                       placeholder="Senha"
                       value={password}
                       onChange={e => setPassword(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-3 py-3 w-full"
+                      className="border border-border bg-input text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-3 w-full"
                     />
 
                     <div className="w-full text-right mt-1">
@@ -290,23 +299,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
 
                     {error && <div className="text-red-500 text-sm mt-1 text-center">{error}</div>}
 
-                    <button type="submit" disabled={loading} className="mt-3 bg-[#6366F1] text-white py-3 rounded-full font-semibold hover:bg-[#4f46e5] transition w-full">
+                    <button type="submit" disabled={loading} className="mt-3 bg-brand-primary text-brand-primary-foreground py-3 rounded-full font-semibold hover:opacity-95 transition w-full">
                       {loading ? (<Spinner className="h-5 w-5 text-white mx-auto" />) : 'Fazer login'}
                     </button>
 
                     <div className="mt-4 flex items-center gap-3">
-                      <span className="flex-1 h-px bg-slate-200" />
-                      <span className="text-sm text-slate-500">Ainda não tem conta?</span>
-                      <span className="flex-1 h-px bg-slate-200" />
+                      <span className="flex-1 h-px bg-border" />
+                      <span className="text-sm text-muted-foreground">Ainda não tem conta?</span>
+                      <span className="flex-1 h-px bg-border" />
                     </div>
 
                     <div className="mb-5 text-center text-sm">
                         <TextLink onClick={() => setStep(2)} className="mb-0">Cria tua conta</TextLink>
-                        <span className="text-slate-500 ml-0"> e vem curtir com a gente.</span>
+                        <span className="text-muted-foreground ml-0"> e vem curtir com a gente.</span>
                     </div>
                   </form>
 
-                  <div className="pt-6 text-[12px] text-slate-400 text-center">Ao continuar, você concorda com os&nbsp;Termos de uso&nbsp;e confirma que leu nossa&nbsp;Política de privacidade e cookies.<br/><br/>Este site é protegido por reCAPTCHA e sujeito à&nbsp;Política de privacidade&nbsp;e aos&nbsp;Termos de serviço&nbsp;do Google.</div>
+                    <div className="pt-6 text-[12px] text-muted-foreground text-center">Ao continuar, você concorda com os&nbsp;Termos de uso&nbsp;e confirma que leu nossa&nbsp;Política de privacidade e cookies.<br/><br/>Este site é protegido por reCAPTCHA e sujeito à&nbsp;Política de privacidade&nbsp;e aos&nbsp;Termos de serviço&nbsp;do Google.</div>
                 </div>
               </div>
             )}
@@ -318,17 +327,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
                     <div className="w-12 h-12 flex items-center justify-center">
                       <LogoSquare className="w-12 h-12 block" />
                     </div>
-                    <div className="text-slate-800 font-regular text-[22px]">Cria tua conta e vem curtir<br></br>com a gente.</div>
+                    <div className="text-card-foreground font-regular text-[22px]">Cria tua conta e vem curtir<br></br>com a gente.</div>
                   </div>
 
                   <form className="flex-1 flex flex-col gap-3 justify-center overflow-y-auto" onSubmit={submitSignup}>
                     <div className="grid grid-cols-2 gap-3 w-full">
-                      <input ref={nomeRef} type="text" placeholder="Nome" value={nome} onChange={e => setNome(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-3 w-full" />
-                      <input type="text" placeholder="Sobrenome" value={sobrenome} onChange={e => setSobrenome(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-3 w-full" />
+            <input ref={nomeRef} type="text" placeholder="Nome" value={nome} onChange={e => setNome(e.target.value)} className="border border-border bg-input text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-3 w-full" />
+              <input type="text" placeholder="Sobrenome" value={sobrenome} onChange={e => setSobrenome(e.target.value)} className="border border-border bg-input text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-3 w-full" />
                     </div>
 
-                    <input type="email" placeholder="Endereço de e-mail" value={email} onChange={e => setEmail(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-3 w-full" />
-                    <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-3 w-full" />
+                    <input type="email" placeholder="Endereço de e-mail" value={email} onChange={e => setEmail(e.target.value)} className="border border-border bg-input text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-3 w-full" />
+                    <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="border border-border bg-input text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-3 w-full" />
 
                     {/* password strength indicator */}
                     {step === 2 && (
@@ -338,12 +347,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
                         return (
                           <div className="mt-2 w-full">
                             <div className="flex items-center justify-between mb-1">
-                              <div className="w-full mr-3 bg-slate-100 rounded-full h-2 overflow-hidden">
-                                <div className={`${s.color} h-2 rounded-full`} style={{ width: `${pct}%` }} />
-                              </div>
-                              <div className="text-xs w-16 text-right text-slate-600">{s.label}</div>
+                              <div className="w-full mr-3 bg-card rounded-full h-2 overflow-hidden">
+                                  <div className={`${s.color} h-2 rounded-full`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <div className="text-xs w-16 text-right text-muted-foreground">{s.label}</div>
                             </div>
-                            <div className="text-xs text-slate-400">Use no mínimo 8 caracteres, incluindo letras e números. Símbolos deixam a senha mais forte.</div>
+                              <div className="text-xs text-muted-foreground">Use no mínimo 8 caracteres, incluindo letras e números. Símbolos deixam a senha mais forte.</div>
                           </div>
                         );
                       })()
@@ -352,27 +361,27 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
                     {error && <div className="text-red-500 text-sm mt-1 text-center">{error}</div>}
 
                     <div className="flex items-start gap-3 mt-2">
-                      <input id="marketing" type="checkbox" className="w-4 h-4 rounded border-gray-300 mt-1" />
-                      <label htmlFor="marketing" className="text-sm text-slate-500">Sim, quero saber das ofertas e dos novos recursos. Sei que posso deixar de receber essas informações quando quiser.</label>
+                      <input id="marketing" type="checkbox" className="w-4 h-4 rounded border-border mt-1 bg-input" />
+                      <label htmlFor="marketing" className="text-sm text-muted-foreground">Sim, quero saber das ofertas e dos novos recursos. Sei que posso deixar de receber essas informações quando quiser.</label>
                     </div>
 
-                    <button type="submit" disabled={loading} className="mt-4 bg-[#6366F1] text-white py-3 rounded-full font-semibold hover:bg-[#4f46e5] transition w-full">
+                    <button type="submit" disabled={loading} className="mt-4 bg-brand-primary text-brand-primary-foreground py-3 rounded-full font-semibold hover:opacity-95 transition w-full">
                       {loading ? (<Spinner className="h-5 w-5 text-white mx-auto" />) : 'Criar conta'}
                     </button>
 
                     <div className="mt-6 flex items-center gap-3">
-                      <span className="flex-1 h-px bg-slate-200" />
-                      <span className="text-sm text-slate-500">Já tem uma conta?</span>
-                      <span className="flex-1 h-px bg-slate-200" />
+                      <span className="flex-1 h-px bg-border" />
+                      <span className="text-sm text-muted-foreground">Já tem uma conta?</span>
+                      <span className="flex-1 h-px bg-border" />
                     </div>
 
                     <div className="mt-0 text-center text-sm">
                       <TextLink onClick={() => setStep(1)}>Conecta</TextLink>
-                      <span className="text-slate-500 ml-0"> aí e bora viver.</span>
+                      <span className="text-muted-foreground ml-0"> aí e bora viver.</span>
                     </div>
                   </form>
 
-                  <div className="pt-4 text-xs text-slate-400 text-center">Ao criar conta, você concorda com os Termos de uso e confirma que leu nossa Política de privacidade e cookies.</div>
+                  <div className="pt-4 text-xs text-muted-foreground text-center">Ao criar conta, você concorda com os Termos de uso e confirma que leu nossa Política de privacidade e cookies.</div>
                 </div>
               </div>
             )}
@@ -393,3 +402,17 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess }) => 
 };
 
 export default LoginModal;
+
+/**
+ * Prefetch decorative assets used by the login modal.
+ * Call this from the login trigger (onMouseEnter/onFocus/onMouseDown) so
+ * the browser begins loading large SVGs before the modal mounts — this
+ * makes the modal paint faster and avoids waiting for SVG parsing.
+ */
+export const prefetchLoginModalAssets = () => {
+  // dynamic imports start fetching the modules; we intentionally don't await
+  // because we want to kick off the network request earlier.
+  import('@/assets/guitarrista 1.svg?react').catch(() => {});
+  import('@/assets/vermelho 3.svg?react').catch(() => {});
+  import('@/assets/raio 1.svg?react').catch(() => {});
+};

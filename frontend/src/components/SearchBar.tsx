@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 
 // Fallback image component for event images
@@ -50,7 +51,13 @@ const mockSuggestions = [
   { icon: 'search', label: 'Faça sua busca' },
 ];
 
-const SearchBar: React.FC = () => {
+interface SearchBarProps {
+  mobile?: boolean;
+  onMobileFocus?: () => void;
+  onMobileBlur?: () => void;
+}
+
+const SearchBar: React.FC<SearchBarProps> = ({ mobile = false, onMobileFocus, onMobileBlur }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [focused, setFocused] = useState(false);
@@ -58,6 +65,8 @@ const SearchBar: React.FC = () => {
   const [results, setResults] = useState<{ events: SearchResults[]; collections: SearchResults[]; organizations: SearchResults[] }>({ events: [], collections: [], organizations: [] });
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const mobileBlurTimeout = useRef<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -76,13 +85,52 @@ const SearchBar: React.FC = () => {
     return () => { active = false; };
   }, [searchTerm]);
 
+  const showDropdown = focused || searchTerm.length > 0;
+
+  useEffect(() => {
+    if (!showDropdown) {
+      setDropdownPos(null);
+      return;
+    }
+    const el = inputRef.current;
+    if (!el) return;
+    function compute() {
+      const r = el.getBoundingClientRect();
+      const scrollX = window.scrollX || window.pageXOffset || 0;
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      const desiredWidth = Math.min(Math.max(r.width, 340), window.innerWidth - 16);
+      // start from element left, but clamp so dropdown never exceeds viewport
+      const rawLeft = r.left + scrollX;
+      const minLeft = 8 + scrollX;
+      const maxLeft = Math.max(scrollX + 8, scrollX + window.innerWidth - desiredWidth - 8);
+      const left = Math.min(Math.max(rawLeft, minLeft), maxLeft);
+      const top = r.bottom + scrollY + 8; // small gap
+      const width = desiredWidth;
+      setDropdownPos({ left, top, width });
+    }
+    compute();
+    window.addEventListener('resize', compute);
+    window.addEventListener('scroll', compute, true);
+    return () => {
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('scroll', compute, true);
+    };
+  }, [showDropdown]);
+
+  useEffect(() => {
+    return () => {
+      if (mobileBlurTimeout.current) {
+        clearTimeout(mobileBlurTimeout.current);
+        mobileBlurTimeout.current = null;
+      }
+    };
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchTerm || searchTerm.length < 2) return;
     navigate(`/search?q=${encodeURIComponent(searchTerm)}`);
   };
-
-  const showDropdown = focused || searchTerm.length > 0;
 
   return (
     <form onSubmit={handleSubmit} className="relative">
@@ -92,13 +140,27 @@ const SearchBar: React.FC = () => {
           type="text"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => { 
+            setFocused(true); 
+            if (mobile && mobileBlurTimeout.current) { clearTimeout(mobileBlurTimeout.current); mobileBlurTimeout.current = null; }
+            if (mobile && onMobileFocus) onMobileFocus(); 
+          }}
+          onBlur={() => { 
+            setFocused(false); 
+            if (mobile) {
+              // delay hiding selector so clicks on dropdown items register without flicker
+              mobileBlurTimeout.current = window.setTimeout(() => { if (onMobileBlur) onMobileBlur(); mobileBlurTimeout.current = null; }, 160);
+            } else {
+              if (mobile && onMobileBlur) onMobileBlur();
+            }
+          }}
           placeholder="Pesquisar eventos"
           className={
-            `transition-all duration-300 w-[200px] focus:w-[300px] hover:w-[300px] text-foreground text-[16px] font-normal bg-card border border-border dark:border-[#161616] rounded-full pr-12 pl-4 py-2 outline-none placeholder:text-muted-foreground shadow-[0_4px_12.9px_0_rgba(0,0,0,0.05)] focus:border-[#EF4118] focus:ring-2 focus:ring-[#EF4118]/30`
+            mobile
+              ? `transition-all duration-200 w-full text-foreground text-[16px] font-normal bg-card border border-border dark:border-[#161616] rounded-full pr-12 pl-4 py-2 outline-none placeholder:text-muted-foreground shadow-[0_4px_12.9px_0_rgba(0,0,0,0.05)] focus:border-[#EF4118] focus:ring-2 focus:ring-[#EF4118]/30`
+              : `transition-all duration-300 w-[200px] focus:w-[300px] hover:w-[300px] text-foreground text-[16px] font-normal bg-card border border-border dark:border-[#161616] rounded-full pr-12 pl-4 py-2 outline-none placeholder:text-muted-foreground shadow-[0_4px_12.9px_0_rgba(0,0,0,0.05)] focus:border-[#EF4118] focus:ring-2 focus:ring-[#EF4118]/30`
           }
-          style={{ width: focused ? 300 : 200 }}
+          style={mobile ? undefined : { width: focused ? 300 : 200 }}
         />
   <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-[#EF4118] focus:outline-none focus:ring-2 focus:ring-[#EF4118]/30 rounded-md">
           <svg width="22" height="22" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -106,8 +168,9 @@ const SearchBar: React.FC = () => {
             <path d="M14 14L11.1 11.1" stroke="currentColor" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        {showDropdown && (
-          <div className="absolute left-0 top-[110%] w-[340px] bg-card border border-border dark:border-[#161616] rounded-2xl shadow-[0_4px_12.9px_0_rgba(0,0,0,0.08)] z-50 p-4">
+        {showDropdown && dropdownPos && createPortal(
+          <div style={{ position: 'absolute', left: dropdownPos.left, top: dropdownPos.top, width: dropdownPos.width, zIndex: 9999 }}>
+            <div className="bg-card border border-border dark:border-[#161616] rounded-2xl shadow-[0_4px_12.9px_0_rgba(0,0,0,0.08)] p-4">
             <div className="mb-2">
               <span className="text-foreground dark:text-white text-sm font-bold">Melhores resultados</span>
                 {loading ? (
@@ -202,8 +265,8 @@ const SearchBar: React.FC = () => {
                 ))}
               </div>
             </div>
-          </div>
-        )}
+            </div>
+          </div>, document.body)}
       </div>
     </form>
   );

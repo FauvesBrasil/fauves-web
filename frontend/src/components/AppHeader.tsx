@@ -182,17 +182,37 @@ const AppHeader: React.FC = () => {
   // so the sidebar can sit above the header and not be visually covered.
   const headerZ = (detailWidth > 0 || isEventFlow) ? 5 : 10;
   const headerTextClass = isDark ? 'text-white' : 'text-[#091747]';
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) setMobileMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [mobileMenuOpen]);
   return (
+    <>
     <div style={{ ...dynamicStyle, zIndex: headerZ, pointerEvents: 'auto' }} className={`flex absolute top-0 left-0 w-full items-center pr-5 py-4 bg-white dark:bg-[#0b0b0b] border-b border-solid border-zinc-100 dark:border-[#161616] h-[60px] max-md:relative max-md:flex-wrap max-md:gap-4 max-md:px-5 max-md:py-4 max-md:w-full max-sm:px-4 max-sm:py-2.5 transition-all duration-200`}>
       {/* Left: apenas seletor de organização (oculto quando existe sidebar de detalhe) */}
       <div className="flex items-center gap-4 flex-1 min-w-[240px]">
+        {/* mobile hamburger - visible only on small screens */}
+        <button
+          aria-label="Abrir menu"
+          onClick={() => setMobileMenuOpen(true)}
+          className="block md:hidden mr-2 p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className={headerTextClass}><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
         {/* Hide organization selector when a detail sidebar exists or when we're inside event flows */}
         {detailWidth === 0 && !isEventFlow && <OrganizationDropdown />}
       </div>
       {/* Right: Criar evento + UserDropdown */}
       <div className="flex items-center gap-6 justify-end flex-1 min-w-[300px]">
-        {/* 'Criar evento' placed to the left of the icon group so icons sit next to the user dropdown */}
-        <div className={`text-sm font-bold ${headerTextClass} cursor-pointer hover:text-indigo-700 transition-colors`} onClick={() => navigate('/create-event')}>Criar evento</div>
+  {/* 'Criar evento' placed to the left of the icon group so icons sit next to the user dropdown */}
+  <div className={`text-sm font-bold ${headerTextClass} cursor-pointer hover:text-indigo-700 transition-colors max-sm:hidden`} onClick={() => navigate('/create-event')}>Criar evento</div>
 
         {/* Group icons to match spacing in Header.tsx */}
         <div className="flex items-center gap-3">
@@ -222,6 +242,35 @@ const AppHeader: React.FC = () => {
         </div>
       </div>
     </div>
+      {/* Mobile side drawer menu */}
+      <div aria-hidden={!mobileMenuOpen} className={`fixed inset-0 z-40 ${mobileMenuOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+        <div className={`fixed inset-y-0 left-0 w-72 bg-white dark:bg-[#0b0b0b] border-r dark:border-[#1F1F1F] shadow-lg transform transition-transform duration-200 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`} ref={mobileMenuRef}>
+          <div className="p-4 flex items-center justify-between border-b border-gray-100 dark:border-[#161616]">
+            <div className="flex items-center gap-3">
+              <img src="/assets/logo-square-fauves-blue.svg" alt="Fauves" className="w-8 h-8" />
+              <div className={`font-bold ${headerTextClass}`}>Menu</div>
+            </div>
+            <button aria-label="Fechar menu" onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-md hover:bg-black/5 dark:hover:bg-white/5">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className={headerTextClass}><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          </div>
+          <nav className="p-4">
+            {/* replicate core menu items from SidebarMenu */}
+            <ul className="flex flex-col gap-2">
+              <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-dashboard'); }}>Painel</button></li>
+              <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-events'); }}>Eventos</button></li>
+              <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-orders'); }}>Pedidos</button></li>
+              {/* Marketing page removed */}
+              <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-reports'); }}>Relatórios</button></li>
+              <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-finances'); }}>Finanças</button></li>
+              <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-settings'); }}>Ajustes</button></li>
+            </ul>
+          </nav>
+        </div>
+        {/* backdrop */}
+        <div className={`fixed inset-0 bg-black/30 transition-opacity ${mobileMenuOpen ? 'opacity-100' : 'opacity-0'}`} onClick={() => setMobileMenuOpen(false)} />
+      </div>
+    </>
   );
 };
 

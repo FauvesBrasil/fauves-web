@@ -5,13 +5,31 @@ import { fetchApi } from '@/lib/apiBase';
 export interface Organization {
   id: string;
   name: string;
+  slug?: string;
   logoUrl?: string;
+  coverUrl?: string;
   site?: string;
   bio?: string;
   description?: string;
-  facebook?: string;
-  twitter?: string;
+  tags?: string[];
   instagram?: string;
+  facebook?: string;
+  twitter?: string; // X (antigo Twitter) pode vir como 'twitter'
+  youtube?: string;
+  tiktok?: string;
+  x?: string; // se backend usar 'x' em vez de 'twitter'
+  telegram?: string;
+  whatsapp?: string;
+  messenger?: string;
+  discord?: string;
+  spotify?: string;
+  soundcloud?: string;
+  instagramChannel?: string;
+  // General contact/location
+  contactEmail?: string;
+  showContactEmail?: boolean;
+  locationText?: string;
+  artistsMode?: 'popular' | 'recent' | 'hidden';
   createdAt?: string;
   updatedAt?: string;
 }

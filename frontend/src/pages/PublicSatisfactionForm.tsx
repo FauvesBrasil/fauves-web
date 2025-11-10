@@ -56,6 +56,14 @@ export default function PublicSatisfactionForm() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [ratings, setRatings] = useState<Ratings>({ overall: 0, lineup: 0, sound: 0, venue: 0, security: 0, accessibility: 0 });
   const [comment, setComment] = useState<string>('');
+  const readSurveyActive = (ev: any): boolean => {
+    if (typeof ev?.surveyIsActive === 'boolean') return ev.surveyIsActive;
+    if (typeof ev?.survey_is_active === 'boolean') return ev.survey_is_active;
+    if (typeof ev?.survey_active === 'boolean') return ev.survey_active;
+    return true;
+  };
+  const [surveyActive, setSurveyActive] = useState<boolean>(true);
+  const showForm = surveyActive || loading;
 
   useEffect(() => {
     let mounted = true;
@@ -73,12 +81,14 @@ export default function PublicSatisfactionForm() {
             const ev = await r.json();
             if (!mounted) return;
             setEventName(ev?.name || ev?.title || 'seu evento');
+            setSurveyActive(readSurveyActive(ev));
           }
         } else {
           const payload = await r.json();
           if (!mounted) return;
           const ev = payload?.event || payload;
           setEventName(ev?.name || 'seu evento');
+          setSurveyActive(readSurveyActive(ev));
           const ans = payload?.answer;
           if (ans) {
             setRatings({
@@ -104,7 +114,7 @@ export default function PublicSatisfactionForm() {
     };
   }, [eventId]);
 
-  const canSubmit = useMemo(() => ratings.overall > 0 && !alreadyAnswered, [ratings, alreadyAnswered]);
+  const canSubmit = useMemo(() => ratings.overall > 0 && !alreadyAnswered && surveyActive, [ratings, alreadyAnswered, surveyActive]);
 
   const handleSubmit = async () => {
     try {
@@ -143,72 +153,97 @@ export default function PublicSatisfactionForm() {
       <div className="max-w-3xl mx-auto px-6 py-12">
         <LogoFauves width={100} className="logo-fauves-mono" />
 
-        <h1 className="mt-12 text-4xl font-extrabold tracking-tight">Então, como foi <span className="border-b-2 border-zinc-300">{eventName}</span>?</h1>
-        <p className="mt-6 text-zinc-600">Se quiser alterar sua resposta, volte ao email que enviamos.</p>
+        {showForm ? (
+          <>
+            <h1 className="mt-12 text-4xl font-extrabold tracking-tight">Então, como foi <span className="border-b-2 border-zinc-300">{eventName}</span>?</h1>
+            <p className="mt-6 text-zinc-600">Se quiser alterar sua resposta, volte ao email que enviamos.</p>
 
-        <hr className="my-8 border-zinc-200" />
+            <hr className="my-8 border-zinc-200" />
 
-        <div className="text-zinc-600 text-sm">Agora, como você avaliaria...</div>
+            <div className="text-zinc-600 text-sm">Agora, como você avaliaria...</div>
 
-        <div className="mt-6 space-y-12">
-          <div>
-            <div className="flex items-center gap-2 text-2xl font-semibold"><span>⭐</span> Satisfação geral</div>
-            <div className="text-zinc-600 mt-1">No geral, qual a sua satisfação com o evento?</div>
-            <div className="mt-2"><StarPicker value={ratings.overall} onChange={(n) => setRatings((s) => ({ ...s, overall: n }))} /></div>
-          </div>
+            <div className="mt-6 space-y-12">
+              <div>
+                <div className="flex items-center gap-2 text-2xl font-semibold"><span>⭐</span> Satisfação geral</div>
+                <div className="text-zinc-600 mt-1">No geral, qual a sua satisfação com o evento?</div>
+                <div className="mt-2"><StarPicker value={ratings.overall} onChange={(n) => setRatings((s) => ({ ...s, overall: n }))} /></div>
+              </div>
 
-          <div>
-            <div className="flex items-center gap-2 text-2xl font-semibold"><span>🎸</span> O Lineup</div>
-            <div className="text-zinc-600 mt-1">Quanto você curtiu os artistas?</div>
-            <div className="mt-2"><StarPicker value={ratings.lineup} onChange={(n) => setRatings((s) => ({ ...s, lineup: n }))} /></div>
-          </div>
+              <div>
+                <div className="flex items-center gap-2 text-2xl font-semibold"><span>🎸</span> O Lineup</div>
+                <div className="text-zinc-600 mt-1">Quanto você curtiu os artistas?</div>
+                <div className="mt-2"><StarPicker value={ratings.lineup} onChange={(n) => setRatings((s) => ({ ...s, lineup: n }))} /></div>
+              </div>
 
-          <div>
-            <div className="flex items-center gap-2 text-2xl font-semibold"><span>🔊</span> O Sound System</div>
-            <div className="text-zinc-600 mt-1">Como estava o sistema de som?</div>
-            <div className="mt-2"><StarPicker value={ratings.sound} onChange={(n) => setRatings((s) => ({ ...s, sound: n }))} /></div>
-          </div>
+              <div>
+                <div className="flex items-center gap-2 text-2xl font-semibold"><span>🔊</span> O Sound System</div>
+                <div className="text-zinc-600 mt-1">Como estava o sistema de som?</div>
+                <div className="mt-2"><StarPicker value={ratings.sound} onChange={(n) => setRatings((s) => ({ ...s, sound: n }))} /></div>
+              </div>
 
-          <div>
-            <div className="flex items-center gap-2 text-2xl font-semibold"><span>🎪</span> O Local</div>
-            <div className="text-zinc-600 mt-1">Cenografia, estrutura, capacidade...</div>
-            <div className="mt-2"><StarPicker value={ratings.venue} onChange={(n) => setRatings((s) => ({ ...s, venue: n }))} /></div>
-          </div>
+              <div>
+                <div className="flex items-center gap-2 text-2xl font-semibold"><span>🎪</span> O Local</div>
+                <div className="text-zinc-600 mt-1">Cenografia, estrutura, capacidade...</div>
+                <div className="mt-2"><StarPicker value={ratings.venue} onChange={(n) => setRatings((s) => ({ ...s, venue: n }))} /></div>
+              </div>
 
-          <div>
-            <div className="flex items-center gap-2 text-2xl font-semibold"><span>🛡️</span> A Segurança</div>
-            <div className="text-zinc-600 mt-1">Quão seguro(a) você se sentiu?</div>
-            <div className="mt-2"><StarPicker value={ratings.security} onChange={(n) => setRatings((s) => ({ ...s, security: n }))} /></div>
-          </div>
+              <div>
+                <div className="flex items-center gap-2 text-2xl font-semibold"><span>🛡️</span> A Segurança</div>
+                <div className="text-zinc-600 mt-1">Quão seguro(a) você se sentiu?</div>
+                <div className="mt-2"><StarPicker value={ratings.security} onChange={(n) => setRatings((s) => ({ ...s, security: n }))} /></div>
+              </div>
 
-          <div>
-            <div className="flex items-center gap-2 text-2xl font-semibold"><span>📍</span> Acessibilidade (localização)</div>
-            <div className="text-zinc-600 mt-1">Foi fácil chegar até lá?</div>
-            <div className="mt-2"><StarPicker value={ratings.accessibility} onChange={(n) => setRatings((s) => ({ ...s, accessibility: n }))} /></div>
-          </div>
-        </div>
+              <div>
+                <div className="flex items-center gap-2 text-2xl font-semibold"><span>📍</span> Acessibilidade (localização)</div>
+                <div className="text-zinc-600 mt-1">Foi fácil chegar até lá?</div>
+                <div className="mt-2"><StarPicker value={ratings.accessibility} onChange={(n) => setRatings((s) => ({ ...s, accessibility: n }))} /></div>
+              </div>
+            </div>
 
-        <hr className="my-8 border-zinc-200" />
+            <hr className="my-8 border-zinc-200" />
 
-        <div>
-          <div className="text-2xl font-semibold">Mais algum comentário que gostaria de compartilhar?</div>
-          <div className="text-zinc-600 text-sm">O microfone é seu 🎤😊</div>
-          <textarea
-            className="mt-3 w-full min-h-[120px] rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 p-3"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Escreva aqui"
-          />
-        </div>
+            <div>
+              <div className="text-2xl font-semibold">Mais algum comentário que gostaria de compartilhar?</div>
+              <div className="text-zinc-600 text-sm">O microfone é seu 🎤😊</div>
+              <textarea
+                className="mt-3 w-full min-h-[120px] rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 p-3"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Escreva aqui"
+              />
+            </div>
 
-        <div className="mt-8 flex items-center justify-between">
-          <div className="text-zinc-600 text-sm">
-            {alreadyAnswered ? 'Você já enviou sua resposta.' : 'Obrigado pelo feedback!'}
-          </div>
-          <Button disabled={!canSubmit || submitting} onClick={handleSubmit} className="bg-black hover:bg-zinc-800 text-white">
-            {submitting ? 'Enviando...' : alreadyAnswered ? 'Enviado' : 'Enviar'}
-          </Button>
-      </div>
+            <div className="mt-8 flex items-center justify-between">
+              <div className="text-zinc-600 text-sm">
+                {alreadyAnswered ? 'Você já enviou sua resposta.' : 'Obrigado pelo feedback!'}
+              </div>
+              <Button disabled={!canSubmit || submitting} onClick={handleSubmit} className="bg-black hover:bg-zinc-800 text-white">
+                {submitting ? 'Enviando...' : alreadyAnswered ? 'Enviado' : 'Enviar'}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <hr className="my-8 border-zinc-200" />
+
+            <div className="mb-10 rounded-2xl border border-amber-200 bg-amber-50 px-6 py-8 text-center shadow-sm">
+              <div className="flex flex-col items-center gap-4">
+                <img
+                  src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f914/512.gif"
+                  alt="Emoji animado pensativo"
+                  className="h-16 w-16"
+                  loading="lazy"
+                />
+                <div>
+                  <p className="text-xl font-semibold text-amber-900">Pesquisa indisponível</p>
+                  <p className="mt-1 text-sm text-amber-800">
+                    Este evento ainda não liberou o formulário de feedback. Volte mais tarde ou aguarde um novo convite.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { fetchApi } from "@/lib/apiBase";
 import { useLocation } from "react-router-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import { getEventPath } from '@/lib/eventUrl';
-import { ChevronLeft, ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronDown, ExternalLink, Home, Megaphone, MessageSquare, Users, UserCog, BarChart3 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import './event-sidebar-scrollbar.css';
@@ -17,9 +17,12 @@ interface Step {
   link?: string;
 }
 
+type MenuIcon = React.ComponentType<{ className?: string }>;
+
 interface MenuItem {
   title: string;
   hasSubmenu?: boolean;
+  icon?: MenuIcon;
 }
 
 interface EventDetailsSidebarProps {
@@ -68,12 +71,78 @@ const defaultSteps: Step[] = [
 ];
 
 const defaultMenuItems: MenuItem[] = [
-  { title: "Painel" },
-  { title: "Marketing", hasSubmenu: true },
-  { title: "Gerenciar participantes", hasSubmenu: true },
-  { title: "Gerenciar equipe" },
-  { title: "Relatórios", hasSubmenu: true }
+  { title: "Painel", icon: Home },
+  { title: "Marketing", hasSubmenu: true, icon: Megaphone },
+  { title: "Pesquisa de satisfação", icon: MessageSquare },
+  { title: "Gerenciar participantes", hasSubmenu: true, icon: Users },
+  { title: "Gerenciar equipe", icon: UserCog },
+  { title: "Relatórios", hasSubmenu: true, icon: BarChart3 }
 ];
+
+type CachedEventInfo = {
+  name?: string;
+  date?: string;
+  status?: "Rascunho" | "Publicado";
+  ticketCount?: number;
+};
+
+const eventInfoCache = new Map<string, CachedEventInfo>();
+const eventInfoPromises = new Map<string, Promise<CachedEventInfo>>();
+
+const mergeEventCache = (eventId: string, patch: CachedEventInfo) => {
+  if (!eventId) return;
+  const prev = eventInfoCache.get(eventId) || {};
+  eventInfoCache.set(eventId, { ...prev, ...patch });
+};
+
+const normalizeStatus = (value: any, fallback: "Rascunho" | "Publicado" = "Rascunho"): "Rascunho" | "Publicado" => {
+  if (typeof value === 'string') {
+    return value.toLowerCase() === 'publicado' ? 'Publicado' : fallback;
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'Publicado' : 'Rascunho';
+  }
+  return fallback;
+};
+
+const fetchEventInfo = (eventId: string): Promise<CachedEventInfo> => {
+  if (!eventId) return Promise.resolve({});
+  if (eventInfoPromises.has(eventId)) return eventInfoPromises.get(eventId)!;
+
+  const promise = (async () => {
+    const info: CachedEventInfo = { ...(eventInfoCache.get(eventId) || {}) };
+    try {
+      const res = await fetchApi(`/api/event/${eventId}`);
+      if (res?.ok) {
+        const ev = await res.json().catch(() => null);
+        if (ev) {
+          info.name = ev.name || ev.title || ev.eventName || info.name;
+          info.date = ev.startDate ? (ev.startDate + (ev.startTime ? ` às ${ev.startTime}` : '')) : (ev.date || info.date);
+          info.status = normalizeStatus(
+            typeof ev.isPublished === 'boolean' ? ev.isPublished : ev.status,
+            info.status || 'Rascunho'
+          );
+        }
+      }
+    } catch {}
+
+    try {
+      const ticketRes = await fetchApi(`/api/ticket-type/event/${eventId}`);
+      if (ticketRes?.ok) {
+        const data = await ticketRes.json().catch(() => null);
+        if (Array.isArray(data)) info.ticketCount = data.length;
+      }
+    } catch {}
+
+    mergeEventCache(eventId, info);
+    return info;
+  })().finally(() => {
+    if (eventInfoPromises.get(eventId) === promise) eventInfoPromises.delete(eventId);
+  });
+
+  eventInfoPromises.set(eventId, promise);
+  return promise;
+};
 
 export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   eventName = "Nome do evento",
@@ -121,32 +190,28 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   // Local copies of event name/date so the sidebar can fetch and display details
   const [nameLocal, setNameLocal] = React.useState<string | undefined>(eventName);
   const [dateLocal, setDateLocal] = React.useState<string | undefined>(eventDate);
+  const [ticketCount, setTicketCount] = React.useState<number | null>(null);
   React.useEffect(() => setNameLocal(eventName), [eventName]);
   React.useEffect(() => setDateLocal(eventDate), [eventDate]);
 
-  // Fetch event details when we have an eventId but parent didn't provide full props
+  const applyEventInfo = React.useCallback((info: CachedEventInfo) => {
+    if (!info) return;
+    if (info.name) setNameLocal(info.name);
+    if (info.date) setDateLocal(info.date);
+    if (info.status) setStatusLocal(info.status);
+    if (typeof info.ticketCount === 'number') setTicketCount(info.ticketCount);
+  }, []);
+
   React.useEffect(() => {
-    let mounted = true;
     if (!eventId) return;
-    (async () => {
-      try {
-        const res = await fetchApi(`/api/event/${eventId}`);
-        if (!res || !res.ok) return;
-        const ev = await res.json().catch(() => null);
-        if (!ev || !mounted) return;
-        // set sensible fallbacks
-        const title = ev.name || ev.title || ev.eventName || ev.title || eventName;
-        const dateVal = ev.startDate ? (ev.startDate + (ev.startTime ? ` às ${ev.startTime}` : '')) : (ev.date || eventDate);
-        const status = typeof ev.isPublished === 'boolean' ? (ev.isPublished ? 'Publicado' : 'Rascunho') : (ev.status || eventStatus);
-        setNameLocal(title);
-        setDateLocal(dateVal);
-        setStatusLocal(status as typeof eventStatus);
-      } catch (e) {
-        // ignore fetch errors — sidebar is best-effort
-      }
-    })();
-    return () => { mounted = false; };
-  }, [eventId, eventName, eventDate, eventStatus]);
+    let cancelled = false;
+    const cached = eventInfoCache.get(eventId);
+    if (cached) applyEventInfo(cached);
+    fetchEventInfo(eventId).then((info) => {
+      if (!cancelled) applyEventInfo(info);
+    });
+    return () => { cancelled = true; };
+  }, [eventId, applyEventInfo]);
 
   // internal publish/unpublish handler if parent didn't provide one
   const internalChangeStatus = React.useCallback(async (newStatus: "Rascunho" | "Publicado") => {
@@ -171,7 +236,9 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
         if (getRes.ok) {
           const ev = await getRes.json().catch(() => null);
           const published = !!(ev && ev.isPublished);
-          setStatusLocal(published ? 'Publicado' : 'Rascunho');
+          const statusValue = published ? 'Publicado' : 'Rascunho';
+          setStatusLocal(statusValue);
+          mergeEventCache(eventId, { status: statusValue });
           toast?.({ title: published ? 'Evento publicado' : 'Evento despublicado' });
           // dispatch a window event so parent pages can listen and refresh
           try { window.dispatchEvent(new CustomEvent('fauves:eventStatusChanged', { detail: { eventId, isPublished: published } })); } catch {}
@@ -182,6 +249,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
       }
       toast?.({ title: newStatus === 'Publicado' ? 'Evento publicado' : 'Evento despublicado' });
       setStatusLocal(newStatus);
+      mergeEventCache(eventId, { status: newStatus });
       try { window.dispatchEvent(new CustomEvent('fauves:eventStatusChanged', { detail: { eventId, isPublished: newStatus === 'Publicado' } })); } catch {}
       return true;
     } catch (e) {
@@ -216,32 +284,15 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
     if (route) navigate(route);
   };
 
-  // Compute dynamic step statuses to show checkmarks when completed
-  const [ticketCount, setTicketCount] = React.useState<number | null>(null);
-  React.useEffect(() => {
-    const run = async () => {
-      if (!eventId) { setTicketCount(null); return; }
-      try {
-  // The backend exposes a list endpoint for ticket types; request that and use its length
-  const res = await fetchApi(`/api/ticket-type/event/${eventId}`);
-        if (!res.ok) { setTicketCount(0); return; }
-        const data = await res.json();
-        if (Array.isArray(data)) setTicketCount(data.length);
-        else setTicketCount(0);
-      } catch (_) { /* ignore */ }
-    };
-    run();
-  }, [eventId]);
-
   const displaySteps: Step[] = React.useMemo(() => {
     const isOnCreate = location.pathname.startsWith('/create-event');
     const isOnTickets = location.pathname.startsWith('/create-tickets');
     const isOnPublish = location.pathname.startsWith('/publish-details');
 
     // Completed logic independent of current route (editing keeps check)
-  const isCreateCompleted = !!eventId; // criou evento => ok
+    const isCreateCompleted = !!eventId; // criou evento => ok
     const isTicketsCompleted = !!eventId && (ticketCount ?? 0) > 0; // tem ao menos 1 ingresso => ok
-  const isPublishCompleted = statusLocal === 'Publicado';
+    const isPublishCompleted = statusLocal === 'Publicado';
 
     const createStatus: Step['status'] = isCreateCompleted ? 'completed' : (isOnCreate ? 'active' : 'inactive');
     const ticketsStatus: Step['status'] = isTicketsCompleted ? 'completed' : (!eventId ? 'inactive' : (isOnTickets ? 'active' : 'inactive'));
@@ -256,13 +307,13 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
       },
       {
         id: 'configure-ticket',
-        title: 'Configurar ingresso',
+        title: isTicketsCompleted ? 'Ingressos' : 'Configurar ingresso',
         description: 'Usar nossas sugestões para ajudar a vender mais ingressos ou criar manualmente o seu próprio',
         status: ticketsStatus,
       },
       {
         id: 'publish',
-        title: 'Publicar',
+        title: isPublishCompleted ? 'Configurações do evento' : 'Publicar',
         description: 'Revisar a página e as configurações do seu evento e publicá-lo',
         status: publishStatus,
       },
@@ -278,8 +329,9 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   const isOnMarketing = location.pathname.startsWith('/marketing');
   // Panel is active when we're not on the create/tickets/publish flows and not on marketing pages
   const isOnParticipants = location.pathname.startsWith('/participantes/pedidos') || location.pathname.startsWith('/participantes/lista') || location.pathname.startsWith('/participantes/checkin');
+  const isOnSatisfaction = location.pathname.startsWith('/pesquisa-satisfacao');
   const isOnEquipe = location.pathname.startsWith('/gerenciar-equipe');
-  const isPanelActive = !(isOnCreate || isOnTickets || isOnPublish || isOnMarketing || isOnParticipants || isOnEquipe);
+  const isPanelActive = !(isOnCreate || isOnTickets || isOnPublish || isOnMarketing || isOnParticipants || isOnEquipe || isOnSatisfaction);
   // Always route 'Painel' to painel-evento when we have an eventId
   const panelRoute = React.useMemo(() => {
     if (eventId) return `/painel-evento/${eventId}`;
@@ -473,11 +525,11 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
     style={fixed ? { position: 'fixed', top: fixedTop, left: fixedLeft, width: fixedWidth, height: '100vh', zIndex: 30 } : { height: '100vh', maxWidth: 280 }}
     data-sidebar-detail={fixed ? 'true' : undefined}
   >
-      <div className="pb-32 w-full bg-gray-50 dark:bg-[#0b0b0b] border-r border-gray-100 dark:border-[#1F1F1F]">
+      <div className="pb-[100px] w-full bg-gray-50 dark:bg-[#0b0b0b] border-r border-gray-100 dark:border-[#1F1F1F]">
         {/* Header */}
     <div className="flex gap-4 items-center px-3.5 py-4 text-sm text-indigo-700 dark:text-white bg-gray-50 dark:bg-[#0b0b0b] border-b border-neutral-300 dark:border-[#1F1F1F] min-h-[59px]">
           <div className="object-contain shrink-0 self-stretch my-auto aspect-[0.56] w-[5px]">
-            <ChevronLeft className="w-[13px]" />
+            <ChevronLeft className="w-4 h-4" />
           </div>
           <button 
             className="self-stretch my-auto hover:text-indigo-900 transition-colors"
@@ -506,7 +558,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                     <DropdownMenuTrigger asChild>
                       <button className="relative flex items-center justify-between px-5 py-3 border border-stone-300 rounded-full bg-white dark:bg-[#242424] text-sm font-semibold text-indigo-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500 transition-all w-[137px]">
                         <span>{statusLocal}</span>
-                        <ChevronDown className="w-4 h-4 text-indigo-700 dark:text-white ml-2" />
+                        <ChevronDown className="w-5 h-5 text-indigo-700 dark:text-white ml-2" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44 bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
@@ -626,12 +678,14 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
         {showEventMenus && (
           <div className="-mb-6 w-full text-sm font-semibold text-indigo-950 dark:text-white">
             {menuItems.map((item, index) => {
+              const IconComp = item.icon;
               const active = (item.title === 'Painel' && isPanelActive) || (item.title === 'Gerenciar equipe' && isOnEquipe);
               const isPanelItem = item.title === 'Painel';
-              const isMarketing = item.title === 'Marketing';
-              const isEquipe = item.title === 'Gerenciar equipe';
-              return (
-                <div key={index}>
+                const isMarketing = item.title === 'Marketing';
+                const isSatisfaction = item.title === 'Pesquisa de satisfação';
+                const isEquipe = item.title === 'Gerenciar equipe';
+                return (
+                  <div key={index}>
                   {item.hasSubmenu ? (
                     <div>
                       <div
@@ -640,32 +694,42 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                         role="button"
                         tabIndex={0}
                       >
-                        <div className="self-stretch my-auto">{item.title}</div>
-                        <ChevronDown className={`object-contain shrink-0 self-stretch my-auto w-2 aspect-[1.6] transition-transform ${expandedMenu === item.title ? 'rotate-180' : ''}`} />
+                        <div className="self-stretch my-auto flex items-center gap-3">
+                          {IconComp && <IconComp className="w-4 h-4" />}
+                          <span>{item.title}</span>
+                        </div>
+                        <ChevronDown className={`object-contain shrink-0 self-stretch my-auto w-5 h-5 transition-transform ${expandedMenu === item.title ? 'rotate-180' : ''}`} />
                       </div>
                       {/* Submenu items (only for Marketing right now) */}
                       {expandedMenu === item.title && isMarketing && (
                         <div className="bg-white dark:bg-[#242424] border-t border-gray-100 dark:border-[#1F1F1F]">
-                          {(() => {
-                            const linkActive = location.pathname.startsWith('/marketing/link-rastreamento');
-                            const pixelsActive = location.pathname.startsWith('/marketing/pixels');
-                            return (
-                              <>
-                                <div
-                                  className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${linkActive ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
-                                  onClick={() => navigate(eventId ? `/marketing/link-rastreamento/${eventId}` : '/marketing/link-rastreamento')}
-                                >
-                                  Link de rastreamento
-                                </div>
-                                <div
-                                  className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${pixelsActive ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
-                                  onClick={() => navigate(eventId ? `/marketing/pixels/${eventId}` : '/marketing/pixels')}
-                                >
-                                  Pixels de rastreamento
-                                </div>
-                              </>
-                            );
-                          })()}
+                            {(() => {
+                             const linkActive = location.pathname.startsWith('/marketing/link-rastreamento');
+                             const pixelsActive = location.pathname.startsWith('/marketing/pixels');
+                             const ambassadorsActive = location.pathname.startsWith('/marketing/embaixadores');
+                              return (
+                                <>
+                                  <div
+                                    className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${linkActive ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
+                                    onClick={() => navigate(eventId ? `/marketing/link-rastreamento/${eventId}` : '/marketing/link-rastreamento')}
+                                  >
+                                    Link de rastreamento
+                                  </div>
+                                  <div
+                                    className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${pixelsActive ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
+                                    onClick={() => navigate(eventId ? `/marketing/pixels/${eventId}` : '/marketing/pixels')}
+                                  >
+                                    Pixels de rastreamento
+                                  </div>
+                                  <div
+                                    className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${ambassadorsActive ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
+                                    onClick={() => navigate(eventId ? `/marketing/embaixadores/${eventId}` : '/marketing/embaixadores')}
+                                  >
+                                    Embaixadores
+                                  </div>
+                                </>
+                              );
+                            })()}
                         </div>
                       )}
                       {/* Submenu items for Gerenciar participantes */}
@@ -681,7 +745,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                             className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${location.pathname.startsWith('/participantes/lista') ? ' bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : ' hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
                             onClick={() => navigate(eventId ? `/participantes/lista/${eventId}` : '/participantes/lista')}
                           >
-                            Lista de Participantes
+                            Lista de Convidados
                           </div>
                           <div
                             className={`pl-8 pr-6 py-6 min-h-[65px] cursor-pointer flex items-center ${location.pathname.startsWith('/participantes/checkin') ? ' bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : ' hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-[#1F1F1F] dark:hover:text-white'}`}
@@ -694,16 +758,20 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                     </div>
                   ) : (
                     <div
-                      className={`flex gap-2.5 items-center p-6 w-full min-h-[65px] transition-colors ${active ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'bg-gray-50 dark:bg-[#0b0b0b]'} ${isPanelItem ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isEquipe ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''}`}
+                      className={`flex gap-2.5 items-center p-6 w-full min-h-[65px] transition-colors ${active ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'bg-gray-50 dark:bg-[#0b0b0b]'} ${isPanelItem ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isEquipe ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isSatisfaction ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''}`}
                       onClick={
                         isPanelItem ? (eventId ? () => navigate(panelRoute) : undefined)
                         : isEquipe ? (eventId ? () => navigate(`/gerenciar-equipe/${eventId}`) : undefined)
+                        : isSatisfaction ? (eventId ? () => navigate(`/pesquisa-satisfacao/${eventId}`) : undefined)
                         : undefined
                       }
                       role={(isPanelItem && eventId) || (isEquipe && eventId) ? 'button' : undefined}
                       tabIndex={(isPanelItem && eventId) || (isEquipe && eventId) ? 0 : -1}
                     >
-                      <div className="self-stretch my-auto">{item.title}</div>
+                      <div className="self-stretch my-auto flex items-center gap-3">
+                        {IconComp && <IconComp className="w-4 h-4" />}
+                        <span>{item.title}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -717,3 +785,5 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
 };
 
 export default EventDetailsSidebar;
+
+

@@ -11,6 +11,7 @@ import OrganizerReportsPage from "./pages/ReportsPage";
 import OrganizerReportsOrders from "./pages/OrganizerReportsOrders";
 import OrganizerReportsSales from "./pages/OrganizerReportsSales";
 import OrganizerFinances from "./pages/OrganizerFinances";
+import OrganizerFinanceEvent from "./pages/OrganizerFinanceEvent";
 import Event from "./pages/Event";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -28,9 +29,11 @@ import OrganizerEvents from "./pages/OrganizerEvents";
 import PublicCollection from "./pages/PublicCollection";
 import OrganizationPublicProfile from "./pages/OrganizationPublicProfile";
 import OrdersManager from "./pages/OrdersManager";
-import MarketingTools from "./pages/MarketingTools";
 import MarketingLink from "./pages/MarketingLink";
 import MarketingPixels from "./pages/MarketingPixels";
+import MarketingAmbassadors from "./pages/MarketingAmbassadors";
+import SatisfactionSurvey from "./pages/SatisfactionSurvey";
+import PublicSatisfactionForm from "./pages/PublicSatisfactionForm";
 import Checkout from "./pages/Checkout";
 import CheckoutPix from "./pages/CheckoutPix";
 import { useOrganization } from '@/context/OrganizationContext';
@@ -38,7 +41,7 @@ import { useAuth } from '@/context/AuthContext';
 import { initApiDetection } from '@/lib/apiBase';
 import { LocationProvider } from '@/context/LocationContext';
 import OrganizationTransitionOverlay from '@/components/OrganizationTransitionOverlay';
-import OrganizerSettingsPage from './pages/OrganizerSettingsPage';
+import OrganizerSettingsV2 from './pages/OrganizerSettingsV2';
 import AdminLayout from './pages/Admin';
 import AdminUsers from './pages/AdminUsers';
 import AdminEvents from './pages/AdminEvents';
@@ -87,20 +90,29 @@ const AppInner = () => {
           <Route path="/test-supabase" element={<TestSupabase />} />
           <Route path="/organizer-events" element={<OrganizerEvents />} />
           <Route path="/organizer-orders" element={<OrdersManager />} />
-          <Route path="/organizer-marketing" element={<MarketingTools />} />
+          {/* /organizer-marketing route removed */}
           <Route path="/marketing/link-rastreamento" element={<MarketingLink />} />
           <Route path="/marketing/link-rastreamento/:id" element={<MarketingLink />} />
           <Route path="/marketing/pixels" element={<MarketingPixels />} />
           <Route path="/marketing/pixels/:id" element={<MarketingPixels />} />
+          <Route path="/marketing/embaixadores" element={<MarketingAmbassadors />} />
+          <Route path="/marketing/embaixadores/:id" element={<MarketingAmbassadors />} />
+          <Route path="/pesquisa-satisfacao" element={<SatisfactionSurvey />} />
+          <Route path="/pesquisa-satisfacao/:id" element={<SatisfactionSurvey />} />
+          {/* Public survey form (after event) */}
+          <Route path="/after-event/:id" element={<PublicSatisfactionForm />} />
+          {/* Backward-compat alias (can remove later) */}
+          <Route path="/responder-pesquisa/:id" element={<PublicSatisfactionForm />} />
           <Route path="/colecoes/:slug" element={<PublicCollection />} />
           <Route path="/org/:slug" element={<OrganizationPublicProfile />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/pix" element={<CheckoutPix />} />
-          <Route path="/organizer-settings" element={<OrganizerSettingsPage />} />
+          <Route path="/organizer-settings" element={<OrganizerSettingsV2 />} />
           <Route path="/organizer-reports" element={<OrganizerReportsPage />} />
           <Route path="/organizer-reports/orders" element={<OrganizerReportsOrders />} />
           <Route path="/organizer-reports/sales" element={<OrganizerReportsSales />} />
           <Route path="/organizer-finances" element={<OrganizerFinances />} />
+          <Route path="/organizer-finances/:eventId" element={<OrganizerFinanceEvent />} />
           <Route path="/participantes/pedidos/:eventId" element={<ParticipantesPedidos />} />
           <Route path="/participantes/lista/:eventId" element={<ParticipantesLista />} />
           <Route path="/participantes/checkin/:eventId" element={<ParticipantesCheckin />} />

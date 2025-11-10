@@ -269,7 +269,7 @@ function Checkout() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-white">
       {isDev && (
         <div className="fixed z-50 bottom-4 right-4 w-80 text-[11px] font-mono">
           <button

@@ -18,7 +18,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ activeKeyOverride }) => {
     { key: 'painel', label: 'Painel', icon: Home, route: '/organizer-dashboard' },
     { key: 'eventos', label: 'Eventos', icon: Calendar, route: '/organizer-events' },
     { key: 'pedidos', label: 'Pedidos', icon: ClipboardList, route: '/organizer-orders' },
-    { key: 'marketing', label: 'Marketing', icon: Megaphone, route: '/organizer-marketing' },
+    // marketing page removed
     { key: 'relatorios', label: 'Relatórios', icon: BarChart2, route: '/organizer-reports' },
     { key: 'financas', label: 'Finanças', icon: Banknote, route: '/organizer-finances' },
     { key: 'ajustes', label: 'Ajustes', icon: Settings, route: '/organizer-settings' },

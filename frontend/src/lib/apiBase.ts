@@ -11,9 +11,10 @@ let _rawEnv = (import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL
 if (/\/api$/i.test(_rawEnv)) _rawEnv = _rawEnv.replace(/\/api$/i, '');
 const envBase = _rawEnv || null;
 const isProd = import.meta.env.PROD;
-const DEFAULT_PROD_BACKEND = 'https://fauves-backend-production.up.railway.app';
+const DEFAULT_PROD_BACKEND = import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL || 'https://fauves-backend-production.up.railway.app';
 
 const candidates: string[] = [
+  DEFAULT_PROD_BACKEND,
   'http://localhost:4000',
   'http://127.0.0.1:4000',
   'http://127.0.0.1:3000',
@@ -39,7 +40,7 @@ if (envBase) {
 async function isBackendHealthy(base: string): Promise<boolean> {
   try {
     const ctrl = new AbortController();
-    const to = setTimeout(() => ctrl.abort(), 1500);
+    const to = setTimeout(() => ctrl.abort(), 1200);
     const urls = [base + '/api/health', base + '/health'];
     let r: Response | null = null;
     for (const u of urls) {
@@ -47,7 +48,17 @@ async function isBackendHealthy(base: string): Promise<boolean> {
     }
     clearTimeout(to);
     if (r && r.ok) {
-      try { const j = await r.clone().json(); if (j && typeof j.time === 'string') return true; } catch {}
+      // Consider 200 OK as healthy to avoid shape mismatches between different health endpoints
+      // Also handle variants: { time: string } or { ts: number } or { ok: true }
+      try {
+        const j = await r.clone().json();
+        if (j && (typeof (j as any).time === 'string' || typeof (j as any).ts === 'number' || (j as any).ok === true)) {
+          return true;
+        }
+      } catch { /* non-JSON body: still treat 200 OK as healthy */
+        return true;
+      }
+      return true;
     }
   } catch {}
   return false;

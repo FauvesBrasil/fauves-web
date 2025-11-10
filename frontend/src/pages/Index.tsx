@@ -167,7 +167,7 @@ const Index = () => {
       <EventSlider slides={sliderEvents} />
       <div className="max-w-[1352px] mx-auto">
         <main>
-          <section className="px-[156px] py-5 max-md:p-5 max-sm:p-[15px]">
+          <section className="px-[156px] py-5 max-md:p-5 max-sm:px-[30px] max-sm:py-5">
             <CategoryTags />
           </section>
 

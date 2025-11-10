@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useOrganization } from '@/context/OrganizationContext';
 
 // Exemplo de eventos mockados
 const mockEvents = [
@@ -11,19 +12,61 @@ const mockEvents = [
 ];
 
 export default function SelectEventModal({ open, onClose, onConfirm }) {
+  const { selectedOrg } = useOrganization();
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState([]);
-  const filteredEvents = mockEvents.filter(e => e.name.toLowerCase().includes(search.toLowerCase()));
-  const handleToggle = (id) => {
-    setSelected(sel => sel.includes(id) ? sel.filter(s => s !== id) : [...sel, id]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
+
+  useEffect(() => {
+    // reset selection / search when modal opens
+    if (open) {
+      setSearch('');
+      setSelectedId(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    // Load events scoped to the currently selected organization
+    const abort = { ok: false } as any;
+    (async () => {
+      setLoading(true);
+      try {
+        if (!selectedOrg?.id) {
+          setEvents([]);
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(`/api/organization/${selectedOrg.id}/events`);
+        if (!res.ok) { setEvents([]); setLoading(false); return; }
+        const list = await res.json();
+        if (!abort.ok) setEvents(Array.isArray(list) ? list : []);
+      } catch (e) {
+        setEvents([]);
+      } finally { if (!abort.ok) setLoading(false); }
+    })();
+    return () => { abort.ok = true; };
+  }, [open, selectedOrg?.id]);
+
+  const filteredEvents = events.filter(e => (e.name || e.title || '').toLowerCase().includes(search.toLowerCase()));
+
+  const handleConfirm = () => {
+    if (!selectedId) return onConfirm([]);
+    // keep onConfirm contract as array for compatibility; single-selection enforced
+    const selectedEv = events.find(e => String(e.id) === String(selectedId));
+    // call onConfirm with the id array and also pass the selected event object as a second arg
+    // (callsites that only expect the ids will ignore the extra param)
+    onConfirm([String(selectedId)], selectedEv ? { id: selectedEv.id, name: selectedEv.name || selectedEv.title } : undefined);
   };
+
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent hideClose={false}>
         <div className="w-full max-w-md p-2 sm:p-6 space-y-4">
-          <div className="flex gap-8 border-b mb-4">
-            <button className="pb-3 text-base font-bold text-[#231942] border-b-2 border-[#6C63FF]">Eventos ({mockEvents.length})</button>
-            <button className="pb-3 text-base font-bold text-[#6C63FF]">Selecionados ({selected.length})</button>
+          <div className="flex items-center justify-between border-b mb-4 pb-3">
+            <h3 className="text-lg font-bold">Eventos</h3>
+            <div className="text-sm text-zinc-500">{selectedOrg ? selectedOrg.name : 'Selecione uma organização'}</div>
           </div>
           <Input
             value={search}
@@ -32,22 +75,26 @@ export default function SelectEventModal({ open, onClose, onConfirm }) {
             className="mb-4"
           />
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-            {filteredEvents.length === 0 ? (
-              <div className="border border-dashed rounded-lg p-6 text-center text-[#231942] text-sm">Nenhum evento</div>
+            {loading ? (
+              <div className="p-6 text-center text-sm text-zinc-500">Carregando eventos…</div>
+            ) : !selectedOrg ? (
+              <div className="border border-dashed rounded-lg p-6 text-center text-[#231942] text-sm">Selecione uma organização no cabeçalho para listar eventos.</div>
+            ) : filteredEvents.length === 0 ? (
+              <div className="border border-dashed rounded-lg p-6 text-center text-[#231942] text-sm">Nenhum evento encontrado</div>
             ) : filteredEvents.map(ev => (
               <label key={ev.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-indigo-50 cursor-pointer">
-                <input type="checkbox" checked={selected.includes(ev.id)} onChange={() => handleToggle(ev.id)} />
-                {ev.img ? <img src={ev.img} alt="" className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center"><span className="text-xs text-gray-500">IMG</span></div>}
+                <input type="radio" name="select-event" checked={String(selectedId) === String(ev.id)} onChange={() => setSelectedId(ev.id)} />
+                {ev.image || ev.img ? <img src={ev.image || ev.img} alt="" className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center"><span className="text-xs text-gray-500">IMG</span></div>}
                 <div className="flex flex-col">
-                  <span className="font-bold text-[#231942] text-sm">{ev.name}</span>
-                  <span className="text-xs text-[#231942]">{ev.date}</span>
+                  <span className="font-bold text-[#231942] text-sm">{ev.name || ev.title}</span>
+                  <span className="text-xs text-[#231942]">{ev.date || ev.startsAt || ''}</span>
                 </div>
               </label>
             ))}
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={onClose} className="px-4 py-2 rounded-lg border border-zinc-300 text-slate-600 hover:bg-zinc-100 text-sm font-medium">Cancelar</button>
-            <button onClick={() => onConfirm(selected)} className="px-4 py-2 rounded-lg bg-indigo-700 text-white hover:bg-indigo-800 text-sm font-semibold" disabled={selected.length === 0}>Executar relatório</button>
+            <button onClick={handleConfirm} className="px-4 py-2 rounded-lg bg-indigo-700 text-white hover:bg-indigo-800 text-sm font-semibold" disabled={!selectedId}>Executar relatório</button>
           </div>
         </div>
       </DialogContent>

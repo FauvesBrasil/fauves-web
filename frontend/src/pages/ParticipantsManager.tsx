@@ -4,7 +4,7 @@ import AppHeader from '@/components/AppHeader';
 
 const tabs = [
   { key: 'orders', label: 'Gerenciar pedidos' },
-  { key: 'participants', label: 'Lista de Participantes' },
+  { key: 'participants', label: 'Lista de Convidados' },
   { key: 'checkin', label: 'Check-in' },
 ];
 

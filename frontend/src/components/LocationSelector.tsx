@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface LocationSelectorProps {
   autoDetect?: boolean; // enable automatic selection based on user location
@@ -18,6 +19,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ autoDetect = true }
   const selectorButtonRef = useRef<HTMLButtonElement | null>(null);
   // start/end coordinates in page space passed into the overlay
   const [flightCoords, setFlightCoords] = useState<{ start: { x:number; y:number }; end: { x:number; y:number } } | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
 
   // Lista de estados com nome e sigla (memoized to avoid changing reference)
   const locations = useMemo(() => ([
@@ -206,6 +208,32 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ autoDetect = true }
     return () => window.clearTimeout(id);
   }, [pendingTo, setSelectedUf]);
 
+  useEffect(() => {
+    if (!isOpen) { setDropdownPos(null); return; }
+    const btn = selectorButtonRef.current;
+    if (!btn) return;
+    function compute() {
+      const r = btn.getBoundingClientRect();
+      const scrollX = window.scrollX || window.pageXOffset || 0;
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      const desiredWidth = Math.min(Math.max(r.width, 200), window.innerWidth - 16);
+      const rawLeft = r.left + scrollX;
+      const minLeft = 8 + scrollX;
+      const maxLeft = Math.max(scrollX + 8, scrollX + window.innerWidth - desiredWidth - 8);
+      const left = Math.min(Math.max(rawLeft, minLeft), maxLeft);
+      const top = r.bottom + scrollY + 6;
+      const width = desiredWidth;
+      setDropdownPos({ left, top, width });
+    }
+    compute();
+    window.addEventListener('resize', compute);
+    window.addEventListener('scroll', compute, true);
+    return () => {
+      window.removeEventListener('resize', compute);
+      window.removeEventListener('scroll', compute, true);
+    };
+  }, [isOpen]);
+
   return (
     <div className="relative">
       <button
@@ -229,38 +257,35 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ autoDetect = true }
         </svg>
       </button>
       
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-full bg-card border border-border dark:border-[#161616] rounded-[16.5px] shadow-[0_4px_12.9px_0_rgba(0,0,0,0.05)] z-10">
-          <div className="max-h-48 overflow-auto">
-            {locations.map((location, idx) => (
-              <button
-                key={location.sigla}
-                onClick={(ev) => {
-                  // If the user selected the same location, just close
-                  if (location.sigla === selectedLocation) { setIsOpen(false); return; }
-                  // compute page coordinates for start (selectorButton) and end (this menu item)
-                  const btnRect = selectorButtonRef.current?.getBoundingClientRect();
-                  const itemRect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
-                  if (btnRect && itemRect) {
-                    const start = { x: btnRect.left + btnRect.width/2 + window.scrollX, y: btnRect.top + btnRect.height/2 + window.scrollY };
-                    const end = { x: itemRect.left + itemRect.width/2 + window.scrollX, y: itemRect.top + itemRect.height/2 + window.scrollY };
-                    setFlightCoords({ start, end });
-                  } else {
-                    setFlightCoords(null);
-                  }
-
-                  // Start the flight animation from current -> chosen
-                  setPendingTo({ sigla: location.sigla, name: location.name });
-                  setIsOpen(false);
-                }}
-                className={`w-full px-4 h-10 leading-10 text-left text-foreground text-sm font-bold hover:bg-card/90 hover:text-[#EF4118] ${idx === 0 ? 'first:rounded-t-[16.5px]' : ''} ${idx === locations.length - 1 ? 'last:rounded-b-[16.5px]' : ''} transition-colors`}
-              >
-                {location.sigla}
-              </button>
-            ))}
+      {isOpen && dropdownPos && createPortal(
+        <div style={{ position: 'absolute', left: dropdownPos.left, top: dropdownPos.top, width: dropdownPos.width, zIndex: 9999 }}>
+          <div className="bg-card border border-border dark:border-[#161616] rounded-[16.5px] shadow-[0_4px_12.9px_0_rgba(0,0,0,0.05)]">
+            <div className="max-h-48 overflow-auto">
+              {locations.map((location, idx) => (
+                <button
+                  key={location.sigla}
+                  onClick={(ev) => {
+                    if (location.sigla === selectedLocation) { setIsOpen(false); return; }
+                    const btnRect = selectorButtonRef.current?.getBoundingClientRect();
+                    const itemRect = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+                    if (btnRect && itemRect) {
+                      const start = { x: btnRect.left + btnRect.width/2 + window.scrollX, y: btnRect.top + btnRect.height/2 + window.scrollY };
+                      const end = { x: itemRect.left + itemRect.width/2 + window.scrollX, y: itemRect.top + itemRect.height/2 + window.scrollY };
+                      setFlightCoords({ start, end });
+                    } else {
+                      setFlightCoords(null);
+                    }
+                    setPendingTo({ sigla: location.sigla, name: location.name });
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-4 h-10 leading-10 text-left text-foreground text-sm font-bold hover:bg-card/90 hover:text-[#EF4118] ${idx === 0 ? 'first:rounded-t-[16.5px]' : ''} ${idx === locations.length - 1 ? 'last:rounded-b-[16.5px]' : ''} transition-colors`}
+                >
+                  {location.sigla}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        </div>, document.body)}
       {/* pendingTo is handled inline in the header button (spinner next to sigla). */}
     </div>
   );

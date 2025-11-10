@@ -54,6 +54,7 @@ const OrganizerEvents: React.FC = () => {
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
   const { selectedOrg, orgs, loading: loadingOrgs } = useOrganization();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<'all'|'published'|'draft'|'past'>('all');
   const [loading, setLoading] = useState(true);
 
   // Collections state
@@ -246,9 +247,18 @@ const OrganizerEvents: React.FC = () => {
     let base = events;
     // If a selectedOrg exists, enforce it regardless of old dropdown filter
     if (selectedOrg) base = base.filter(e => e.organizerId === selectedOrg.id || (e as any).organizationId === selectedOrg.id);
+    // Apply status / time filters
+    if (filter === 'published') {
+      base = base.filter(e => (e as any).status === 'published');
+    } else if (filter === 'draft') {
+      base = base.filter(e => (e as any).status !== 'published' && (e as any).status !== 'deleted');
+    } else if (filter === 'past') {
+      const now = Date.now();
+      base = base.filter(e => { try { return new Date(e.startDate).getTime() < now; } catch { return false; } });
+    }
     if (!q) return base;
     return base.filter(e => e.name?.toLowerCase().includes(q));
-  }, [events, search, selectedOrg?.id]);
+  }, [events, search, selectedOrg?.id, filter]);
 
   const filteredCollections = useMemo(() => {
     const q = collectionsSearch.trim().toLowerCase();
@@ -424,16 +434,20 @@ const OrganizerEvents: React.FC = () => {
       <div className="rounded-3xl w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4">{/* dashboard-sized container */}
         <AppHeader />
         {/* mimic absolute inner layout used on dashboard for consistent left/top spacing */}
-        <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4 pb-32">
+        <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4 pb-[100px]">
           <h1 className="text-4xl font-bold text-slate-900 max-sm:text-3xl">Eventos</h1>
-          <div className="flex items-center gap-6 border-b border-zinc-200 -mb-2">{/* moved up tighter like dashboard sections */}
-            <button onClick={() => setShowCollections(false)} className={`pb-2 ${!showCollections ? 'border-b-2 border-indigo-600 text-indigo-700 font-bold' : 'text-slate-500 hover:text-slate-700'}`}>Eventos</button>
-            <button onClick={() => setShowCollections(true)} className={`pb-2 ${showCollections ? 'border-b-2 border-indigo-600 text-indigo-700 font-bold' : 'text-slate-500 hover:text-slate-700'}`}>Coleções</button>
-          </div>
+          {/* Tabs hidden: simplified UI for now (Eventos/Coleções removed) */}
           {!showCollections ? (
             <>
               <div className="flex items-center gap-4 mt-2">{/* simplified: removed placeholder select */}
                 <input className="flex-1 h-[46px] px-5 rounded-xl border border-[#E5E7EB] focus:outline-none focus:ring-2 focus:ring-indigo-200 text-[15px]" placeholder="Pesquisar eventos" value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+              {/* Filtros abaixo da barra de busca */}
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <button onClick={() => setFilter('all')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-zinc-200 text-slate-700'}`}>Todos</button>
+                <button onClick={() => setFilter('published')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${filter === 'published' ? 'bg-indigo-600 text-white' : 'bg-zinc-200 text-slate-700'}`}>Publicado</button>
+                <button onClick={() => setFilter('draft')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${filter === 'draft' ? 'bg-indigo-600 text-white' : 'bg-zinc-200 text-slate-700'}`}>Em rascunho</button>
+                <button onClick={() => setFilter('past')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${filter === 'past' ? 'bg-indigo-600 text-white' : 'bg-zinc-200 text-slate-700'}`}>Passado</button>
               </div>
               <div className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm mt-4">{/* card style like dashboard's large cards */}
                 <table className="w-full text-left">
@@ -565,46 +579,22 @@ const OrganizerEvents: React.FC = () => {
         </div>
       )}
       <CollectionDrawer open={showCollectionDrawer} mode={collectionDrawerMode} initialData={editingCollection} organizationOptions={organizations} onClose={()=> setShowCollectionDrawer(false)} onSaved={handleCollectionSaved} onDelete={async (id)=> handleDeleteCollection(id)} loadEvents={collectionDrawerMode==='edit'? loadCollectionEvents : undefined} allUserEvents={events} onAddEvent={addEventToCollection} onRemoveEvent={removeEventFromCollection} />
-    {/* Botão flutuante com submenu animado */}
-    <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
-      {/* Submenu animado */}
-      <div className={`flex flex-col items-end gap-3 transition-all duration-300 ${fabOpen ? 'opacity-100 translate-y-0' : 'opacity-0 pointer-events-none translate-y-4'}`}>
-        <Link
-          to="/create-event"
-          className="w-48 h-14 rounded-xl bg-[#EF4118] shadow-lg flex items-center justify-center hover:bg-[#d12c0f] transition-all text-white font-bold text-base"
+    {/* Botão flutuante com texto flutuante igual ao OrganizerSettings (círculo + texto ao passar o mouse) */}
+    <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3">
+      <div className="relative group">
+        <button
+          onClick={() => navigate('/create-event')}
+          className="w-16 h-16 rounded-full bg-[#EF4118] shadow-lg flex items-center justify-center hover:bg-[#d12c0f] transition-all"
+          aria-label="Criar evento"
           style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
-          onClick={()=>setFabOpen(false)}
         >
-          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" className="mr-2">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
             <circle cx="16" cy="16" r="16" fill="#EF4118" />
             <path d="M16 10v12M10 16h12" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          Criar evento
-        </Link>
-        <button
-          className="w-48 h-14 rounded-xl bg-indigo-600 shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-all text-white font-bold text-base"
-          style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
-          onClick={()=>{ setFabOpen(false); openCreateCollection(); }}
-        >
-          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" className="mr-2">
-            <circle cx="16" cy="16" r="16" fill="#6366F1" />
-            <path d="M16 10v12M10 16h12" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          Criar coleção
         </button>
+        <span className="absolute right-20 top-1/2 -translate-y-1/2 bg-white dark:bg-[#242424] text-[#EF4118] dark:text-white font-bold px-4 py-2 rounded-xl shadow text-base opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Criar evento</span>
       </div>
-      {/* Botão principal */}
-      <button
-        className="w-16 h-16 rounded-full bg-[#EF4118] shadow-lg flex items-center justify-center hover:bg-[#d12c0f] transition-all"
-        aria-label="Ações rápidas"
-        style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
-        onClick={()=>setFabOpen(f=>!f)}
-      >
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <circle cx="16" cy="16" r="16" fill="#EF4118" />
-          <path d="M16 10v12M10 16h12" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      </button>
     </div>
     </div>
   );

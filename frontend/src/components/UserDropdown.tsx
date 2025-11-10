@@ -86,7 +86,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userName, userEmail }) => {
             </Avatar>
           )}
         </div>
-  <span className="text-[#091747] font-bold text-[15px]">{userName}</span>
+  <span className="text-[#091747] font-bold text-[15px] max-sm:hidden">{userName}</span>
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-[#091747]">
           <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>

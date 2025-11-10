@@ -33,7 +33,7 @@ export default function OrganizerReportsSales() {
   return (
     <div className="relative min-h-screen w-full bg-white flex justify-center items-start">
       <SidebarMenu activeKeyOverride="relatorios" />
-      <div className="rounded-3xl w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-32">
+      <div className="rounded-3xl w-[1352px] bg-white max-md:p-5 max-md:w-full max-md:max-w-screen-lg max-md:h-auto max-sm:p-4 pb-[100px]">
         <AppHeader />
         <div className="flex absolute flex-col gap-6 left-[167px] top-[99px] w-[1018px] max-md:relative max-md:top-0 max-md:left-0 max-md:w-full max-md:py-5 max-sm:py-4">
           <button

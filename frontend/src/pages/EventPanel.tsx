@@ -179,10 +179,13 @@ const EventPanel: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full bg-white dark:bg-[#0b0b0b]">
-      {/* Fixed main sidebar */}
-      <SidebarMenu />
-  {/* Fixed event details sidebar */}
-      <EventDetailsSidebar
+    {/* Fixed main sidebar (hidden on small screens) */}
+    <div className="hidden lg:block">
+    <SidebarMenu />
+    </div>
+  {/* Fixed event details sidebar (hidden on small screens) */}
+    <div className="hidden lg:block">
+    <EventDetailsSidebar
           eventName={event?.name}
           eventDate={event?.startDate ? new Date(event.startDate).toLocaleString('pt-BR') : undefined}
           eventStatus={event?.isPublished ? 'Publicado' : 'Rascunho'}
@@ -193,12 +196,13 @@ const EventPanel: React.FC = () => {
             fixed
             fixedLeft={70}
             fixedWidth={300}
-            fixedTop={0}
-      />
+    fixedTop={0}
+  />
+  </div>
       {/* Global header (full width) */}
       <AppHeader />
       {/* Content with left margin for both sidebars */}
-  <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 min-h-screen relative">
+  <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col pl-8 pr-8 min-h-screen relative pb-[100px]">
           <div className="mt-24 max-w-[900px]">
           {loading ? (
             <div className="animate-pulse">

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AppHeader from '@/components/AppHeader';
 import SidebarMenu from '@/components/SidebarMenu';
@@ -6,7 +6,9 @@ import EventDetailsSidebar from '@/components/EventDetailsSidebar';
 import { useLayoutOffsets } from '@/context/LayoutOffsetsContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Star, X, MessageSquare, Calendar as CalendarIcon, User as UserIcon, ExternalLink } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/components/ui/use-toast';
+import { Star, X, MessageSquare, Calendar as CalendarIcon, User as UserIcon, ExternalLink, ChevronDown, Info, Power } from 'lucide-react';
 import { fetchApi } from '@/lib/apiBase';
 
 export default function SatisfactionSurvey() {
@@ -23,32 +25,84 @@ export default function SatisfactionSurvey() {
     comments: Array<{ id:string; comment:string; createdAt:string; overall:number; lineup:number; sound:number; venue:number; security:number; accessibility:number }>;
     page: number;
     limit: number;
+    survey?: { isActive: boolean; activatedAt?: string | null };
   };
+  const { toast } = useToast();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [surveyMeta, setSurveyMeta] = useState<{ isActive: boolean; activatedAt?: string | null } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      if (!eventId) { setStats(null); return; }
-      setLoadingStats(true);
-      try {
-        const r = await fetchApi(`/api/surveys/stats/${eventId}`);
-        if (r?.ok) {
-          const j = await r.json();
-          if (!mounted) return;
+  const [toggleLoading, setToggleLoading] = useState(false);
+
+  const latestFetchRef = useRef(0);
+
+  const loadStats = useCallback(async () => {
+    if (!eventId) {
+      setStats(null);
+      setSurveyMeta(null);
+      return;
+    }
+    const currentFetchId = ++latestFetchRef.current;
+    setLoadingStats(true);
+    try {
+      const r = await fetchApi(`/api/surveys/stats/${eventId}`);
+      if (r?.ok) {
+        const j = await r.json();
+        if (latestFetchRef.current === currentFetchId) {
           setStats(j);
-        } else {
-          if (mounted) setStats(null);
+          setSurveyMeta(j?.survey ? { isActive: !!j.survey.isActive, activatedAt: j.survey.activatedAt || null } : { isActive: false, activatedAt: null });
         }
-      } catch {
-        if (mounted) setStats(null);
-      } finally {
-        if (mounted) setLoadingStats(false);
+      } else {
+        if (latestFetchRef.current === currentFetchId) {
+          setStats(null);
+          setSurveyMeta(null);
+        }
+      }
+    } catch {
+      if (latestFetchRef.current === currentFetchId) {
+        setStats(null);
+        setSurveyMeta(null);
+      }
+    } finally {
+      if (latestFetchRef.current === currentFetchId) {
+        setLoadingStats(false);
       }
     }
-    load();
-    return () => { mounted = false; };
   }, [eventId]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  const toggleSurvey = useCallback(async (desired: boolean) => {
+    if (!eventId) return false;
+    setToggleLoading(true);
+    let ok = false;
+    try {
+      const endpoint = desired ? `/api/surveys/${eventId}/activate` : `/api/surveys/${eventId}/deactivate`;
+      const r = await fetchApi(endpoint, { method: 'POST' });
+      if (!r?.ok) {
+        const text = await r.text().catch(() => '');
+        throw new Error(text || 'Não foi possível atualizar a pesquisa.');
+      }
+      await loadStats();
+      toast({
+        title: desired ? 'Pesquisa ativada' : 'Pesquisa desativada',
+        description: desired
+          ? 'Os participantes receberão o formulário automaticamente.'
+          : 'Novos envios foram pausados.',
+      });
+      ok = true;
+    } catch (e: any) {
+      toast({
+        title: 'Erro ao atualizar pesquisa',
+        description: e?.message || 'Tente novamente em instantes.',
+        variant: 'destructive' as any,
+      });
+    } finally {
+      setToggleLoading(false);
+    }
+    return ok;
+  }, [eventId, loadStats, toast]);
 
   // Banner dismiss persistence
   const bannerKey = useMemo(() => `SAT_SURVEY_BANNER_HIDE_${eventId || 'global'}`,[eventId]);
@@ -75,6 +129,32 @@ export default function SatisfactionSurvey() {
     setActiveTopic({ title, emoji });
     setDetailsOpen(true);
   };
+  type TopicKey = keyof Stats['avg'];
+  const getTopicKey = (title?: string | null): TopicKey | null => {
+    if (!title) return null;
+    const t = title.toLowerCase();
+    if (t.includes('lineup')) return 'lineup';
+    if (t.includes('sound')) return 'sound';
+    if (t.includes('local') || t.includes('venue')) return 'venue';
+    if (t.includes('segur')) return 'security';
+    if (t.includes('acess')) return 'accessibility';
+    if (t.includes('geral') || t.includes('satisfa')) return 'overall';
+    return null;
+  };
+  const activeTopicKey = useMemo<TopicKey | null>(() => getTopicKey(activeTopic?.title), [activeTopic]);
+  const activeTopicAvg = useMemo(() => {
+    if (!activeTopicKey || !stats?.avg) return null;
+    const value = stats.avg[activeTopicKey];
+    return typeof value === 'number' ? value : null;
+  }, [activeTopicKey, stats]);
+  const topicComments = useMemo(() => {
+    if (!activeTopicKey || !stats?.comments) return [];
+    return stats.comments.filter((c) => typeof (c as any)[activeTopicKey] === 'number');
+  }, [activeTopicKey, stats]);
+  const topicImprovementComments = useMemo(() => {
+    if (!activeTopicKey) return [];
+    return topicComments.filter((c) => ((c as any)[activeTopicKey] || 0) <= 3);
+  }, [activeTopicKey, topicComments]);
 
   // Try to load event end date for the activation modal timing copy
   useEffect(() => {
@@ -113,25 +193,34 @@ export default function SatisfactionSurvey() {
   };
 
   const TopicCard: React.FC<{ title: string; emoji: string }>
-    = ({ title, emoji }) => (
-    <button
-      className="text-left rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-4 min-w-[180px] hover:bg-zinc-50 dark:hover:bg-[#191919] transition"
-      onClick={() => openDetails(title, emoji)}
-    >
-      <div className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-2">
-        <span>{emoji}</span>
-        <span>{title}</span>
-        <span className="ml-auto text-xs text-slate-500">ver detalhes</span>
-      </div>
-      {stats?.count && getAvgFor(title) != null ? (
-        <div className="mt-2 text-xs text-slate-600 dark:text-slate-300">
-          Média {getAvgFor(title)!.toFixed(1)} / 5 • {stats.count} resposta{stats.count>1?'s':''}
+    = ({ title, emoji }) => {
+    const average = getAvgFor(title);
+    const hasData = !!stats?.count && average != null && stats.count > 0;
+    return (
+      <button
+        className="text-left rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111111] text-slate-900 dark:text-white p-4 w-[185px] flex-shrink-0 hover:border-indigo-300 dark:hover:border-indigo-500 transition"
+        onClick={() => openDetails(title, emoji)}
+      >
+        <div className="text-sm font-semibold flex items-center gap-2 text-slate-900 dark:text-slate-100">
+          <span>{emoji}</span>
+          <span>{title}</span>
         </div>
-      ) : (
-        <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">Sem dados ainda</div>
-      )}
-    </button>
-  );
+        <div className="mt-3 text-lg font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+          {hasData ? (
+            <>
+              {average!.toFixed(1)} <span className="text-sm text-slate-500 dark:text-slate-400">/ 5</span>
+              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+            </>
+          ) : (
+            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Sem dados ainda</span>
+          )}
+        </div>
+        <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+          {hasData ? `${stats?.count || 0} resposta${(stats?.count || 0) > 1 ? 's' : ''}` : 'Aguardando respostas'}
+        </div>
+      </button>
+    );
+  };
 
   return (
     <div className="bg-white dark:bg-[#0b0b0b] w-full">
@@ -153,11 +242,56 @@ export default function SatisfactionSurvey() {
         className="flex flex-col pl-8 pr-8 pb-16 relative"
       >
         <div className="mt-24 max-w-5xl">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <h1 className="text-3xl font-bold text-indigo-950 dark:text-white mb-3">Pesquisa de satisfação</h1>
-            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => setActivateOpen(true)}>
-              Ativar pesquisa
-            </Button>
+            <div className="flex items-center gap-2">
+              {!bannerOpen && (
+                <Button variant="outline" onClick={() => setBannerOpen(true)} className="flex items-center gap-2">
+                  <Info className="w-4 h-4" /> O que é?
+                </Button>
+              )}
+              {surveyMeta?.isActive ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={toggleLoading}
+                      className="min-w-[140px] justify-between bg-emerald-500/10 border border-emerald-500/40 text-emerald-700 dark:text-emerald-200 dark:bg-emerald-500/20 hover:bg-emerald-500/20"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        Ativado
+                      </span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-[#121212] dark:border-[#2b2b2b]">
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      disabled={toggleLoading}
+                      onSelect={async (e) => {
+                        e.preventDefault();
+                        await toggleSurvey(false);
+                      }}
+                    >
+                      <Power className="w-4 h-4 mr-2" /> Desativar pesquisa
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setActivateOpen(true);
+                      }}
+                    >
+                      <Info className="w-4 h-4 mr-2" /> Sobre a pesquisa
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button className="bg-indigo-600 hover:bg-indigo-700" disabled={toggleLoading} onClick={() => setActivateOpen(true)}>
+                  {toggleLoading ? 'Carregando...' : 'Ativar pesquisa'}
+                </Button>
+              )}
+            </div>
           </div>
 
           {bannerOpen && (
@@ -169,33 +303,21 @@ export default function SatisfactionSurvey() {
               >
                 <X className="w-4 h-4 text-slate-600 dark:text-slate-300" />
               </button>
-              <div className="grid grid-cols-1 md:grid-cols-5">
-                {/* Left: dark panel with copy */}
-                <div className="bg-black text-white p-8 md:col-span-3">
-                  <div className="text-xl font-semibold">✨ Desbloqueie insights para aprimorar os eventos futuros:</div>
-                  <div className="text-sm text-zinc-300 mt-3">
-                    Recolha o feedback de participantes e tenha insights para tomar decisões a partir de dados
-                    para melhorar a experiência do evento como um todo
-                  </div>
-                  <div className="mt-5">
-                    <Button
-                      variant="secondary"
-                      className="bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-700 gap-2"
-                      onClick={() => openDetails('Lineup', '🎸')}
-                    >
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-zinc-800">•</span>
-                      Ver exemplo
-                    </Button>
-                  </div>
+              <div className="bg-black text-white p-8">
+                <div className="text-xl font-semibold">✨ Desbloqueie insights para aprimorar os eventos futuros:</div>
+                <div className="text-sm text-zinc-300 mt-3">
+                  Recolha o feedback de participantes e tenha insights para tomar decisões a partir de dados
+                  para melhorar a experiência do evento como um todo
                 </div>
-                {/* Right: static artwork image (drop file at /public/img/nps-art.png) */}
-                <div className="relative min-h-[180px] md:min-h-full bg-white md:col-span-2">
-                  <img
-                    src="/img/nps-art.png"
-                    alt="NPS artwork"
-                    className="absolute inset-0 w-full h-full object-cover"
-                    onError={(e:any)=>{ e.currentTarget.style.display='none'; e.currentTarget.parentElement!.classList.add('bg-gradient-to-br','from-indigo-700','via-fuchsia-600','to-orange-500'); }}
-                  />
+                <div className="mt-5">
+                  <Button
+                    variant="secondary"
+                    className="bg-zinc-900 hover:bg-zinc-800 text-white border border-zinc-700 gap-2"
+                    onClick={() => openDetails('Lineup', '🎸')}
+                  >
+                    <Info className="w-4 h-4" />
+                    Ver exemplo
+                  </Button>
                 </div>
               </div>
             </div>
@@ -203,7 +325,7 @@ export default function SatisfactionSurvey() {
 
           <div className="mt-8">
             <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Notas por tema</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="flex gap-3 overflow-x-auto pb-2">
               <TopicCard title="Lineup" emoji="🎸" />
               <TopicCard title="Sound system" emoji="🔊" />
               <TopicCard title="Localização" emoji="📍" />
@@ -214,12 +336,31 @@ export default function SatisfactionSurvey() {
 
           <div className="mt-8">
             <div className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">Comentários</div>
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-6 text-center text-sm text-slate-500 dark:text-slate-300">
-              Sem comentários por enquanto
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-6">
+              {stats?.comments?.length ? (
+                <div className="space-y-4">
+                  {stats.comments.map((c) => (
+                    <div key={c.id}>
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                        <span>{new Date(c.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">
+                          Nota geral: {typeof c.overall === 'number' ? c.overall.toFixed(1) : '—'}/5
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-900 dark:text-slate-100 leading-relaxed">{c.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-sm text-slate-500 dark:text-slate-300">Sem comentários por enquanto</div>
+              )}
             </div>
-            <div className="mt-3 text-xs text-slate-500 flex items-center gap-2">
-              <span className="px-2 py-1 rounded bg-zinc-100 dark:bg-[#1a1a1a]">1</span> / 0
-            </div>
+            {stats?.comments?.length ? (
+              <div className="mt-3 text-xs text-slate-500 flex items-center gap-2">
+                <span className="px-2 py-1 rounded bg-zinc-100 dark:bg-[#1a1a1a]">{stats.page}</span>
+                / {Math.max(1, Math.ceil((stats.count || 0) / (stats.limit || 1)))}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -275,7 +416,16 @@ export default function SatisfactionSurvey() {
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setActivateOpen(false)}>Cancelar</Button>
-            <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => setActivateOpen(false)}>Ativar a pesquisa</Button>
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700"
+              disabled={toggleLoading}
+              onClick={async () => {
+                const ok = await toggleSurvey(true);
+                if (ok) setActivateOpen(false);
+              }}
+            >
+              {toggleLoading ? 'Ativando...' : 'Ativar a pesquisa'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -293,13 +443,23 @@ export default function SatisfactionSurvey() {
                 <span>{activeTopic?.emoji}</span>
                 <span>{activeTopic?.title || 'Tópico'}</span>
               </div>
-              <div className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">–</div>
-              <div className="mt-2 flex items-center gap-1 text-amber-400">
-                {[0,1,2,3,4].map((i) => (
-                  <Star key={i} className="w-5 h-5" />
-                ))}
+              <div className="mt-3 text-2xl font-semibold text-slate-900 dark:text-white">
+                {activeTopicAvg != null && stats?.count ? `${activeTopicAvg.toFixed(1)} / 5` : 'Sem dados ainda'}
               </div>
-              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">Sem respostas ainda</div>
+              <div className="mt-2 flex items-center gap-1">
+                {[0,1,2,3,4].map((i) => {
+                  const filled = activeTopicAvg ? Math.round(activeTopicAvg) : 0;
+                  return (
+                    <Star
+                      key={i}
+                      className={`w-5 h-5 ${i < filled ? 'text-amber-400 fill-amber-400' : 'text-slate-300 dark:text-slate-600'}`}
+                    />
+                  );
+                })}
+              </div>
+              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {stats?.count ? `${stats.count} resposta${stats.count > 1 ? 's' : ''}` : 'Sem respostas ainda'}
+              </div>
             </div>
 
             {/* Areas for improvement */}
@@ -308,22 +468,27 @@ export default function SatisfactionSurvey() {
               <div className="text-xs text-slate-500 dark:text-slate-400">
                 Feedback das pessoas que avaliaram o {activeTopic?.title?.toLowerCase() || 'tópico'} com 1 a 3 estrelas
               </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">0 respostas</div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                {topicImprovementComments.length} resposta{topicImprovementComments.length !== 1 ? 's' : ''}
+              </div>
 
-              <div className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
-                {[
-                  'Apresentação ruim 🥱',
-                  'Não é minha vibe 🌌',
-                  'Não consegui ver meu artista favorito 😬',
-                  'O artista não foi 🎤',
-                  'Outro'
-                ].map((label) => (
-                  <div key={label} className="py-2 flex items-center">
-                    <div className="flex-1 text-sm text-slate-900 dark:text-slate-200">{label}</div>
-                    <div className="w-10 text-right text-sm text-slate-500 dark:text-slate-400">0</div>
-                    <div className="w-10 text-right text-sm text-slate-500 dark:text-slate-400">0%</div>
-                  </div>
-                ))}
+              <div className="mt-4 space-y-3">
+                {topicImprovementComments.length === 0 ? (
+                  <div className="text-sm text-slate-500 dark:text-slate-300">Sem feedback negativo ainda.</div>
+                ) : (
+                  topicImprovementComments.map((c) => {
+                    const ratedValue = activeTopicKey ? (c as any)[activeTopicKey] : null;
+                    return (
+                      <div key={c.id} className="rounded-lg border border-zinc-100 dark:border-zinc-800 p-3">
+                        <div className="text-sm text-slate-900 dark:text-slate-100">{c.comment || 'Sem comentário'}</div>
+                        <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                          <span>{new Date(c.createdAt).toLocaleDateString('pt-BR')}</span>
+                          <span>Nota: {ratedValue ?? 0}/5</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
