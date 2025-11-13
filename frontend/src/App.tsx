@@ -36,6 +36,7 @@ import SatisfactionSurvey from "./pages/SatisfactionSurvey";
 import PublicSatisfactionForm from "./pages/PublicSatisfactionForm";
 import Checkout from "./pages/Checkout";
 import CheckoutPix from "./pages/CheckoutPix";
+import Review from "./pages/Review";
 import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
 import { initApiDetection } from '@/lib/apiBase';
@@ -106,6 +107,7 @@ const AppInner = () => {
           <Route path="/colecoes/:slug" element={<PublicCollection />} />
           <Route path="/org/:slug" element={<OrganizationPublicProfile />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/checkout/review" element={<Review />} />
           <Route path="/checkout/pix" element={<CheckoutPix />} />
           <Route path="/organizer-settings" element={<OrganizerSettingsV2 />} />
           <Route path="/organizer-reports" element={<OrganizerReportsPage />} />

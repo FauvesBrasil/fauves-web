@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import SidebarMenu from "@/components/SidebarMenu";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/context/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
 import CollectionDrawer from "@/components/CollectionDrawer";
 import { ensureApiBase, apiUrl } from '@/lib/apiBase';
@@ -53,6 +53,7 @@ const OrganizerEvents: React.FC = () => {
   const [events, setEvents] = useState<OrgEvent[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
   const { selectedOrg, orgs, loading: loadingOrgs } = useOrganization();
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<'all'|'published'|'draft'|'past'>('all');
   const [loading, setLoading] = useState(true);
@@ -169,7 +170,7 @@ const OrganizerEvents: React.FC = () => {
       } finally { setLoading(false); }
     };
     boot();
-  }, []);
+  }, [userId, selectedOrg?.id, location.pathname]);
 
   // Refetch events when selected organization changes (scoped view)
   useEffect(() => {

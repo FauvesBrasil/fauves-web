@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from 'react-dom';
 import { useRegisterSidebar } from '@/context/LayoutOffsetsContext';
 import { fetchApi } from "@/lib/apiBase";
 import { useLocation } from "react-router-dom";
@@ -183,6 +184,11 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   }, [location.search, eventIdOverride, routeParams]);
 
   const { toast } = useToast();
+
+  // Tooltip to explain why Publish is disabled when there are no tickets
+  const [showPublishTooltip, setShowPublishTooltip] = React.useState<boolean>(false);
+  const [publishTooltipPos, setPublishTooltipPos] = React.useState<{ left: number; top: number } | null>(null);
+  const publishBtnRef = React.useRef<HTMLButtonElement | null>(null);
 
   const [statusLocal, setStatusLocal] = React.useState<typeof eventStatus>(eventStatus);
   React.useEffect(() => setStatusLocal(eventStatus), [eventStatus]);
@@ -556,26 +562,46 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                 <div className="self-stretch my-auto rounded-[100px] w-[137px]">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="relative flex items-center justify-between px-5 py-3 border border-stone-300 rounded-full bg-white dark:bg-[#242424] text-sm font-semibold text-indigo-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500 transition-all w-[137px]">
-                        <span>{statusLocal}</span>
-                        <ChevronDown className="w-5 h-5 text-indigo-700 dark:text-white ml-2" />
-                      </button>
+                        <button
+                          ref={publishBtnRef}
+                          onMouseEnter={() => {
+                            // show tooltip if disabled
+                            if ((ticketCount ?? 0) === 0) {
+                              const r = publishBtnRef.current?.getBoundingClientRect();
+                              if (r) setPublishTooltipPos({ left: r.left + r.width / 2, top: r.top - 8 });
+                              setShowPublishTooltip(true);
+                            }
+                          }}
+                          onMouseLeave={() => setShowPublishTooltip(false)}
+                          className="relative flex items-center justify-between px-5 py-3 border border-stone-300 rounded-full bg-white dark:bg-[#242424] text-sm font-semibold text-indigo-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500 transition-all w-[137px]"
+                        >
+                          <span>{statusLocal}</span>
+                          <ChevronDown className="w-5 h-5 text-indigo-700 dark:text-white ml-2" />
+                        </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44 bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
-                      {statusLocal === 'Publicado' ? (
-                        <DropdownMenuItem onSelect={async () => {
-                          // always attempt internal API update to ensure persistence
-                          try { if (onStatusChange) onStatusChange('Rascunho'); } catch (e) {}
-                          const ok = await internalChangeStatus('Rascunho');
-                          if (ok) setStatusLocal('Rascunho');
-                        }}>Despublicar evento</DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onSelect={async () => {
-                          try { if (onStatusChange) onStatusChange('Publicado'); } catch (e) {}
-                          const ok = await internalChangeStatus('Publicado');
-                          if (ok) setStatusLocal('Publicado');
-                        }}>Publicar evento</DropdownMenuItem>
-                      )}
+                        {statusLocal === 'Publicado' ? (
+                          <DropdownMenuItem onSelect={async () => {
+                            // always attempt internal API update to ensure persistence
+                            try { if (onStatusChange) onStatusChange('Rascunho'); } catch (e) {}
+                            const ok = await internalChangeStatus('Rascunho');
+                            if (ok) setStatusLocal('Rascunho');
+                          }}>Despublicar evento</DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            className={(ticketCount ?? 0) === 0 ? 'opacity-60 cursor-not-allowed' : ''}
+                            onSelect={async () => {
+                              // prevent publishing if there are no tickets
+                              if ((ticketCount ?? 0) === 0) {
+                                setShowPublishTooltip(true);
+                                return;
+                              }
+                              try { if (onStatusChange) onStatusChange('Publicado'); } catch (e) {}
+                              const ok = await internalChangeStatus('Publicado');
+                              if (ok) setStatusLocal('Publicado');
+                          }}
+                          >Publicar evento</DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -620,7 +646,8 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
           {displaySteps.map((step, index) => {
             const isActive = step.id === currentStepId;
             // Regras: se não há eventId, desabilita 'configure-ticket' e 'publish'
-            const isDisabled = !eventId && (step.id === 'configure-ticket' || step.id === 'publish');
+            // Além disso, bloqueia o passo 'publish' quando não houver ingressos
+            const isDisabled = (!eventId && (step.id === 'configure-ticket' || step.id === 'publish')) || (step.id === 'publish' && (ticketCount ?? 0) === 0);
             const isCompleted = step.status === 'completed';
             return (
               <div
@@ -630,6 +657,15 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                   (isDisabled ? 'cursor-not-allowed opacity-60 bg-gray-50 dark:bg-[#0b0b0b]' : (isActive ? 'cursor-pointer bg-white dark:bg-[#242424]' : 'cursor-pointer bg-gray-50 dark:bg-[#0b0b0b] hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]'))
                 }
                 onClick={() => handleStepClick(step.id, isDisabled)}
+                onMouseEnter={(e) => {
+                  if (step.id === 'publish' && (ticketCount ?? 0) === 0) {
+                    const el = e.currentTarget as HTMLElement;
+                    const r = el.getBoundingClientRect();
+                    setPublishTooltipPos({ left: r.left + r.width / 2, top: r.top - 8 });
+                    setShowPublishTooltip(true);
+                  }
+                }}
+                onMouseLeave={() => { if (step.id === 'publish') setShowPublishTooltip(false); }}
                 tabIndex={0}
                 role={isDisabled ? undefined : "button"}
               >
@@ -778,6 +814,17 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
               );
             })}
           </div>
+        )}
+        {/* Floating tooltip rendered via portal when publish is disabled */}
+        {showPublishTooltip && publishTooltipPos && createPortal(
+          <div
+            role="tooltip"
+            style={{ position: 'fixed', left: publishTooltipPos.left, top: publishTooltipPos.top, transform: 'translate(-50%, -100%)' }}
+            className="z-50 max-w-[320px] w-[260px] bg-white dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] text-[12px] text-slate-700 dark:text-slate-300 p-3 rounded-lg shadow-lg whitespace-normal break-words"
+          >
+            Você precisa criar ao menos 1 ingresso antes de publicar o evento.
+          </div>,
+          document.body
         )}
       </div>
     </div>

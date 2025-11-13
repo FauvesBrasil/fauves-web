@@ -1,0 +1,3 @@
+ONE backslash: \u00E7
+TWO backslashes: \\u00E7
+ACTUAL char: ç

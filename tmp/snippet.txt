@@ -1,0 +1,201 @@
+}
+// Centraliza a base da API com detecção resiliente.
+// Estratégia revisada:
+// 1. Usa VITE_BACKEND_URL se definido e responder 200 OK.
+// 2. Usa base previamente persistida (localStorage) se ainda responde.
+// 3. Prioriza portas do backend conhecido: 4000 primeiro; só tenta 4001 depois.
+// 4. Ignora respostas 500 (trata como não saudável) e conexões recusadas.
+// 5. Evita spam: remove candidato após 2 falhas consecutivas.
+// 6. Persiste a base saudável (chave localStorage 'API_BASE_WORKING').
+
+const LS_KEY = 'API_BASE_WORKING';
+// Read stored candidate but drop/remove it immediately if it points to localhost
+let stored = (typeof window !== 'undefined') ? window.localStorage.getItem(LS_KEY) : null;
+try {
+  if (stored && typeof window !== 'undefined') {
+    // If stored candidate is localhost (any port, including :3000) it's very likely
+    // a stale dev value that should not be probed from other environments.
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(stored) || /:\s*3000\b/.test(stored) || /:\/\/localhost:3000/.test(stored)) {
+      try { window.localStorage.removeItem(LS_KEY); } catch (e) {}
+      console.debug('[apiBase] ignored and removed stored API_BASE_WORKING pointing to localhost', stored);
+      stored = null;
+    }
+  }
+} catch (e) {
+  // ignore any localStorage access errors
+}
+// Normaliza env base removendo barras finais e um sufixo /api (para evitar construir /api/api/* em probes)
+let _rawEnv = (import.meta.env.VITE_API_BASE || import.meta.env.VITE_BACKEND_URL) || '';
+_rawEnv = _rawEnv.replace(/\/$/, '');
+if (/\/api$/i.test(_rawEnv)) {
+  _rawEnv = _rawEnv.replace(/\/api$/i, '');
+}
+const envBase = _rawEnv || null;
+const isProd = import.meta.env.PROD;
+
+// Fallback production backend (hardcoded) to guarantee API calls work even if VITE_API_BASE
+// was not set in the build environment or Vercel rewrite is not yet applied.
+// This is a safe fallback during emergency; we can remove it once Vercel rewrites are stable.
+const DEFAULT_PROD_BACKEND = 'https://fauves-backend-production.up.railway.app';
+let finalEnvBase = envBase;
+// Emergency: in production, force the known Railway backend as authoritative to avoid
+// situations where VITE_API_BASE is misconfigured to the frontend origin and causes 405s.
+if (isProd) {
+  finalEnvBase = DEFAULT_PROD_BACKEND;
+}
+// In development, ignore build-time env bases that point to localhost (they often
+// come from CI or incorrect configs and cause the client to probe a non-existent
+// host like :3000). Keep this only for non-production to avoid breaking intended setups.
+try {
+  if (!isProd && finalEnvBase && /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(finalEnvBase)) {
+    console.debug('[apiBase] ignoring VITE_API_BASE pointing to localhost in dev:', finalEnvBase);
+    finalEnvBase = null;
+  }
+} catch (e) {}
+// Also ignore env values that contain localhost:3000 even if they lack protocol
+try {
+  if (!isProd && finalEnvBase && /localhost:3000/.test(finalEnvBase)) {
+    console.debug('[apiBase] stripping VITE_API_BASE containing localhost:3000 in dev:', finalEnvBase);
+    finalEnvBase = null;
+  }
+} catch (e) {}
+// Runtime fetch override: rewrite any relative /api requests to the known backend host
+// This ensures 3rd-party libraries or legacy calls that do direct fetch('/api/...')
+// are routed to the backend instead of being served by Vercel (index.html -> 405).
+if (typeof window !== 'undefined') {
+  try {
+    if (!((window as any).__apiFetchPatched) && window.location && window.location.hostname === 'app.fauves.com.br') {
+      const originalFetch = window.fetch.bind(window);
+      (window as any).__apiFetchPatched = true;
+      window.fetch = async (input: RequestInfo, init?: RequestInit) => {
+        try {
+          // Rewrite string URLs starting with /api or absolute same-origin /api
+          if (typeof input === 'string') {
+            if (input.startsWith('/api/') || input === '/api' || input.startsWith('/api?')) {
+              const rewritten = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + input;
+              console.debug('[apiBase] fetch override: rewriting', input, '->', rewritten);
+              input = rewritten;
+            }
+            // also handle relative paths that start with './api' or without leading slash
+            else if (/^\.?\/?api\//.test(input)) {
+              const path = input.replace(/^\.?\//, '/');
+              const rewritten = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + path;
+              console.debug('[apiBase] fetch override: rewriting', input, '->', rewritten);
+              input = rewritten;
+            }
+          } else if (input instanceof Request) {
+            const reqUrl = new URL(input.url, window.location.origin);
+            if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
+              const newUrl = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + reqUrl.pathname + reqUrl.search;
+              console.debug('[apiBase] fetch override: rewriting Request ->', newUrl);
+              input = new Request(newUrl, input);
+            }
+          }
+        } catch (e) {
+          // swallow
+        }
+        return originalFetch(input as any, init);
+      };
+    }
+  } catch (e) {}
+  // DEV: also patch fetch while developing locally so any relative /api calls
+  // are routed to the local backend (127.0.0.1:4000). This avoids the browser
+  // hitting stale frontend origins (ex: localhost:3000) when the frontend dev
+  // server doesn't serve /api and prevents noisy probes.
+  try {
+    if (!((window as any).__apiFetchPatchedDev) && window.location) {
+      const h = window.location.hostname;
+      if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
+        const originalFetchDev = window.fetch.bind(window);
+        (window as any).__apiFetchPatchedDev = true;
+        window.fetch = async (input: RequestInfo, init?: RequestInit) => {
+          try {
+            if (typeof input === 'string') {
+              // rewrite /api, /api/whatever or api/whatever
+              if (input === '/api' || input.startsWith('/api/') || /^\.?\/api\//.test(input) || /^api\//.test(input)) {
+                const path = input.startsWith('/') ? input : (input.startsWith('./') ? input.replace(/^\.\//, '/') : '/' + input);
+                input = 'http://127.0.0.1:4000' + path;
+              }
+            } else if (input instanceof Request) {
+              const reqUrl = new URL(input.url, window.location.origin);
+              if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
+                const newUrl = 'http://127.0.0.1:4000' + reqUrl.pathname + reqUrl.search;
+                input = new Request(newUrl, input);
+              }
+            }
+          } catch (e) {
+            // swallow
+          }
+          return originalFetchDev(input as any, init);
+        };
+        console.debug('[apiBase] fetch override (dev): rewriting /api -> http://127.0.0.1:4000');
+        // Also proactively remove any stored API_BASE_WORKING that points to localhost:3000
+        try {
+          const s = window.localStorage.getItem(LS_KEY);
+          if (s && /localhost:3000/.test(s)) {
+            window.localStorage.removeItem(LS_KEY);
+            console.debug('[apiBase] removed stale API_BASE_WORKING pointing to localhost:3000');
+            stored = null;
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+}
+// If the configured env base equals the current frontend origin (e.g. VERCEL set to the site URL),
+// ignore it because that causes the app to call itself (leading to 405). Use default backend instead.
+try {
+    if (typeof window !== 'undefined' && finalEnvBase) {
+    const origin = window.location.origin.replace(/\/$/, '');
+    const norm = finalEnvBase.replace(/\/$/, '');
+    if (norm === origin || norm.startsWith(origin + '/')) {
+      console.debug('[apiBase] detected VITE_API_BASE pointing to frontend origin; switching to default backend');
+      finalEnvBase = DEFAULT_PROD_BACKEND;
+    }
+  }
+} catch (e) {}
+
+// Ordem montada dinamicamente
+let candidates: string[] = [];
+// In non-production prefer local candidates first and leave envBase as a last-resort candidate.
+if (stored && !candidates.includes(stored)) candidates.push(stored);
+['http://localhost:4000','http://127.0.0.1:4000']
+  .forEach(b => { if (!candidates.includes(b)) candidates.push(b); });
+if (finalEnvBase) {
+  if (isProd) candidates.unshift(finalEnvBase); // production: envBase (or default) is authoritative
+  else if (!candidates.includes(finalEnvBase)) candidates.push(finalEnvBase); // dev: keep envBase as fallback
+}
+
+// Defensive filter: never try to probe localhost:3000 — it's a common stale value
+try {
+  candidates = candidates.filter(c => {
+    if (!c) return false;
+    try {
+      // normalize
+      const s = String(c).trim();
+      if (/https?:\/\/localhost:3000\b/i.test(s) || /https?:\/\/127\.0\.0\.1:3000\b/.test(s) || /:\/\/\[::1\]:3000/.test(s)) {
+        console.debug('[apiBase] filtered out candidate pointing to localhost:3000', s);
+        try { if (typeof window !== 'undefined') window.localStorage.removeItem(LS_KEY); } catch (e) {}
+        return false;
+      }
+      return true;
+    } catch (e) { return true; }
+  });
+} catch (e) {}
+
+let resolvedBase: string | null = null; // base atual saudável
+let resolving = false;                 // lock de resolução
+let resolvingPromise: Promise<string> | null = null; // promessa compartilhada para evitar tempestade
+const failureCount: Record<string, number> = {}; // contador de falhas por base
+const candidateBackoffUntil: Record<string, number> = {}; // timestamp ms até quando não devemos reprobar um candidato
+let lastResolutionTs = 0;
+let backendDownUntil = 0; // epoch ms até quando evitamos novas tentativas
+const BACKOFF_MS = 5000;
+const CANDIDATE_BACKOFF_MS = 10000; // se um candidato falhar, não tentamos de novo por 10s
+let envBaseBackoffUntil = 0; // epoch ms até quando não tentamos usar finalEnvBase
+const ENVBASE_BACKOFF_MS = 60 * 1000; // 60s
+let lastEnsureCall = 0; // ms - rate limit multiple callers
+
+async function probe(base: string): Promise<boolean> {
+  try {
+    // Never probe stale frontend dev server on port 3000 — skip quickly.

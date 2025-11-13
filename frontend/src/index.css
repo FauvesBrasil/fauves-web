@@ -212,3 +212,36 @@ All colors MUST be HSL.
 .producer-journey:hover::before { animation-duration: 6s; opacity: 0.36; filter: blur(100px); }
 .producer-journey:hover::after { animation-duration: 7s; opacity: 0.32; filter: blur(96px); }
 
+/* Simple, accessible wave animation for emoji (used in checkout header) */
+@keyframes wave-hand {
+  0% { transform: rotate( 0deg); }
+  15% { transform: rotate( 14deg); }
+  30% { transform: rotate(-8deg); }
+  45% { transform: rotate(14deg); }
+  60% { transform: rotate(-4deg); }
+  75% { transform: rotate(10deg); }
+  100% { transform: rotate(0deg); }
+}
+.wave-emoji {
+  display: inline-block;
+  transform-origin: 70% 70%;
+  animation: wave-hand 1.6s ease-in-out infinite;
+}
+
+/* Flag box used in phone input trigger */
+.flag-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 20px;
+}
+
+.phone-control { gap: 8px; }
+.phone-control .select-trigger { min-width: 64px; padding-left: 8px; padding-right: 8px; }
+.phone-control .chevron { opacity: 0.6; }
+
+/* Make the small flag box visually aligned with inputs */
+.flag-box { border-radius: 3px; }
+.select-flag-trigger { padding: 0; }
+

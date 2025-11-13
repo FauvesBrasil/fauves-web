@@ -5,7 +5,7 @@ import SidebarMenu from "@/components/SidebarMenu";
 import AppHeader from "@/components/AppHeader";
 import EventDetailsSidebar from "@/components/EventDetailsSidebar";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ChevronLeft, ChevronDown, ExternalLink, Upload } from "lucide-react";
+import { ChevronLeft, ChevronDown, ExternalLink, Upload, Calendar, MapPin } from "lucide-react";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LocationAutocomplete } from '@/components/LocationAutocomplete';
 import { fetchApi } from '@/lib/apiBase';
@@ -709,14 +709,14 @@ function CreateEditEvent() {
 															<div className="text-xl font-bold text-indigo-950 dark:text-white mb-2">Data e hora</div>
 															<div className="text-sm text-gray-600 dark:text-white">
 																<div className="text-xs text-gray-500 dark:text-white">Início</div>
-																<div className="flex items-center gap-2 font-semibold"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8h18"/><path d="M7 4h10v16H7z"/></svg> <span className="dark:text-white">{formatSingleDate(startDate, startTime)}</span></div>
+																<div className="flex items-center gap-2 font-semibold"><Calendar className="w-4 h-4 text-slate-700 dark:text-white" /> <span className="dark:text-white">{formatSingleDate(startDate, startTime)}</span></div>
 																<div className="mt-1 text-xs text-gray-500 dark:text-white">Término</div>
-																<div className="flex items-center gap-2 font-semibold"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8h18"/><path d="M7 4h10v16H7z"/></svg> <span className="dark:text-white">{endDate ? formatSingleDate(endDate, endTime) : 'Não definido'}</span></div>
+																<div className="flex items-center gap-2 font-semibold"><Calendar className="w-4 h-4 text-slate-700 dark:text-white" /> <span className="dark:text-white">{endDate ? formatSingleDate(endDate, endTime) : 'Não definido'}</span></div>
 															</div>
 														</div>
 														<div className="flex-1 pl-6">
 															<div className="text-xl font-bold text-indigo-950 dark:text-white mb-2">Localização</div>
-															<div className="text-sm text-gray-600 flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 6-9 11-9 11s-9-5-9-11a9 9 0 1 1 18 0z"/></svg> <span className="font-semibold dark:text-white">{locationType === 'Local' ? (locationAddress ? locationAddress : 'Inserir localização') : (locationType === 'Evento online' ? (onlineUrl ? onlineUrl : 'Link online') : 'Local será anunciado')}</span></div>
+															<div className="text-sm text-gray-600 flex items-center gap-2"><MapPin className="w-4 h-4 text-slate-700 dark:text-white" /> <span className="font-semibold dark:text-white">{locationType === 'Local' ? (locationAddress ? locationAddress : 'Inserir localização') : (locationType === 'Evento online' ? (onlineUrl ? onlineUrl : 'Link online') : 'Local será anunciado')}</span></div>
 														</div>
 													</div>
 													<button type="button" onClick={(e) => { e.stopPropagation(); setEditDate(true); setDateSaved(false); }} className="rounded-full bg-white dark:bg-[#242424] border border-indigo-200 dark:border-[#1F1F1F] text-indigo-700 dark:text-white shadow w-9 h-9 flex items-center justify-center hover:bg-indigo-50 dark:hover:bg-[#111827]">

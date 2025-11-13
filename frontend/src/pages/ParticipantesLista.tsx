@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React, { useEffect } from 'react';
 import { useLayoutOffsets } from '@/context/LayoutOffsetsContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import EventDetailsSidebar from '@/components/EventDetailsSidebar';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ArrowLeft, List, ListPlus, UploadCloud, Trash2, Users, MoreHorizontal, Pencil, Plus, X } from 'lucide-react';
+import { fetchApi } from '@/lib/apiBase';
 
 type Guest = {
   id: string;
@@ -28,11 +29,9 @@ type GuestList = {
 
 const initialLists: GuestList[] = [];
 
-export default function ParticipantesLista() {
-  const { totalLeft } = useLayoutOffsets();
-  const { eventId } = useParams();
-  const navigate = useNavigate();
 
+export default function ParticipantesLista() {
+  // Funções auxiliares declaradas antes do uso
   const [lists, setLists] = React.useState<GuestList[]>(initialLists);
   const [selectedListId, setSelectedListId] = React.useState<string | null>(null);
   const [createListOpen, setCreateListOpen] = React.useState(false);
@@ -46,18 +45,77 @@ export default function ParticipantesLista() {
   const manualTotalGuests = manualGuests.reduce((acc, g) => acc + (Number(g.quantity) || 0), 0);
   const manualGuestsReady = manualGuests.filter((g) => g.firstName.trim());
   const canSubmitManual = manualGuestsReady.length > 0;
-
   const activeList = lists.find((l) => l.id === selectedListId) || null;
 
-  const handleCreateList = () => {
+  const { totalLeft } = useLayoutOffsets();
+  const { eventId } = useParams();
+  const navigate = useNavigate();
+
+
+  // Funções auxiliares declaradas antes do uso
+  function openEditListDialog(list: GuestList) {
+    setEditingList(list);
+    setEditingListName(list.name);
+  }
+
+  async function handleUpdateListName() {
+    const updatedName = editingListName.trim();
+    if (!editingList || !updatedName || !eventId) return;
+    const res = await fetchApi(`/api/event/${eventId}/guest-lists/${editingList.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: updatedName })
+    });
+    if (res.ok) {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === editingList.id ? { ...list, name: updatedName, updatedAt: new Date().toISOString() } : list,
+        ),
+      );
+      setEditingList(null);
+      setEditingListName('');
+    }
+  }
+
+  async function handleDeleteList() {
+    if (!listPendingDeletion || !eventId) return;
+    const res = await fetchApi(`/api/event/${eventId}/guest-lists/${listPendingDeletion.id}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      setLists((prev) => prev.filter((list) => list.id !== listPendingDeletion.id));
+      if (selectedListId === listPendingDeletion.id) {
+        setSelectedListId(null);
+      }
+      setListPendingDeletion(null);
+    }
+  }
+
+  // Carregar listas do backend ao montar
+  useEffect(() => {
+    if (!eventId) return;
+    fetchApi(`/api/event/${eventId}/guest-lists`).then(async (r) => {
+      if (r.ok) {
+        const data = await r.json();
+        setLists(data);
+      }
+    });
+  }, [eventId]);
+
+  const handleCreateList = async () => {
     const name = newListName.trim();
-    if (!name) return;
-    setLists((prev) => [
-      ...prev,
-      { id: `list_${Date.now()}`, name, updatedAt: new Date().toISOString(), guests: [] },
-    ]);
-    setNewListName('');
-    setCreateListOpen(false);
+    if (!name || !eventId) return;
+    const res = await fetchApi(`/api/event/${eventId}/guest-lists`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    if (res.ok) {
+      const created = await res.json();
+      setLists((prev) => [...prev, { ...created, guests: [] }]);
+      setNewListName('');
+      setCreateListOpen(false);
+    }
   };
 
   const handleAddManualRows = () => setManualGuests((prev) => [...prev, { firstName: '', lastName: '', quantity: 1 }]);
@@ -73,40 +131,51 @@ export default function ParticipantesLista() {
     });
   };
 
-  const handleAddGuests = () => {
-    if (!activeList) return;
+  const handleAddGuests = async () => {
+    if (!activeList || !eventId) return;
     if (guestTab === 'manual') {
-      const newGuests: Guest[] = manualGuests
+      const newGuests = manualGuests
         .filter((g) => g.firstName.trim())
-        .map((g, idx) => ({
-          id: `guest_${Date.now()}_${idx}`,
+        .map((g) => ({
           firstName: g.firstName.trim(),
           lastName: g.lastName.trim(),
-          quantity: Number(g.quantity) || 1,
-          checkedIn: 0,
+          quantity: Number(g.quantity) || 1
         }));
       if (!newGuests.length) return;
-      setLists((prev) =>
-        prev.map((list) =>
-          list.id === activeList.id
-            ? { ...list, guests: [...list.guests, ...newGuests], updatedAt: new Date().toISOString() }
-            : list,
-        ),
-      );
+      const res = await fetchApi(`/api/event/${eventId}/guest-lists/${activeList.id}/guests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGuests)
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setLists((prev) =>
+          prev.map((list) =>
+            list.id === activeList.id
+              ? { ...list, guests: [...list.guests, ...created], updatedAt: new Date().toISOString() }
+              : list,
+          ),
+        );
+      }
     }
     setManualGuests([{ firstName: '', lastName: '', quantity: 1 }]);
     setAddGuestOpen(false);
   };
 
-  const handleRemoveGuest = (guestId: string) => {
-    if (!activeList) return;
-    setLists((prev) =>
-      prev.map((list) =>
-        list.id === activeList.id
-          ? { ...list, guests: list.guests.filter((g) => g.id !== guestId), updatedAt: new Date().toISOString() }
-          : list,
-      ),
-    );
+  const handleRemoveGuest = async (guestId: string) => {
+    if (!activeList || !eventId) return;
+    const res = await fetchApi(`/api/event/${eventId}/guest-lists/${activeList.id}/guests/${guestId}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === activeList.id
+            ? { ...list, guests: list.guests.filter((g) => g.id !== guestId), updatedAt: new Date().toISOString() }
+            : list,
+        ),
+      );
+    }
   };
 
   const renderListCards = () => {
@@ -283,6 +352,8 @@ export default function ParticipantesLista() {
       </div>
     );
   };
+
+  // Funções auxiliares movidas para antes do uso
 
   return (
     <div className="min-h-screen w-full bg-white dark:bg-[#0b0b0b]">
@@ -541,34 +612,13 @@ export default function ParticipantesLista() {
       </Dialog>
     </div>
   );
+  // Funções auxiliares movidas para dentro do componente
+
+
+  // ...
 }
 
 
-  const openEditListDialog = (list: GuestList) => {
-    setEditingList(list);
-    setEditingListName(list.name);
-  };
-
-  const handleUpdateListName = () => {
-    const updatedName = editingListName.trim();
-    if (!editingList || !updatedName) return;
-    setLists((prev) =>
-      prev.map((list) =>
-        list.id === editingList.id ? { ...list, name: updatedName, updatedAt: new Date().toISOString() } : list,
-      ),
-    );
-    setEditingList(null);
-    setEditingListName('');
-  };
-
-  const handleDeleteList = () => {
-    if (!listPendingDeletion) return;
-    setLists((prev) => prev.filter((list) => list.id !== listPendingDeletion.id));
-    if (selectedListId === listPendingDeletion.id) {
-      setSelectedListId(null);
-    }
-    setListPendingDeletion(null);
-  };
 
 
 

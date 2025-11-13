@@ -135,6 +135,13 @@ const CreateTickets: React.FC = () => {
   const [ticketName, setTicketName] = useState("");
   const [maxTickets, setMaxTickets] = useState("");
   const [price, setPrice] = useState("");
+  // price stored as a string representing a number with dot decimal (e.g. '500.00')
+
+  // Normalize service fee percent: backend may return 15 (meaning 15%), or 0.15
+  const feePercent = React.useMemo(() => {
+    const p = Number(serviceFeePercent) || 0;
+    return p > 1 ? p / 100 : p;
+  }, [serviceFeePercent]);
   const [isFree, setIsFree] = useState(false);
   const [description, setDescription] = useState("");
   const [isAbsorbFee, setIsAbsorbFee] = useState(false);
@@ -423,7 +430,7 @@ const CreateTickets: React.FC = () => {
                 const isParentWithHalf = !t.isHalf && !!ticketTypes[index + 1] && ticketTypes[index + 1].isHalf && ticketTypes[index + 1].parentId === t.id;
                 const rawName = t.name || 'Nome do ingresso';
                 const displayName = t.isHalf ? (rawName.replace(/\s*-\s*Meia-entrada\s*$/i, '') || rawName) : rawName;
-                const feeRaw = (t.price ?? 0) * (serviceFeePercent ?? 0);
+                const feeRaw = (t.price ?? 0) * (feePercent ?? 0);
                 const fee = round2(feeRaw);
                 const receive = round2(t.absorbFee ? (t.price - fee) : t.price);
                 return (
@@ -624,11 +631,42 @@ const CreateTickets: React.FC = () => {
                     {!isFree && (
                       <>
                         <Label>Preço</Label>
-                        <Input placeholder="Preço" type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} />
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">R$</span>
+                          <Input
+                            placeholder="0,00"
+                            type="text"
+                            value={(formatBRL(Number(price || 0)).replace(/^R\$/,''))}
+                            onChange={(e) => {
+                              const raw = String(e.target.value || '');
+                              // allow digits, comma and dot; treat comma as decimal separator
+                              const cleaned = raw.replace(/\s/g, '').replace(/\./g, '').replace(/,/g, '.').replace(/[^0-9.]/g, '');
+                              if (cleaned === '') {
+                                setPrice('0');
+                                return;
+                              }
+                              // keep only the first dot
+                              const parts = cleaned.split('.');
+                              let norm = parts[0];
+                              if (parts.length > 1) {
+                                norm += '.' + parts.slice(1).join('');
+                              }
+                              const asNum = Number(norm || 0) || 0;
+                              // store normalized with two decimals for consistent calculations
+                              setPrice(String(asNum.toFixed(2)));
+                              // attempt to keep caret at end (best-effort) — browser will place caret at end after value change
+                              try { const input = e.target as HTMLInputElement; setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0); } catch (e) {}
+                            }}
+                          />
+                        </div>
                       </>
                     )}
                     <div className="flex items-center justify-between text-sm mt-1 mb-2">
-                      <span className="text-[#091747] font-medium">Total do comprador: {formatBRL(isFree ? 0 : Number(price || 0) + (isAbsorbFee ? 0 : Number(price || 0) * (serviceFeePercent ?? 0)))}</span>
+                      <span className="text-[#091747] font-medium">Total do comprador: {formatBRL(isFree ? 0 : (() => {
+                        const p = Number(price || 0) || 0;
+                        const total = p + (isAbsorbFee ? 0 : p * (feePercent || 0));
+                        return total;
+                      })())}</span>
                       <a href="#" className="text-indigo-700 font-medium hover:underline">Ver detalhes</a>
                     </div>
                     <div className="flex items-center gap-3 bg-indigo-50 rounded-lg px-4 py-3">

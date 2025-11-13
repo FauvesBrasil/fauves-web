@@ -26,7 +26,6 @@ import OrganizerEvents from "./pages/OrganizerEvents";
 import PublicCollection from "./pages/PublicCollection";
 import OrganizationPublicProfile from "./pages/OrganizationPublicProfile";
 import OrdersManager from "./pages/OrdersManager";
-import MarketingTools from "./pages/MarketingTools";
 import MarketingLink from "./pages/MarketingLink";
 import MarketingPixels from "./pages/MarketingPixels";
 import Checkout from "./pages/Checkout";
@@ -81,7 +80,7 @@ const AppInner = () => {
           <Route path="/test-supabase" element={<TestSupabase />} />
           <Route path="/organizer-events" element={<OrganizerEvents />} />
           <Route path="/organizer-orders" element={<OrdersManager />} />
-          <Route path="/organizer-marketing" element={<MarketingTools />} />
+          {/* /organizer-marketing route removed */}
           <Route path="/marketing/link-rastreamento" element={<MarketingLink />} />
           <Route path="/marketing/link-rastreamento/:id" element={<MarketingLink />} />
           <Route path="/marketing/pixels" element={<MarketingPixels />} />

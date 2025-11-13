@@ -1,5 +1,6 @@
 import AppHeader from "@/components/AppHeader";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from 'react-dom';
 // Animated ticket deletion effect styles
 const style = document.createElement('style');
 style.innerHTML = `
@@ -10,6 +11,8 @@ style.innerHTML = `
   .animate-slide-up { animation: slide-up 0.7s cubic-bezier(.4,2,.6,1); }
   .animate-trash { animation: trash 0.7s cubic-bezier(.4,2,.6,1); }
   .animate-delete-ticket { border-color: #fca5a5 !important; box-shadow: 0 0 0 4px #fca5a555; transition: border-color 0.7s, box-shadow 0.7s; }
+  @keyframes emoji-pop { 0% { transform: scale(1) rotate(0deg); } 30% { transform: scale(1.25) rotate(-10deg); } 60% { transform: scale(0.95) rotate(8deg); } 100% { transform: scale(1) rotate(0deg); } }
+  .emoji-pop { display: inline-block; transform-origin: center; animation: emoji-pop 700ms cubic-bezier(.2,.9,.2,1); }
 `;
 document.head.appendChild(style);
 import { fetchApi } from "@/lib/apiBase";
@@ -24,7 +27,23 @@ import SidebarMenu from "@/components/SidebarMenu";
 import EventDetailsSidebar from "@/components/EventDetailsSidebar";
 import { useNavigate, useLocation } from "react-router-dom";
 import StepFlowOverlay from "@/components/overlays/StepFlowOverlay";
-import { Pencil, Trash, MoreVertical, GripVertical } from "lucide-react";
+import { Pencil, Trash, MoreVertical, GripVertical, Info, ChevronDown, Copy, Tag } from "lucide-react";
+import { useToast } from '@/hooks/use-toast';
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import CheckIcon from "../components/icons/CheckIcon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +59,11 @@ const CreateTickets: React.FC = () => {
       .format(n)
       .replace(/\s/g, '');
   }, []);
+  // Format number for BRL without the currency symbol (used when we render the fixed 'R$' prefix)
+  const formatBRLNoSymbol = React.useCallback((n: number) => {
+    if (Number.isNaN(n)) n = 0;
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  }, []);
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const formatDateTimeShort = (d: Date) => {
     const dd = String(d.getDate()).padStart(2, '0');
@@ -51,6 +75,73 @@ const CreateTickets: React.FC = () => {
   // Estado para lista de tipos de ingresso
   const [ticketTypes, setTicketTypes] = useState<any[]>([]);
 
+  // Local form / UI state that was accidentally removed in previous edits
+  const [ticketName, setTicketName] = useState<string>("");
+  const [maxTickets, setMaxTickets] = useState<string>("");
+  const [price, setPrice] = useState<string>("");
+  const [priceRaw, setPriceRaw] = useState<string>("");
+  const [priceFocused, setPriceFocused] = useState<boolean>(false);
+  const [isFree, setIsFree] = useState<boolean>(false);
+  const [isAbsorbFee, setIsAbsorbFee] = useState<boolean>(false);
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
+  const [isFacePass, setIsFacePass] = useState<boolean>(false);
+  const [description, setDescription] = useState<string>("");
+  const [perUserLimit, setPerUserLimit] = useState<string>("");
+  const [salesStartDate, setSalesStartDate] = useState<string>("");
+  const [salesStartTime, setSalesStartTime] = useState<string>("");
+  const [salesEndDate, setSalesEndDate] = useState<string>("");
+  const [salesEndTime, setSalesEndTime] = useState<string>("");
+  const [createHalf, setCreateHalf] = useState<boolean>(false);
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [loading, setLoading] = useState<boolean>(false);
+  const [success, setSuccess] = useState<string>("");
+  const [error, setError] = useState<string>("");
+
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [duplicatePendingId, setDuplicatePendingId] = useState<string | null>(null);
+  const [duplicateName, setDuplicateName] = useState<string>('');
+  const [duplicateLoading, setDuplicateLoading] = useState<boolean>(false);
+  const [markSoldPendingId, setMarkSoldPendingId] = useState<string | null>(null);
+  const [markSoldLoading, setMarkSoldLoading] = useState<boolean>(false);
+  const [reopenPendingId, setReopenPendingId] = useState<string | null>(null);
+  const [reopenLoading, setReopenLoading] = useState<boolean>(false);
+  const [reopenValue, setReopenValue] = useState<string>('10');
+
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'before' | 'after' | null>(null);
+
+  const [flowStep, setFlowStep] = useState<1|2|3>(1);
+  const [flowVisible, setFlowVisible] = useState<boolean>(false);
+
+  const [ticketsLoading, setTicketsLoading] = useState<boolean>(true);
+
+  const [advancedOpen, setAdvancedOpen] = useState<boolean>(false);
+
+  const [perUserTooltipPos, setPerUserTooltipPos] = useState<{ left: number; top: number } | null>(null);
+  const [halfTooltipPos, setHalfTooltipPos] = useState<{ left: number; top: number } | null>(null);
+  const [privateTooltipPos, setPrivateTooltipPos] = useState<{ left: number; top: number } | null>(null);
+
+  const [showPerUserTooltip, setShowPerUserTooltip] = useState<boolean>(false);
+  const [showHalfInfoTooltip, setShowHalfInfoTooltip] = useState<boolean>(false);
+  const [showPrivateTooltip, setShowPrivateTooltip] = useState<boolean>(false);
+
+  const [createHalfAnim, setCreateHalfAnim] = useState<boolean>(false);
+  const [privateAnim, setPrivateAnim] = useState<boolean>(false);
+  const [faceAnim, setFaceAnim] = useState<boolean>(false);
+
+  const perUserBtnRef = useRef<HTMLButtonElement | null>(null);
+  const halfBtnRef = useRef<HTMLButtonElement | null>(null);
+  const privateBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  const [showPublishTooltip, setShowPublishTooltip] = useState<boolean>(false);
+  const [publishTooltipPos, setPublishTooltipPos] = useState<{ left: number; top: number } | null>(null);
+
+  const HALF_INDENT_PX = 48;
+  const serviceFeePercent = 0.1;
   const navigate = useNavigate();
   const location = useLocation();
   // Pega eventId da query string
@@ -58,108 +149,51 @@ const CreateTickets: React.FC = () => {
     const params = new URLSearchParams(location.search);
     return params.get("eventId");
   }, [location.search]);
-  // Event summary for sidebar
-  const [eventName, setEventName] = useState<string>("Nome do evento");
-  const [eventStatus, setEventStatus] = useState<"Rascunho" | "Publicado">("Rascunho");
-  const [eventStart, setEventStart] = useState<string>("");
-  const [organizerId, setOrganizerId] = useState<string | null>(null);
-  const [serviceFeePercent, setServiceFeePercent] = useState<number>(0.15);
 
-  // Fetch event for sidebar details
-  React.useEffect(() => {
-    const run = async () => {
-      if (!eventId) return;
-      try {
-  const res = await fetchApi(`/api/event/${eventId}`);
-        if (!res.ok) return;
-        const ev = await res.json();
-        setEventName(ev.name || "Nome do evento");
-        setEventStatus(ev.isPublished ? 'Publicado' : 'Rascunho');
-        if (ev.startDate) {
-          const d = new Date(ev.startDate);
-          const months = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
-          const dia = String(d.getDate()).padStart(2,'0');
-          const mes = months[d.getMonth()];
-          const ano = d.getFullYear();
-          const hh = String(d.getHours()).padStart(2,'0');
-          const mi = String(d.getMinutes()).padStart(2,'0');
-          setEventStart(`${dia} ${mes} ${ano} às ${hh}:${mi}`);
-        }
-        const orgId = ev.organizerId || ev.organizationId || null;
-        setOrganizerId(orgId);
-        if (orgId) {
-          try {
-            const feeRes = await fetchApi(`/api/organization/${orgId}/fee`);
-            if (feeRes.ok) {
-              const feeData = await feeRes.json();
-              if (typeof feeData.serviceFeePercent === 'number') setServiceFeePercent(feeData.serviceFeePercent);
-            }
-          } catch (_) {}
-        }
-      } catch (_) {}
-    };
-    run();
-  }, [eventId]);
-
-  // Step overlay based on navigation state
-  const [flowVisible, setFlowVisible] = useState(!!(location.state as any)?.stepFlow?.visible);
-  const [flowStep, setFlowStep] = useState<1 | 2 | 3>((location.state as any)?.stepFlow?.step || 2);
-
-  useEffect(() => {
-    if (flowVisible) {
-      const t = setTimeout(() => setFlowVisible(false), 1200);
-      return () => clearTimeout(t);
-    }
-  }, [flowVisible]);
-
-  // Buscar tipos de ingresso do evento
+  // Fetch ticket types and some event info
   const fetchTickets = React.useCallback(async () => {
-    if (!eventId) return;
+    if (!eventId) {
+      setTicketTypes([]);
+      setTicketsLoading(false);
+      return;
+    }
+    setTicketsLoading(true);
     try {
-      setTicketsLoading(true);
-  const res = await fetchApi(`/api/ticket-type/event/${eventId}`);
-      if (res.ok) {
-        const list = await res.json();
-        setTicketTypes(Array.isArray(list) ? list : []);
+      const res = await fetchApi(`/api/ticket-type/event/${eventId}`);
+      if (res && res.ok) {
+        const data = await res.json().catch(() => null);
+        if (Array.isArray(data)) setTicketTypes(data);
+        else setTicketTypes([]);
+      } else {
+        setTicketTypes([]);
       }
     } catch (e) {
-      // mantém lista atual em caso de erro
+      setTicketTypes([]);
     } finally {
       setTicketsLoading(false);
     }
+    // Also try to fetch basic event info (non-blocking)
+    try {
+      const ev = await fetchApi(`/api/event/${eventId}`);
+      if (ev && ev.ok) {
+        const json = await ev.json().catch(() => null);
+        if (json) {
+          if (json.name) setEventName(json.name);
+          if (json.startDate) setEventStart(json.startDate + (json.startTime ? ` às ${json.startTime}` : ''));
+          if (typeof json.isPublished === 'boolean') setEventStatus(json.isPublished ? 'Publicado' : 'Rascunho');
+        }
+      }
+    } catch (_) {}
   }, [eventId]);
 
   React.useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
-  const [ticketName, setTicketName] = useState("");
-  const [maxTickets, setMaxTickets] = useState("");
-  const [price, setPrice] = useState("");
-  const [isFree, setIsFree] = useState(false);
-  const [description, setDescription] = useState("");
-  const [isAbsorbFee, setIsAbsorbFee] = useState(false);
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [isFacePass, setIsFacePass] = useState(false);
-  const [perUserLimit, setPerUserLimit] = useState("");
-  const [salesStartDate, setSalesStartDate] = useState("");
-  const [salesStartTime, setSalesStartTime] = useState("");
-  const [salesEndDate, setSalesEndDate] = useState("");
-  const [salesEndTime, setSalesEndTime] = useState("");
-  const [createHalf, setCreateHalf] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [ticketsLoading, setTicketsLoading] = useState(false);
-
-  // Drag-and-drop ordering
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-  // Visual hierarchy: keep child (meia) indented to the right of the parent
-  const HALF_INDENT_PX = 80;
+  // Event summary for sidebar
+  const [eventName, setEventName] = useState<string>("Nome do evento");
+  const [eventStatus, setEventStatus] = useState<"Rascunho" | "Publicado">("Rascunho");
+  const [eventStart, setEventStart] = useState<string>("");
+ 
 
   const groupOf = React.useCallback((list: any[], id: string) => {
     const item = list.find((x) => x.id === id);
@@ -323,20 +357,264 @@ const CreateTickets: React.FC = () => {
     }, 700);
   };
 
+  const { toast } = useToast();
+
+  const handleDuplicateTicket = async (id: string, forcedName?: string) => {
+    const t = ticketTypes.find(x => x.id === id);
+    if (!t) {
+      toast?.({ title: 'Erro', description: 'Ingresso não encontrado' });
+      return;
+    }
+    // Ensure we have an eventId: prefer query param, fallback to ticket's eventId
+    const targetEventId = eventId || t.eventId || t.event_id || null;
+    if (!targetEventId) {
+      toast?.({ title: 'Erro', description: 'ID do evento não encontrado. Não é possível duplicar.' , variant: 'destructive'} as any);
+      return;
+    }
+    try {
+      const baseName = forcedName ?? (t.name ? `${t.name} (Cópia)` : 'Cópia de ingresso');
+      const body: any = {
+        eventId: targetEventId,
+        name: baseName,
+        maxQuantity: Number(t.maxQuantity || 0),
+        price: Number(t.price || 0),
+        description: t.description || undefined,
+        absorbFee: !!t.absorbFee,
+        isPrivate: !!t.isPrivate,
+        isFacePass: !!t.isFacePass,
+        perUserLimit: typeof t.perUserLimit !== 'undefined' ? t.perUserLimit : undefined,
+      };
+
+      let res = await fetchApi('/api/ticket-type', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+
+      // If backend rejected due to conflict (409), retry with a unique suffix
+      if (res && res.status === 409 && !forcedName) {
+        // If conflict and user didn't force a name, attempt a single retry with a unique suffix
+        const suffix = `c${String(Date.now()).slice(-5)}`;
+        body.name = `${baseName} — ${suffix}`;
+        res = await fetchApi('/api/ticket-type', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+      }
+
+      if (!res || !res.ok) {
+        let msg = `Falha ao duplicar ingresso (${res ? res.status : 'sem resposta'})`;
+        try { const j = await res.json().catch(() => null); if (j?.message) msg = j.message; } catch {}
+        toast?.({ title: 'Erro', description: msg, variant: 'destructive' } as any);
+        return;
+      }
+
+      const created = await res.json().catch(() => null);
+      toast?.({ title: 'Duplicado', description: 'Ingresso duplicado com sucesso' });
+      // refresh list and open drawer to edit the duplicated ticket
+      await fetchTickets();
+  const newId = created?.id || created?.ticketTypeId || created?.ticket_type_id || null;
+      if (newId) {
+        // Pre-fill drawer with created ticket data
+        setEditingId(newId);
+        setTicketName(created?.name || (t.name ? `${t.name}` : ''));
+        setMaxTickets(String(created?.maxQuantity ?? created?.max_quantity ?? t.maxQuantity ?? ''));
+        setPrice(String(created?.price ?? t.price ?? ''));
+        setIsFree(Number(created?.price ?? t.price ?? 0) === 0);
+        setDescription(created?.description || t.description || '');
+        setIsAbsorbFee(!!(created?.absorbFee ?? t.absorbFee));
+        setIsPrivate(!!(created?.isPrivate ?? t.isPrivate));
+        setIsFacePass(!!(created?.isFacePass ?? t.isFacePass));
+        setPerUserLimit(String(created?.perUserLimit ?? t.perUserLimit ?? ''));
+        try {
+          if (created?.salesStart) {
+            const d = new Date(created.salesStart);
+            setSalesStartDate(d.toISOString().slice(0,10));
+            setSalesStartTime(d.toTimeString().slice(0,5));
+          } else { setSalesStartDate(''); setSalesStartTime(''); }
+          if (created?.salesEnd) {
+            const d2 = new Date(created.salesEnd);
+            setSalesEndDate(d2.toISOString().slice(0,10));
+            setSalesEndTime(d2.toTimeString().slice(0,5));
+          } else { setSalesEndDate(''); setSalesEndTime(''); }
+        } catch (_) {
+          setSalesStartDate(''); setSalesStartTime(''); setSalesEndDate(''); setSalesEndTime('');
+        }
+        setCreateHalf(false);
+        setDrawerOpen(true);
+      }
+    } catch (e) {
+      toast?.({ title: 'Erro', description: 'Erro de conexão ao duplicar', variant: 'destructive' } as any);
+    }
+  };
+
+  const handleMarkAsSold = async (id: string) => {
+    const t = ticketTypes.find(x => x.id === id);
+    if (!t) {
+      toast?.({ title: 'Erro', description: 'Ingresso não encontrado' });
+      return;
+    }
+    try {
+      // set maxQuantity to 0 to stop future sales
+      const res = await fetchApi(`/api/ticket-type/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ maxQuantity: 0 })
+      });
+      if (!res || !res.ok) {
+        let msg = 'Falha ao marcar como esgotado';
+        try { const j = await res.json().catch(() => null); if (j?.message) msg = j.message; } catch {}
+        toast?.({ title: 'Erro', description: msg, variant: 'destructive' } as any);
+        return;
+      }
+      toast?.({ title: 'Atualizado', description: 'Ingresso marcado como esgotado' });
+      // update local state optimistically
+      setTicketTypes(prev => prev.map(x => x.id === id ? ({ ...x, maxQuantity: 0 }) : x));
+    } catch (e) {
+      toast?.({ title: 'Erro', description: 'Erro de conexão ao atualizar', variant: 'destructive' } as any);
+    }
+  };
+
+  const handleReopenTicket = async (id: string, qty: number) => {
+    const t = ticketTypes.find(x => x.id === id);
+    if (!t) {
+      toast?.({ title: 'Erro', description: 'Ingresso não encontrado' });
+      return;
+    }
+    try {
+      const res = await fetchApi(`/api/ticket-type/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ maxQuantity: qty })
+      });
+      if (!res || !res.ok) {
+        let msg = `Falha ao reabrir vendas (${res ? res.status : 'sem resposta'})`;
+        try { const j = await res.json().catch(() => null); if (j?.message) msg = j.message; } catch {}
+        toast?.({ title: 'Erro', description: msg, variant: 'destructive' } as any);
+        return;
+      }
+      toast?.({ title: 'Atualizado', description: 'Vendas reabertas com sucesso' });
+      await fetchTickets();
+    } catch (e) {
+      toast?.({ title: 'Erro', description: 'Erro de conexão ao reabrir vendas', variant: 'destructive' } as any);
+    }
+  };
+
   // Helpers for date/time input constraints
   const toYmd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const toHm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const now = new Date();
   const todayYmd = toYmd(now);
   const nowHm = toHm(now);
+  const nowPlus5 = new Date(Date.now() + 5 * 60 * 1000);
+  const nowPlus5Hm = toHm(nowPlus5);
   const startDateIsToday = salesStartDate === todayYmd;
   const endDateIsToday = salesEndDate === todayYmd;
   const endSameAsStart = !!salesStartDate && !!salesEndDate && salesStartDate === salesEndDate;
-  const startTimeMin = startDateIsToday ? nowHm : undefined;
+  const startTimeMin = startDateIsToday ? nowPlus5Hm : undefined;
   const endDateMin = salesStartDate || todayYmd;
+  const addMinutesToTime = (time: string, mins: number) => {
+    if (!time) return '';
+    const [hh, mm] = time.split(':').map(Number);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return '';
+    const d = new Date();
+    d.setHours(hh, mm + mins, 0, 0);
+    // clamp to 23:59
+    if (d.getHours() >= 24) return '23:59';
+    return toHm(d);
+  };
   const endTimeMin = endSameAsStart
-    ? (salesStartTime || (startDateIsToday ? nowHm : undefined))
-    : (endDateIsToday ? nowHm : undefined);
+    ? (salesStartTime ? addMinutesToTime(salesStartTime, 30) : undefined)
+    : undefined;
+
+  // When a tooltip is shown, compute its position relative to viewport and portal it to document.body
+  useEffect(() => {
+    if (showPerUserTooltip && perUserBtnRef.current) {
+      const r = perUserBtnRef.current.getBoundingClientRect();
+      setPerUserTooltipPos({ left: r.left + r.width / 2, top: r.top - 8 });
+    } else {
+      setPerUserTooltipPos(null);
+    }
+  }, [showPerUserTooltip]);
+
+  useEffect(() => {
+    if (showHalfInfoTooltip && halfBtnRef.current) {
+      const r = halfBtnRef.current.getBoundingClientRect();
+      setHalfTooltipPos({ left: r.left + r.width / 2, top: r.top - 8 });
+    } else {
+      setHalfTooltipPos(null);
+    }
+  }, [showHalfInfoTooltip]);
+
+  // trigger emoji animation when createHalf toggles
+  useEffect(() => {
+    setCreateHalfAnim(true);
+    const t = setTimeout(() => setCreateHalfAnim(false), 700);
+    return () => clearTimeout(t);
+  }, [createHalf]);
+
+  // animate private emoji when toggled
+  useEffect(() => {
+    setPrivateAnim(true);
+    const t = setTimeout(() => setPrivateAnim(false), 700);
+    return () => clearTimeout(t);
+  }, [isPrivate]);
+
+  // animate facepass emoji when toggled
+  useEffect(() => {
+    setFaceAnim(true);
+    const t = setTimeout(() => setFaceAnim(false), 700);
+    return () => clearTimeout(t);
+  }, [isFacePass]);
+
+  useEffect(() => {
+    if (showPrivateTooltip && privateBtnRef.current) {
+      const r = privateBtnRef.current.getBoundingClientRect();
+      setPrivateTooltipPos({ left: r.left + r.width / 2, top: r.top - 8 });
+    } else {
+      setPrivateTooltipPos(null);
+    }
+  }, [showPrivateTooltip]);
+
+  // Prefill sales start/end when opening drawer for a NEW ticket
+  // Persistent behavior: always reset to sensible defaults when opening create drawer
+  useEffect(() => {
+    if (drawerOpen && !editingId) {
+      setSalesStartDate(todayYmd);
+      setSalesStartTime(nowPlus5Hm);
+      setSalesEndDate(todayYmd);
+      setSalesEndTime(addMinutesToTime(nowPlus5Hm, 30));
+      // Ensure feature toggles are off for a fresh create
+      setCreateHalf(false);
+      setIsPrivate(false);
+      setIsFacePass(false);
+    }
+  }, [drawerOpen, editingId]);
+
+  // When the drawer closes, reset the advanced panel state so it's collapsed on next open
+  useEffect(() => {
+    if (!drawerOpen) {
+      setAdvancedOpen(false);
+      // also hide any visible tooltips
+      setShowPerUserTooltip(false);
+      setShowHalfInfoTooltip(false);
+      setShowPrivateTooltip(false);
+      // Reset advanced inputs so next open starts fresh (description, per-user limits, sales window and feature toggles)
+      setDescription("");
+      setPerUserLimit("");
+      setSalesStartDate("");
+      setSalesStartTime("");
+      setSalesEndDate("");
+      setSalesEndTime("");
+      setCreateHalf(false);
+      setIsPrivate(false);
+      setIsFacePass(false);
+      // Also reset main form fields so canceling/closing clears the form
+      setTicketName("");
+      setMaxTickets("");
+      setPrice("");
+      setPriceRaw("");
+      setPriceFocused(false);
+      setIsFree(false);
+      setIsAbsorbFee(false);
+      setSuccess("");
+      setError("");
+      setEditingId(null);
+    }
+  }, [drawerOpen]);
 
   return (
     <div className="min-h-screen w-full bg-white dark:bg-[#0b0b0b] flex">
@@ -430,8 +708,8 @@ const CreateTickets: React.FC = () => {
                   <div key={t.id} className="relative w-full">
                     {/* Animated deletion effect */}
                     <div
-                      className={`bg-white dark:bg-[#242424] rounded-2xl border p-6 transition-all duration-700 ${isParentWithHalf ? 'mb-1' : 'mb-4'} shadow-sm ${draggingId === t.id ? 'opacity-70' : ''} ${dragOverId === t.id ? 'ring-2 ring-indigo-200' : ''} ${deleteId === t.id ? 'border-red-300 animate-delete-ticket' : 'border-[#E5E7EB] dark:border-[#1F1F1F]'}`}
-                      style={t.isHalf ? { marginLeft: HALF_INDENT_PX, width: `calc(100% - ${HALF_INDENT_PX}px)` } : undefined}
+                      className={`bg-white dark:bg-[#242424] rounded-2xl border p-6 relative transition-all duration-700 ${isParentWithHalf ? 'mb-0' : 'mb-4'} shadow-sm ${draggingId === t.id ? 'opacity-70' : ''} ${deleteId === t.id ? 'border-red-300 animate-delete-ticket' : 'border-[#E5E7EB] dark:border-[#1F1F1F]'}`}
+                      style={t.isHalf ? { marginLeft: HALF_INDENT_PX / 2, width: `calc(100% - ${HALF_INDENT_PX / 2}px)`, marginTop: '-8px' } : undefined}
                       draggable={!t.isHalf}
                       onDragStart={(e) => {
                         if (t.isHalf) { e.preventDefault(); return; }
@@ -441,32 +719,59 @@ const CreateTickets: React.FC = () => {
                       }}
                       onDragOver={(e) => {
                         e.preventDefault();
-                        // If hovering over half, highlight parent instead
-                        const targetId = t.isHalf ? (ticketTypes.find((x: any) => x.id === t.parentId)?.id || t.id) : t.id;
-                        setDragOverId(targetId);
+                        // decide before/after based on cursor Y relative to element midpoint
+                        try {
+                          const el = e.currentTarget as HTMLElement;
+                          const r = el.getBoundingClientRect();
+                          const cursorY = e.clientY;
+                          const pos = cursorY < (r.top + r.height / 2) ? 'before' : 'after';
+                          const targetId = t.isHalf ? (ticketTypes.find((x: any) => x.id === t.parentId)?.id || t.id) : t.id;
+                          setDragOverId(targetId);
+                          setDragOverPosition(pos as 'before' | 'after');
+                        } catch (_) {
+                          setDragOverId(t.id);
+                          setDragOverPosition(null);
+                        }
                       }}
-                      onDragLeave={() => setDragOverId(null)}
+                      onDragLeave={() => { setDragOverId(null); setDragOverPosition(null); }}
                       onDrop={(e) => {
                         e.preventDefault();
                         const sourceId = draggingId || e.dataTransfer.getData('text/plain');
+                        const pos = dragOverPosition;
                         setDragOverId(null);
+                        setDragOverPosition(null);
                         setDraggingId(null);
                         if (!sourceId || sourceId === t.id) return;
-                        // Determine groups
                         const src = groupOf(ticketTypes, sourceId);
                         if (src.startIdx < 0 || src.count === 0) return;
                         const list = [...ticketTypes];
                         const moved = list.splice(src.startIdx, src.count);
-                        // Determine target index as start of target group (parent if half)
-                        let targetIdx = list.findIndex((x) => x.id === (t.isHalf ? t.parentId : t.id));
+                        const normalizedTargetId = t.isHalf ? t.parentId : t.id;
+                        let targetIdx = list.findIndex((x) => x.id === normalizedTargetId);
                         if (targetIdx < 0) targetIdx = 0;
-                        // If source was before target, after removing, adjust target index
-                        if (src.startIdx < targetIdx) targetIdx = Math.max(0, targetIdx - src.count);
-                        list.splice(targetIdx, 0, ...moved);
+                        // If the target has an adjacent half-child, treat parent+child as a single group
+                        let groupEndIdx = targetIdx + 1; // default: after parent only
+                        const childIdx = list.findIndex((x) => x.parentId === normalizedTargetId);
+                        if (childIdx === targetIdx + 1) {
+                          groupEndIdx = childIdx + 1; // position after the child
+                        }
+                        // decide insertion index: before parent (targetIdx) or after the whole group (groupEndIdx)
+                        let insertIdx = (pos === 'after') ? groupEndIdx : targetIdx;
+                        // account for the earlier splice that removed the moved items
+                        if (src.startIdx < insertIdx) insertIdx = Math.max(0, insertIdx - src.count);
+                        // if insertion would still fall inside the moved block, ignore
+                        if (insertIdx >= src.startIdx && insertIdx <= src.startIdx + src.count) return;
+                        list.splice(insertIdx, 0, ...moved);
                         reorderTickets(list);
                       }}
                     >
-                      {/* Animated trash icon and message when deleting */}
+                      {/* visual indicator for before/after insertion while dragging */}
+                      {dragOverId === (t.isHalf ? (ticketTypes.find((x: any) => x.id === t.parentId)?.id || t.id) : t.id) && dragOverPosition === 'before' && (
+                        <div className="absolute left-0 right-0 top-0 h-1 bg-indigo-500 rounded-t-2xl z-20" />
+                      )}
+                      {dragOverId === (t.isHalf ? (ticketTypes.find((x: any) => x.id === t.parentId)?.id || t.id) : t.id) && dragOverPosition === 'after' && (
+                        <div className="absolute left-0 right-0 bottom-0 h-1 bg-indigo-500 rounded-b-2xl z-20" />
+                      )}
                       {pendingDeleteId === t.id && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-[#0b0b0b]/80 z-10 rounded-2xl border-2 border-red-300 animate-fade-in">
                           <svg className="w-16 h-16 text-red-400 animate-trash" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -475,107 +780,108 @@ const CreateTickets: React.FC = () => {
                           <div className="mt-4 text-lg font-bold text-red-500 animate-slide-up">Jogando fora esse ingresso…</div>
                         </div>
                       )}
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-start gap-3">
-                        {!t.isHalf && (
-                          <div className="mt-0.5 text-gray-400 cursor-grab select-none" title="Arraste para reordenar">
-                            <GripVertical className="w-4 h-4" />
+
+                      {/* Top row: name + badge on left, price + sold + menu on right */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          {!t.isHalf && (
+                            <div className="mt-0.5 text-gray-400 cursor-grab select-none" title="Arraste para reordenar">
+                              <GripVertical className="w-4 h-4" />
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-3">
+                              <div className="text-lg font-bold text-[#091747] dark:text-white">{displayName}</div>
+                              {!t.isHalf ? (
+                                t.maxQuantity === 0 ? (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#2A2AD7] text-white border border-[#2A2AD7] text-[12px]">ESGOTADO</span>
+                                ) : (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-[12px]">PRONTO</span>
+                                )
+                              ) : (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#FFF4F0] text-[#EF4118] border border-[#FFBCA3] text-[12px]">MEIA ENTRADA</span>
+                              )}
+                            </div>
+                            {/* sales period removed from card header as per design */}
                           </div>
-                        )}
-                        <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="text-lg font-bold text-[#091747] dark:text-white">{displayName}</div>
-                          {t.isHalf && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[12px]">Meia-entrada</span>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <div className="text-[#091747] text-lg font-bold">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</div>
+                          <div className="text-sm text-slate-500">0 / {t.maxQuantity}</div>
+                          {!t.isHalf && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="w-9 h-9 rounded-full bg-slate-100 dark:bg-[#1F1F1F] flex items-center justify-center text-slate-600 dark:text-slate-300" aria-label="Ações do ingresso">
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
+                                <DropdownMenuItem onClick={() => {
+                                  setEditingId(t.id);
+                                  setTicketName(t.name || "");
+                                  setMaxTickets(String(t.maxQuantity ?? ""));
+                                  setPrice(String(t.price ?? ""));
+                                  setIsFree(Number(t.price || 0) === 0);
+                                  setDescription(t.description || "");
+                                  setIsAbsorbFee(!!t.absorbFee);
+                                  setIsPrivate(!!t.isPrivate);
+                                  setIsFacePass(!!t.isFacePass);
+                                  setPerUserLimit(String(t.perUserLimit ?? ""));
+                                  try {
+                                    if (t.salesStart) {
+                                      const d = new Date(t.salesStart);
+                                      const yyyy = d.getFullYear();
+                                      const mm = String(d.getMonth() + 1).padStart(2,'0');
+                                      const dd = String(d.getDate()).padStart(2,'0');
+                                      const hh = String(d.getHours()).padStart(2,'0');
+                                      const mi = String(d.getMinutes()).padStart(2,'0');
+                                      setSalesStartDate(`${yyyy}-${mm}-${dd}`);
+                                      setSalesStartTime(`${hh}:${mi}`);
+                                    } else { setSalesStartDate(""); setSalesStartTime(""); }
+                                    if (t.salesEnd) {
+                                      const d2 = new Date(t.salesEnd);
+                                      const yyyy2 = d2.getFullYear();
+                                      const mm2 = String(d2.getMonth() + 1).padStart(2,'0');
+                                      const dd2 = String(d2.getDate()).padStart(2,'0');
+                                      const hh2 = String(d2.getHours()).padStart(2,'0');
+                                      const mi2 = String(d2.getMinutes()).padStart(2,'0');
+                                      setSalesEndDate(`${yyyy2}-${mm2}-${dd2}`);
+                                      setSalesEndTime(`${hh2}:${mi2}`);
+                                    } else { setSalesEndDate(""); setSalesEndTime(""); }
+                                  } catch (_) {
+                                    setSalesStartDate(""); setSalesStartTime(""); setSalesEndDate(""); setSalesEndTime("");
+                                  }
+                                  setCreateHalf(false);
+                                  setDrawerOpen(true);
+                                }}>
+                                  <Pencil className="w-4 h-4 mr-2" /> Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setDuplicatePendingId(t.id);
+                                  setDuplicateName(t.name ? `${t.name} (Cópia)` : 'Cópia de ingresso');
+                                }} className="flex items-center gap-2 whitespace-nowrap">
+                                  <Copy className="w-4 h-4 mr-2" /> Duplicar
+                                </DropdownMenuItem>
+                                {t.maxQuantity === 0 ? (
+                                  <DropdownMenuItem onClick={() => { setReopenPendingId(t.id); setReopenValue('10'); }} className="flex items-center gap-2 whitespace-nowrap">
+                                    <Tag className="w-4 h-4 mr-2" /> Reabrir vendas
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem onClick={() => setMarkSoldPendingId(t.id)} className="flex items-center gap-2 whitespace-nowrap">
+                                    <Tag className="w-4 h-4 mr-2" /> Marcar como esgotado
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem className="text-red-600 focus:text-red-700 whitespace-nowrap" onSelect={() => setDeleteId(t.id)}>
+                                  <Trash className="w-4 h-4 mr-2" /> Apagar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm mb-1">
-                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-                          <span className="text-emerald-600 font-medium">À venda</span>
-                        </div>
-                        {(t.salesStart || t.salesEnd) && (
-                          <div className="text-xs text-indigo-900/70 dark:text-slate-300 mb-2">
-                            {(() => {
-                              try {
-                                const startStr = t.salesStart ? formatDateTimeShort(new Date(t.salesStart)) : null;
-                                const endStr = t.salesEnd ? formatDateTimeShort(new Date(t.salesEnd)) : null;
-                                if (startStr && endStr) return <>Vendas: {startStr} — {endStr}</>;
-                                if (startStr) return <>A partir de {startStr}</>;
-                                if (endStr) return <>Até {endStr}</>;
-                              } catch (_) {}
-                              return null;
-                            })()}
-                          </div>
-                        )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-[#EF4118] text-lg font-bold mr-1">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-[#1F1F1F] text-gray-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-white" aria-label="Ações do ingresso">
-                              <MoreVertical className="w-5 h-5" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40 bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
-                            <DropdownMenuItem disabled={!!t.isHalf} onClick={() => {
-                              setEditingId(t.id);
-                              setTicketName(t.name || "");
-                              setMaxTickets(String(t.maxQuantity ?? ""));
-                              setPrice(String(t.price ?? ""));
-                              setIsFree(Number(t.price || 0) === 0);
-                              setDescription(t.description || "");
-                              setIsAbsorbFee(!!t.absorbFee);
-                              setIsPrivate(!!t.isPrivate);
-                              setIsFacePass(!!t.isFacePass);
-                              setPerUserLimit(String(t.perUserLimit ?? ""));
-                              try {
-                                if (t.salesStart) {
-                                  const d = new Date(t.salesStart);
-                                  const yyyy = d.getFullYear();
-                                  const mm = String(d.getMonth() + 1).padStart(2,'0');
-                                  const dd = String(d.getDate()).padStart(2,'0');
-                                  const hh = String(d.getHours()).padStart(2,'0');
-                                  const mi = String(d.getMinutes()).padStart(2,'0');
-                                  setSalesStartDate(`${yyyy}-${mm}-${dd}`);
-                                  setSalesStartTime(`${hh}:${mi}`);
-                                } else { setSalesStartDate(""); setSalesStartTime(""); }
-                                if (t.salesEnd) {
-                                  const d2 = new Date(t.salesEnd);
-                                  const yyyy2 = d2.getFullYear();
-                                  const mm2 = String(d2.getMonth() + 1).padStart(2,'0');
-                                  const dd2 = String(d2.getDate()).padStart(2,'0');
-                                  const hh2 = String(d2.getHours()).padStart(2,'0');
-                                  const mi2 = String(d2.getMinutes()).padStart(2,'0');
-                                  setSalesEndDate(`${yyyy2}-${mm2}-${dd2}`);
-                                  setSalesEndTime(`${hh2}:${mi2}`);
-                                } else { setSalesEndDate(""); setSalesEndTime(""); }
-                              } catch (_) {
-                                setSalesStartDate(""); setSalesStartTime(""); setSalesEndDate(""); setSalesEndTime("");
-                              }
-                              setCreateHalf(false);
-                              setDrawerOpen(true);
-                            }}>
-                              <Pencil className="w-4 h-4 mr-2" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600 focus:text-red-700" disabled={!!t.isHalf} onSelect={() => setDeleteId(t.id)}>
-                              <Trash className="w-4 h-4 mr-2" /> Apagar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </div>
                     </div>
-                    <hr className={`border-gray-100 dark:border-[#1F1F1F] ${isParentWithHalf ? 'my-2' : 'my-4'}`} />
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-[#091747] dark:text-white font-semibold">Vendido <span className="font-bold">0/{t.maxQuantity}</span></span>
-                      {Number(t.price || 0) > 0 && (
-                        <>
-                          <span className="text-[#EF4118] font-semibold">Você recebe <span className="font-bold">{formatBRL(receive)}</span></span>
-                          <span className="text-[#EF4118] font-semibold">Taxa <span className="font-bold">{formatBRL(fee)}</span></span>
-                        </>
-                      )}
-                    </div>
-                    </div>
+                    {/* removed dividing hr between cards per design */}
                   </div>
                 );
               })}
@@ -624,105 +930,281 @@ const CreateTickets: React.FC = () => {
                     {!isFree && (
                       <>
                         <Label>Preço</Label>
-                        <Input placeholder="Preço" type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} className="dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" />
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-600">R$</span>
+                          <Input
+                            placeholder="Preço"
+                            type="text"
+                            value={priceFocused ? priceRaw : (price === '' ? '' : formatBRLNoSymbol(Number(price)))}
+                            onFocus={(e) => {
+                              setPriceFocused(true);
+                              setPriceRaw(price ? price.replace('.', ',') : '');
+                            }}
+                            onBlur={(e) => {
+                              const raw = String(priceRaw || '').replace(/[^0-9,\.]/g, '');
+                              if (!raw) {
+                                setPrice('');
+                                setPriceFocused(false);
+                                return;
+                              }
+                              const normalized = raw.replace(/,/g, '.');
+                              const parts = normalized.split('.');
+                              let numStr = normalized;
+                              if (parts.length > 2) {
+                                const dec = parts.pop();
+                                numStr = parts.join('') + '.' + dec;
+                              }
+                              const n = parseFloat(numStr);
+                              if (Number.isNaN(n)) {
+                                setPrice('');
+                              } else {
+                                setPrice((round2(n)).toFixed(2));
+                              }
+                              setPriceFocused(false);
+                            }}
+                            onChange={e => {
+                              const val = String(e.target.value || '');
+                              const cleaned = val.replace(/[^0-9,\.]/g, '');
+                              setPriceRaw(cleaned);
+                            }}
+                            className="pl-10 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
+                          />
+                        </div>
                       </>
                     )}
                     <div className="flex items-center justify-between text-sm mt-1 mb-2">
-                      <span className="text-[#091747] font-medium">Total do comprador: {formatBRL(isFree ? 0 : Number(price || 0) + (isAbsorbFee ? 0 : Number(price || 0) * (serviceFeePercent ?? 0)))}</span>
+                      {(() => {
+                        const p = String(price || '').trim();
+                        const priceNum = p === '' ? 0 : Number(p.replace(',', '.')) || 0;
+                        const total = isFree ? 0 : (priceNum + (isAbsorbFee ? 0 : priceNum * (serviceFeePercent ?? 0)));
+                        return (
+                          <span className="text-[#091747] font-medium">Total do comprador: {formatBRL(total)}</span>
+                        );
+                      })()}
                       <a href="#" className="text-indigo-700 font-medium hover:underline">Ver detalhes</a>
                     </div>
                     <div className="flex items-center gap-3 bg-indigo-50 rounded-lg px-4 py-3">
                       <span className="text-[#091747] dark:text-white text-sm flex-1">Absorver o valor da taxa, ou seja, o cliente não pagará pela taxa de serviço da Fauves.</span>
                       <Switch checked={isAbsorbFee} onCheckedChange={setIsAbsorbFee} disabled={isFree} />
                     </div>
-                    {/* Janela de vendas (data e hora lado a lado em cada grupo) */}
-                    <div className="flex flex-col gap-4 mt-2 w-full">
-                      <div className="w-full">
-                        <Label className="mb-1 block">Início das vendas</Label>
-                        <div className="flex gap-2 w-full">
-              <Input
-                className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
-                type="date"
-                value={salesStartDate}
-                min={todayYmd}
-                onFocus={e => { (e.currentTarget as any).showPicker?.(); }}
-                onChange={e => {
-                              let v = e.target.value;
-                              if (v && v < todayYmd) v = todayYmd;
-                              // Se término já existir e for anterior ao início, alinhar
-                              if (salesEndDate && v && salesEndDate < v) {
-                                setSalesEndDate(v);
-                              }
-                              // Se o início for hoje e hora anterior ao agora, ajustar
-                              setSalesStartDate(v);
-                            }}
-                          />
-                          <Input
-                            className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
-                            type="time"
-                            value={salesStartTime}
-                            min={startTimeMin}
-                            disabled={!salesStartDate}
-                                onChange={e => setSalesStartTime(e.target.value)}
-                          />
+                    
+                    <div className="flex justify-center">
+                      <button type="button" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(v => !v)} className="flex items-center gap-2 font-semibold text-indigo-600 mt-8 mb-1 hover:underline">
+                        <span>Configurações avançadas</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? 'rotate-180' : 'rotate-0'}`} />
+                      </button>
+                    </div>
+                    {advancedOpen && (
+                      <>
+                        <Label>Descrição</Label>
+                        <Textarea placeholder="Explique para os participantes mais sobre esse ingresso." className="resize-none dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" value={description} onChange={e => setDescription(e.target.value)} />
+                        <div className="flex items-center gap-2">
+                          <Label>Quantidade máxima por usuário</Label>
+                            <div className="relative inline-block">
+                              <button
+                                ref={perUserBtnRef}
+                                type="button"
+                                aria-label="Informação sobre quantidade máxima por usuário"
+                                onMouseEnter={() => setShowPerUserTooltip(true)}
+                                onMouseLeave={() => setShowPerUserTooltip(false)}
+                                onFocus={() => setShowPerUserTooltip(true)}
+                                onBlur={() => setShowPerUserTooltip(false)}
+                                className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-[#1f1f1f] text-slate-600 dark:text-slate-300 text-xs"
+                              >
+                                <Info className="w-3 h-3" />
+                              </button>
+                              {perUserTooltipPos && perUserTooltipPos.left != null && createPortal(
+                                <div
+                                  role="tooltip"
+                                  style={{ position: 'fixed', left: perUserTooltipPos.left, top: perUserTooltipPos.top, transform: 'translate(-50%, -100%)' }}
+                                  className="z-50 max-w-[calc(100vw-48px)] w-[280px] bg-white dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] text-[12px] text-slate-700 dark:text-slate-300 p-3 rounded-lg shadow-lg whitespace-normal break-words"
+                                >
+                                  <div className="leading-snug">
+                                    A quantidade mínima por compra deste ingresso é definida em 1. Abaixo, a quantidade máxima que o usuário pode comprar deste ingresso.
+                                  </div>
+                                </div>,
+                                document.body
+                              )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-4 mt-2 w-full">
+                          <div className="w-full">
+                            <Label className="mb-1 block">Início das vendas</Label>
+                            <div className="flex gap-2 w-full">
+                              <Input
+                                className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
+                                type="date"
+                                value={salesStartDate}
+                                min={todayYmd}
+                                onFocus={e => { (e.currentTarget as any).showPicker?.(); }}
+                                onChange={e => {
+                                  let v = e.target.value;
+                                  if (v && v < todayYmd) v = todayYmd;
+                                  // If end exists and is before new start date, align
+                                  if (salesEndDate && v && salesEndDate < v) {
+                                    setSalesEndDate(v);
+                                  }
+                                  setSalesStartDate(v);
+                                  // If same day and endTime exists, ensure endTime >= startTime + 30min
+                                  if (v && salesEndDate === v && salesStartTime && salesEndTime) {
+                                    const minEnd = addMinutesToTime(salesStartTime, 30);
+                                    if (salesEndTime < minEnd) setSalesEndTime(minEnd as any);
+                                  }
+                                }}
+                              />
+                              <Input
+                                className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
+                                type="time"
+                                value={salesStartTime}
+                                min={startTimeMin}
+                                disabled={!salesStartDate}
+                                onChange={e => {
+                                  const v = e.target.value;
+                                  setSalesStartTime(v);
+                                  // If end is same day, ensure endTime >= startTime + 30min
+                                  if (salesEndDate && salesEndDate === salesStartDate && salesEndTime) {
+                                    const minEnd = addMinutesToTime(v, 30);
+                                    if (salesEndTime < minEnd) setSalesEndTime(minEnd as any);
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="w-full">
+                            <Label className="mb-1 block">Término das vendas</Label>
+                            <div className="flex gap-2 w-full">
+                              <Input
+                                className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
+                                type="date"
+                                value={salesEndDate}
+                                min={endDateMin}
+                                onFocus={e => { (e.currentTarget as any).showPicker?.(); }}
+                                onChange={e => {
+                                  let v = e.target.value;
+                                  const min = endDateMin;
+                                  if (v && min && v < min) v = min as string;
+                                  setSalesEndDate(v);
+                                  // If same day as start and endTime exists but less than start+30, align
+                                  if (v && v === salesStartDate && salesStartTime && salesEndTime) {
+                                    const minEnd = addMinutesToTime(salesStartTime, 30);
+                                    if (salesEndTime < minEnd) setSalesEndTime(minEnd as any);
+                                  }
+                                }}
+                              />
+                              <Input
+                                className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
+                                type="time"
+                                value={salesEndTime}
+                                min={endTimeMin}
+                                disabled={!salesEndDate}
+                                onChange={e => setSalesEndTime(e.target.value)}
+                              />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="w-full">
-                        <Label className="mb-1 block">Término das vendas</Label>
-                        <div className="flex gap-2 w-full">
-                          <Input
-                            className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
-                            type="date"
-                            value={salesEndDate}
-                            min={endDateMin}
-                            onFocus={e => { (e.currentTarget as any).showPicker?.(); }}
-                            onChange={e => {
-                              let v = e.target.value;
-                              const min = endDateMin;
-                              if (v && min && v < min) v = min as string;
-                              setSalesEndDate(v);
-                              // Se mesmo dia do início e hora do término menor, alinhar
-                              if (v && v === salesStartDate && salesStartTime && salesEndTime && salesEndTime < salesStartTime) {
-                                setSalesEndTime(salesStartTime);
-                              }
-                            }}
-                          />
-                          <Input
-                            className="flex-1 dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white"
-                            type="time"
-                            value={salesEndTime}
-                            min={endTimeMin}
-                            disabled={!salesEndDate}
-                            onChange={e => setSalesEndTime(e.target.value)}
-                          />
+                        {/* Meia-entrada automática 40/60 - custom card (visually similar to FacePass) */}
+                        <div className="mt-3">
+                          <div className="flex items-center gap-4 p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+                            <div className="w-12 h-12 flex items-center justify-center rounded-lg bg-white shadow-sm text-2xl">
+                              {/* Inline emoji fallback. To use a Noto animated emoji, replace the contents below with an <img src="<NOTO_ANIM_URL>" alt="emoji" /> */}
+                              <span aria-hidden className={`${createHalfAnim ? 'emoji-pop' : ''}`}>🥳</span>
+                            </div>
+                            <div className="flex-1 relative">
+                              <div className="font-semibold text-[#091747] dark:text-white flex items-center gap-2">
+                                <span>Criar automaticamente meia-entrada</span>
+                                <div className="relative inline-block">
+                                  <button
+                                    ref={halfBtnRef}
+                                    type="button"
+                                    aria-label="Informação sobre criar automaticamente meia-entrada"
+                                    onMouseEnter={() => setShowHalfInfoTooltip(true)}
+                                    onMouseLeave={() => setShowHalfInfoTooltip(false)}
+                                    onFocus={() => setShowHalfInfoTooltip(true)}
+                                    onBlur={() => setShowHalfInfoTooltip(false)}
+                                    className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-[#1f1f1f] text-slate-600 dark:text-slate-300 text-xs"
+                                  >
+                                    <Info className="w-3 h-3" />
+                                  </button>
+                                  {halfTooltipPos && halfTooltipPos.left != null && createPortal(
+                                    <div
+                                      role="tooltip"
+                                      style={{ position: 'fixed', left: halfTooltipPos.left, top: halfTooltipPos.top, transform: 'translate(-50%, -100%)' }}
+                                      className="z-50 max-w-[calc(100vw-48px)] w-[300px] bg-white dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] text-[12px] text-slate-700 dark:text-slate-300 p-3 rounded-lg shadow-lg whitespace-normal break-words"
+                                    >
+                                      <div className="leading-snug">
+                                        Ao ativar, serão criados automaticamente ingressos de meia-entrada (40%) para cada ingresso inteiro (60%). Não editável individualmente.
+                                      </div>
+                                    </div>,
+                                    document.body
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0">
+                              <Switch checked={createHalf} onCheckedChange={setCreateHalf} disabled={isFree || !!editingId} />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    {/* Meia-entrada automática 40/60 */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <Switch checked={createHalf} onCheckedChange={setCreateHalf} disabled={isFree || !!editingId} />
-                      <span className="text-indigo-900/90 text-sm">Criar automaticamente meia-entrada (40%) para este ingresso (60% inteira). Não editável individualmente.</span>
-                    </div>
-                    <div className="font-semibold text-indigo-950 mt-2 mb-1">Configurações avançadas</div>
-                    <Label>Descrição</Label>
-                    <Textarea placeholder="Explique para os participantes mais sobre esse ingresso." className="resize-none dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" value={description} onChange={e => setDescription(e.target.value)} />
-                    <div className="text-xs text-indigo-900/80 mt-1 mb-2">A quantidade mínima por compra deste ingresso é definida em 1. Abaixo, a quantidade máxima que o usuário pode comprar deste ingresso.</div>
-                    <Label>Quantidade máxima por usuário</Label>
-                    <Input placeholder="Ex.: 4" type="number" min={1} value={perUserLimit} onChange={e => setPerUserLimit(e.target.value)} className="dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" />
-                    <div className="flex items-center gap-2 mt-2">
-                      <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-                      <span className="text-indigo-900/90 dark:text-white text-sm flex items-center gap-1">
-                        <span className="inline-block"><svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M17 17.5V17.5C17 15.0147 14.9853 13 12.5 13H11.5C9.01472 13 7 15.0147 7 17.5V17.5" stroke="#6366F1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="3" stroke="#6366F1" strokeWidth="1.5"/></svg></span>
-                        Ingresso privado
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-2 bg-[#FFF4F0] border border-[#FFBCA3] rounded-xl px-4 py-3">
-                      <Switch checked={isFacePass} onCheckedChange={setIsFacePass} />
-                      <span className="flex flex-col">
-                        <span className="text-[#EF4118] font-semibold flex items-center gap-1">FacePass by Fauves</span>
-                        <span className="text-[#EF4118] text-xs">Ative o FacePass para que esse ingresso seja validado nessa modalidade.</span>
-                      </span>
-                    </div>
+                        {/* Ingresso privado (styled card like meia-entrada) */}
+                        <div className="mt-0">
+                          <div className="flex items-center gap-4 p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+                            <div className="w-12 h-12 flex items-center justify-center rounded-lg bg-white shadow-sm text-2xl">
+                              {/* Lock emoji as visual for private ticket */}
+                              <span aria-hidden className={`${privateAnim ? 'emoji-pop' : ''}`}>🔒</span>
+                            </div>
+                            <div className="flex-1 relative">
+                              <div className="font-semibold text-[#091747] dark:text-white flex items-center gap-2">
+                                <span>Ingresso privado</span>
+                                <div className="relative inline-block">
+                                  <button
+                                    ref={privateBtnRef}
+                                    type="button"
+                                    aria-label="Informação sobre ingresso privado"
+                                    onMouseEnter={() => setShowPrivateTooltip(true)}
+                                    onMouseLeave={() => setShowPrivateTooltip(false)}
+                                    onFocus={() => setShowPrivateTooltip(true)}
+                                    onBlur={() => setShowPrivateTooltip(false)}
+                                    className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-[#1f1f1f] text-slate-600 dark:text-slate-300 text-xs"
+                                  >
+                                    <Info className="w-3 h-3" />
+                                  </button>
+                                  {privateTooltipPos && privateTooltipPos.left != null && createPortal(
+                                    <div
+                                      role="tooltip"
+                                      style={{ position: 'fixed', left: privateTooltipPos.left, top: privateTooltipPos.top, transform: 'translate(-50%, -100%)' }}
+                                      className="z-50 max-w-[calc(100vw-48px)] w-[300px] bg-white dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] text-[12px] text-slate-700 dark:text-slate-300 p-3 rounded-lg shadow-lg whitespace-normal break-words"
+                                    >
+                                      <div className="leading-snug">
+                                        Ative esta opção para que este ingresso só seja acessível por convite/ link privado — ideal para ingressos restritos ou por lista.
+                                      </div>
+                                    </div>,
+                                    document.body
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex-shrink-0">
+                              <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+                            </div>
+                          </div>
+                        </div>
+                        {/* FacePass card (orange) */}
+                        <div className="mt-0">
+                          <div className="flex items-center gap-4 p-3 rounded-xl bg-[#FFF4F0] border border-[#FFBCA3]">
+                            <div className="w-12 h-12 flex items-center justify-center rounded-lg bg-white shadow-sm text-2xl">
+                              <span aria-hidden className={`${faceAnim ? 'emoji-pop' : ''}`}>🦊</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-semibold text-[#EF4118]">FacePass by Fauves</div>
+                              <div className="text-[#EF4118] text-xs">Ative o FacePass para que esse ingresso seja validado nessa modalidade.</div>
+                            </div>
+                            <div className="flex-shrink-0">
+                              <Switch checked={isFacePass} onCheckedChange={setIsFacePass} />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <DrawerFooter className="flex flex-row gap-4 justify-between p-6 border-t border-gray-100 dark:border-[#1F1F1F]">
                     <DrawerClose asChild>
@@ -746,12 +1228,28 @@ const CreateTickets: React.FC = () => {
       {!(eventStatus === 'Publicado' && ticketTypes.length > 0) && (
         <div className="fixed bottom-6 right-6 z-50">
           <Button
-            onClick={() => {
+            onClick={(e) => {
+              if ((ticketTypes || []).length === 0) {
+                // show tooltip explaining why publish is disabled
+                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                setPublishTooltipPos({ left: r.left + r.width / 2, top: r.top - 8 });
+                setShowPublishTooltip(true);
+                return;
+              }
               setFlowStep(3);
               setFlowVisible(true);
               setTimeout(() => goToPublish(), 80);
             }}
-            className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-12 min-w-[180px] rounded-md shadow-lg px-4 flex items-center justify-center gap-2 whitespace-nowrap"
+            onMouseEnter={(e) => {
+              if ((ticketTypes || []).length === 0) {
+                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                setPublishTooltipPos({ left: r.left + r.width / 2, top: r.top - 8 });
+                setShowPublishTooltip(true);
+              }
+            }}
+            onMouseLeave={() => setShowPublishTooltip(false)}
+            disabled={(ticketTypes || []).length === 0}
+            className={`bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-12 min-w-[180px] rounded-md shadow-lg px-4 flex items-center justify-center gap-2 whitespace-nowrap ${((ticketTypes || []).length === 0) ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
             <span>Continuar para publicar</span>
             <svg className="ml-2 w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
@@ -759,6 +1257,16 @@ const CreateTickets: React.FC = () => {
         </div>
       )}
       <StepFlowOverlay visible={flowVisible} activeStep={flowStep} subtitle={flowStep === 2 ? "Preparando criação de ingressos…" : undefined} />
+      {showPublishTooltip && publishTooltipPos && createPortal(
+        <div
+          role="tooltip"
+          style={{ position: 'fixed', left: publishTooltipPos.left, top: publishTooltipPos.top, transform: 'translate(-50%, -100%)' }}
+          className="z-50 max-w-[320px] w-[260px] bg-white dark:bg-[#111] border border-gray-200 dark:border-[#2a2a2a] text-[12px] text-slate-700 dark:text-slate-300 p-3 rounded-lg shadow-lg whitespace-normal break-words"
+        >
+          Você precisa criar ao menos 1 ingresso antes de publicar o evento.
+        </div>,
+        document.body
+      )}
       {/* Modal único de confirmação de exclusão */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
         <AlertDialogContent>
@@ -788,6 +1296,109 @@ const CreateTickets: React.FC = () => {
               }}
             >
               {deleteLoading ? 'Apagando…' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Modal para confirmar marcar como esgotado */}
+      <AlertDialog open={!!markSoldPendingId} onOpenChange={(open) => { if (!open) setMarkSoldPendingId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marcar ingresso como esgotado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação vai fechar as vendas deste tipo de ingresso. Você poderá reabrir ajustando a quantidade depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={markSoldLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={markSoldLoading}
+              onClick={async () => {
+                if (!markSoldPendingId) return;
+                setMarkSoldLoading(true);
+                try {
+                  await handleMarkAsSold(markSoldPendingId);
+                } finally {
+                  setMarkSoldLoading(false);
+                  setMarkSoldPendingId(null);
+                }
+              }}
+            >
+              {markSoldLoading ? 'Processando…' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Modal para reabrir vendas (definir nova quantidade) */}
+      <AlertDialog open={!!reopenPendingId} onOpenChange={(open) => { if (!open) setReopenPendingId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reabrir vendas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Informe a nova quantidade máxima disponível para este tipo de ingresso.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-6">
+            <Label className="mb-2">Quantidade máxima</Label>
+            <Input type="number" min={1} value={reopenValue} onChange={e => setReopenValue(e.target.value)} />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reopenLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-indigo-700 hover:bg-indigo-800 text-white"
+              disabled={reopenLoading}
+              onClick={async () => {
+                if (!reopenPendingId) return;
+                const q = Number(reopenValue || 0);
+                if (!Number.isFinite(q) || q < 1) {
+                  toast?.({ title: 'Erro', description: 'Informe uma quantidade válida.' });
+                  return;
+                }
+                setReopenLoading(true);
+                try {
+                  await handleReopenTicket(reopenPendingId, q);
+                } finally {
+                  setReopenLoading(false);
+                  setReopenPendingId(null);
+                }
+              }}
+            >
+              {reopenLoading ? 'Processando…' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Modal para escolher nome ao duplicar ingresso */}
+      <AlertDialog open={!!duplicatePendingId} onOpenChange={(open) => { if (!open) setDuplicatePendingId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicar ingresso</AlertDialogTitle>
+            <AlertDialogDescription>
+              Escolha um nome para a cópia do ingresso. Você pode editar mais detalhes depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="px-6">
+            <Label className="mb-2">Nome da cópia</Label>
+            <Input value={duplicateName} onChange={e => setDuplicateName(e.target.value)} />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={duplicateLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-indigo-700 hover:bg-indigo-800 text-white"
+              disabled={duplicateLoading}
+              onClick={async () => {
+                if (!duplicatePendingId) return;
+                setDuplicateLoading(true);
+                try {
+                  await handleDuplicateTicket(duplicatePendingId, duplicateName);
+                } finally {
+                  setDuplicateLoading(false);
+                  setDuplicatePendingId(null);
+                }
+              }}
+            >
+              {duplicateLoading ? 'Duplicando…' : 'Duplicar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

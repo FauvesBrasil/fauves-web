@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "services": [
+    {
+      "name": "backend",
+      "build": {
+        "builder": "node:22",
+        "buildCommand": "cd backend && npm ci --include=dev --legacy-peer-deps --ignore-scripts && npx prisma generate && npm run build"
+      },
+      "start": "cd backend && node dist/main.js"
+    }
+  ]
+}
