@@ -1,0 +1,52 @@
+--- a/src/pages/EventPanel.tsx
++++ b/src/pages/EventPanel.tsx
+@@ -8,6 +8,7 @@ import SidebarMenu from "@/components/SidebarMenu";
+ import AppHeader from "@/components/AppHeader";
+ import { OrganizerLayout } from "@/components/OrganizerLayout";
+ import { Button } from "@/components/ui/button";
++import { CourtesyModal } from "@/components/CourtesyModal";
+ import { Input } from "@/components/ui/input";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { Clipboard, ClipboardCheck, Users, Percent, Share2, Loader2 } from "lucide-react";
+@@ -72,6 +73,7 @@ const EventPanel = () => {
+   // Mobile menu states
+   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+   const [eventMenuOpen, setEventMenuOpen] = React.useState(false);
++  const [courtesyModalOpen, setCourtesyModalOpen] = React.useState(false);
+
+   React.useEffect(() => {
+     if (!id || !selectedOrg) return;
+@@ -393,7 +395,12 @@ const EventPanel = () => {
+                 </div>
+                 <div className="mb-6 flex justify-center">
+-                  <QuickActionsCard />
++                  <QuickActionsCard 
++                    onIssueCourtesy={() => setCourtesyModalOpen(true)}
++                    onCopyLink={copyLink}
++                    onOpenReport={() => navigate(`/painel-evento/${id}/analytics`)}
++                    copyOk={copyOk}
++                  />
+                 </div>
+
+                 {/* Histórico de Saques */}
+@@ -479,6 +486,19 @@ const EventPanel = () => {
+           </div>
+         </div>
+       </OrganizerLayout>
++
++      <CourtesyModal
++        isOpen={courtesyModalOpen}
++        onClose={() => setCourtesyModalOpen(false)}
++        courtesyEmail={courtesyEmail}
++        setCourtesyEmail={setCourtesyEmail}
++        courtesyTicketTypeId={courtesyTicketTypeId}
++        setCourtesyTicketTypeId={setCourtesyTicketTypeId}
++        ticketTypes={ticketTypes}
++        emailInvalid={emailInvalid}
++        courtesyDisabled={courtesyDisabled}
++        courtesyLoading={courtesyLoading}
++        onSubmit={issueCourtesy}
++      />
+     </div>
+   );
+ };

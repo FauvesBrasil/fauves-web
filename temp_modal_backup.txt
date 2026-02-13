@@ -1,0 +1,63 @@
+      {/* Modal de Emitir Cortesia */}
+      {courtesyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setCourtesyModalOpen(false)}>
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-4">Emitir Cortesia</h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">Preencha os dados para emitir um ingresso de cortesia</p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Tipo de Ingresso</label>
+                <select
+                  value={courtesyTicketTypeId}
+                  onChange={(e) => setCourtesyTicketTypeId(e.target.value)}
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Selecione um tipo</option>
+                  {ticketTypes.map(tt => (
+                    <option key={tt.id} value={tt.id}>{tt.name} - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(tt.price)}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Email do Participante</label>
+                <input
+                  type="email"
+                  value={courtesyEmail}
+                  onChange={(e) => setCourtesyEmail(e.target.value)}
+                  placeholder="participante@exemplo.com"
+                  className={`w-full px-4 py-2 border ${emailInvalid ? 'border-red-500' : 'border-zinc-300 dark:border-zinc-700'} bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                />
+                {emailInvalid && <p className="text-xs text-red-500 mt-1">Email inválido</p>}
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setCourtesyModalOpen(false);
+                  setCourtesyEmail('');
+                  setCourtesyTicketTypeId('');
+                }}
+                className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  await issueCourtesy();
+                  setCourtesyModalOpen(false);
+                }}
+                disabled={courtesyDisabled}
+                className={`flex-1 px-4 py-2 rounded-lg text-white transition ${courtesyDisabled ? 'bg-zinc-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+              >
+                {courtesyLoading ? 'Emitindo...' : 'Emitir Cortesia'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
