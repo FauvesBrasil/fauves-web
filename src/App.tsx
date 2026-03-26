@@ -110,6 +110,7 @@ import ChatWidget from './components/ChatWidget';
 import EventAnalytics from './pages/EventAnalytics';
 import IssuedTickets from './pages/IssuedTickets';
 import ResetPassword from './pages/ResetPassword';
+import HowItWorks from './pages/HowItWorks';
 
 // Lazy load admin analytics
 const AdminAnalytics = React.lazy(() => import('./pages/AdminAnalytics'));
@@ -154,6 +155,7 @@ const AppInner = () => {
           <Route path="/" element={<Index />} />
           <Route path="/o-que-fazer-em/:citySlug" element={<WhatToDoCity />} />
           <Route path="/quem-somos" element={<About />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/carreiras" element={<Careers />} />
           <Route path="/eventos/:categorySlug" element={<EventsByCategory />} />
           <Route path="/lei-da-meia-entrada" element={<HalfPriceLaw />} />

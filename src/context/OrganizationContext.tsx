@@ -61,7 +61,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [error, setError] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [fromOrgName, setFromOrgName] = useState<string | null>(null);
-  const userIdRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null | undefined>(undefined);
   const orgsRef = useRef<Organization[]>(orgs);
   useEffect(() => { orgsRef.current = orgs; }, [orgs]);
 

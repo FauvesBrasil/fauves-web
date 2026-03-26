@@ -59,7 +59,7 @@ const Footer: React.FC = () => {
                         <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-gray-900'}`}>Institucional</h3>
                         <ul className="space-y-4 text-sm font-medium">
                             <li><Link to="/quem-somos" className="hover:text-orange-600 transition-colors">Quem Somos</Link></li>
-                            <li><Link to="/jornada-produtor" className="hover:text-orange-600 transition-colors font-bold text-orange-600">Venda seus Ingressos</Link></li>
+                            <li><Link to="/create-event" className="hover:text-orange-600 transition-colors font-bold text-orange-600">Venda seus Ingressos</Link></li>
                             <li><Link to="/" className="hover:text-orange-600 transition-colors">Blog Fauves</Link></li>
                             <li><Link to="/carreiras" className="hover:text-orange-600 transition-colors">Carreiras</Link></li>
                         </ul>

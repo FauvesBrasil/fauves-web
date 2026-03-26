@@ -27,7 +27,7 @@ export function ProtectedOrganizerRoute({
 
     // Check 1: User must be logged in
     if (!user) {
-      navigate('/', { replace: true });
+      navigate('/?login=true', { replace: true });
       return;
     }
 

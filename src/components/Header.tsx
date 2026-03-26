@@ -4,6 +4,7 @@ import LogoFauves from '@/components/LogoFauves';
 import LocationSelector from '@/components/LocationSelector';
 import SearchBar from '@/components/SearchBar';
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getFirstName, getDisplayName } from '@/lib/user';
 import { useTheme } from '@/context/ThemeContext';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -23,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
   const headerTextClass = isDark ? 'text-white' : 'text-[#091747]';
   const headerIconClass = isDark ? 'text-white' : 'text-[#091747]';
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { user, logout, token } = useAuth();
+  const { user, logout, token, loading: authLoading } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
@@ -57,6 +58,19 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
   }, []);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Auto-open login modal if ?login=true and user is not authenticated
+  useEffect(() => {
+    if (searchParams.get('login') === 'true' && !user && !authLoading) {
+      setShowLogin(true);
+      // Clean up the URL after opening the modal
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('login');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, user, authLoading, setSearchParams]);
 
   // Load notifications from API
   useEffect(() => {
