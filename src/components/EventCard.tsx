@@ -79,11 +79,6 @@ const EventCard: React.FC<EventCardProps> = ({
               {badge}
             </span>
           )}
-          {isTrending && (
-             <span className="bg-orange-600 text-white text-[8px] uppercase font-black px-1.5 py-0.5 rounded-md shadow-lg tracking-wider flex items-center gap-1">
-                <Flame size={9} /> Em alta
-             </span>
-          )}
         </div>
 
         <div className="absolute top-2 right-2 z-10">
