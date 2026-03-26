@@ -107,20 +107,18 @@ const Index = () => {
       try {
         setError(null);
 
-        // Build URLs
-        // We only need the first ~30 events for Trending/StyleDiscovery/Weekend
         const initialEventsUrl = `/api/event?limit=30${selectedUf ? `&uf=${selectedUf}` : ''}`;
         const slidesUrl = selectedUf ? `/api/slides?uf=${selectedUf}` : '/api/slides';
         const categoriesUrl = '/api/categories';
 
-        // Fetch everything in parallel, but handle responses as they come
         const fetchSlides = async () => {
+          let slides: EventSliderSlide[] = [];
           try {
             const res = await fetchApi(slidesUrl);
             if (res.ok) {
               const data = await res.json();
-              if (Array.isArray(data)) {
-                setSliderEvents(data.map((slide: any) => ({
+              if (Array.isArray(data) && data.length > 0) {
+                slides = data.map((slide: any) => ({
                   category: slide.title,
                   image: slide.imageUrl || '/no-image.svg',
                   id: slide.eventSlug || slide.id,
@@ -129,10 +127,11 @@ const Index = () => {
                   linkUrl: slide.linkType === 'external' ? slide.linkUrl : null,
                   linkType: slide.linkType,
                   showTitle: slide.showTitle !== false,
-                })));
+                }));
               }
             }
           } catch (e) { console.error('Error fetching slides:', e); }
+          return slides;
         };
 
         const fetchCats = async () => {
@@ -147,31 +146,61 @@ const Index = () => {
           } catch (e) { console.error('Error fetching categories:', e); }
         };
 
-        const fetchInitialEvents = async () => {
+        const fetchInitEvents = async () => {
+          let events: Event[] = [];
           try {
             const res = await fetchApi(initialEventsUrl);
             if (res.ok) {
               const data = await res.json();
               if (Array.isArray(data)) {
+                events = data;
                 setInitialEvents(data);
               }
             }
           } catch (e) { console.error('Error fetching initial events:', e); }
           setLoadingInitialEvents(false);
+          return events;
         };
 
-        // Start all but categorize them
-        await Promise.all([
+        // Start everything
+        const [slides, _, events] = await Promise.all([
           fetchSlides(),
           fetchCats(),
-          fetchInitialEvents()
+          fetchInitEvents()
         ]);
+
+        // Auto-supplement slides if needed (Restore logic)
+        const MAX_SLIDES = 8;
+        let finalSlides = [...slides];
+        
+        if (finalSlides.length < MAX_SLIDES && events.length > 0) {
+            const existingIds = new Set(finalSlides.map(s => s.id || s.slug));
+            const slotsAvailable = MAX_SLIDES - finalSlides.length;
+
+            const autoSlides: EventSliderSlide[] = events
+                .filter((ev: any) => !existingIds.has(ev.id) && !existingIds.has(ev.slug))
+                .slice(0, slotsAvailable)
+                .map((ev: any) => ({
+                    category: ev.name,
+                    image: ev.bannerUrl || ev.image || '/no-image.svg',
+                    id: ev.id,
+                    slug: ev.slug,
+                    date: ev.startDate ? new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '',
+                    linkType: 'event',
+                }));
+
+            finalSlides = [...finalSlides, ...autoSlides];
+        }
+        
+        setSliderEvents(finalSlides);
+        setLoadingHero(false);
 
       } catch (e) {
         console.error('Core loading failed:', e);
-      } finally {
         setLoadingHero(false);
-        setLoading(false); // Global legacy loading
+        setLoadingInitialEvents(false);
+      } finally {
+        setLoading(false);
       }
     })();
   }, [selectedUf]); // Reload all when location changes
@@ -238,8 +267,9 @@ const Index = () => {
   // Show all events (backend already filtered by UF if selectedUf is set)
   const allEvents = (initialEvents || []).map(mapEvent);
 
-  // Slicing logic: if hero is loaded, show the top. Else show global skeleton.
-  if (loadingHero && sliderEvents.length === 0) return <HomePageSkeleton />;
+  // Slicing logic: if hero is loaded OR we have slides, show the top. 
+  // Else show global skeleton if EVERYTHING is still loading.
+  if (loadingHero && sliderEvents.length === 0 && categories.length === 0) return <HomePageSkeleton />;
 
   return (
     <AppShell hideSearchOnMobile={false}>
