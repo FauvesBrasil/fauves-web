@@ -39,6 +39,8 @@ interface Event {
   organization?: {
     platformFeePercent?: number;
   };
+  isExternal?: boolean;
+  externalUrl?: string;
 }
 
 const SelectTickets: React.FC = () => {
@@ -76,6 +78,13 @@ const SelectTickets: React.FC = () => {
           const eventData = await eventRes.json();
           console.log('Event data:', eventData);
           setEvent(eventData);
+
+          // Redirecionamento de segurança para eventos externos
+          if (eventData.isExternal && eventData.externalUrl) {
+            console.log('External event detected, redirecting to:', eventData.externalUrl);
+            window.location.href = eventData.externalUrl;
+            return;
+          }
         }
 
         // Load categories

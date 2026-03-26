@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { getEventPath } from '../lib/eventUrl';
 import InterestButton from './InterestButton';
+import EventCard from './EventCard';
 
 interface Event {
   id: string;
@@ -64,58 +65,30 @@ const TrendingHighlights: React.FC<TrendingHighlightsProps> = ({ events }) => {
         </div>
 
         {sortedEvents.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
-            {sortedEvents.map((ev) => {
-              const displayEvent = mapEvent(ev);
-              const to = getEventPath({ id: displayEvent.id, slug: displayEvent.slug });
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8 max-sm:flex max-sm:overflow-x-auto max-sm:snap-x max-sm:pb-6 max-sm:px-1 max-sm:-mx-1 scrollbar-hide">
+            {sortedEvents.map((ev: any) => {
+              const to = getEventPath({ id: ev.id, slug: ev.slug });
+              const startDate = ev.startDate ? new Date(ev.startDate) : null;
+              const dateMarkup = startDate ? startDate.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+              }) : 'Data não informada';
 
               return (
-                <div 
-                  key={displayEvent.id}
-                  className="bg-white rounded-2xl border border-[rgba(9,23,71,0.10)] overflow-hidden hover:shadow-2xl transition-all duration-300 group flex flex-col h-full"
-                >
-                  <div className="relative h-56 overflow-hidden">
-                    <img 
-                      src={displayEvent.image} 
-                      alt={displayEvent.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 items-end">
-                      <span className="bg-orange-600 text-white text-[10px] uppercase font-black px-3 py-1 rounded-md shadow-lg tracking-wider">
-                        Em alta
-                      </span>
-                      <InterestButton eventId={displayEvent.id} variant="card" />
-                    </div>
-                  </div>
-                  
-                  <div className="p-6 flex flex-col flex-grow">
-                    <div className="flex items-center gap-2 mb-3">
-                        <span className="w-2 h-2 bg-orange-600 rounded-full animate-pulse"></span>
-                        <time className="text-orange-600 text-sm font-bold">
-                        {displayEvent.date}
-                        </time>
-                    </div>
-                    <h3 className="text-[#091747] text-xl font-bold mb-4 line-clamp-2 leading-tight h-14">
-                      {displayEvent.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-[#6b7280] mb-6">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M7 13C7 13 12 9.4 12 5.5C12 2.73858 9.76142 0.5 7 0.5C4.23858 0.5 2 2.73858 2 5.5C2 9.4 7 13 7 13Z" stroke="currentColor" strokeLinejoin="round"/>
-                        <circle cx="7" cy="5.5" r="1.5" stroke="currentColor"/>
-                      </svg>
-                      <span className="text-xs font-medium truncate">{displayEvent.location}</span>
-                    </div>
-                    
-                    <Link 
-                      to={to}
-                      className="mt-auto w-full bg-[#091747] hover:bg-[#0d1f5c] text-white font-bold py-4 px-4 rounded-xl text-center transition-all duration-300 flex items-center justify-center gap-2 group-hover:bg-[#FF3F00]"
-                    >
-                      Ver evento
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="transition-transform group-hover:translate-x-1">
-                        <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </Link>
-                  </div>
+                <div key={ev.id} className="max-sm:min-w-[85vw] max-sm:snap-center">
+                  <EventCard
+                    id={ev.id}
+                    slug={ev.slug}
+                    title={ev.name}
+                    date={dateMarkup}
+                    location={formatLocation(ev)}
+                    image={ev.bannerUrl || ev.banner || ev.image || '/no-image.svg'}
+                    showButton={true}
+                    isTrending={true}
+                    views={Number(ev.views || 0)}
+                    interests={Number(ev.interests || 0)}
+                  />
                 </div>
               );
             })}

@@ -15,7 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useTrackingPixels } from '@/hooks/useTrackingPixels';
 import InterestButton from '../components/InterestButton';
-import { Eye, Users, Flame } from 'lucide-react';
+import { Eye, Users, Flame, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { getEventHypeLevel, getHypeBadge } from '../lib/hype';
 import { fetchApi } from '@/lib/apiBase';
 
@@ -475,6 +476,26 @@ const Event: React.FC = () => {
           )}
 
           <div className="flex flex-col items-center mx-auto mt-5 max-w-[1000px] max-md:max-w-full max-md:px-4" style={{ marginBottom: 100 }}>
+            {/* Alerta de Evento Externo */}
+            {event?.isExternal && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full mb-6"
+              >
+                <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 rounded-2xl p-5 flex items-start gap-4 shadow-sm backdrop-blur-sm">
+                  <div className="bg-orange-500 rounded-full p-2 text-white shrink-0 shadow-md">
+                    <AlertTriangle size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-orange-950 dark:text-orange-200 font-bold text-base">Atenção: Evento Externo</h4>
+                    <p className="text-orange-800 dark:text-orange-300 text-sm mt-1 leading-relaxed">
+                      Este evento não é vendido diretamente pela <strong>Fauves</strong>. Ao clicar em comprar, você será redirecionado para o site oficial do organizador para concluir sua compra com segurança.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
             {/* Imagem Mobile (Hero) */}
             <div className="w-full md:hidden mb-6 rounded-2xl overflow-hidden shadow-lg">
               <img
@@ -746,13 +767,27 @@ const Event: React.FC = () => {
                               {!ticketsError && ticketTypes.length === 0 && 'Nenhum ingresso disponível'}
                               {!ticketsError && ticketTypes.length > 0 && `Ingressos a partir de R$${(Math.min(...ticketTypes.map(t => t.price)) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                             </div>
-                            <button
-                              onClick={() => navigate(`/select-tickets/${event.id}`)}
-                              className="flex justify-center px-16 py-3.5 mt-5 text-base font-bold text-white bg-[#2A2AD7] rounded-md max-md:px-5 transition-all duration-200 hover:bg-[#2A2AD7] hover:shadow-2xl hover:-translate-y-1 cursor-pointer w-full"
-                              disabled={!!ticketsError && ticketTypes.length === 0}
-                            >
-                              <div>Selecionar ingressos</div>
-                            </button>
+                            {event?.isExternal ? (
+                              <Button 
+                                onClick={() => {
+                                  if (event.externalUrl) {
+                                    window.open(event.externalUrl, '_blank', 'noopener,noreferrer');
+                                  }
+                                }}
+                                className="w-full h-14 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white text-lg font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 mt-4"
+                              >
+                                Comprar no Site Oficial
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                              </Button>
+                            ) : (
+                              <button
+                                onClick={() => navigate(`/select-tickets/${event.id}`)}
+                                className="flex justify-center px-16 py-3.5 mt-5 text-base font-bold text-white bg-[#2A2AD7] rounded-md max-md:px-5 transition-all duration-200 hover:bg-[#2A2AD7] hover:shadow-2xl hover:-translate-y-1 cursor-pointer w-full"
+                                disabled={!!ticketsError && ticketTypes.length === 0}
+                              >
+                                <div>Selecionar ingressos</div>
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -807,13 +842,27 @@ const Event: React.FC = () => {
                     : 'Indisponível'}
                 </span>
               </div>
-              <Button
-                onClick={() => navigate(`/select-tickets/${event.id}`)}
-                className="bg-[#2A2AD7] text-white px-6 py-3 text-[15px] rounded-full font-bold shadow-lg hover:bg-[#1f1fcf]"
-                disabled={ticketTypes.length === 0}
-              >
-                Comprar Ingressos
-              </Button>
+              {event?.isExternal ? (
+                <Button 
+                  onClick={() => {
+                    if (event.externalUrl) {
+                      window.open(event.externalUrl, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 text-[15px] rounded-full font-bold shadow-lg flex items-center justify-center gap-2"
+                >
+                  Comprar no Site Oficial
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => navigate(`/select-tickets/${event.id}`)}
+                  className="bg-[#2A2AD7] text-white px-6 py-3 text-[15px] rounded-full font-bold shadow-lg hover:bg-[#1f1fcf]"
+                  disabled={ticketTypes.length === 0}
+                >
+                  Comprar Ingressos
+                </Button>
+              )}
             </div>
           )}
 

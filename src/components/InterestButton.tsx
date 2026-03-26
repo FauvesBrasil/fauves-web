@@ -14,9 +14,10 @@ const generateSId = () => {
 interface InterestButtonProps {
     eventId: string;
     variant?: 'card' | 'detail';
+    showText?: boolean;
 }
 
-const InterestButton: React.FC<InterestButtonProps> = ({ eventId, variant = 'card' }) => {
+const InterestButton: React.FC<InterestButtonProps> = ({ eventId, variant = 'card', showText = true }) => {
     const { user } = useAuth();
     const { toast } = useToast();
     const [count, setCount] = useState<number | null>(null);
@@ -154,7 +155,9 @@ const InterestButton: React.FC<InterestButtonProps> = ({ eventId, variant = 'car
             ) : (
                 <Flame size={14} fill={isInterested ? 'currentColor' : 'none'} className={loading ? 'animate-pulse' : ''} />
             )}
-            <span>{isInterested ? 'Interessado' : count && count > 0 ? count : 'Tenho interesse'}</span>
+            <span className={variant === 'card' ? 'max-sm:hidden' : ''}>
+                {isInterested ? 'Interessado' : count && count > 0 ? count : 'Tenho interesse'}
+            </span>
         </button>
     );
 };
