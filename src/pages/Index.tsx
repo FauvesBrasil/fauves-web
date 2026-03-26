@@ -98,194 +98,86 @@ const Index = () => {
     resetPagination();
   }, [selectedUf, selectedCategory, resetPagination]);
 
-  // Load all initial data (events, categories, slides) in parallel to avoid waterfalls
+  const [loadingHero, setLoadingHero] = useState(true);
+  const [loadingInitialEvents, setLoadingInitialEvents] = useState(true);
+
+  // Load initial data (events, categories, slides) in parallel
   useEffect(() => {
     (async () => {
       try {
-        setLoading(true);
         setError(null);
 
         // Build URLs
-        const eventsUrl = selectedUf ? `/events?uf=${selectedUf}` : '/events';
+        // We only need the first ~30 events for Trending/StyleDiscovery/Weekend
+        const initialEventsUrl = `/api/event?limit=30${selectedUf ? `&uf=${selectedUf}` : ''}`;
         const slidesUrl = selectedUf ? `/api/slides?uf=${selectedUf}` : '/api/slides';
         const categoriesUrl = '/api/categories';
 
-        const [rEvents, rCats, rSlides] = await Promise.all([
-          fetchApi(eventsUrl, { headers: { 'Accept': 'application/json' } }),
-          fetchApi(categoriesUrl),
-          fetchApi(slidesUrl)
+        // Fetch everything in parallel, but handle responses as they come
+        const fetchSlides = async () => {
+          try {
+            const res = await fetchApi(slidesUrl);
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data)) {
+                setSliderEvents(data.map((slide: any) => ({
+                  category: slide.title,
+                  image: slide.imageUrl || '/no-image.svg',
+                  id: slide.eventSlug || slide.id,
+                  slug: slide.eventSlug || null,
+                  date: slide.eventDate ? new Date(slide.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '',
+                  linkUrl: slide.linkType === 'external' ? slide.linkUrl : null,
+                  linkType: slide.linkType,
+                  showTitle: slide.showTitle !== false,
+                })));
+              }
+            }
+          } catch (e) { console.error('Error fetching slides:', e); }
+        };
+
+        const fetchCats = async () => {
+          try {
+            const res = await fetchApi(categoriesUrl);
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data)) {
+                setCategories(data.filter((c: any) => c.isActive));
+              }
+            }
+          } catch (e) { console.error('Error fetching categories:', e); }
+        };
+
+        const fetchInitialEvents = async () => {
+          try {
+            const res = await fetchApi(initialEventsUrl);
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data)) {
+                setInitialEvents(data);
+              }
+            }
+          } catch (e) { console.error('Error fetching initial events:', e); }
+          setLoadingInitialEvents(false);
+        };
+
+        // Start all but categorize them
+        await Promise.all([
+          fetchSlides(),
+          fetchCats(),
+          fetchInitialEvents()
         ]);
 
-        // 1. Process Categories
-        if (rCats.ok) {
-          try {
-            const cData = await rCats.json();
-            if (Array.isArray(cData)) {
-              setCategories(cData.filter((c: any) => c.isActive));
-            }
-          } catch { }
-        }
-
-        // 2. Process Events
-        let loadedEvents: Event[] = [];
-        if (!rEvents.ok) {
-          const detail = await (async () => { try { const j = await rEvents.json(); return j?.error || j?.message; } catch { return null; } })();
-          setError(buildErrorMessage(rEvents.status, detail));
-        } else {
-          const data = await rEvents.json();
-          if (Array.isArray(data)) {
-            loadedEvents = data;
-            setInitialEvents(data);
-          } else {
-            setError(buildErrorMessage(undefined, 'Resposta inesperada'));
-          }
-        }
-
-        // 3. Process Slides (Manual + Auto-supplement)
-        const MAX_SLIDES = 8;
-        let finalSlides: EventSliderSlide[] = [];
-
-        if (rSlides.ok) {
-            try {
-                const sData = await rSlides.json();
-                if (Array.isArray(sData) && sData.length > 0) {
-                    finalSlides = sData.map((slide: any) => ({
-                        category: slide.title,
-                        image: slide.imageUrl || '/no-image.svg',
-                        id: slide.eventSlug || slide.id,
-                        slug: slide.eventSlug || null,
-                        date: slide.eventDate ? new Date(slide.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '',
-                        linkUrl: slide.linkType === 'external' ? slide.linkUrl : null,
-                        linkType: slide.linkType,
-                        showTitle: slide.showTitle !== false,
-                    }));
-                }
-            } catch { }
-        }
-
-        // Auto-supplement slides if needed
-        if (finalSlides.length < MAX_SLIDES && loadedEvents.length > 0) {
-            const getEventUf = (ev: any): string => {
-                if (ev.locationUf) return String(ev.locationUf).toUpperCase();
-                if (ev.uf) return String(ev.uf).toUpperCase();
-                return '';
-            };
-
-            const sortedEvents = [...loadedEvents]
-                .filter((ev: any) => ev.startDate)
-                .sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-
-            const existingIds = new Set(finalSlides.map(s => s.id || s.slug));
-            const slotsAvailable = MAX_SLIDES - finalSlides.length;
-
-            const autoSlides: EventSliderSlide[] = sortedEvents
-                .filter((ev: any) => !existingIds.has(ev.id) && !existingIds.has(ev.slug))
-                .slice(0, slotsAvailable)
-                .map((ev: any) => ({
-                    category: ev.name,
-                    image: ev.bannerUrl || ev.image || '/no-image.svg',
-                    id: ev.id,
-                    slug: ev.slug,
-                    date: ev.startDate ? new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '',
-                    linkType: 'event',
-                }));
-
-            finalSlides = [...finalSlides, ...autoSlides];
-        }
-        setSliderEvents(finalSlides);
-
-      } catch (e: unknown) {
-        let message: string | undefined = undefined;
-        if (typeof e === 'object' && e !== null && 'message' in e) {
-          const maybe = (e as { message?: unknown }).message;
-          if (typeof maybe === 'string') message = maybe;
-        }
-        setError(buildErrorMessage(undefined, message || 'network error'));
+      } catch (e) {
+        console.error('Core loading failed:', e);
       } finally {
-        setLoading(false);
+        setLoadingHero(false);
+        setLoading(false); // Global legacy loading
       }
     })();
   }, [selectedUf]); // Reload all when location changes
 
-  if (loading) return <HomePageSkeleton />;
-
-  // Loading especial para mudança de localização
-  if (locationChanging) {
-    const stateName = UF_TO_STATE_NAME[selectedUf] || selectedUf;
-    return (
-      <AppShell>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
-          <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
-            Buscando eventos em <span className="text-orange-500 font-semibold">{stateName}</span>...
-          </p>
-        </div>
-      </AppShell>
-    );
-  }
-
-  // Helper to build a user-facing location string. Prefer structured fields (city/uf) when available
-  function formatLocation(ev: Record<string, unknown>) {
-    // helper to safely read nested string props
-    const getStr = (obj: Record<string, unknown> | undefined, key: string) => {
-      if (!obj) return undefined;
-      const v = obj[key];
-      return typeof v === 'string' && v.trim() ? v.trim() : undefined;
-    };
-
-    // Try explicit fields first
-    const city = getStr(ev, 'locationCity') || (typeof ev.location === 'object' && ev.location ? getStr(ev.location as Record<string, unknown>, 'city') : undefined) || (typeof ev.locationDetails === 'object' && ev.locationDetails ? getStr(ev.locationDetails as Record<string, unknown>, 'city') : undefined) || getStr(ev, 'city');
-    const uf = getStr(ev, 'locationUf') || (typeof ev.location === 'object' && ev.location ? getStr(ev.location as Record<string, unknown>, 'uf') : undefined) || (typeof ev.locationDetails === 'object' && ev.locationDetails ? getStr(ev.locationDetails as Record<string, unknown>, 'uf') : undefined) || getStr(ev, 'uf');
-    if (city && uf) return `${city} - ${uf}`;
-    // If the backend stored a composed string like 'Local será anunciado: City - UF', try to extract the part after ':'
-    if (typeof ev.location === 'string') {
-      const s = (ev.location as string).trim();
-      if (!s) return '';
-      if (s.includes('Local será anunciado')) {
-        const parts = s.split(':').slice(1).join(':').trim();
-        if (parts) return parts; // return only 'City - UF' when available
-        return ''; // hide the editorial phrase from public UI
-      }
-      return s;
-    }
-    return '';
-  }
-
-  // Função para mapear eventos do Supabase para o formato que o EventsGrid espera
-  const mapEvent = (ev: RawEvent) => {
-    const r = ev as Record<string, unknown>;
-    const startDate = typeof r.startDate === 'string' ? new Date(r.startDate) : null;
-
-    return {
-      id: typeof r.id === 'string' ? r.id : '',
-      slug: typeof r.slug === 'string' ? r.slug : null,
-      title: typeof r.name === 'string' ? r.name : 'Evento sem nome',
-      date: startDate ? startDate.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      }) : 'Data não informada',
-      dateShort: startDate ? `${startDate.getDate().toString().padStart(2, '0')} ${startDate.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase().replace('.', '')}` : 'Data não informada',
-      location: formatLocation(r) || 'Local não informado',
-      image: ((): string => {
-        const maybeBanner = r.bannerUrl ?? r.banner ?? r.image;
-        const candidate = typeof maybeBanner === 'string' ? maybeBanner : null;
-        if (!candidate) return '/no-image.svg';
-        if (candidate.startsWith('/uploads/')) return apiUrl(candidate);
-        return candidate;
-      })(),
-      categories: (r.categories as any[]) || [],
-      views: Number(r.views || 0),
-      interests: Number(r.interests || 0),
-    };
-  };
-
-  // Map paginated events for display
-  const mappedPaginatedEvents = paginatedEvents.map(mapEvent);
-
-  // Show all events (backend already filtered by UF if selectedUf is set)
-  const allEvents = (initialEvents || []).map(mapEvent);
-  const filteredEvents = allEvents;
+  // Slicing logic: if hero is loaded, show the top. Else show global skeleton.
+  if (loadingHero && sliderEvents.length === 0) return <HomePageSkeleton />;
 
   return (
     <AppShell hideSearchOnMobile={false}>
@@ -298,7 +190,7 @@ const Index = () => {
       )}
 
       {/* Slider with skeleton loader to prevent CLS */}
-      {!loading && sliderEvents.length > 0 && (
+      {sliderEvents.length > 0 && (
         <div className="w-full max-w-[1352px] mx-auto flex flex-col items-center py-6 overflow-x-hidden">
           <EventSlider slides={sliderEvents} />
         </div>
@@ -306,7 +198,9 @@ const Index = () => {
 
       <div className="max-w-[1352px] mx-auto px-0">
         {/* Seção: Descubra por Estilo */}
-        {filteredEvents.length > 0 && (
+        {loadingInitialEvents ? (
+           <div className="flex justify-center py-20"><Loader2 className="animate-spin text-orange-500" /></div>
+        ) : initialEvents.length > 0 && (
           <StyleDiscovery
             events={initialEvents}
             selectedUf={selectedUf}
@@ -316,7 +210,7 @@ const Index = () => {
         )}
 
         {/* Seção: Eventos em Alta */}
-        {filteredEvents.length > 0 && (
+        {!loadingInitialEvents && initialEvents.length > 0 && (
           <>
             <TrendingEvents
               events={initialEvents}
@@ -329,14 +223,16 @@ const Index = () => {
         )}
 
         {/* Seção: Artistas que Você Segue (só para logados) */}
-        <FollowedArtists
-          events={initialEvents}
-          selectedUf={selectedUf}
-          useMockData={false}
-        />
+        {!loadingInitialEvents && (
+          <FollowedArtists
+            events={initialEvents}
+            selectedUf={selectedUf}
+            useMockData={false}
+          />
+        )}
 
         {/* Seção: O que fazer esse fim de semana */}
-        <WeekendHighlights events={initialEvents} />
+        {!loadingInitialEvents && <WeekendHighlights events={initialEvents} />}
 
         {/* Link para o topo quando filtrar */}
         <main>
