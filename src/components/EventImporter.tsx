@@ -72,11 +72,11 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
       
       setFormData({
         name: data.title || '',
-        date: '',
-        location: '',
-        locationUf: 'CE', // Default to CE as requested context often focuses on Fortaleza
-        locationCity: 'Fortaleza',
-        producer: '',
+        date: data.date ? data.date.substring(0, 16) : '',
+        location: data.location || data.locationAddress || '',
+        locationUf: data.locationUf || 'CE',
+        locationCity: data.locationCity || 'Fortaleza',
+        producer: data.producer || '',
         image: data.image || '',
         externalUrl: url
       });
