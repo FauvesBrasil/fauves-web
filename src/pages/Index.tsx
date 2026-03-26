@@ -176,6 +176,68 @@ const Index = () => {
     })();
   }, [selectedUf]); // Reload all when location changes
 
+  // Helper to build a user-facing location string. Prefer structured fields (city/uf) when available
+  function formatLocation(ev: Record<string, unknown>) {
+    // helper to safely read nested string props
+    const getStr = (obj: Record<string, unknown> | undefined, key: string) => {
+      if (!obj) return undefined;
+      const v = obj[key];
+      return typeof v === 'string' && v.trim() ? v.trim() : undefined;
+    };
+
+    // Try explicit fields first
+    const city = getStr(ev, 'locationCity') || (typeof ev.location === 'object' && ev.location ? getStr(ev.location as Record<string, unknown>, 'city') : undefined) || (typeof ev.locationDetails === 'object' && ev.locationDetails ? getStr(ev.locationDetails as Record<string, unknown>, 'city') : undefined) || getStr(ev, 'city');
+    const uf = getStr(ev, 'locationUf') || (typeof ev.location === 'object' && ev.location ? getStr(ev.location as Record<string, unknown>, 'uf') : undefined) || (typeof ev.locationDetails === 'object' && ev.locationDetails ? getStr(ev.locationDetails as Record<string, unknown>, 'uf') : undefined) || getStr(ev, 'uf');
+    if (city && uf) return `${city} - ${uf}`;
+    // If the backend stored a composed string like 'Local será anunciado: City - UF', try to extract the part after ':'
+    if (typeof ev.location === 'string') {
+      const s = (ev.location as string).trim();
+      if (!s) return '';
+      if (s.includes('Local será anunciado')) {
+        const parts = s.split(':').slice(1).join(':').trim();
+        if (parts) return parts; // return only 'City - UF' when available
+        return ''; // hide the editorial phrase from public UI
+      }
+      return s;
+    }
+    return '';
+  }
+
+  // Função para mapear eventos do backend para o formato que o EventsGrid espera
+  const mapEvent = (ev: RawEvent) => {
+    const r = ev as Record<string, unknown>;
+    const startDate = typeof r.startDate === 'string' ? new Date(r.startDate) : null;
+
+    return {
+      id: typeof r.id === 'string' ? r.id : '',
+      slug: typeof r.slug === 'string' ? r.slug : null,
+      title: typeof r.name === 'string' ? r.name : 'Evento sem nome',
+      date: startDate ? startDate.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      }) : 'Data não informada',
+      dateShort: startDate ? `${startDate.getDate().toString().padStart(2, '0')} ${startDate.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase().replace('.', '')}` : 'Data não informada',
+      location: formatLocation(r) || 'Local não informado',
+      image: ((): string => {
+        const maybeBanner = r.bannerUrl ?? r.banner ?? r.image;
+        const candidate = typeof maybeBanner === 'string' ? maybeBanner : null;
+        if (!candidate) return '/no-image.svg';
+        if (candidate.startsWith('/uploads/')) return apiUrl(candidate);
+        return candidate;
+      })(),
+      categories: (r.categories as any[]) || [],
+      views: Number(r.views || 0),
+      interests: Number(r.interests || 0),
+    };
+  };
+
+  // Map paginated events for display
+  const mappedPaginatedEvents = paginatedEvents.map(mapEvent);
+
+  // Show all events (backend already filtered by UF if selectedUf is set)
+  const allEvents = (initialEvents || []).map(mapEvent);
+
   // Slicing logic: if hero is loaded, show the top. Else show global skeleton.
   if (loadingHero && sliderEvents.length === 0) return <HomePageSkeleton />;
 
