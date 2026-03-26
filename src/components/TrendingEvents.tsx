@@ -96,7 +96,7 @@ const TrendingEvents: React.FC<TrendingEventsProps> = ({ events, selectedUf, use
             <div className="grid grid-cols-4 gap-5 max-md:grid-cols-2 max-md:gap-4 max-sm:flex max-sm:overflow-x-auto max-sm:snap-x max-sm:pb-4 max-sm:px-1 max-sm:-mx-1 scrollbar-hide">
                 {displayEvents.map((event, idx) => {
                     return (
-                        <div key={event.id} className="max-sm:min-w-[85vw] max-sm:snap-center">
+                        <div key={event.id} className="max-sm:min-w-[70vw] max-sm:snap-center">
                             <EventCard
                                 id={event.id}
                                 slug={event.slug}

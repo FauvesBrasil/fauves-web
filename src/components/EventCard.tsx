@@ -54,12 +54,12 @@ const EventCard: React.FC<EventCardProps> = ({
     <div 
       className={`group flex bg-white dark:bg-[#1a1b1e] rounded-2xl border border-[rgba(9,23,71,0.08)] dark:border-[#2a2b2e] overflow-hidden hover:shadow-2xl transition-all duration-300 ${
         isLarge 
-          ? 'w-[245px] max-sm:w-full max-sm:min-h-[140px] flex-col max-sm:flex-row' 
-          : 'w-[156px] max-sm:w-full max-sm:min-h-[110px] flex-col max-sm:flex-row'
+          ? `w-[245px] max-sm:w-full max-sm:min-h-[140px] flex-col ${isTrending ? '' : 'max-sm:flex-row'}` 
+          : `w-[156px] max-sm:w-full max-sm:min-h-[110px] flex-col ${isTrending ? '' : 'max-sm:flex-row'}`
       }`}
       style={style}
     >
-      <Link to={to} className="relative aspect-square overflow-hidden block shrink-0 max-sm:w-[130px] max-sm:h-full">
+      <Link to={to} className={`relative aspect-square overflow-hidden block shrink-0 ${isTrending ? '' : 'max-sm:w-[130px] max-sm:h-full'}`}>
         <img
           src={image}
           alt={title}

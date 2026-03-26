@@ -382,9 +382,6 @@ const Index = () => {
         {/* Seção: O que fazer esse fim de semana */}
         <WeekendHighlights events={initialEvents} />
 
-        {/* Seção: Eventos em Alta (Nova) */}
-        <TrendingHighlights events={initialEvents} />
-
         {/* Link para o topo quando filtrar */}
         <main>
           <section className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mb-4">
