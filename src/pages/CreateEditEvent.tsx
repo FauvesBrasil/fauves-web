@@ -11,6 +11,7 @@ import MobileDrawerMenu from '@/components/MobileDrawerMenu';
 import EventMobileTopBar from '@/components/EventMobileTopBar';
 import EventMobileDrawer from '@/components/EventMobileDrawer';
 import { useState, useEffect, useRef, useMemo } from "react";
+
 import { ChevronLeft, ChevronDown, ExternalLink, Upload, Calendar as CalendarIcon, MapPin, CheckIcon, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LocationAutocomplete } from '@/components/LocationAutocomplete';
@@ -117,6 +118,11 @@ function CreateEditEvent() {
 	// Ticket types for completion status
 	const [ticketTypes, setTicketTypes] = useState<any[]>([]);
 
+	// Category state
+	const [categories, setCategories] = useState<any[]>([]);
+	const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+
 	// Track original values for change detection (mobile save button)
 	const [originalValues, setOriginalValues] = useState<any>({});
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);		// Keep local organizers list in sync with organizations from context
@@ -171,6 +177,22 @@ function CreateEditEvent() {
 		})();
 		return () => { mounted = false; };
 	}, [user?.isAdmin, authLoading]);
+
+	// Fetch categories
+	useEffect(() => {
+		(async () => {
+			try {
+				const res = await fetchApi('/api/categories');
+				if (res?.ok) {
+					const data = await res.json();
+					if (Array.isArray(data)) setCategories(data);
+				}
+			} catch (err) {
+				console.warn('Failed to fetch categories', err);
+			}
+		})();
+	}, []);
+
 
 	// Load event data when editing (eventId present)
 	useEffect(() => {
@@ -237,6 +259,10 @@ function CreateEditEvent() {
 				const orgId = ev.organizerId || ev.organizationId || null;
 				if (orgId) setSelectedOrganizer(orgId);
 
+				// category
+				if (ev.categoryId) setSelectedCategory(ev.categoryId);
+
+
 				// external info
 				setIsExternal(!!ev.isExternal);
 				setExternalUrl(ev.externalUrl || '');
@@ -277,9 +303,11 @@ function CreateEditEvent() {
 					tbdUf: ev.locationUf || (ev as any).locationDetails?.uf || '',
 					tbdCity: ev.locationCity || (ev as any).locationDetails?.city || '',
 					selectedOrganizer: orgId || '',
+					selectedCategory: ev.categoryId || '',
 					isExternal: !!ev.isExternal,
 					externalUrl: ev.externalUrl || ''
 				};
+
 				setOriginalValues(original);
 			} catch (err) {
 				console.warn('Failed to load event', err);
@@ -311,11 +339,14 @@ function CreateEditEvent() {
 			tbdUf !== originalValues.tbdUf ||
 			tbdCity !== originalValues.tbdCity ||
 			selectedOrganizer !== originalValues.selectedOrganizer ||
+			selectedCategory !== originalValues.selectedCategory ||
 			isExternal !== originalValues.isExternal ||
 			externalUrl !== originalValues.externalUrl;
 
+
 		setHasUnsavedChanges(hasChanges);
-	}, [eventId, originalValues, eventName, eventSubtitle, eventDescription, startDate, startTime, endDate, endTime, locationType, locationAddress, onlineUrl, tbdUf, tbdCity, selectedOrganizer, loadingEvent]);
+	}, [eventId, originalValues, eventName, eventSubtitle, eventDescription, startDate, startTime, endDate, endTime, locationType, locationAddress, onlineUrl, tbdUf, tbdCity, selectedOrganizer, selectedCategory, loadingEvent]);
+
 
 	const [errors, setErrors] = useState({ url: "", tbd: "" });
 	const [backendError, setBackendError] = useState("");
@@ -794,8 +825,10 @@ function CreateEditEvent() {
 					if (tbdCity) form.append('locationCity', tbdCity);
 					// send both organizerId and organizationId to be safe
 					if (selectedOrganizer) { form.append('organizerId', selectedOrganizer); form.append('organizationId', selectedOrganizer); }
+					if (selectedCategory) form.append('categoryId', selectedCategory);
 					if (lineup && lineup.length > 0) { form.append('lineup', JSON.stringify(lineup)); }
 					form.append('startDate', startISO);
+
 					if (endISO) form.append('endDate', endISO);
 					form.append('isExternal', isExternal.toString());
 					if (externalUrl) form.append('externalUrl', externalUrl);
@@ -815,11 +848,13 @@ function CreateEditEvent() {
 						locationCity: tbdCity || undefined,
 						organizerId: selectedOrganizer || undefined,
 						organizationId: selectedOrganizer || undefined,
+						categoryId: selectedCategory || undefined,
 						startDate: startISO,
 						lineup: lineup && lineup.length ? lineup : undefined,
 						isExternal,
 						externalUrl: externalUrl || undefined
 					};
+
 					if (endISO) body.endDate = endISO;
 
 					if (eventId) {
@@ -1083,8 +1118,25 @@ function CreateEditEvent() {
 												{subtitleError && <div className="text-xs text-red-600 mt-1">{subtitleError}</div>}
 												<div className="text-xs text-gray-500 text-right mt-1">{eventSubtitle.length} / 140</div>
 											</div>
+											<div>
+												<div className="text-base font-semibold mb-1.5">Categoria</div>
+												<div className="text-xs mb-5 text-gray-600 dark:text-white">Selecione a categoria que melhor descreve seu evento.</div>
+												<Select value={selectedCategory} onValueChange={setSelectedCategory}>
+													<SelectTrigger className="w-full h-11 dark:bg-[#121212] dark:border-transparent dark:text-white">
+														<SelectValue placeholder="Selecionar categoria" />
+													</SelectTrigger>
+													<SelectContent className="bg-white dark:bg-[#242424] dark:border-[#1F1F1F]">
+														{categories.map((cat) => (
+															<SelectItem key={cat.id} value={cat.id} className="dark:text-white">
+																{cat.name}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+											</div>
 										</div>
 									</Card>
+
 								)}
 							</div>
 
@@ -1421,33 +1473,35 @@ function CreateEditEvent() {
 										)}
 									</div>
 									
-									{/* External Event Configuration (Admin/Advanced) */}
-									<div className="mt-6 pt-6 border-t border-zinc-100 dark:border-gray-800">
-										<div className="flex items-center justify-between mb-4">
-											<div>
-												<h4 className="text-sm font-semibold text-indigo-950 dark:text-white">Evento Externo</h4>
-												<p className="text-xs text-gray-500">Se ativado, o redirecionamento será para uma URL externa.</p>
+									{/* External Event Configuration (Admin Only) */}
+									{user?.isAdmin && (
+										<div className="mt-6 pt-6 border-t border-zinc-100 dark:border-gray-800">
+											<div className="flex items-center justify-between mb-4">
+												<div>
+													<h4 className="text-sm font-semibold text-indigo-950 dark:text-white">Evento Externo</h4>
+													<p className="text-xs text-gray-500">Se ativado, o redirecionamento será para uma URL externa.</p>
+												</div>
+												<button
+													type="button"
+													onClick={() => setIsExternal(!isExternal)}
+													className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isExternal ? 'bg-indigo-600' : 'bg-gray-200'}`}
+												>
+													<span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isExternal ? 'translate-x-6' : 'translate-x-1'}`} />
+												</button>
 											</div>
-											<button
-												type="button"
-												onClick={() => setIsExternal(!isExternal)}
-												className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isExternal ? 'bg-indigo-600' : 'bg-gray-200'}`}
-											>
-												<span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isExternal ? 'translate-x-6' : 'translate-x-1'}`} />
-											</button>
+											{isExternal && (
+												<div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+													<div className="text-xs font-semibold text-gray-700 dark:text-white mb-1">Link Externo (Compra/Mais Info)</div>
+													<Input 
+														value={externalUrl} 
+														onChange={e => setExternalUrl(e.target.value)} 
+														placeholder="https://www.sympla.com.br/evento/..." 
+														className="w-full dark:bg-[#121212] dark:border-transparent dark:text-white"
+													/>
+												</div>
+											)}
 										</div>
-										{isExternal && (
-											<div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-												<div className="text-xs font-semibold text-gray-700 dark:text-white mb-1">Link Externo (Compra/Mais Info)</div>
-												<Input 
-													value={externalUrl} 
-													onChange={e => setExternalUrl(e.target.value)} 
-													placeholder="https://www.sympla.com.br/evento/..." 
-													className="w-full dark:bg-[#121212] dark:border-transparent dark:text-white"
-												/>
-											</div>
-										)}
-									</div>
+									)}
 								</div>
 							</Card>
 							

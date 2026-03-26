@@ -12,6 +12,8 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { WarpDialog } from '@/components/WarpDialog';
 import MobileTopBar from '@/components/MobileTopBar';
 import MobileDrawerMenu from '@/components/MobileDrawerMenu';
+import EventImporter from '@/components/EventImporter';
+
 
 // Event projection used in this screen
 interface OrgEvent {
@@ -62,6 +64,8 @@ const OrganizerEvents: React.FC = () => {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<'all' | 'published' | 'draft' | 'past'>('all');
   const [loading, setLoading] = useState(true);
+  const [showImporter, setShowImporter] = useState(false);
+
 
   // Estados para menu mobile
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -464,7 +468,26 @@ const OrganizerEvents: React.FC = () => {
           <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-12 sm:px-6 lg:px-8">
             <AppHeader />
             <div className="flex flex-col gap-6 w-full mx-auto mt-16 px-2 max-md:mt-10 max-sm:mt-6 pb-[100px]">
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-white max-sm:text-2xl">Eventos</h1>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <h1 className="text-4xl font-bold text-slate-900 dark:text-white max-sm:text-2xl mb-0">Eventos</h1>
+                <button 
+                  onClick={() => setShowImporter(!showImporter)}
+                  className="inline-flex items-center gap-2 px-4 h-10 bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#1F1F1F] text-slate-700 dark:text-white text-sm rounded-xl hover:bg-slate-50 dark:hover:bg-[#242424] transition font-semibold shadow-sm w-fit"
+                >
+                  <svg className="w-4 h-4 text-teal-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                  <span>Importar Externo</span>
+                </button>
+              </div>
+
+              {showImporter && (
+                <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                  <EventImporter 
+                    onSuccess={() => { setShowImporter(false); refresh(); }} 
+                    onClose={() => setShowImporter(false)}
+                  />
+                </div>
+              )}
+
               {/* Tabs hidden: simplified UI for now (Eventos/Coleções removed) */}
               {!showCollections ? (
                 <>
