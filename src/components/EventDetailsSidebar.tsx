@@ -209,7 +209,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   // Track if event data has been loaded for smooth entry animation
   // Use lazy initialization to check cache immediately and avoid flash on navigation
   const [isLoaded, setIsLoaded] = React.useState(() => {
-    if (!eventId) return false;
+    if (!eventId) return true;
     return eventInfoCache.has(eventId);
   });
   React.useEffect(() => setNameLocal(eventName), [eventName]);
@@ -225,7 +225,10 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   }, []);
 
   React.useEffect(() => {
-    if (!eventId) return;
+    if (!eventId) {
+      setIsLoaded(true);
+      return;
+    }
 
     // Opt-out of fetching if we already have the data provided via props
     if (eventName !== "Nome do evento" && typeof ticketCount === 'number') {

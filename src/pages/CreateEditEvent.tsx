@@ -1018,7 +1018,7 @@ function CreateEditEvent() {
 					fixedTop={0}
 				/>
 			</div>
-			<div className="flex-1 flex flex-col ml-[350px] max-sm:ml-0">
+			<div className="flex-1 flex flex-col lg:ml-[350px] max-sm:ml-0">
 				<AppHeader className="relative max-sm:hidden" />
 				<OrganizerLayout>
 					<div className="flex-1 flex flex-col items-center max-sm:items-stretch px-8 max-sm:px-4 max-sm:pt-[118px]">
