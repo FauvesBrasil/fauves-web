@@ -16,6 +16,10 @@ import { fetchApi, apiUrl } from '@/lib/apiBase';
 import EventSlider, { EventSliderSlide } from '@/components/EventSlider';
 import { Loader2 } from 'lucide-react';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import WeekendHighlights from '@/components/WeekendHighlights';
+import TrendingHighlights from '@/components/TrendingHighlights';
+import CategoryFilter from '@/components/CategoryFilter';
+import LeadCapture from '@/components/LeadCapture';
 
 // OBS: removido supabase e spinner não utilizados; carregamento é puramente via backend /events
 
@@ -45,6 +49,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [locationChanging, setLocationChanging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const prevUfRef = useRef<string | null>(null);
 
   // Keep hooks order stable: read location context here so it's not called conditionally later
@@ -66,15 +71,16 @@ const Index = () => {
   // Infinite scroll for main events grid
   const fetchEventsPage = useCallback(async (page: number) => {
     const ufParam = selectedUf ? `&uf=${selectedUf}` : '';
-    const response = await fetchApi(`/events?page=${page}&limit=20${ufParam}`);
+    const catParam = selectedCategory ? `&category=${selectedCategory}` : '';
+    const response = await fetchApi(`/events?page=${page}&limit=20${ufParam}${catParam}`);
     if (!response.ok) throw new Error('Failed to fetch events');
     const data = await response.json();
     return {
-      items: data.events || [],
+      items: data.events || data || [], // Handle both formats if necessary
       hasMore: data.hasMore || false,
       total: data.total,
     };
-  }, [selectedUf]); // Reset pagination when UF changes
+  }, [selectedUf, selectedCategory]); // Reset pagination when UF or Category changes
 
   const {
     items: paginatedEvents,
@@ -87,10 +93,10 @@ const Index = () => {
     pageSize: 20,
   });
 
-  // Reset pagination when UF changes
+  // Reset pagination when UF or Category changes
   useEffect(() => {
     resetPagination();
-  }, [selectedUf, resetPagination]);
+  }, [selectedUf, selectedCategory, resetPagination]);
 
   // Load initial data for hero sections (categories + first 100 events)
   useEffect(() => {
@@ -312,6 +318,9 @@ const Index = () => {
         if (candidate.startsWith('/uploads/')) return apiUrl(candidate);
         return candidate;
       })(),
+      categories: (r.categories as any[]) || [],
+      views: Number(r.views || 0),
+      interests: Number(r.interests || 0),
     };
   };
 
@@ -352,11 +361,15 @@ const Index = () => {
 
         {/* Seção: Eventos em Alta */}
         {filteredEvents.length > 0 && (
-          <TrendingEvents
-            events={initialEvents}
-            selectedUf={selectedUf}
-            useMockData={false}
-          />
+          <>
+            <TrendingEvents
+              events={initialEvents}
+              selectedUf={selectedUf}
+              useMockData={false}
+            />
+
+            <LeadCapture source="home" />
+          </>
         )}
 
         {/* Seção: Artistas que Você Segue (só para logados) */}
@@ -366,7 +379,20 @@ const Index = () => {
           useMockData={false}
         />
 
+        {/* Seção: O que fazer esse fim de semana */}
+        <WeekendHighlights events={initialEvents} />
+
+        {/* Seção: Eventos em Alta (Nova) */}
+        <TrendingHighlights events={initialEvents} />
+
+        {/* Link para o topo quando filtrar */}
         <main>
+          <section className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mb-4">
+            <CategoryFilter 
+              selectedSlug={selectedCategory} 
+              onSelect={setSelectedCategory} 
+            />
+          </section>
 
           {paginatedEvents.length > 0 ? (
             <>
@@ -386,7 +412,7 @@ const Index = () => {
               )}
             </>
           ) : (
-            <section className="px-[156px] max-md:px-5 max-sm:px-4">
+            <section className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4">
               <EmptyStateOrganizerCTA selectedUf={selectedUf} />
             </section>
           )}

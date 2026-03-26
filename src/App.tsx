@@ -9,6 +9,14 @@ import React, { Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Index from "./pages/Index";
+import WhatToDoCity from "./pages/WhatToDoCity";
+import About from "./pages/About";
+import Careers from "./pages/Careers";
+import EventsByCategory from "./pages/EventsByCategory";
+import HalfPriceLaw from './pages/HalfPriceLaw';
+import TermsOfUse from './pages/TermsOfUse';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import ScrollToTop from './components/ScrollToTop';
 import OrganizerReportsPage from "./pages/ReportsPage";
 import OrganizerReportsOrders from "./pages/OrganizerReportsOrders";
 import OrganizerReportsSales from "./pages/OrganizerReportsSales";
@@ -144,6 +152,13 @@ const AppInner = () => {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Index />} />
+          <Route path="/o-que-fazer-em/:citySlug" element={<WhatToDoCity />} />
+          <Route path="/quem-somos" element={<About />} />
+          <Route path="/carreiras" element={<Careers />} />
+          <Route path="/eventos/:categorySlug" element={<EventsByCategory />} />
+          <Route path="/lei-da-meia-entrada" element={<HalfPriceLaw />} />
+          <Route path="/termos-de-uso" element={<TermsOfUse />} />
+          <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
           <Route path="/jornada-produtor" element={<ProtectedOrganizerRoute><ProducerJourneyPage /></ProtectedOrganizerRoute>} />
@@ -297,6 +312,7 @@ const App = () => (
           <LocationProvider>
             <Bootstrap />
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+              <ScrollToTop />
               <AppErrorBoundary>
                 <AppInner />
               </AppErrorBoundary>

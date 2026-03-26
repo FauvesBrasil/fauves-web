@@ -93,7 +93,10 @@ if (typeof window !== 'undefined') {
               // rewrite /api, /api/whatever or api/whatever
               if (input === '/api' || input.startsWith('/api/') || /^\.?\/api\//.test(input) || /^api\//.test(input)) {
                 const path = input.startsWith('/') ? input : (input.startsWith('./') ? input.replace(/^\.\//, '/') : '/' + input);
-                input = 'http://127.0.0.1:4000' + path;
+                const targetBase = (finalEnvBase && !/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(finalEnvBase)) 
+                  ? finalEnvBase.replace(/\/$/, '') 
+                  : 'http://127.0.0.1:4000';
+                input = targetBase + path;
               }
             } else if (input instanceof Request) {
               const reqUrl = new URL(input.url, window.location.origin);

@@ -8,6 +8,9 @@ interface Event {
   dateShort?: string;
   title: string;
   location: string;
+  categories?: Array<{ name: string; slug: string }>;
+  views?: number;
+  interests?: number;
 }
 
 interface EventsGridProps {
@@ -38,6 +41,9 @@ const EventsGrid: React.FC<EventsGridProps> = ({ title, events, size = 'large' }
             dateShort={event.dateShort}
             title={event.title}
             location={event.location}
+            categories={event.categories}
+            views={event.views}
+            interests={event.interests}
             size={size === 'large' ? 'large' : 'small'}
             style={{
               opacity: 0,

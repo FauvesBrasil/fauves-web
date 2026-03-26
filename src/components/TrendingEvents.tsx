@@ -1,7 +1,8 @@
 import React from 'react';
-import { Flame, Clock } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getEventPath } from '@/lib/eventUrl';
+import { getSortedTrendingEvents } from '@/lib/hype';
 
 interface TrendingEvent {
     id: string;
@@ -21,51 +22,7 @@ interface TrendingEventsProps {
     useMockData?: boolean;
 }
 
-// Dados mockados para visualização
-const MOCK_TRENDING_EVENTS: TrendingEvent[] = [
-    {
-        id: 'mock-1',
-        title: 'Festival de Verão 2025',
-        date: '15 de janeiro de 2025',
-        dateShort: '15 JAN',
-        location: 'São Paulo - SP',
-        image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800',
-        percentSold: 95,
-        badge: 'last-tickets',
-    },
-    {
-        id: 'mock-2',
-        title: 'Rock in Rio Experience',
-        date: '20 de janeiro de 2025',
-        dateShort: '20 JAN',
-        location: 'Rio de Janeiro - RJ',
-        image: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800',
-        percentSold: 75,
-        badge: 'hot',
-    },
-    {
-        id: 'mock-3',
-        title: 'Sertanejo Universitário',
-        date: '25 de janeiro de 2025',
-        dateShort: '25 JAN',
-        location: 'Belo Horizonte - MG',
-        image: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800',
-        percentSold: 60,
-        badge: 'selling-fast',
-    },
-    {
-        id: 'mock-4',
-        title: 'Eletrônica Night',
-        date: '28 de janeiro de 2025',
-        dateShort: '28 JAN',
-        location: 'São Paulo - SP',
-        image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
-        percentSold: 92,
-        badge: 'last-tickets',
-    },
-];
-
-const TrendingEvents: React.FC<TrendingEventsProps> = ({ events, selectedUf, useMockData = true }) => {
+const TrendingEvents: React.FC<TrendingEventsProps> = ({ events, selectedUf, useMockData = false }) => {
     // Mapeia eventos reais para formato TrendingEvent
     const mapEvent = (ev: any): TrendingEvent => {
         const startDate = typeof ev.startDate === 'string' ? new Date(ev.startDate) : null;
@@ -107,31 +64,20 @@ const TrendingEvents: React.FC<TrendingEventsProps> = ({ events, selectedUf, use
         })
         : events;
 
-    // Ordena eventos próximos
-    const trendingEvents = stateEvents
-        .map(mapEvent)
+    // Ordena por Score de Tendência
+    const trendingEvents = getSortedTrendingEvents(stateEvents)
         .filter(ev => {
             try {
-                const eventDate = new Date(ev.date);
-                return eventDate > new Date();
+                const eventDate = new Date(ev.startDate || ev.date);
+                return eventDate > new Date(); // Apenas eventos futuros
             } catch {
                 return true;
             }
         })
-        .sort((a, b) => {
-            try {
-                const dateA = new Date(a.date).getTime();
-                const dateB = new Date(b.date).getTime();
-                return dateA - dateB;
-            } catch {
-                return 0;
-            }
-        })
-        .slice(0, 4);
+        .slice(0, 8)
+        .map(mapEvent);
 
-    const displayEvents = useMockData && trendingEvents.length === 0
-        ? MOCK_TRENDING_EVENTS
-        : trendingEvents;
+    const displayEvents = trendingEvents;
 
     if (displayEvents.length === 0) {
         return null;
@@ -170,26 +116,16 @@ const TrendingEvents: React.FC<TrendingEventsProps> = ({ events, selectedUf, use
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                 />
 
-                                {/* Badge no canto superior - DENTRO do card */}
-                                {event.badge && (
-                                    <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-lg z-20 ${event.badge === 'last-tickets' ? 'bg-red-500' :
-                                            event.badge === 'hot' ? 'bg-orange-500' :
-                                                'bg-yellow-500'
-                                        }`}>
-                                        {event.badge === 'last-tickets' ? (
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3" />
-                                                Últimos
-                                            </span>
-                                        ) :
-                                            event.badge === 'hot' ? (
-                                                <span className="flex items-center gap-1">
-                                                    <Flame className="w-3 h-3" />
-                                                    Bombando
-                                                </span>
-                                            ) : '📈 Em alta'}
-                                    </div>
-                                )}
+                                {/* Ranking Indicator */}
+                                <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-black text-sm border border-white/30 z-20 shadow-lg">
+                                    #{idx + 1}
+                                </div>
+
+                                {/* Hot Badge */}
+                                <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-orange-600/90 backdrop-blur-sm text-[10px] font-black text-white shadow-lg z-20 flex items-center gap-1 uppercase tracking-tighter">
+                                    <Flame className="w-3 h-3" />
+                                    Em alta
+                                </div>
 
                                 {/* Overlay com info - aparece no hover */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 z-10">

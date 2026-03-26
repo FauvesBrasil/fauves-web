@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import LeadCapture from "@/components/LeadCapture";
 import { getEventPath } from '@/lib/eventUrl';
 import { apiUrl, ensureApiBase } from '@/lib/apiBase';
 import Header from '../components/Header';
@@ -13,6 +14,10 @@ import FollowersModal from '@/components/FollowersModal';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useTrackingPixels } from '@/hooks/useTrackingPixels';
+import InterestButton from '../components/InterestButton';
+import { Eye, Users, Flame } from 'lucide-react';
+import { getEventHypeLevel, getHypeBadge } from '../lib/hype';
+import { fetchApi } from '@/lib/apiBase';
 
 // Modal de denúncia
 function ReportModal({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: (reason: string, email: string, description: string) => void }) {
@@ -194,11 +199,36 @@ const Event: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const utm = params.get('utm_source');
     const alias = utm || 'direct';
-    fetch(`/api/marketing-link/track-view`, {
+    fetch(apiUrl(`/api/marketing-link/track-view`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ eventId: event.id, alias })
     });
+  }, [event?.id]);
+
+  // Incrementar visualização com throttling via localStorage
+  useEffect(() => {
+    if (!event?.id) return;
+    
+    const VIEW_KEY = `fauves_view_${event.id}`;
+    const lastView = localStorage.getItem(VIEW_KEY);
+    const now = Date.now();
+    const thirtyMinutes = 30 * 60 * 1000;
+
+    if (!lastView || (now - parseInt(lastView)) > thirtyMinutes) {
+      fetch(apiUrl(`/api/event-metrics/increment/${event.id}`), { method: 'POST' })
+        .then(() => {
+          localStorage.setItem(VIEW_KEY, now.toString());
+          // Opcionalmente: atualizar o estado local se quisermos ver o +1 imediatamente
+          if (event.metrics) {
+            setEvent((prev: any) => ({
+              ...prev,
+              metrics: { ...prev.metrics, views: (Number(prev.metrics.views) || 0) + 1 }
+            }));
+          }
+        })
+        .catch(err => console.error('Failed to increment view:', err));
+    }
   }, [event?.id]);
   // Efeito blur/degradê no topo da tela será definido após checar loading/error/event
   const { slugOrId } = useParams<{ slugOrId: string }>();
@@ -382,6 +412,7 @@ const Event: React.FC = () => {
             <a href="/" className="text-blue-600 underline">Voltar para a página inicial</a>
           </div>
         </div>
+        <LeadCapture source="event-page" />
         <Footer />
       </div>
     );
@@ -457,15 +488,47 @@ const Event: React.FC = () => {
             <div className="flex flex-row gap-8 w-full mt-6 max-md:flex-col max-md:gap-0">
               {/* Coluna Esquerda */}
               <div className="flex flex-col w-[62%] max-md:w-full">
-                <div className="flex flex-col justify-center px-3 py-1 max-md:px-2.5 max-md:py-0.5 text-xs font-bold text-white bg-orange-600 rounded-[100px] w-fit">
-                  <div>
-                    {(() => {
-                      const raw = event?.category || (Array.isArray(event?.categories) && event.categories[0]);
-                      if (!raw) return 'Categoria';
-                      if (categoriesMap && categoriesMap[raw]) return categoriesMap[raw];
-                      // fallback: humanize slug-like values (e.g., 'congressos-e-palestras' -> 'Congressos E Palestras')
-                      return String(raw).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-                    })()}
+                {(() => {
+                  const cats = event?.categories || [];
+                  const categoryName = Array.isArray(cats) && cats.length > 0 
+                    ? cats[0].name 
+                    : (event?.category ? String(event?.category).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Geral');
+                  const categorySlug = Array.isArray(cats) && cats.length > 0 
+                    ? `/eventos/${cats[0].slug}` 
+                    : (event?.category ? `/eventos/${event.category}` : '#');
+
+                  return (
+                    <Link 
+                      to={categorySlug}
+                      className="flex flex-col justify-center px-4 py-1.5 max-md:px-2.5 max-md:py-0.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 transition-colors rounded-[100px] w-fit"
+                    >
+                      {categoryName}
+                    </Link>
+                  );
+                })()}
+                
+                {/* Hype Badge & Metrics */}
+                <div className="flex flex-wrap items-center gap-4 mt-3">
+                  {(() => {
+                    const hypeLevel = getEventHypeLevel(event?.metrics);
+                    const hypeBadge = getHypeBadge(hypeLevel);
+                    if (!hypeBadge) return null;
+                    return (
+                      <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-[11px] font-black uppercase tracking-wider ${hypeBadge.color} shadow-md`}>
+                        <span>{hypeBadge.icon}</span>
+                        <span>{hypeBadge.label}</span>
+                      </div>
+                    );
+                  })()}
+                  
+                  <div className="flex items-center gap-1.5 text-sm font-bold text-gray-500 dark:text-slate-400">
+                    <Eye size={16} className="text-gray-400" />
+                    <span>{event?.metrics?.views || 0} visualizações</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 text-sm font-bold text-orange-600 dark:text-orange-500">
+                    <Users size={16} className="text-orange-400" />
+                    <span>{event?.metrics?.interests || 0} interessados</span>
                   </div>
                 </div>
                 <div className="mt-2.5 text-4xl max-md:text-3xl font-bold text-indigo-950 dark:text-white leading-tight">
@@ -474,6 +537,9 @@ const Event: React.FC = () => {
                 <div className="text-lg max-md:text-base font-medium text-indigo-950 dark:text-slate-300 mt-2 max-md:mt-1.5">
                   {event.subtitle || "Subtítulo do evento"}
                 </div>
+
+                {/* Nova Funcionalidade: Tenho Interesse */}
+                <InterestButton eventId={event.id} variant="detail" />
 
                 {/* Data e hora + Localização lado a lado */}
                 <div className="flex flex-row gap-4 mt-8 mb-4 w-full max-md:flex-col max-md:gap-3">
@@ -751,6 +817,7 @@ const Event: React.FC = () => {
             </div>
           )}
 
+          <LeadCapture source="event-page" />
           <Footer />
         </div>
       </div>

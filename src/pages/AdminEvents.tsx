@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Calendar, TrendingUp, AlertCircle, Plus, RefreshCw } from 'lucide-react';
+import { Search, Filter, Calendar, TrendingUp, AlertCircle, Plus, RefreshCw, Link as LinkIcon } from 'lucide-react';
+import EventImporter from '@/components/EventImporter';
 
 export default function AdminEvents(){
   const { token } = useAuth();
@@ -11,6 +12,7 @@ export default function AdminEvents(){
   const [status, setStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showImporter, setShowImporter] = useState(false);
 
   const loadEvents = async () => {
     if(!token) return;
@@ -62,11 +64,32 @@ export default function AdminEvents(){
           <h1 className="text-2xl font-semibold text-slate-900 mb-0.5">Eventos & Vendas</h1>
           <p className="text-slate-600 text-sm">Gerencie todos os eventos da plataforma</p>
         </div>
-        <button className="inline-flex items-center gap-2 px-3 h-9 bg-gradient-to-r from-teal-500 to-blue-600 text-white text-sm rounded-lg hover:shadow-lg transition font-medium">
-          <Plus className="w-4 h-4" />
-          <span>Criar Evento</span>
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowImporter(!showImporter)}
+            className="inline-flex items-center gap-2 px-3 h-9 bg-white border border-slate-200 text-slate-700 text-sm rounded-lg hover:bg-slate-50 transition font-medium"
+          >
+            <LinkIcon className="w-4 h-4 text-teal-500" />
+            <span>Importar Externo</span>
+          </button>
+          <button 
+            onClick={() => navigate('/admin/events/new')}
+            className="inline-flex items-center gap-2 px-3 h-9 bg-gradient-to-r from-teal-500 to-blue-600 text-white text-sm rounded-lg hover:shadow-lg transition font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Criar Evento</span>
+          </button>
+        </div>
       </div>
+
+      {showImporter && (
+        <div className="mb-8">
+          <EventImporter 
+            onSuccess={() => { setShowImporter(false); loadEvents(); }} 
+            onClose={() => setShowImporter(false)}
+          />
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
