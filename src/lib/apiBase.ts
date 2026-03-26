@@ -344,8 +344,8 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
   const headers = new Headers(init?.headers || {});
   if (authToken && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + authToken);
   const finalInit: RequestInit = { ...init, headers, credentials: 'include' };
-  // Apply a request timeout so slow endpoints don't hang forever. Default 4s.
-  const TIMEOUT_MS = 4000;
+  // Apply a request timeout so slow endpoints don't hang forever. Default 10s.
+  const TIMEOUT_MS = 10000;
   const ctrl = new AbortController();
   const userSignal = init && (init as any).signal;
   // If caller passed a signal, propagate its abort to our controller
