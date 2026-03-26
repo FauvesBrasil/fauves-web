@@ -225,6 +225,25 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
                   className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 />
               </div>
+
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">URL da Imagem (Banner)</label>
+                <div className="relative">
+                  <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={formData.image}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    placeholder="https://exemplo.com/imagem.jpg"
+                    className="w-full pl-9 pr-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
+                </div>
+                {formData.image && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 h-24 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <img src={formData.image} alt="Preview" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.src = 'https://placehold.co/600x300?text=Erro+ao+carregar+imagem')} />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="pt-4 flex gap-2 border-t border-slate-100 dark:border-slate-800 mt-2">
