@@ -107,7 +107,7 @@ const Index = () => {
       try {
         setError(null);
 
-        const initialEventsUrl = `/api/event?limit=30${selectedUf ? `&uf=${selectedUf}` : ''}`;
+        const initialEventsUrl = `/events?limit=30${selectedUf ? `&uf=${selectedUf}` : ''}`;
         const slidesUrl = selectedUf ? `/api/slides?uf=${selectedUf}` : '/api/slides';
         const categoriesUrl = '/api/categories';
 
@@ -152,9 +152,11 @@ const Index = () => {
             const res = await fetchApi(initialEventsUrl);
             if (res.ok) {
               const data = await res.json();
-              if (Array.isArray(data)) {
-                events = data;
-                setInitialEvents(data);
+              // Support both flat array and { events: [], ... } object
+              const items = Array.isArray(data) ? data : (data.events || []);
+              if (Array.isArray(items)) {
+                events = items;
+                setInitialEvents(items);
               }
             }
           } catch (e) { console.error('Error fetching initial events:', e); }
