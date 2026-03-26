@@ -106,8 +106,7 @@ const StyleDiscovery: React.FC<StyleDiscoveryProps> = ({ events, selectedUf, cat
         }))
         : categories
             .filter(cat => cat.isActive)
-            .map(cat => ({ ...cat, count: getEventCount(cat.name) }))
-            .filter(cat => cat.count > 0);
+            .map(cat => ({ ...cat, count: getEventCount(cat.name) }));
 
     if (displayCategories.length === 0) {
         return null;

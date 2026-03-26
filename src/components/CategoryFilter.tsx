@@ -34,7 +34,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ onSelect, selectedSlug,
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetchApi('/event-category');
+        const response = await fetchApi('/api/categories');
         if (response.ok) {
           const data = await response.json();
           setCategories(data);
