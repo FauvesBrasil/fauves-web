@@ -66,8 +66,13 @@ const InterestButton: React.FC<InterestButtonProps> = ({ eventId, variant = 'car
         e.preventDefault();
         e.stopPropagation();
 
-        if (loading) return;
-        setLoading(true);
+        // Optimistic update
+        const previousInterested = isInterested;
+        const previousCount = count;
+        
+        const nextInterested = !previousInterested;
+        setIsInterested(nextInterested);
+        setCount(prev => (prev !== null ? (nextInterested ? prev + 1 : Math.max(0, prev - 1)) : null));
 
         try {
             const sid = getSessionId();
@@ -77,27 +82,40 @@ const InterestButton: React.FC<InterestButtonProps> = ({ eventId, variant = 'car
                 method: 'POST'
             });
 
-            if (res.ok) {
-                const data = await res.json();
-                const nowInterested = data.interested;
-                setIsInterested(nowInterested);
+            if (!res.ok) {
+                // Revert on error
+                setIsInterested(previousInterested);
+                setCount(previousCount);
                 
-                // Update count locally to be faster
-                setCount(prev => (prev !== null ? (nowInterested ? prev + 1 : Math.max(0, prev - 1)) : null));
+                toast({
+                    title: 'Erro',
+                    description: 'Não foi possível processar sua solicitação.',
+                    variant: 'destructive'
+                });
+            } else {
+                // Validar se o estado do servidor bate (opcional, mas bom pra consistência)
+                const data = await res.json();
+                if (data.interested !== nextInterested) {
+                    setIsInterested(data.interested);
+                    // O count já foi ajustado, se quisermos ser hyper-precisos podemos buscar o count de novo
+                    // mas o ajuste local +1/-1 geralmente é suficiente para o feedback imediato.
+                }
 
                 toast({
-                    title: nowInterested ? 'Interesse registrado!' : 'Interesse removido',
-                    description: nowInterested ? 'Você demonstrou interesse neste evento.' : 'Seu interesse foi removido.',
+                    title: nextInterested ? 'Interesse registrado!' : 'Interesse removido',
+                    description: nextInterested ? 'Você demonstrou interesse neste evento.' : 'Seu interesse foi removido.',
                 });
             }
         } catch (error) {
+            // Revert on network error
+            setIsInterested(previousInterested);
+            setCount(previousCount);
+            
             toast({
                 title: 'Erro',
-                description: 'Não foi possível processar sua solicitação.',
+                description: 'Verifique sua conexão e tente novamente.',
                 variant: 'destructive'
             });
-        } finally {
-            setLoading(false);
         }
     };
 
