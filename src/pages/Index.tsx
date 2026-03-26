@@ -98,23 +98,25 @@ const Index = () => {
     resetPagination();
   }, [selectedUf, selectedCategory, resetPagination]);
 
-  // Load initial data for hero sections (categories + first 100 events)
+  // Load all initial data (events, categories, slides) in parallel to avoid waterfalls
   useEffect(() => {
     (async () => {
       try {
-        // Clear previous data and show loading when location changes
         setLoading(true);
-        setInitialEvents([]);
         setError(null);
 
-        // Build URL with optional UF filter
+        // Build URLs
         const eventsUrl = selectedUf ? `/events?uf=${selectedUf}` : '/events';
+        const slidesUrl = selectedUf ? `/api/slides?uf=${selectedUf}` : '/api/slides';
+        const categoriesUrl = '/api/categories';
 
-        const [rEvents, rCats] = await Promise.all([
+        const [rEvents, rCats, rSlides] = await Promise.all([
           fetchApi(eventsUrl, { headers: { 'Accept': 'application/json' } }),
-          fetchApi('/api/categories')
+          fetchApi(categoriesUrl),
+          fetchApi(slidesUrl)
         ]);
 
+        // 1. Process Categories
         if (rCats.ok) {
           try {
             const cData = await rCats.json();
@@ -124,17 +126,74 @@ const Index = () => {
           } catch { }
         }
 
+        // 2. Process Events
+        let loadedEvents: Event[] = [];
         if (!rEvents.ok) {
           const detail = await (async () => { try { const j = await rEvents.json(); return j?.error || j?.message; } catch { return null; } })();
           setError(buildErrorMessage(rEvents.status, detail));
         } else {
           const data = await rEvents.json();
           if (Array.isArray(data)) {
-            setInitialEvents(data); // For TrendingEvents/StyleDiscovery
+            loadedEvents = data;
+            setInitialEvents(data);
           } else {
             setError(buildErrorMessage(undefined, 'Resposta inesperada'));
           }
         }
+
+        // 3. Process Slides (Manual + Auto-supplement)
+        const MAX_SLIDES = 8;
+        let finalSlides: EventSliderSlide[] = [];
+
+        if (rSlides.ok) {
+            try {
+                const sData = await rSlides.json();
+                if (Array.isArray(sData) && sData.length > 0) {
+                    finalSlides = sData.map((slide: any) => ({
+                        category: slide.title,
+                        image: slide.imageUrl || '/no-image.svg',
+                        id: slide.eventSlug || slide.id,
+                        slug: slide.eventSlug || null,
+                        date: slide.eventDate ? new Date(slide.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '',
+                        linkUrl: slide.linkType === 'external' ? slide.linkUrl : null,
+                        linkType: slide.linkType,
+                        showTitle: slide.showTitle !== false,
+                    }));
+                }
+            } catch { }
+        }
+
+        // Auto-supplement slides if needed
+        if (finalSlides.length < MAX_SLIDES && loadedEvents.length > 0) {
+            const getEventUf = (ev: any): string => {
+                if (ev.locationUf) return String(ev.locationUf).toUpperCase();
+                if (ev.uf) return String(ev.uf).toUpperCase();
+                return '';
+            };
+
+            const sortedEvents = [...loadedEvents]
+                .filter((ev: any) => ev.startDate)
+                .sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+
+            const existingIds = new Set(finalSlides.map(s => s.id || s.slug));
+            const slotsAvailable = MAX_SLIDES - finalSlides.length;
+
+            const autoSlides: EventSliderSlide[] = sortedEvents
+                .filter((ev: any) => !existingIds.has(ev.id) && !existingIds.has(ev.slug))
+                .slice(0, slotsAvailable)
+                .map((ev: any) => ({
+                    category: ev.name,
+                    image: ev.bannerUrl || ev.image || '/no-image.svg',
+                    id: ev.id,
+                    slug: ev.slug,
+                    date: ev.startDate ? new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '',
+                    linkType: 'event',
+                }));
+
+            finalSlides = [...finalSlides, ...autoSlides];
+        }
+        setSliderEvents(finalSlides);
+
       } catch (e: unknown) {
         let message: string | undefined = undefined;
         if (typeof e === 'object' && e !== null && 'message' in e) {
@@ -146,110 +205,7 @@ const Index = () => {
         setLoading(false);
       }
     })();
-  }, [selectedUf]); // Reload when location changes
-
-  // Detecta mudança de localização e mostra loading
-  useEffect(() => {
-    if (prevUfRef.current !== null && prevUfRef.current !== selectedUf) {
-      setLocationChanging(true);
-      // Remove loading após um pequeno delay para suavizar a transição
-      const timer = setTimeout(() => setLocationChanging(false), 800);
-      return () => clearTimeout(timer);
-    }
-    prevUfRef.current = selectedUf;
-  }, [selectedUf]);
-
-  // Carrega slides da API + eventos automáticos (sistema híbrido)
-  useEffect(() => {
-    (async () => {
-      try {
-        const MAX_SLIDES = 8;
-        let allSlides: EventSliderSlide[] = [];
-
-        // 1. Primeiro busca slides manuais
-        const url = selectedUf ? `/api/slides?uf=${selectedUf}` : '/api/slides';
-        const res = await fetchApi(url);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            allSlides = data.map((slide: any) => ({
-              category: slide.title,
-              image: slide.imageUrl || '/no-image.svg',
-              id: slide.eventSlug || slide.id,
-              slug: slide.eventSlug || null,
-              date: slide.eventDate ? new Date(slide.eventDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '',
-              linkUrl: slide.linkType === 'external' ? slide.linkUrl : null,
-              linkType: slide.linkType,
-              showTitle: slide.showTitle !== false,
-            }));
-          }
-        }
-
-        // 2. Complementa com eventos automáticos se não tiver slides suficientes
-        // Helper to extract UF from event (multiple possible fields)
-        const getEventUf = (ev: any): string => {
-          if (ev.locationUf) return String(ev.locationUf).toUpperCase();
-          if (ev.uf) return String(ev.uf).toUpperCase();
-          if (ev.location && typeof ev.location === 'object' && ev.location.uf) return String(ev.location.uf).toUpperCase();
-          if (ev.locationDetails && typeof ev.locationDetails === 'object' && ev.locationDetails.uf) return String(ev.locationDetails.uf).toUpperCase();
-          // Try extracting from location string
-          if (ev.location && typeof ev.location === 'string') {
-            const match = ev.location.match(/\b([A-Z]{2})\b/);
-            if (match) return match[1];
-          }
-          if (ev.locationAddress && typeof ev.locationAddress === 'string') {
-            const match = ev.locationAddress.match(/\b([A-Z]{2})\b/);
-            if (match) return match[1];
-          }
-          return '';
-        };
-
-        console.log('[Slides Debug] events:', initialEvents.length, 'selectedUf:', selectedUf);
-        console.log('[Slides Debug] events UFs:', initialEvents.map((ev: any) => getEventUf(ev) || 'NO_UF'));
-
-        if (allSlides.length < MAX_SLIDES && initialEvents.length > 0) {
-          // Filtra eventos do estado selecionado
-          const stateEvents = selectedUf
-            ? initialEvents.filter((ev: any) => {
-              const evUf = getEventUf(ev);
-              console.log(`[Slides Debug] Event ${ev.name}: evUf="${evUf}" vs selectedUf="${selectedUf}"`);
-              return evUf === selectedUf.toUpperCase();
-            })
-            : initialEvents;
-
-          console.log('[Slides Debug] stateEvents after filter:', stateEvents.length);
-
-          // Ordena por data
-          const sortedEvents = [...stateEvents]
-            .filter((ev: any) => ev.startDate)
-            .sort((a: any, b: any) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-
-          // Adiciona eventos que não estão já no slider (evita duplicatas)
-          const existingIds = new Set(allSlides.map(s => s.id || s.slug));
-          const slotsAvailable = MAX_SLIDES - allSlides.length;
-
-          const autoSlides: EventSliderSlide[] = sortedEvents
-            .filter((ev: any) => !existingIds.has(ev.id) && !existingIds.has(ev.slug))
-            .slice(0, slotsAvailable)
-            .map((ev: any) => ({
-              category: ev.name,
-              image: ev.bannerUrl || ev.image || '/no-image.svg',
-              id: ev.id,
-              slug: ev.slug,
-              date: ev.startDate ? new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '',
-              linkType: 'event',
-            }));
-
-          allSlides = [...allSlides, ...autoSlides];
-        }
-
-        console.log('[Slides Debug] Final allSlides:', allSlides.length, allSlides);
-        setSliderEvents(allSlides);
-      } catch (e) {
-        console.error('Error loading slides:', e);
-      }
-    })();
-  }, [selectedUf, initialEvents]);
+  }, [selectedUf]); // Reload all when location changes
 
   if (loading) return <HomePageSkeleton />;
 
