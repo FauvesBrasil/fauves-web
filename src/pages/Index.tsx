@@ -18,7 +18,6 @@ import { Loader2 } from 'lucide-react';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import WeekendHighlights from '@/components/WeekendHighlights';
 import TrendingHighlights from '@/components/TrendingHighlights';
-import CategoryFilter from '@/components/CategoryFilter';
 import LeadCapture from '@/components/LeadCapture';
 
 // OBS: removido supabase e spinner não utilizados; carregamento é puramente via backend /events
@@ -49,7 +48,6 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [locationChanging, setLocationChanging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const prevUfRef = useRef<string | null>(null);
 
   // Keep hooks order stable: read location context here so it's not called conditionally later
@@ -71,7 +69,7 @@ const Index = () => {
   // Infinite scroll for main events grid
   const fetchEventsPage = useCallback(async (page: number) => {
     const ufParam = selectedUf ? `&uf=${selectedUf}` : '';
-    const catParam = selectedCategory ? `&category=${selectedCategory}` : '';
+    const catParam = ''; // Category filtering moved to search page
     const response = await fetchApi(`/events?page=${page}&limit=20${ufParam}${catParam}`);
     if (!response.ok) throw new Error('Failed to fetch events');
     const data = await response.json();
@@ -80,7 +78,7 @@ const Index = () => {
       hasMore: data.hasMore || false,
       total: data.total,
     };
-  }, [selectedUf, selectedCategory]); // Reset pagination when UF or Category changes
+  }, [selectedUf]); // Reset pagination when UF changes
 
   const {
     items: paginatedEvents,
@@ -96,7 +94,7 @@ const Index = () => {
   // Reset pagination when UF or Category changes
   useEffect(() => {
     resetPagination();
-  }, [selectedUf, selectedCategory, resetPagination]);
+  }, [selectedUf, resetPagination]);
 
   const [loadingHero, setLoadingHero] = useState(true);
   const [loadingInitialEvents, setLoadingInitialEvents] = useState(true);
@@ -292,9 +290,9 @@ const Index = () => {
 
       <div className="max-w-[1352px] mx-auto px-0">
         {/* Seção: Descubra por Estilo */}
-        {loadingInitialEvents ? (
+        {(loadingInitialEvents && categories.length === 0) ? (
            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-orange-500" /></div>
-        ) : initialEvents.length > 0 && (
+        ) : (categories.length > 0 || initialEvents.length > 0) && (
           <StyleDiscovery
             events={initialEvents}
             selectedUf={selectedUf}
@@ -330,12 +328,7 @@ const Index = () => {
 
         {/* Link para o topo quando filtrar */}
         <main>
-          <section className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mb-4">
-            <CategoryFilter 
-              selectedSlug={selectedCategory} 
-              onSelect={setSelectedCategory} 
-            />
-          </section>
+          {/* Category filter section removed as requested */}
 
           {paginatedEvents.length > 0 ? (
             <>
