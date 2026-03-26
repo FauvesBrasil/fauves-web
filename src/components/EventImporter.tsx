@@ -1,7 +1,24 @@
-import React, { useState } from 'react';
-import { Search, Loader2, Save, Link as LinkIcon, Calendar, MapPin, User, Image as ImageIcon, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Loader2, Save, Link as LinkIcon, Calendar, MapPin, User, Image as ImageIcon, X, CheckIcon } from 'lucide-react';
 import { fetchApi } from '@/lib/apiBase';
 import { toast } from 'sonner';
+import { LocationAutocomplete } from '@/components/LocationAutocomplete';
+
+const BRAZIL_UFS = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+] as const;
+
+const UF_CAPITALS: Record<string, string> = {
+  AC: 'Rio Branco', AL: 'Maceió', AP: 'Macapá', AM: 'Manaus',
+  BA: 'Salvador', CE: 'Fortaleza', DF: 'Brasília', ES: 'Vitória',
+  GO: 'Goiânia', MA: 'São Luís', MT: 'Cuiabá', MS: 'Campo Grande',
+  MG: 'Belo Horizonte', PA: 'Belém', PB: 'João Pessoa', PR: 'Curitiba',
+  PE: 'Recife', PI: 'Teresina', RJ: 'Rio de Janeiro', RN: 'Natal',
+  RS: 'Porto Alegre', RO: 'Porto Velho', RR: 'Boa Vista', SC: 'Florianópolis',
+  SP: 'São Paulo', SE: 'Aracaju', TO: 'Palmas'
+};
 
 interface EventImporterProps {
   onSuccess?: () => void;
@@ -18,16 +35,36 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
     name: '',
     date: '',
     location: '',
+    locationUf: '',
+    locationCity: '',
     producer: '',
     image: '',
     externalUrl: ''
   });
 
+  const [existingOrgs, setExistingOrgs] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (step === 'edit') {
+      fetchApi('/api/admin/organizations?perPage=100')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.organizations) setExistingOrgs(data.organizations);
+        })
+        .catch(() => {});
+    }
+  }, [step]);
+
+  useEffect(() => {
+    if (formData.locationUf && UF_CAPITALS[formData.locationUf] && !formData.locationCity) {
+      setFormData(prev => ({ ...prev, locationCity: UF_CAPITALS[formData.locationUf] }));
+    }
+  }, [formData.locationUf]);
+
   const handleExtract = async () => {
     if (!url) return;
     setLoading(true);
     try {
-      // Use full URL for internal API
       const res = await fetchApi(`/api/admin/event-importer/extract?url=${encodeURIComponent(url)}`);
       if (!res.ok) throw new Error('Erro ao extrair dados');
       
@@ -35,8 +72,10 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
       
       setFormData({
         name: data.title || '',
-        date: '', // Metadados OG raramente tem data padronizada em formato útil, admin preenche
+        date: '',
         location: '',
+        locationUf: 'CE', // Default to CE as requested context often focuses on Fortaleza
+        locationCity: 'Fortaleza',
         producer: '',
         image: data.image || '',
         externalUrl: url
@@ -44,7 +83,7 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
       setStep('edit');
     } catch (error) {
       toast.error('Não foi possível extrair dados automaticamente. Preencha manualmente.');
-      setFormData({ ...formData, externalUrl: url });
+      setFormData({ ...formData, externalUrl: url, locationUf: 'CE', locationCity: 'Fortaleza' });
       setStep('edit');
     } finally {
       setLoading(false);
@@ -52,8 +91,8 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.date || !formData.producer) {
-      toast.error('Preencha os campos obrigatórios (Nome, Data e Produtora)');
+    if (!formData.name || !formData.date || !formData.producer || !formData.locationUf) {
+      toast.error('Preencha os campos obrigatórios (Nome, Data, Produtora e Estado)');
       return;
     }
     setSaving(true);
@@ -93,7 +132,7 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
         {step === 'url' ? (
           <div className="space-y-4">
             <p className="text-sm text-slate-500 dark:text-slate-400 m-0">
-              Cole o link de um evento externo (ex: Sympla, Bilheteria Digital) para tentarmos extrair as informações automaticamente.
+              Cole o link de um evento externo para tentarmos extrair as informações automaticamente.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
@@ -120,9 +159,7 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
           <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  Nome do Evento *
-                </label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Nome do Evento *</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -132,9 +169,7 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  Data e Hora *
-                </label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Data e Hora *</label>
                 <input
                   type="datetime-local"
                   value={formData.date}
@@ -144,49 +179,53 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  Produtora *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Move Concerts"
-                  value={formData.producer}
-                  onChange={(e) => setFormData({ ...formData, producer: e.target.value })}
-                  className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
-                />
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Produtora *</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="existing-orgs"
+                    placeholder="Ex: Move Concerts"
+                    value={formData.producer}
+                    onChange={(e) => setFormData({ ...formData, producer: e.target.value })}
+                    className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
+                  <datalist id="existing-orgs">
+                    {existingOrgs.map(org => <option key={org.id} value={org.name} />)}
+                  </datalist>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  Local
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Arena Castelão"
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Local / Endereço</label>
+                <LocationAutocomplete
                   value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                  onChange={(val) => setFormData({ ...formData, location: val })}
+                  placeholder="Arena Castelão ou Rua Exemplo, 123"
+                  className="w-full"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  URL da Imagem
-                </label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Estado (UF) *</label>
+                <select
+                  value={formData.locationUf}
+                  onChange={(e) => setFormData({ ...formData, locationUf: e.target.value })}
+                  className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                >
+                  {BRAZIL_UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Cidade *</label>
                 <input
                   type="text"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  value={formData.locationCity}
+                  onChange={(e) => setFormData({ ...formData, locationCity: e.target.value })}
                   className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 />
               </div>
             </div>
-
-            {formData.image && (
-              <div className="mt-2 rounded-lg overflow-hidden border border-slate-100 dark:border-slate-800 aspect-video relative max-h-32">
-                 <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-            )}
 
             <div className="pt-4 flex gap-2 border-t border-slate-100 dark:border-slate-800 mt-2">
                <button

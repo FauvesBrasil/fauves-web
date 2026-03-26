@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Calendar, TrendingUp, AlertCircle, Plus, RefreshCw, Link as LinkIcon } from 'lucide-react';
+import { Search, Filter, Calendar, TrendingUp, AlertCircle, Plus, RefreshCw, Link as LinkIcon, Edit2 } from 'lucide-react';
 import EventImporter from '@/components/EventImporter';
 
 export default function AdminEvents(){
@@ -181,9 +181,18 @@ export default function AdminEvents(){
                   }`}>
                     {e.status || 'draft'}
                   </span>
-                  <div className="flex items-center gap-1 text-slate-600">
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="text-sm font-semibold">{e.ticketsSold || 0}</span>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(evt) => { evt.stopPropagation(); navigate(`/create-event?eventId=${e.id}`); }}
+                      className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-teal-600 transition"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <TrendingUp className="w-4 h-4" />
+                      <span className="text-sm font-semibold">{e.ticketsSold || 0}</span>
+                    </div>
                   </div>
                 </div>
               </div>

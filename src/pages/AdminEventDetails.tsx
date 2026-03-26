@@ -5,7 +5,7 @@ import {
   ArrowLeft, Calendar, MapPin, Users, TrendingUp, DollarSign, 
   Eye, MousePointer, ShoppingCart, CreditCard, AlertTriangle,
   Clock, CheckCircle, XCircle, Package, BarChart3, Activity,
-  FileText, Shield, Target, Zap, Wallet, Send, Download, ExternalLink
+  FileText, Shield, Target, Zap, Wallet, Send, Download, ExternalLink, Edit2
 } from 'lucide-react';
 
 export default function AdminEventDetails() {
@@ -187,13 +187,51 @@ export default function AdminEventDetails() {
           <h1 className="text-3xl font-bold text-slate-900">{event.name}</h1>
           <p className="text-slate-600">{event.organizationName || 'Sem organização'}</p>
         </div>
-        <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-          event.status === 'published' || event.status === 'active'
-            ? 'bg-emerald-100 text-emerald-700'
-            : 'bg-slate-100 text-slate-700'
-        }`}>
-          {event.status || 'draft'}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/create-event?eventId=${eventId}`)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium"
+          >
+            <Edit2 className="w-4 h-4" />
+            Editar
+          </button>
+          <button
+            onClick={async () => {
+              if (confirm('Tem certeza que deseja excluir permanentemente este evento e todos os seus dados?')) {
+                try {
+                  const res = await fetch(`/api/admin/delete-event`, { 
+                    method: 'POST',
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ eventId })
+                  });
+                  const data = await res.json();
+                  if (data.ok) {
+                    alert('Evento excluído com sucesso!');
+                    navigate('/admin/events');
+                  } else {
+                    alert(`Erro ao excluir: ${data.error || 'Erro desconhecido'}`);
+                  }
+                } catch (e) {
+                  alert('Erro ao processar exclusão');
+                }
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg hover:bg-red-100 transition font-medium"
+          >
+            <XCircle className="w-4 h-4" />
+            Excluir
+          </button>
+          <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+            event.status === 'published' || event.status === 'active'
+              ? 'bg-emerald-100 text-emerald-700'
+              : 'bg-slate-100 text-slate-700'
+          }`}>
+            {event.status || 'draft'}
+          </span>
+        </div>
       </div>
 
       {/* Event Image & Basic Info */}

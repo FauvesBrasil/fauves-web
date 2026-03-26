@@ -81,6 +81,8 @@ function CreateEditEvent() {
 	const [onlineUrl, setOnlineUrl] = useState("");
 	const [tbdUf, setTbdUf] = useState("");
 	const [tbdCity, setTbdCity] = useState("");
+	const [isExternal, setIsExternal] = useState(false);
+	const [externalUrl, setExternalUrl] = useState("");
 	const [eventDescription, setEventDescription] = useState("");
 	// organizadores locais para o select (id, name, optional avatar)
 	const [organizers, setOrganizers] = useState<Array<{ id: string; name: string; avatar?: string }>>([
@@ -145,6 +147,30 @@ function CreateEditEvent() {
 		})();
 		return () => { mounted = false; };
 	}, [eventId]);
+
+	// Fetch ALL organizations if user is an admin (to allow selecting any producer)
+	useEffect(() => {
+		if (!user?.isAdmin || authLoading) return;
+		let mounted = true;
+		(async () => {
+			try {
+				const res = await fetchApi('/api/admin/organizations?perPage=1000');
+				if (res?.ok && mounted) {
+					const data = await res.json();
+					if (data.ok && Array.isArray(data.organizations)) {
+						setOrganizers(data.organizations.map((o: any) => ({ 
+							id: o.id, 
+							name: o.name, 
+							avatar: o.logoUrl || undefined 
+						})));
+					}
+				}
+			} catch (err) {
+				console.warn('Failed to fetch all organizations for admin', err);
+			}
+		})();
+		return () => { mounted = false; };
+	}, [user?.isAdmin, authLoading]);
 
 	// Load event data when editing (eventId present)
 	useEffect(() => {
@@ -211,6 +237,10 @@ function CreateEditEvent() {
 				const orgId = ev.organizerId || ev.organizationId || null;
 				if (orgId) setSelectedOrganizer(orgId);
 
+				// external info
+				setIsExternal(!!ev.isExternal);
+				setExternalUrl(ev.externalUrl || '');
+
 				// lineup
 				if (ev.artists && Array.isArray(ev.artists)) {
 					const artists = ev.artists.map((ea: any) => ({
@@ -246,7 +276,9 @@ function CreateEditEvent() {
 					onlineUrl: derivedType === 'Evento online' ? (ev.onlineUrl || (ev as any).locationDetails?.url || rawLoc) : '',
 					tbdUf: ev.locationUf || (ev as any).locationDetails?.uf || '',
 					tbdCity: ev.locationCity || (ev as any).locationDetails?.city || '',
-					selectedOrganizer: orgId || ''
+					selectedOrganizer: orgId || '',
+					isExternal: !!ev.isExternal,
+					externalUrl: ev.externalUrl || ''
 				};
 				setOriginalValues(original);
 			} catch (err) {
@@ -278,7 +310,9 @@ function CreateEditEvent() {
 			onlineUrl !== originalValues.onlineUrl ||
 			tbdUf !== originalValues.tbdUf ||
 			tbdCity !== originalValues.tbdCity ||
-			selectedOrganizer !== originalValues.selectedOrganizer;
+			selectedOrganizer !== originalValues.selectedOrganizer ||
+			isExternal !== originalValues.isExternal ||
+			externalUrl !== originalValues.externalUrl;
 
 		setHasUnsavedChanges(hasChanges);
 	}, [eventId, originalValues, eventName, eventSubtitle, eventDescription, startDate, startTime, endDate, endTime, locationType, locationAddress, onlineUrl, tbdUf, tbdCity, selectedOrganizer, loadingEvent]);
@@ -763,6 +797,8 @@ function CreateEditEvent() {
 					if (lineup && lineup.length > 0) { form.append('lineup', JSON.stringify(lineup)); }
 					form.append('startDate', startISO);
 					if (endISO) form.append('endDate', endISO);
+					form.append('isExternal', isExternal.toString());
+					if (externalUrl) form.append('externalUrl', externalUrl);
 
 					if (eventId) {
 						res = await fetchApi(`/api/event/${eventId}`, { method: 'PUT', body: form });
@@ -781,6 +817,8 @@ function CreateEditEvent() {
 						organizationId: selectedOrganizer || undefined,
 						startDate: startISO,
 						lineup: lineup && lineup.length ? lineup : undefined,
+						isExternal,
+						externalUrl: externalUrl || undefined
 					};
 					if (endISO) body.endDate = endISO;
 
@@ -1382,8 +1420,75 @@ function CreateEditEvent() {
 											/>
 										)}
 									</div>
+									
+									{/* External Event Configuration (Admin/Advanced) */}
+									<div className="mt-6 pt-6 border-t border-zinc-100 dark:border-gray-800">
+										<div className="flex items-center justify-between mb-4">
+											<div>
+												<h4 className="text-sm font-semibold text-indigo-950 dark:text-white">Evento Externo</h4>
+												<p className="text-xs text-gray-500">Se ativado, o redirecionamento será para uma URL externa.</p>
+											</div>
+											<button
+												type="button"
+												onClick={() => setIsExternal(!isExternal)}
+												className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isExternal ? 'bg-indigo-600' : 'bg-gray-200'}`}
+											>
+												<span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isExternal ? 'translate-x-6' : 'translate-x-1'}`} />
+											</button>
+										</div>
+										{isExternal && (
+											<div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+												<div className="text-xs font-semibold text-gray-700 dark:text-white mb-1">Link Externo (Compra/Mais Info)</div>
+												<Input 
+													value={externalUrl} 
+													onChange={e => setExternalUrl(e.target.value)} 
+													placeholder="https://www.sympla.com.br/evento/..." 
+													className="w-full dark:bg-[#121212] dark:border-transparent dark:text-white"
+												/>
+											</div>
+										)}
+									</div>
 								</div>
 							</Card>
+							
+							{/* Admin Actions */}
+							{user?.isAdmin && eventId && (
+								<div className="mt-6 w-full px-2">
+									<Button
+										type="button"
+										variant="ghost"
+										onClick={async () => {
+											if (confirm('ATENÇÃO: Deseja realmente EXCLUIR este evento? Esta ação não pode ser desfeita.')) {
+												try {
+													const res = await fetchApi('/api/admin/delete-event', {
+														method: 'POST',
+														headers: { 'Content-Type': 'application/json' },
+														body: JSON.stringify({ eventId })
+													});
+													const data = await res.json();
+													if (data.ok) {
+														toast.success('Evento excluído com sucesso');
+														navigate('/admin/events');
+													} else {
+														toast.error(data.error || 'Erro ao excluir evento');
+													}
+												} catch (e) {
+													toast.error('Erro de conexão ao excluir');
+												}
+											}
+										}}
+										className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 w-full flex items-center justify-center gap-2 border border-red-100 dark:border-red-900/30 h-11 rounded-xl transition-all"
+									>
+										<svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+											<polyline points="3 6 5 6 21 6"></polyline>
+											<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+											<line x1="10" y1="11" x2="10" y2="17"></line>
+											<line x1="14" y1="11" x2="14" y2="17"></line>
+										</svg>
+										Excluir Evento permanentemente
+									</Button>
+								</div>
+							)}
 							{/* Fixed CTA button (canto inferior direito) */}
 							{!showCreateOrgModal && (
 								<div>
