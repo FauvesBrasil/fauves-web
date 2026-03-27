@@ -5,7 +5,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { OrganizationProvider } from '@/context/OrganizationContext';
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from 'framer-motion';
-import React, { Suspense } from 'react';
+import React, { Suspense, Component } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Index from "./pages/Index";
@@ -111,6 +111,7 @@ import EventAnalytics from './pages/EventAnalytics';
 import IssuedTickets from './pages/IssuedTickets';
 import ResetPassword from './pages/ResetPassword';
 import HowItWorks from './pages/HowItWorks';
+import LoginModal from './components/LoginModal';
 
 // Lazy load admin analytics
 const AdminAnalytics = React.lazy(() => import('./pages/AdminAnalytics'));
@@ -127,7 +128,7 @@ const queryClient = new QueryClient({
   },
 });
 
-class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
+class AppErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
   constructor(props: any) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
   componentDidCatch(error: any, info: any) { console.error('[AppErrorBoundary]', error, info); }
@@ -300,7 +301,20 @@ const AppInner = () => {
         !location.pathname.startsWith('/participantes') &&
         !location.pathname.startsWith('/gerenciar-equipe') &&
         <ChatWidget />}
+
+      <AuthModalWrapper />
     </>
+  );
+};
+
+const AuthModalWrapper = () => {
+  const { isLoginModalOpen, closeLoginModal, loginModalRedirect } = useAuth();
+  return (
+    <LoginModal 
+      open={isLoginModalOpen} 
+      onClose={closeLoginModal} 
+      redirectPath={loginModalRedirect} 
+    />
   );
 };
 

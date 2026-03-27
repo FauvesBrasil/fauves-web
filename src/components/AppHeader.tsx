@@ -182,9 +182,7 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
 
     const loadNotifications = async () => {
       try {
-        const res = await fetch('/api/notifications?limit=5', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetchApi('/api/notifications?limit=5');
         if (res.ok) {
           const data = await res.json();
           setNotifications(data.notifications || []);
@@ -205,9 +203,8 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
     try {
       if (!token) return;
 
-      await fetch(`/api/notifications/${notifId}/read`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
+      await fetchApi(`/api/notifications/${notifId}/read`, {
+        method: 'PUT'
       });
 
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));

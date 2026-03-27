@@ -6,6 +6,7 @@ import OrgLogoUpload from "./OrgLogoUpload";
 import { useAuth } from "@/context/AuthContext";
 import { getDisplayName } from '@/lib/user';
 import { useNavigate } from 'react-router-dom';
+import { fetchApi } from '@/lib/apiBase';
 
 interface RequireOrganizationProps {
   // onCreated may return a Promise (for example parent awaits a refresh) or void
@@ -80,7 +81,7 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
         if (logoFile) {
           const formData = new FormData();
           formData.append('file', logoFile, logoFile.name || 'logo.png');
-          const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+          const uploadRes = await fetchApi('/api/upload', { method: 'POST', body: formData });
           if (!uploadRes.ok) {
             const errText = await uploadRes.text().catch(() => '');
             throw new Error('Erro ao enviar imagem: ' + errText);
@@ -89,26 +90,18 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
           finalLogoUrl = data?.url || '';
         }
 
-        const attempt = async (url: string) => {
-          const r = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: orgName,
-              userId: user.id,
-              userEmail: user.email,
-              userName: getDisplayName(user) || null,
-              logoUrl: finalLogoUrl,
-            }),
-          });
-          return r;
-        };
+        const res = await fetchApi('/api/organization', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: orgName,
+            userId: user.id,
+            userEmail: user.email,
+            userName: getDisplayName(user) || null,
+            logoUrl: finalLogoUrl,
+          }),
+        });
 
-        let res = await attempt('/api/organization');
-        if (!res.ok) {
-          try { res = await attempt('http://localhost:4000/api/organization'); } catch (e) { /* swallow */ }
-        }
-        if (!res) throw new Error('Falha de rede ao criar organização');
         if (!res.ok) {
           // Special handling for 409 Conflict
           if (res.status === 409) {

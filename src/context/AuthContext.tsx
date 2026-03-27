@@ -3,7 +3,15 @@ import { fetchApi } from '@/lib/apiBase';
 
 interface AuthUser { id: string; email: string; name?: string | null; isAdmin?: boolean }
 interface AuthState { user: AuthUser | null; token: string | null; loading: boolean }
-interface AuthContextValue extends AuthState { login(email: string, password: string): Promise<boolean>; logout(): void; refreshUser(): Promise<void> }
+interface AuthContextValue extends AuthState { 
+  login(email: string, password: string): Promise<boolean>; 
+  logout(): void; 
+  refreshUser(): Promise<void>;
+  isLoginModalOpen: boolean;
+  loginModalRedirect: string | undefined;
+  openLoginModal(redirect?: string): void;
+  closeLoginModal(): void;
+}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -13,6 +21,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginModalRedirect, setLoginModalRedirect] = useState<string | undefined>(undefined);
 
   // Carrega token inicial
   useEffect(() => {
@@ -146,7 +156,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTimeout(() => window.location.reload(), 100);
   }, []);
 
-  const value: AuthContextValue = { user, token, loading, login, logout, refreshUser };
+  const openLoginModal = useCallback((redirect?: string) => {
+    setLoginModalRedirect(redirect);
+    setIsLoginModalOpen(true);
+  }, []);
+
+  const closeLoginModal = useCallback(() => {
+    setIsLoginModalOpen(false);
+    // Delay clearing redirect so modal can finish transitions if needed
+    setTimeout(() => setLoginModalRedirect(undefined), 300);
+  }, []);
+
+  const value: AuthContextValue = { 
+    user, 
+    token, 
+    loading, 
+    login, 
+    logout, 
+    refreshUser,
+    isLoginModalOpen,
+    loginModalRedirect,
+    openLoginModal,
+    closeLoginModal
+  };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 

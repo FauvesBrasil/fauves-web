@@ -24,8 +24,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
   const headerTextClass = isDark ? 'text-white' : 'text-[#091747]';
   const headerIconClass = isDark ? 'text-white' : 'text-[#091747]';
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { user, logout, token, loading: authLoading } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
+  const { user, logout, token, loading: authLoading, isLoginModalOpen, openLoginModal } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
@@ -64,13 +63,17 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
   // Auto-open login modal if ?login=true and user is not authenticated
   useEffect(() => {
     if (searchParams.get('login') === 'true' && !user && !authLoading) {
-      setShowLogin(true);
+      const redirect = searchParams.get('redirect') || undefined;
+      openLoginModal(redirect);
+      
       // Clean up the URL after opening the modal
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('login');
       setSearchParams(newParams, { replace: true });
     }
-  }, [searchParams, user, authLoading, setSearchParams]);
+  }, [searchParams, user, authLoading, setSearchParams, openLoginModal]);
+
+  const redirectPath = searchParams.get('redirect') || undefined;
 
   // Load notifications from API
   useEffect(() => {
@@ -124,7 +127,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
     if (user?.id) {
       // Fetch tickets count
       const q = `userId=${encodeURIComponent(user.id)}`;
-      fetch(`/api/my/tickets?${q}`)
+      fetchApi(`/api/my/tickets?${q}`)
         .then(r => r.json())
         .then(data => {
           const items = Array.isArray(data.items) ? data.items : [];
@@ -268,7 +271,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
                 </div>
               </div>
             ) : (
-              <button className="w-[68px] h-[33px] flex items-center justify-center bg-[#0205D3] rounded-[95px] hover:bg-[#2A2AD7] transition-colors max-sm:w-auto max-sm:px-4 max-sm:h-9" onClick={() => setShowLogin(true)}>
+              <button className="w-[68px] h-[33px] flex items-center justify-center bg-[#0205D3] rounded-[95px] hover:bg-[#2A2AD7] transition-colors max-sm:w-auto max-sm:px-4 max-sm:h-9" onClick={() => openLoginModal()}>
                 <span className="text-white text-center text-[15px] font-bold">Entrar</span>
               </button>
             )}
@@ -292,7 +295,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
         </div>
       )}
 
-      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
+      {/* Global LoginModal is now rendered in App.tsx */}
 
       {showCreateOrg && (
         <RequireOrganization onCreated={(org) => {
