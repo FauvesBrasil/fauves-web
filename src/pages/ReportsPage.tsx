@@ -361,24 +361,6 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-        console.log('[ReportsPage] Fetching promoters for event:', activeEventId);
-
-        const path = `/api/organization/event/${activeEventId}/marketing-links`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let data: any = null;
-
-        for (const u of attempts) {
-          try {
-            console.log('[ReportsPage] Fetching from:', u);
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-
-            const r = await fetch(u, { headers });
-            console.log('[ReportsPage] Response status:', r.status);
-    (async () => {
-      try {
         const path = `/api/organization/event/${activeEventId}/marketing-links`;
         const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
