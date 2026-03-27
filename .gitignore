@@ -12,6 +12,24 @@ dist
 dist-ssr
 *.local
 
+# Android / Mobile Build artifacts
+build/
+bin/
+gen/
+out/
+intermediates/
+*.apk
+*.aab
+*.dex
+*.class
+.gradle/
+.dart_tool/
+.pub-cache/
+.pub/
+android/app/build/
+ios/Pods/
+ios/.symlinks/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
