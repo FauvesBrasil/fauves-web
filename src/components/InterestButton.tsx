@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Check } from 'lucide-react';
+import { Flame, Check, Users } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiUrl } from '@/lib/apiBase';
 import { useToast } from '@/hooks/use-toast';
