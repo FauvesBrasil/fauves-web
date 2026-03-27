@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { useOrganization } from '@/context/OrganizationContext';
 import AppHeader from '@/components/AppHeader';
 import SidebarMenu from '@/components/SidebarMenu';
-import { apiUrl } from '@/lib/apiBase';
+import { apiUrl, fetchApi } from '@/lib/apiBase';
 import { getOrganizationPath } from '@/lib/eventUrl';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -119,7 +119,7 @@ const OrganizerSettingsPage: React.FC = () => {
         const file = new Blob([u8arr], { type: mime });
         const formData = new FormData();
         formData.append('file', file, 'logo.png');
-        const uploadRes = await fetch('/api/upload', {
+        const uploadRes = await fetchApi('/api/upload', {
           method: 'POST',
           body: formData
         });
@@ -138,7 +138,7 @@ const OrganizerSettingsPage: React.FC = () => {
         setSaving(false);
         return;
       }
-      const res = await fetch(isNew ? '/api/organization' : `/api/organization/${form.id}`, {
+      const res = await fetchApi(isNew ? '/api/organization' : `/api/organization/${form.id}`, {
         method: isNew ? 'POST' : 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -167,25 +167,7 @@ const OrganizerSettingsPage: React.FC = () => {
     setSaveError(null);
     try {
       console.debug('[OrganizerSettings] Deleting org id=', id);
-      // Try with apiUrl resolution first, then a localhost:4000 fallback (some dev setups run on 4000)
-      const candidates = [apiUrl(`/api/organization/${id}`), `http://localhost:4000/api/organization/${id}`];
-      let res: Response | null = null;
-      for (const u of candidates) {
-        try {
-          console.debug('[OrganizerSettings] attempting DELETE', u);
-          res = await fetch(u, { method: 'DELETE' });
-          // accept any 2xx or 4xx/5xx as final response (we don't want to keep trying on 404)
-          break;
-        } catch (e) {
-          console.warn('[OrganizerSettings] delete attempt failed for', u, e);
-          continue;
-        }
-      }
-      if (!res) {
-        setSaveError('Falha ao contatar o servidor para excluir organização');
-        setSaving(false);
-        return;
-      }
+      const res = await fetchApi(`/api/organization/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const text = await res.text().catch(()=>null);
         let data = null;

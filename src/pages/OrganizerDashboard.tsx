@@ -156,7 +156,7 @@ const OrganizerDashboard = () => {
         const file = new Blob([u8arr], { type: mime });
         const formData = new FormData();
         formData.append('file', file, 'logo.png');
-        const uploadRes = await fetch('/api/upload', {
+        const uploadRes = await fetchApi('/api/upload', {
           method: 'POST',
           body: formData
         });
@@ -175,7 +175,7 @@ const OrganizerDashboard = () => {
         setSaving(false);
         return;
       }
-      const res = await fetch(`/api/organization/${form.id}`, {
+      const res = await fetchApi(`/api/organization/${form.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

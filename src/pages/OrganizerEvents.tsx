@@ -117,7 +117,13 @@ const OrganizerEvents: React.FC = () => {
       if (!need.length) return;
       const updated: OrganizationOption[] = [];
       for (const o of need) {
-        try { const r = await fetch(`/api/organization/${o.id}`); const data = await r.json(); if (data?.name) updated.push({ id: o.id, name: data.name }); } catch { }
+        try { 
+          const r = await fetchApi(`/api/organization/${o.id}`); 
+          if (r.ok) {
+            const data = await r.json(); 
+            if (data?.name) updated.push({ id: o.id, name: data.name }); 
+          }
+        } catch { }
       }
       if (updated.length) setOrganizations(prev => prev.map(p => updated.find(u => u.id === p.id) || p));
     };
@@ -204,27 +210,13 @@ const OrganizerEvents: React.FC = () => {
 
     (async () => {
       try {
-        const attempts = [
-          apiUrl(`/api/organization/${orgId}/events`),
-          `http://localhost:4000/api/organization/${orgId}/events`,
-          `http://localhost:3000/api/organization/${orgId}/events`
-        ];
-        let loaded: any[] | null = null;
-        for (const u of attempts) {
-          try {
-            const r = await fetch(u);
-            if (r.ok) {
-              const data = await r.json();
-              if (Array.isArray(data)) {
-                loaded = data;
-                break;
-              }
-            }
-          } catch { }
-        }
-        if (!cancelled && Array.isArray(loaded)) {
-          setEvents(loaded);
-          (window as any).__dbgEventsScoped = { orgId, loaded };
+        const res = await fetchApi(`/api/organization/${orgId}/events`);
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setEvents(data);
+            (window as any).__dbgEventsScoped = { orgId, loaded: data };
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -330,19 +322,14 @@ const OrganizerEvents: React.FC = () => {
   const refresh = async () => {
     if (!userId) return;
     try {
-      if (selectedOrg) {
-        const attempts = [
-          apiUrl(`/api/organization/${selectedOrg.id}/events`),
-          `http://localhost:4000/api/organization/${selectedOrg.id}/events`
-        ];
-        for (const u of attempts) {
-          try { const r = await fetch(u); if (r.ok) { const list = await r.json(); if (Array.isArray(list)) { setEvents(list); (window as any).__dbgEventsScopedRefresh = list; break; } } } catch { }
-        }
-      } else {
-        const attempts = [apiUrl(`/api/events/by-user?userId=${userId}`), `http://localhost:4000/api/events/by-user?userId=${userId}`];
-        for (const u of attempts) {
-          try { const r = await fetch(u); if (r.ok) { const list = await r.json(); setEvents(Array.isArray(list) ? list : []); (window as any).__dbgEventsByUser = list; break; } } catch { }
-        }
+      const path = selectedOrg 
+        ? `/api/organization/${selectedOrg.id}/events`
+        : `/api/events/by-user?userId=${userId}`;
+      
+      const res = await fetchApi(path);
+      if (res.ok) {
+        const list = await res.json();
+        setEvents(Array.isArray(list) ? list : []);
       }
     } catch { }
   };
@@ -351,9 +338,12 @@ const OrganizerEvents: React.FC = () => {
   const onDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const urls = [apiUrl(`/api/event/${deleteTarget}`), `http://localhost:4000/api/event/${deleteTarget}`];
-      for (const u of urls) {
-        try { const res = await fetch(u, { method: 'DELETE' }); if (res.ok) { const j = await res.json(); if (j?.ok) { await refresh(); break; } } } catch { }
+      const res = await fetchApi(`/api/event/${deleteTarget}`, { method: 'DELETE' });
+      if (res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (j?.ok || res.status === 200) {
+          await refresh();
+        }
       }
     } finally { setDeleteTarget(null); }
   };
@@ -365,25 +355,27 @@ const OrganizerEvents: React.FC = () => {
     const fetchCollectionsIfNeeded = async () => {
       if (!showCollections || collections.length > 0) return;
       try {
-        const attempt = async (path: string) => {
-          const bases = [apiUrl(path), `http://localhost:4000${path}`];
-          for (const b of bases) { try { const r = await fetch(b); if (r.ok) return r.json(); } catch { } }
+        const attemptPath = async (path: string) => {
+          try { 
+            const r = await fetchApi(path); 
+            if (r.ok) return r.json(); 
+          } catch { }
           return null;
         };
         // Prefer explicit selectedOrg when present, otherwise fall back to discovered organizations
         let oid: string | null = selectedOrg?.id || organizations[0]?.id || null;
-        if (!oid && userId) { const orgJ = await attempt(`/api/organization/equipe?userId=${userId}`); oid = orgJ?.organizationId || null; }
+        if (!oid && userId) { const orgJ = await attemptPath(`/api/organization/equipe?userId=${userId}`); oid = orgJ?.organizationId || null; }
         if (collections.length === 0 && userId) {
-          const allCols = await attempt(`/api/collections/by-user/${userId}`);
+          const allCols = await attemptPath(`/api/collections/by-user/${userId}`);
           if (Array.isArray(allCols) && allCols.length) { const norm = normalizeCollections(allCols, oid); setCollections(norm); return; }
         }
         if (oid) {
-          const list = await attempt(`/api/organization/${oid}/collections`);
+          const list = await attemptPath(`/api/organization/${oid}/collections`);
           if (Array.isArray(list) && list.length) { const norm = normalizeCollections(list, oid); setCollections(prev => prev.length ? prev : norm); try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch { } }
         }
         if (collections.length === 0 && organizations.length > 1) {
           for (const o of organizations) {
-            const ll = await attempt(`/api/organization/${o.id}/collections`);
+            const ll = await attemptPath(`/api/organization/${o.id}/collections`);
             if (Array.isArray(ll) && ll.length) { const norm = normalizeCollections(ll, o.id); setCollections(prev => prev.length ? prev : norm); try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch { }; break; }
           }
         }

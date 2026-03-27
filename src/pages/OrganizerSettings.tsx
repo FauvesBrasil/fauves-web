@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import OrgLogoUpload from '@/components/OrgLogoUpload';
 import { WarpDialog } from '@/components/WarpDialog';
+import { fetchApi } from '@/lib/apiBase';
 
 interface EditOrgModalProps {
   org: any;
@@ -62,7 +63,7 @@ const EditOrgModal: React.FC<EditOrgModalProps> = ({ org, open, onClose, onUpdat
         const formData = new FormData();
         formData.append('file', logoFile, logoFile.name || 'logo.png');
         console.log('Enviando fetch para /api/upload...');
-        const uploadRes = await fetch('/api/upload', {
+        const uploadRes = await fetchApi('/api/upload', {
           method: 'POST',
           body: formData
         });
@@ -93,7 +94,7 @@ const EditOrgModal: React.FC<EditOrgModalProps> = ({ org, open, onClose, onUpdat
       return;
     }
     try {
-      const res = await fetch(`/api/organization/${org.id}`, {
+      const res = await fetchApi(`/api/organization/${org.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, logoUrl: finalLogoUrl, description }),
@@ -120,7 +121,7 @@ const EditOrgModal: React.FC<EditOrgModalProps> = ({ org, open, onClose, onUpdat
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/organization/${org.id}`, { method: 'DELETE' });
+      const res = await fetchApi(`/api/organization/${org.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Falha ao excluir organização');
       onDeleted(org.id);
       onClose();

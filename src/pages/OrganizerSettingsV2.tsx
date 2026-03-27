@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import TextLink from '@/components/TextLink';
 import AppHeader from '@/components/AppHeader';
 import SidebarMenu from '@/components/SidebarMenu';
@@ -73,7 +73,7 @@ export default function OrganizerSettingsV2() {
     setDeleteLoading(true);
     setDeleteError('');
     try {
-      const res = await fetch(`/api/organization/${selectedOrg.id}`, { method: 'DELETE' });
+      const res = await fetchApi(`/api/organization/${selectedOrg.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const errText = await res.text();
         setDeleteError('Erro ao excluir: ' + errText);
@@ -401,17 +401,13 @@ export default function OrganizerSettingsV2() {
     try {
       await ensureApiBase().catch(() => { });
       const path = `/api/organization/${selectedOrg.id}/events`;
-      const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-      for (const u of attempts) {
-        try {
-          const r = await fetch(u, { headers: { Accept: 'application/json' } });
-          if (!r.ok) continue;
-          const j = await r.json();
-          if (Array.isArray(j)) {
-            setEvents(j.map((e: any) => ({ id: e.id, name: e.name || e.title || 'Evento', startDate: e.startDate || e.startDateUtc || e.startsAt })));
-            return;
-          }
-        } catch { }
+      const res = await fetchApi(path, { headers: { Accept: 'application/json' } });
+      if (res.ok) {
+        const j = await res.json();
+        if (Array.isArray(j)) {
+          setEvents(j.map((e: any) => ({ id: e.id, name: e.name || e.title || 'Evento', startDate: e.startDate || e.startDateUtc || e.startsAt })));
+          return;
+        }
       }
       toast({ variant: 'destructive', title: 'Erro', description: 'Nao foi possivel carregar seus eventos.' });
     } finally {
@@ -523,7 +519,7 @@ export default function OrganizerSettingsV2() {
   const onPickCover = (file?: File | null) => { if (!file) return; setCoverFile(file); try { setCoverPreview(URL.createObjectURL(file)); } catch { } };
   const uploadOne = async (file: File): Promise<string> => {
     const fd = new FormData(); fd.append('file', file, file.name || 'image.png');
-    const r = await fetch('/api/upload', { method: 'POST', body: fd });
+    const r = await fetchApi('/api/upload', { method: 'POST', body: fd });
     if (!r.ok) throw new Error(await r.text());
     const j = await r.json(); if (!j?.url) throw new Error('Upload Nao retornou URL');
     return j.url as string;

@@ -127,12 +127,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // a potentially slow or mis-resolved apiBase probe that could point to
       // localhost or another host unreachable from the client.
       try {
-        const relStart = Date.now();
-        // include token if available so same-origin endpoints that require
-        // Bearer auth succeed (matches fetchApi behavior)
-        let relHeaders: Record<string,string> = { Accept: 'application/json' };
-        try { const t = window.localStorage.getItem('AUTH_TOKEN_V1'); if (t) relHeaders['Authorization'] = 'Bearer ' + t; } catch {}
-        const relRes = await fetch(`/api/organization?userId=${userId}`, { headers: relHeaders });
+        const relRes = await fetchApi(`/api/organization?userId=${userId}`, { headers: { Accept: 'application/json' } });
         if (relRes && relRes.ok) {
           const relData = await relRes.json().catch(() => null);
           if (relData) {

@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
 import { getFirstName, getDisplayName } from '@/lib/user';
+import { fetchApi } from '@/lib/apiBase';
 import ProfilePageSkeleton from '@/components/skeletons/ProfilePageSkeleton';
 
 interface User {
@@ -128,7 +129,7 @@ const Profile = () => {
         return;
       }
       const q = user.id ? `userId=${encodeURIComponent(user.id)}` : `userEmail=${encodeURIComponent(user.email || '')}`;
-      const r = await fetch(`/api/my/tickets?${q}&include=event`);
+      const r = await fetchApi(`/api/my/tickets?${q}&include=event`);
       if (!r.ok) {
         setTickets([]);
       } else {
@@ -152,7 +153,7 @@ const Profile = () => {
         return;
       }
       const q = user.id ? `userId=${encodeURIComponent(user.id)}` : `userEmail=${encodeURIComponent(user.email || '')}`;
-      const r = await fetch(`/api/orders?${q}&include=event`);
+      const r = await fetchApi(`/api/orders?${q}&include=event`);
       if (!r.ok) {
         setOrders([]);
       } else {
@@ -206,7 +207,7 @@ const Profile = () => {
       }
       setTransferLoading(true);
       try {
-        const res = await fetch('/api/ticket/transfer', {
+        const res = await fetchApi('/api/ticket/transfer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ticketId: ticket.id, targetEmail: target }),

@@ -48,6 +48,17 @@ if (typeof window !== 'undefined') {
       (window as any).__apiFetchPatched = true;
       window.fetch = async (input: RequestInfo, init?: RequestInit) => {
         try {
+          // Injection: add Authorization header if token exists and not already present
+          let token: string | null = null;
+          try { token = window.localStorage.getItem('AUTH_TOKEN_V1'); } catch (e) {}
+          if (token) {
+            const headers = new Headers(init?.headers || {});
+            if (!headers.has('Authorization')) {
+              headers.set('Authorization', 'Bearer ' + token);
+              init = { ...init, headers };
+            }
+          }
+
           // Rewrite string URLs starting with /api or absolute same-origin /api
           if (typeof input === 'string') {
             if (input.startsWith('/api/') || input === '/api' || input.startsWith('/api?')) {
