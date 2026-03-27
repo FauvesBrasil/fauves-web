@@ -476,23 +476,18 @@ const Event: React.FC = () => {
           )}
 
           <div className="flex flex-col items-center mx-auto mt-5 max-w-[1000px] max-md:max-w-full max-md:px-4" style={{ marginBottom: 100 }}>
-            {/* Alerta de Evento Externo */}
+            {/* Alerta de Evento Externo - Versão Sutil */}
             {event?.isExternal && (
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full mb-6"
+                className="w-full mb-4"
               >
-                <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 rounded-2xl p-5 flex items-start gap-4 shadow-sm backdrop-blur-sm">
-                  <div className="bg-orange-500 rounded-full p-2 text-white shrink-0 shadow-md">
-                    <AlertTriangle size={24} />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-orange-950 dark:text-orange-200 font-bold text-base">Atenção: Evento Externo</h4>
-                    <p className="text-orange-800 dark:text-orange-300 text-sm mt-1 leading-relaxed">
-                      Este evento não é vendido diretamente pela <strong>Fauves</strong>. Ao clicar em comprar, você será redirecionado para o site oficial do organizador para concluir sua compra com segurança.
-                    </p>
-                  </div>
+                <div className="bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm backdrop-blur-sm">
+                  <AlertTriangle size={18} className="text-orange-500 shrink-0" />
+                  <p className="text-orange-800 dark:text-orange-300 text-[13px] leading-snug">
+                    <span className="font-bold">Evento Externo:</span> Este evento não é vendido pela Fauves. Você será redirecionado para o site oficial ao clicar em comprar.
+                  </p>
                 </div>
               </motion.div>
             )}
@@ -547,10 +542,8 @@ const Event: React.FC = () => {
                     <span>{event?.metrics?.views || 0} visualizações</span>
                   </div>
                   
-                  <div className="flex items-center gap-1.5 text-sm font-bold text-orange-600 dark:text-orange-500">
-                    <Users size={16} className="text-orange-400" />
-                    <span>{event?.metrics?.interests || 0} interessados</span>
-                  </div>
+                  {/* Seção de Interesse integrada */}
+                  <InterestButton eventId={event.id} variant="detail" />
                 </div>
                 <div className="mt-2.5 text-4xl max-md:text-3xl font-bold text-indigo-950 dark:text-white leading-tight">
                   {event.name || "Nome do evento"}
@@ -559,8 +552,6 @@ const Event: React.FC = () => {
                   {event.subtitle || "Subtítulo do evento"}
                 </div>
 
-                {/* Nova Funcionalidade: Tenho Interesse */}
-                <InterestButton eventId={event.id} variant="detail" />
 
                 {/* Data e hora + Localização lado a lado */}
                 <div className="flex flex-row gap-4 mt-8 mb-4 w-full max-md:flex-col max-md:gap-3">
@@ -764,7 +755,7 @@ const Event: React.FC = () => {
                           <>
                             <div className="self-center text-lg text-indigo-950 dark:text-white min-h-[28px] flex items-center">
                               {ticketsError && <span className="text-red-600 text-sm">{ticketsError}</span>}
-                              {!ticketsError && ticketTypes.length === 0 && 'Nenhum ingresso disponível'}
+                              {!ticketsError && ticketTypes.length === 0 && !event?.isExternal && 'Nenhum ingresso disponível'}
                               {!ticketsError && ticketTypes.length > 0 && `Ingressos a partir de R$${(Math.min(...ticketTypes.map(t => t.price)) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                             </div>
                             {event?.isExternal ? (

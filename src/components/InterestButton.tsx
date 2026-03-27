@@ -121,11 +121,11 @@ const InterestButton: React.FC<InterestButtonProps> = ({ eventId, variant = 'car
 
     if (variant === 'detail') {
         return (
-            <div className="flex flex-col items-start gap-3 mt-4">
+            <div className="flex items-center gap-3">
                 <button
                     onClick={handleToggle}
                     disabled={loading}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all duration-300 ${
                         isInterested 
                         ? 'bg-green-100 text-green-700 border border-green-200' 
                         : 'bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100'
@@ -133,23 +133,22 @@ const InterestButton: React.FC<InterestButtonProps> = ({ eventId, variant = 'car
                 >
                     {isInterested ? (
                         <>
-                            <Check size={20} strokeWidth={3} />
-                            Interessado ✓
+                            <Check size={18} strokeWidth={3} />
+                            Interessado
                         </>
                     ) : (
                         <>
-                            <Flame size={20} fill={loading ? 'none' : 'currentColor'} className={loading ? 'animate-pulse' : ''} />
+                            <Flame size={18} fill={loading ? 'none' : 'currentColor'} className={loading ? 'animate-pulse' : ''} />
                             Tenho interesse
                         </>
                     )}
                 </button>
                 
-                <div className="flex items-center gap-2 text-sm font-medium">
-                    <span className="flex items-center justify-center w-5 h-5 bg-orange-100 rounded-full text-orange-600">
-                         <Flame size={12} fill="currentColor" />
-                    </span>
-                    <span className="text-[#4b5563]">
-                        {count === null ? '...' : count === 0 ? 'Seja o primeiro a demonstrar interesse' : `🔥 ${count} ${count === 1 ? 'pessoa interessada' : 'pessoas interessadas'}`}
+                <div className="flex items-center gap-2 text-sm font-bold text-orange-600 dark:text-orange-500">
+                    <span className="text-gray-400 dark:text-gray-500">•</span>
+                    <span className="flex items-center gap-1.5">
+                        <Users size={16} className="text-orange-400" />
+                        {count === null ? '...' : count === 0 ? 'Seja o primeiro!' : `${count} interessados`}
                     </span>
                 </div>
             </div>
