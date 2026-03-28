@@ -513,30 +513,33 @@ const Event: React.FC = () => {
                 {(() => {
                   const cats = event?.categories || [];
                   let categoryName = 'Geral';
-                  let categorySlug = '#';
+                  let categorySlugValue = '';
 
                   if (Array.isArray(cats) && cats.length > 0) {
                     categoryName = cats[0].name;
-                    categorySlug = `/eventos/${cats[0].slug}`;
+                    categorySlugValue = cats[0].slug;
                   } else if (event?.category) {
                     const mapped = categoriesMap[event.category];
                     if (mapped) {
                       categoryName = mapped.name;
-                      categorySlug = `/eventos/${mapped.slug}`;
+                      categorySlugValue = mapped.slug;
                     } else {
-                      // Fallback: Check if it's a UUID
                       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.category);
                       if (!isUUID) {
                         categoryName = String(event.category).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-                        categorySlug = `/eventos/${event.category}`;
+                        categorySlugValue = event.category;
                       }
-                      // If it's a UUID and NOT in the map, we don't know the name/slug, so default to Geral/Link #
                     }
                   }
 
+                  const uf = event.locationUf || event.locationDetails?.uf || event.uf || 'CE';
+                  const categoryLink = categorySlugValue 
+                    ? `/search?category=${categorySlugValue}&uf=${uf}` 
+                    : '#';
+
                   return (
                     <Link 
-                      to={categorySlug}
+                      to={categoryLink}
                       className="flex flex-col justify-center px-4 py-1.5 max-md:px-2.5 max-md:py-0.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 transition-colors rounded-[100px] w-fit"
                     >
                       {categoryName}
@@ -645,7 +648,7 @@ const Event: React.FC = () => {
                       Sobre este evento
                     </div>
                     <div
-                      className="mt-5 max-md:mt-4 text-base max-md:text-[15px] max-md:leading-relaxed text-indigo-950 dark:text-slate-300 w-full max-w-[600px] max-md:max-w-full prose dark:prose-invert"
+                      className="mt-5 max-md:mt-4 text-base max-md:text-[15px] max-md:leading-relaxed text-indigo-950 dark:text-slate-300 w-full max-w-[600px] max-md:max-w-full prose dark:prose-invert whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{ __html: event.description }}
                     />
                   </>
