@@ -492,13 +492,17 @@ const Event: React.FC = () => {
               </motion.div>
             )}
             {/* Imagem Mobile (Hero) */}
-            <div className="w-full md:hidden mb-6 rounded-2xl overflow-hidden shadow-lg">
+            <div className="w-full md:hidden mb-6 rounded-2xl overflow-hidden shadow-lg relative">
               <img
                 src={eventMainImage}
                 onError={(e) => { if (!mainImgErrored) setMainImgErrored(true); }}
                 className="object-cover w-full aspect-video"
                 alt={event.name || 'Imagem do evento'}
               />
+              {/* Overlaid Interest Button for Mobile */}
+              <div className="absolute top-4 right-4 z-10 scale-110">
+                <InterestButton eventId={event.id} variant="card" />
+              </div>
             </div>
 
             <div className="flex flex-row gap-8 w-full mt-6 max-md:flex-col max-md:gap-0">
@@ -541,9 +545,6 @@ const Event: React.FC = () => {
                     <Eye size={16} className="text-gray-400" />
                     <span>{event?.metrics?.views || 0} visualizações</span>
                   </div>
-                  
-                  {/* Seção de Interesse integrada */}
-                  <InterestButton eventId={event.id} variant="detail" />
                 </div>
                 <div className="mt-2.5 text-4xl max-md:text-3xl font-bold text-indigo-950 dark:text-white leading-tight">
                   {event.name || "Nome do evento"}
@@ -729,7 +730,7 @@ const Event: React.FC = () => {
               <div className="flex flex-col w-[38%] max-md:w-full ml-5 max-md:ml-0">
                 <div className="sticky top-10 flex flex-col gap-4">
                   <div>
-                    <div className="w-full rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#1b1b1b] hidden md:block">
+                    <div className="w-full rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#1b1b1b] hidden md:block relative">
                       <img
                         src={eventMainImage}
                         onError={(e) => { if (!mainImgErrored) setMainImgErrored(true); }}
@@ -740,6 +741,10 @@ const Event: React.FC = () => {
                         }}
                         alt={event.name || 'Imagem do evento'}
                       />
+                      {/* Overlaid Interest Button for Desktop */}
+                      <div className="absolute top-4 right-4 z-10 scale-125 origin-top-right">
+                        <InterestButton eventId={event.id} variant="card" />
+                      </div>
                     </div>
                     {/* Seção de ingressos - escondida quando evento encerrado e no mobile */}
                     {event?.status !== 'ENCERRADO' && (
