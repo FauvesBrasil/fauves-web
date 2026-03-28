@@ -178,7 +178,7 @@ const Event: React.FC = () => {
   // Importante: hooks precisam ficar antes de qualquer return condicional para não mudar a ordem entre renders
   const [mainImgErrored, setMainImgErrored] = useState(false);
   const { toast } = useToast();
-  const [categoriesMap, setCategoriesMap] = useState<Record<string, string>>({});
+  const [categoriesMap, setCategoriesMap] = useState<Record<string, { name: string; slug: string }>>({});
 
   // Tracking pixels integration
   const { trackPageView } = useTrackingPixels(event?.id);
@@ -249,16 +249,18 @@ const Event: React.FC = () => {
         if (!r.ok) return;
         const list = await r.json();
         if (!Array.isArray(list)) return;
-        const map: Record<string, string> = {};
+        const map: Record<string, { name: string; slug: string }> = {};
         for (const c of list) {
           if (!c) continue;
-          const slug = c.slug || c.name;
-          const name = c.name || c.slug || String(slug || '');
-          if (slug) map[slug] = name;
+          const name = c.name || c.slug || 'Geral';
+          const slug = c.slug || c.name || 'geral';
+          const item = { name, slug };
+          if (c.slug) map[c.slug] = item;
+          if (c.id) map[c.id] = item;
         }
         if (mounted) setCategoriesMap(map);
       } catch (e) {
-        // ignore failures, we'll fallback to slug humanization
+        // ignore failures
       }
     })();
     return () => { mounted = false; };
@@ -510,12 +512,27 @@ const Event: React.FC = () => {
               <div className="flex flex-col w-[62%] max-md:w-full">
                 {(() => {
                   const cats = event?.categories || [];
-                  const categoryName = Array.isArray(cats) && cats.length > 0 
-                    ? cats[0].name 
-                    : (event?.category ? String(event?.category).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Geral');
-                  const categorySlug = Array.isArray(cats) && cats.length > 0 
-                    ? `/eventos/${cats[0].slug}` 
-                    : (event?.category ? `/eventos/${event.category}` : '#');
+                  let categoryName = 'Geral';
+                  let categorySlug = '#';
+
+                  if (Array.isArray(cats) && cats.length > 0) {
+                    categoryName = cats[0].name;
+                    categorySlug = `/eventos/${cats[0].slug}`;
+                  } else if (event?.category) {
+                    const mapped = categoriesMap[event.category];
+                    if (mapped) {
+                      categoryName = mapped.name;
+                      categorySlug = `/eventos/${mapped.slug}`;
+                    } else {
+                      // Fallback: Check if it's a UUID
+                      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.category);
+                      if (!isUUID) {
+                        categoryName = String(event.category).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                        categorySlug = `/eventos/${event.category}`;
+                      }
+                      // If it's a UUID and NOT in the map, we don't know the name/slug, so default to Geral/Link #
+                    }
+                  }
 
                   return (
                     <Link 
