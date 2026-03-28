@@ -748,7 +748,7 @@ const Event: React.FC = () => {
               </div>
               {/* Coluna Direita */}
               <div className="flex flex-col w-[38%] max-md:w-full ml-5 max-md:ml-0">
-                <div className="sticky top-10 flex flex-col gap-4">
+                <div className="sticky top-[90px] flex flex-col gap-4">
                   <div>
                     <div className="w-full rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#1b1b1b] hidden md:block relative">
                       <img
