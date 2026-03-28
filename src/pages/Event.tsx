@@ -477,7 +477,7 @@ const Event: React.FC = () => {
             </div>
           )}
 
-          <div className="flex flex-col items-center mx-auto mt-5 max-w-[1000px] max-md:max-w-full max-md:px-4" style={{ marginBottom: 100 }}>
+          <div className="flex flex-col mx-auto mt-5 max-w-[1000px] max-md:max-w-full max-md:px-4" style={{ marginBottom: 100 }}>
             {/* Alerta de Evento Externo - Versão Sutil */}
             {event?.isExternal && (
               <motion.div
@@ -507,7 +507,7 @@ const Event: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-row gap-8 w-full mt-6 max-md:flex-col max-md:gap-0">
+            <div className="flex flex-row items-stretch gap-8 w-full mt-6 max-md:flex-col max-md:gap-0">
               {/* Coluna Esquerda */}
               <div className="flex flex-col w-[62%] max-md:w-full">
                 {(() => {
