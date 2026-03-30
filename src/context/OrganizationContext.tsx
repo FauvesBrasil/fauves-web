@@ -208,22 +208,26 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       for (const d of diag) {
         if (d?.unauth) {
           // user unauthorized: clear organizations
+          console.warn('[OrganizationContext] User unauthorized for path:', d.path);
           setOrgs([]); setSelectedOrg(null); setLoading(false); return;
         }
         if (d?.list && Array.isArray(d.list) && d.list.length) {
           finalList = d.list;
           try { window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: finalList })); } catch {}
-          console.debug('[OrganizationContext] loaded orgs via candidate', { path: d.path, count: finalList.length });
+          console.debug('[OrganizationContext] loaded orgs via candidate', { path: d.path, count: finalList.length, orgs: finalList });
           setOrgs(finalList);
           const savedId = localStorage.getItem(LS_KEY);
           applySelection(finalList, savedId);
           // orgs loaded; keep silent in production and development
           break;
+        } else if (d?.path) {
+          console.debug(`[OrganizationContext] Candidate ${d.path} returned no organizations`, { duration: d.duration, error: d.error });
         }
       }
 
       // nothing returned
       if (!finalList.length) {
+        console.warn('[OrganizationContext] No organizations found after all attempts:', diag);
         // If we had previously cached orgs locally, keep showing them instead of blanking the UI.
         if (prevOrgs && prevOrgs.length) {
           console.warn('[OrganizationContext] refresh failed but previous orgs exist; keeping local cache');
