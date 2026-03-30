@@ -103,8 +103,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Avoid multiple concurrent refreshes and rate-limit to 2s
     const now = Date.now();
     const MIN_INTERVAL = 2000;
-    // BUILD_INFO log para confirmar deploy (DEBUG_20260330_1)
-    console.debug('[OrganizationContext] refresh() starting (v:20260330_1415)');
+    // BUILD_INFO log para confirmar deploy (DEBUG_20260330_2)
+    console.debug(`[OrganizationContext] refresh() starting for user: ${user?.email} (v:20260330_1520)`);
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
     if (now - lastRefreshTsRef.current < MIN_INTERVAL && orgsRef.current && orgsRef.current.length) {
       // recently refreshed
@@ -229,7 +229,11 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       // nothing returned
       if (!finalList.length) {
-        console.warn('[OrganizationContext] No organizations found after all attempts:', diag);
+        console.warn('[OrganizationContext] No organizations found after all attempts:', {
+          userEmail: user?.email,
+          userId: user?.id,
+          results: diag
+        });
         // If we had previously cached orgs locally, keep showing them instead of blanking the UI.
         if (prevOrgs && prevOrgs.length) {
           console.warn('[OrganizationContext] refresh failed but previous orgs exist; keeping local cache');
