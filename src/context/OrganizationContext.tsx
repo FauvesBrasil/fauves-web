@@ -103,6 +103,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Avoid multiple concurrent refreshes and rate-limit to 2s
     const now = Date.now();
     const MIN_INTERVAL = 2000;
+    // BUILD_INFO log para confirmar deploy (DEBUG_20260330_1)
+    console.debug('[OrganizationContext] refresh() starting (v:20260330_1415)');
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
     if (now - lastRefreshTsRef.current < MIN_INTERVAL && orgsRef.current && orgsRef.current.length) {
       // recently refreshed
