@@ -45,6 +45,7 @@ interface OrganizationContextValue {
   clear: () => void;
   transitioning: boolean;
   fromOrgName: string | null;
+  hasAttemptedRefresh: boolean;
 }
 
 const OrganizationContext = createContext<OrganizationContextValue | undefined>(undefined);
@@ -61,6 +62,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [error, setError] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [fromOrgName, setFromOrgName] = useState<string | null>(null);
+  const [hasAttemptedRefresh, setHasAttemptedRefresh] = useState(false);
   const userIdRef = useRef<string | null | undefined>(undefined);
   const orgsRef = useRef<Organization[]>(orgs);
   useEffect(() => { orgsRef.current = orgs; }, [orgs]);
@@ -117,142 +119,115 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setLoading(true);
       setError(null);
       const prevOrgs = orgsRef.current || [];
+      const uid = user?.id; // keep local reference
+      
       try {
-      // Busca userId do usuário logado via AuthContext
-      const userId = user?.id;
-      if (!userId) {
-        setOrgs([]); setSelectedOrg(null); setLoading(false); return;
-      }
-  let finalList: Organization[] = [];
-      // First try a same-origin quick fetch (relative path). In many deployments
-      // the frontend is served from the same host as the backend and this avoids
-      // a potentially slow or mis-resolved apiBase probe that could point to
-      // localhost or another host unreachable from the client.
-      try {
-        const relRes = await fetchApi(`/api/organization?userId=${userId}`, { headers: { Accept: 'application/json' } });
-        if (relRes && relRes.ok) {
-          const relData = await relRes.json().catch(() => null);
-          if (relData) {
-            let relList: Organization[] = [];
-            if (Array.isArray(relData)) relList = relData;
-            else if (relData.organizations && Array.isArray(relData.organizations)) relList = relData.organizations;
-            else if (relData.items && Array.isArray(relData.items)) relList = relData.items;
-            else if (relData.organization && Array.isArray(relData.organization)) relList = relData.organization;
-            else if (relData && typeof relData === 'object' && relData.id && !relData.error) relList = [relData];
-            if (relList.length) {
-              finalList = relList;
-              try { window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: finalList })); } catch {}
-              console.debug('[OrganizationContext] loaded orgs via same-origin', { count: finalList.length });
-              setOrgs(finalList);
-              const savedId = localStorage.getItem(LS_KEY);
-              applySelection(finalList, savedId);
-              setLoading(false);
-              return;
+        // Busca userId do usuário logado via AuthContext
+        const userId = uid;
+        if (!userId) {
+          console.debug('[OrganizationContext] No userId available, clearing orgs');
+          setOrgs([]); setSelectedOrg(null); setLoading(false); return;
+        }
+
+        let finalList: Organization[] = [];
+        
+        // 1. First try: Primary relative path (same-origin). Most reliable in production.
+        try {
+          const relRes = await fetchApi(`/api/organization?userId=${userId}`, { headers: { Accept: 'application/json' } });
+          if (relRes && relRes.ok) {
+            const relData = await relRes.json().catch(() => null);
+            if (relData) {
+              let relList: Organization[] = [];
+              if (Array.isArray(relData)) relList = relData;
+              else if (relData.organizations && Array.isArray(relData.organizations)) relList = relData.organizations;
+              else if (relData.items && Array.isArray(relData.items)) relList = relData.items;
+              else if (relData.organization && Array.isArray(relData.organization)) relList = relData.organization;
+              else if (relData && typeof relData === 'object' && relData.id && !relData.error) relList = [relData];
+              
+              if (relList && relList.length > 0) {
+                finalList = relList;
+                console.debug('[OrganizationContext] Loaded orgs via primary endpoint', { count: finalList.length });
+                try { window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: finalList })); } catch {}
+                setOrgs(finalList);
+                applySelection(finalList, localStorage.getItem(LS_KEY));
+                setLoading(false);
+                return;
+              }
+              console.debug('[OrganizationContext] Primary endpoint returned empty list, trying candidates');
+            }
+          }
+        } catch (e) {
+          console.debug('[OrganizationContext] Primary endpoint fetch error', e);
+        }
+
+        // 2. Parallel attempts for legacy or alternative endpoints
+        const attempts = [
+          `/api/organization?userId=${userId}`, // repeat just in case of transient error
+          `/api/organization/user/${userId}`,
+          `/api/organization/equipe?userId=${userId}`,
+        ];
+
+        const promises = attempts.map(async (path) => {
+          const start = Date.now();
+          let duration = 0;
+          try {
+            const res = await fetchApi(path);
+            duration = Date.now() - start;
+            if (!res) return null;
+            if (res.status === 401) return { unauth: true, path } as any;
+            if (!res.ok) return null;
+            const data = await res.json().catch(() => null);
+            if (!data) return null;
+
+            const list = Array.isArray(data) ? data : (data.organizations || data.items || data.organization || (data.id && !data.error ? [data] : []));
+            
+            // handling for /equipe which might return { organizationId: ... }
+            if (data?.organizationId && (!list || list.length === 0)) {
+              return { path, list: [], organizationId: data.organizationId, duration };
+            }
+
+            return list.length ? { path, list, duration } : null;
+          } catch (e) {
+            duration = Date.now() - start;
+            return { path, error: String(e?.message || e), duration } as any;
+          }
+        });
+
+        const settled = await Promise.allSettled(promises);
+        for (const s of settled) {
+          if (s.status === 'fulfilled' && s.value) {
+            const val = s.value;
+            if (val.unauth) {
+              console.warn('[OrganizationContext] Path unauth:', val.path);
+              continue;
+            }
+            if (val.list && val.list.length > 0) {
+              finalList = val.list;
+              console.debug('[OrganizationContext] Loaded orgs via candidate', { path: val.path, count: finalList.length });
+              break;
             }
           }
         }
-      } catch (e) {
-        // ignore and fall back to the parallel candidate attempts below
-        try { console.debug('[OrganizationContext] same-origin fetch error', e); } catch {}
-      }
 
-      // Try several endpoints / response shapes because different deployments
-      // may expose slightly different organization endpoints. Take the first
-      // successful result that yields an array of organizations.
-      const attempts = [
-        `/api/organization?userId=${userId}`,
-        `/api/organizations/by-user?userId=${userId}`,
-        `/api/organization/user/${userId}`,
-        `/api/organization/equipe?userId=${userId}`,
-      ];
-
-      // Fire all attempts in parallel and pick the first successful result that yields organizations.
-      const promises = attempts.map(async (path) => {
-        const start = Date.now();
-        try {
-          const res = await fetchApi(path);
-          const duration = Date.now() - start;
-          if (!res) return null;
-          if (res.status === 401) return { unauth: true } as any;
-          if (!res.ok) return null;
-          const data = await res.json().catch(() => null);
-          if (!data) return null;
-
-          // normalize common shapes
-          let list: Organization[] = [];
-          if (Array.isArray(data)) list = data;
-          else if (data.organizations && Array.isArray(data.organizations)) list = data.organizations;
-          else if (data.items && Array.isArray(data.items)) list = data.items;
-          else if (data.organization && Array.isArray(data.organization)) list = data.organization;
-          else if (data && typeof data === 'object' && data.id && !data.error) list = [data];
-
-          return list.length ? { path, list, duration } : null;
-        } catch (e) {
-          const duration = Date.now() - start;
-          return { path, error: String(e?.message || e), duration } as any;
-        }
-      });
-
-  const settled = await Promise.allSettled(promises);
-  const diag: Array<any> = [];
-      for (const s of settled) {
-        if (s.status === 'fulfilled' && s.value) {
-          diag.push({ ok: true, ...(s.value) });
-        } else if (s.status === 'rejected') {
-          diag.push({ ok: false, error: String((s as any).reason) });
-        } else if (s.status === 'fulfilled' && !s.value) {
-          // handle null results
-          // we cannot know path here, so leave generic
-          diag.push({ ok: false, note: 'no data' });
-        }
-      }
-
-      for (const d of diag) {
-        if (d?.unauth) {
-          // user unauthorized: clear organizations
-          console.warn('[OrganizationContext] User unauthorized for path:', d.path);
-          setOrgs([]); setSelectedOrg(null); setLoading(false); return;
-        }
-        if (d?.list && Array.isArray(d.list) && d.list.length) {
-          finalList = d.list;
+        if (finalList.length > 0) {
           try { window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: finalList })); } catch {}
-          console.debug('[OrganizationContext] loaded orgs via candidate', { path: d.path, count: finalList.length, orgs: finalList });
           setOrgs(finalList);
-          const savedId = localStorage.getItem(LS_KEY);
-          applySelection(finalList, savedId);
-          // orgs loaded; keep silent in production and development
-          break;
-        } else if (d?.path) {
-          console.debug(`[OrganizationContext] Candidate ${d.path} returned no organizations`, { duration: d.duration, error: d.error });
-        }
-      }
-
-      // nothing returned
-      if (!finalList.length) {
-        console.warn('[OrganizationContext] No organizations found after all attempts:', {
-          userEmail: user?.email,
-          userId: user?.id,
-          results: diag
-        });
-        // If we had previously cached orgs locally, keep showing them instead of blanking the UI.
-        if (prevOrgs && prevOrgs.length) {
-          console.warn('[OrganizationContext] refresh failed but previous orgs exist; keeping local cache');
-          setError('Falha ao atualizar organizações — mantendo dados em cache');
+          applySelection(finalList, localStorage.getItem(LS_KEY));
         } else {
-          setOrgs([]);
-          setSelectedOrg(null);
+          console.warn('[OrganizationContext] No organizations found for user after all probes.', { email: user?.email, userId: user?.id });
+          if (prevOrgs && prevOrgs.length) {
+            console.warn('[OrganizationContext] Preserving existing cached orgs to avoid UI blank-out');
+          } else {
+            setOrgs([]);
+            setSelectedOrg(null);
+          }
         }
-      }
       } catch (e: any) {
+        console.error('[OrganizationContext] Fatal error during refresh():', e);
         setError(e?.message || 'Falha ao carregar organizações');
-        if (!prevOrgs || !prevOrgs.length) {
-          setOrgs([]);
-          setSelectedOrg(null);
-        } else {
-          console.warn('[OrganizationContext] refresh threw but preserving previous orgs', e);
-        }
       } finally {
         setLoading(false);
+        setHasAttemptedRefresh(true);
         refreshingRef.current = false;
         refreshPromiseRef.current = null;
       }
@@ -358,8 +333,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const value = useMemo<OrganizationContextValue>(() => ({
     orgs, selectedOrg, loading, error, setSelectedOrgById, refresh, addOrganization, clear,
-    transitioning, fromOrgName
-  }), [orgs, selectedOrg, loading, error, setSelectedOrgById, refresh, addOrganization, clear, transitioning, fromOrgName]);
+    transitioning, fromOrgName, hasAttemptedRefresh
+  }), [orgs, selectedOrg, loading, error, setSelectedOrgById, refresh, addOrganization, clear, transitioning, fromOrgName, hasAttemptedRefresh]);
 
   return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
 };

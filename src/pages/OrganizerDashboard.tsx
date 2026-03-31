@@ -201,7 +201,7 @@ const OrganizerDashboard = () => {
   };
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedOrg, loading: loadingOrgs, orgs, refresh, addOrganization, setSelectedOrgById } = useOrganization();
+  const { selectedOrg, loading: loadingOrgs, orgs, refresh, addOrganization, setSelectedOrgById, hasAttemptedRefresh } = useOrganization();
   const { user, refreshUser } = useAuth();
 
   // Ensure we fetch authoritative user data from the server on mount so
@@ -328,6 +328,8 @@ const OrganizerDashboard = () => {
     try {
       if (!user || !user.email) return;
       if (loadingOrgs) return;
+      if (!hasAttemptedRefresh) return; // Aguarda pelo menos uma tentativa de carregamento
+      
       const hasOrgs = Array.isArray(orgs) && orgs.length > 0;
       if (!hasOrgs && !modalAutoOpenedRef.current) {
         console.debug('[OrganizerDashboard] No organizations found for user, opening RequireOrganization modal');
@@ -338,7 +340,7 @@ const OrganizerDashboard = () => {
     } catch (e) {
       console.warn('[OrganizerDashboard] auto-open org modal effect failed', e);
     }
-  }, [user, loadingOrgs, orgs]);
+  }, [user, loadingOrgs, orgs, hasAttemptedRefresh]);
 
   // Fetch help categories for organizer
   const [helpCategories, setHelpCategories] = useState<any[]>([]);
