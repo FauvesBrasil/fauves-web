@@ -18,7 +18,7 @@ export function useUserOrganizations(enabled: boolean = true) {
     }
     await ensureApiBase();
     try {
-      const res = await fetchApi(`/api/organization?userId=${userId}`);
+      const res = await fetchApi(`/api/organization/list?userId=${userId}`);
       if (res && res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -30,11 +30,11 @@ export function useUserOrganizations(enabled: boolean = true) {
         }
       } else {
         setOrgs([]);
-        console.warn('[useUserOrganizations] rota /api/organization falhou status', res?.status);
+        console.warn('[useUserOrganizations] rota /api/organization/list falhou status', res?.status);
       }
     } catch (e) {
       setOrgs([]);
-      console.warn('[useUserOrganizations] erro ao chamar /api/organization', e);
+      console.warn('[useUserOrganizations] erro ao chamar /api/organization/list', e);
     }
     setLoading(false);
   };

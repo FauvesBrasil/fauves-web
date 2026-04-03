@@ -133,7 +133,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         
         // 1. First try: Primary relative path (same-origin). Most reliable in production.
         try {
-          const relRes = await fetchApi(`/api/organization?userId=${userId}`, { headers: { Accept: 'application/json' } });
+          const relRes = await fetchApi(`/api/organization/list?userId=${userId}`, { headers: { Accept: 'application/json' } });
           if (relRes && relRes.ok) {
             const relData = await relRes.json().catch(() => null);
             if (relData) {
