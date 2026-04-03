@@ -107,12 +107,12 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const MIN_INTERVAL = 2000;
     // BUILD_INFO log para confirmar deploy (DEBUG_20260330_2)
     console.debug(`[OrganizationContext] refresh() starting for user: ${user?.email} (v:20260330_1520)`);
+    console.log('[OrganizationContext] refresh() triggered. userLoading:', userLoading, 'userId:', user?.id);
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
-    if (now - lastRefreshTsRef.current < MIN_INTERVAL && orgsRef.current && orgsRef.current.length) {
-      // recently refreshed
-      setLoading(false);
-      return Promise.resolve();
-    }
+    
+    // Disable interval-based throttling temporarily to ensure we pick up DB fixes
+    // if (now - lastRefreshTsRef.current < MIN_INTERVAL && orgsRef.current && orgsRef.current.length) { ... }
+    
     const p = (async () => {
       lastRefreshTsRef.current = Date.now();
       refreshingRef.current = true;
@@ -125,9 +125,11 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Busca userId do usuário logado via AuthContext
         const userId = uid;
         if (!userId) {
-          console.debug('[OrganizationContext] No userId available, clearing orgs');
+          console.log('[OrganizationContext] No userId available, can\'t refresh list');
           setOrgs([]); setSelectedOrg(null); setLoading(false); return;
         }
+
+        console.log('[OrganizationContext] Fetching from /api/organization/list for:', userId);
 
         let finalList: Organization[] = [];
         
@@ -314,13 +316,9 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // which would cause a refresh -> setOrgs -> effect loop.
     // Only trigger refresh once the auth state is settled to avoid repeated probes while
     // the AuthContext is still initializing (userLoading=true).
-    if (!userLoading) {
-      const uid = user?.id || null;
-      // avoid re-fetching when the user object identity changes but id is the same
-      if (userIdRef.current !== uid) {
-        userIdRef.current = uid;
-        void refresh();
-      }
+    if (!userLoading && user?.id) {
+      console.log('[OrganizationContext] User ready, triggering aggressive refresh for:', user.id);
+      void refresh();
     }
     // Atualiza organizações quando usuário muda
     // Não precisa listener do supabase
