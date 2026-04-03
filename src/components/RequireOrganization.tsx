@@ -196,7 +196,7 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
           {!fullScreenAnimating && (
             <>
               <span className="text-[18px] font-bold text-[#091747] text-center mb-7 leading-snug" style={{ lineHeight: 1.25 }}>
-                Crie o perfil da sua organização<br />antes de cadastrar seu evento.
+                Crie o perfil da sua organização (V:D6)<br />antes de cadastrar seu evento.
               </span>
               <div className="flex items-center gap-4 w-full justify-center mb-7">
                 <OrgLogoUpload logoUrl={logoUrl} onSelect={handleLogoSelect} />
