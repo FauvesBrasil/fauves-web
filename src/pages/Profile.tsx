@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Edit, 
   ChevronRight, 
@@ -18,9 +18,13 @@ import {
   MoreVertical,
   QrCode,
   Loader2,
-  ArrowRightLeft
+  ArrowRightLeft,
+  X, // 👈 FIX: Added missing X icon
+  Info,
+  HelpCircle
 } from 'lucide-react';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer'; // 👈 FIX: Added Footer
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import QRCode from 'qrcode';
@@ -78,7 +82,7 @@ const EmptyState = ({ icon: Icon, title, description, actionLabel, onAction }: a
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, loading, token } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState('tickets');
@@ -87,6 +91,8 @@ const Profile = () => {
   const [ticketsLoading, setTicketsLoading] = useState<boolean>(true);
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState<boolean>(false);
+  const [following, setFollowing] = useState<any[]>([]);
+  const [followingLoading, setFollowingLoading] = useState<boolean>(false);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
@@ -101,6 +107,7 @@ const Profile = () => {
     if (loading || !user) return;
     reloadTickets();
     reloadOrders();
+    reloadFollowing();
   }, [loading, user]);
 
   const reloadTickets = async () => {
@@ -110,8 +117,10 @@ const Profile = () => {
       const res = await fetchApi(`/api/my/tickets?${q}&include=event`);
       if (res.ok) {
         const data = await res.json();
-        setTickets(Array.isArray(data.items) ? data.items : []);
+        setTickets(Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
       }
+    } catch (e) {
+      console.error('Error loading tickets:', e);
     } finally { setTicketsLoading(false); }
   };
 
@@ -122,20 +131,36 @@ const Profile = () => {
       const res = await fetchApi(`/api/orders?${q}&include=event`);
       if (res.ok) {
         const data = await res.json();
-        setOrders(Array.isArray(data.items) ? data.items : []);
+        setOrders(Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
       }
+    } catch (e) {
+      console.error('Error loading orders:', e);
     } finally { setOrdersLoading(false); }
+  };
+
+  const reloadFollowing = async () => {
+    setFollowingLoading(true);
+    try {
+      // 👈 FIX: Try to get real organizations related to user
+      const res = await fetchApi(`/api/organization?userId=${user?.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFollowing(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error('Error loading following:', e);
+    } finally { setFollowingLoading(false); }
   };
 
   const getFilteredTickets = () => {
     let filtered = showInactiveTickets ? tickets : tickets.filter(t => t.status === 'ISSUED');
-    return filtered.sort((a,b) => new Date(a.eventStartDate || 0).getTime() - new Date(b.eventStartDate || 0).getTime());
+    return filtered.sort((a,b) => new Date(a.eventStartDate || a.event?.startDate || 0).getTime() - new Date(b.eventStartDate || b.event?.startDate || 0).getTime());
   };
 
   // --- INTERNAL COMPONENTS ---
 
   const TicketCard = ({ t }: { t: any }) => {
-    const date = t.eventStartDate ? new Date(t.eventStartDate) : null;
+    const date = t.eventStartDate || t.event?.startDate ? new Date(t.eventStartDate || t.event?.startDate) : null;
     const month = date ? date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase() : '—';
     const day = date ? date.getDate() : '—';
     const isInactive = t.status !== 'ISSUED';
@@ -146,22 +171,20 @@ const Profile = () => {
         onClick={() => setSelectedTicket(t)}
         className={`group relative flex items-center p-0 border-none bg-white dark:bg-[#0d0d0d] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-[28px] overflow-hidden mb-4 ${isInactive ? 'opacity-70 saturate-50' : ''}`}
       >
-        {/* Visual Ticket Shape (Left Edge) */}
         <div className="w-24 h-24 sm:w-28 sm:h-28 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#151515] border-r border-dashed border-gray-100 dark:border-[#222] relative shrink-0">
           <div className="text-[10px] font-black text-orange-500 uppercase tracking-widest">{month}</div>
           <div className="text-3xl font-black text-[#091747] dark:text-white leading-none mt-1">{day}</div>
-          {/* Half circles for ticket effect */}
-          <div className="absolute top-0 right-0 w-4 h-4 bg-white dark:bg-[#0b0b0b] rounded-full translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 right-0 w-4 h-4 bg-white dark:bg-[#0b0b0b] rounded-full translate-x-1/2 translate-y-1/2" />
+          <div className="absolute top-0 right-0 w-4 h-4 bg-[#FDFDFD] dark:bg-[#0b0b0b] rounded-full translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#FDFDFD] dark:bg-[#0b0b0b] rounded-full translate-x-1/2 translate-y-1/2" />
         </div>
 
         <div className="flex-1 px-5 py-4 flex items-center justify-between min-w-0">
           <div className="min-w-0">
-             <h3 className="text-base font-bold text-[#091747] dark:text-white truncate mb-1 pr-4">{t.eventName || 'Evento'}</h3>
+             <h3 className="text-base font-bold text-[#091747] dark:text-white truncate mb-1 pr-4">{t.eventName || t.event?.name || 'Evento'}</h3>
              <div className="flex items-center gap-2">
                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">#{t.code?.slice(-6)}</span>
                <div className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter ${t.status === 'ISSUED' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-500'}`}>
-                 {t.status === 'ISSUED' ? 'Ativo' : t.status}
+                 {t.status === 'ISSUED' ? 'Ativo' : t.status === 'CANCELED' ? 'Cancelado' : t.status}
                </div>
              </div>
           </div>
@@ -191,7 +214,7 @@ const Profile = () => {
         </div>
         <div className="flex-1 ml-4 min-w-0">
           <div className="flex justify-between items-start mb-1">
-            <h4 className="text-sm font-bold text-[#091747] dark:text-white truncate pr-2">{order.eventName || 'Resumo do pedido'}</h4>
+            <h4 className="text-sm font-bold text-[#091747] dark:text-white truncate pr-2">{order.eventName || order.event?.name || 'Resumo do pedido'}</h4>
             <span className="text-xs font-bold text-[#2A2AD7] whitespace-nowrap">{total}</span>
           </div>
           <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
@@ -250,7 +273,7 @@ const Profile = () => {
            {/* Header with Event Image */}
            <div className="relative h-48">
              <img 
-               src={ticket.event?.bannerUrl ? (ticket.event.bannerUrl.startsWith('http') ? ticket.event.bannerUrl : apiUrl(ticket.event.bannerUrl)) : ''} 
+               src={ticket.event?.bannerUrl || ticket.event?.image ? ( (ticket.event.bannerUrl || ticket.event.image).startsWith('http') ? (ticket.event.bannerUrl || ticket.event.image) : apiUrl(ticket.event.bannerUrl || ticket.event.image)) : ''} 
                className="w-full h-full object-cover" 
              />
              <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] to-transparent" />
@@ -260,7 +283,7 @@ const Profile = () => {
            </div>
 
            <div className="px-8 pb-10 -mt-10 text-center relative z-10">
-              <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2">{ticket.eventName}</h2>
+              <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2 leading-tight">{ticket.eventName || ticket.event?.name}</h2>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-8">#{ticket.code}</p>
               
               <div className="relative inline-block mb-8 p-6 bg-white rounded-3xl shadow-2xl">
@@ -284,8 +307,10 @@ const Profile = () => {
                 <button 
                   onClick={() => {
                     const w = window.open('', '_blank');
-                    w?.document.write(`<html><body><img src="${qrDataUrl}" style="width: 100%" /></body></html>`);
-                    w?.print(); w?.close();
+                    if (w) {
+                      w.document.write(`<html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;"><img src="${qrDataUrl}" style="width: 80%" /></body></html>`);
+                      w.print();
+                    }
                   }}
                   className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-full text-sm font-bold text-[#091747] dark:text-white hover:bg-gray-100 transition-colors"
                 >
@@ -346,7 +371,7 @@ const Profile = () => {
            <div className="space-y-6">
               <div className="bg-gray-50 dark:bg-[#0d0d0d] rounded-3xl p-6">
                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Evento</h4>
-                 <p className="text-lg font-bold text-[#091747] dark:text-white">{order.eventName}</p>
+                 <p className="text-lg font-bold text-[#091747] dark:text-white leading-tight">{order.eventName || order.event?.name}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -375,10 +400,6 @@ const Profile = () => {
     <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0b0b0b] text-[#091747] dark:text-gray-100">
       <Header />
       
-      {/* 
-         🚀 FIX: Padding top to avoid header overlapping content. 
-         Header is typically ~80px. Adding plenty of space for a premium feel.
-      */}
       <div className="pt-[100px] sm:pt-[120px] pb-20">
         <div className="max-w-[1100px] mx-auto px-6">
           
@@ -412,12 +433,8 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Navigation & Content Area */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            
-            {/* Main Tabs (Mobile Layout Helper & Desktop Side) */}
             <div className="lg:col-span-8">
-               {/* Custom Tabs Navigation (Premium Feel) */}
                <div className="flex gap-2 p-1.5 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[24px] mb-8 w-fit mx-auto sm:mx-0">
                   {['tickets', 'orders', 'following'].map(tab => (
                     <button 
@@ -436,8 +453,7 @@ const Profile = () => {
                   ))}
                </div>
 
-               {/* Tab Content Rendering */}
-               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[400px]">
                   {activeTab === 'tickets' && (
                     <div className="space-y-4">
                       <div className="flex justify-between items-center px-1">
@@ -452,7 +468,7 @@ const Profile = () => {
                         )}
                       </div>
                       
-                      {ticketsLoading ? <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-[#2A2AD7]" /></div> : (
+                      {ticketsLoading ? <ProfilePageSkeleton /> : (
                         getFilteredTickets().length > 0 ? (
                           getFilteredTickets().map(t => <TicketCard key={t.id} t={t} />)
                         ) : (
@@ -460,7 +476,7 @@ const Profile = () => {
                             icon={Ticket} 
                             title="Nenhum ingresso ativo" 
                             description="Você ainda não possui ingressos para os próximos eventos."
-                            actionLabel="Página inicial"
+                            actionLabel="Explorar eventos"
                             onAction={() => navigate('/')}
                           />
                         )
@@ -473,12 +489,14 @@ const Profile = () => {
                       <SectionTitle icon={ShoppingBag} count={orders.length}>Histórico de Pedidos</SectionTitle>
                       {ordersLoading ? <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-[#2A2AD7]" /></div> : (
                         orders.length > 0 ? (
-                          orders.map(o => <OrderCard key={o.id} order={o} />)
+                          orders.map(o => <OrderCard key={o.id || o.code} order={o} />)
                         ) : (
                           <EmptyState 
                             icon={ShoppingBag} 
                             title="Lista de pedidos vazia" 
                             description="Seus pedidos realizados aparecerão listados aqui."
+                            actionLabel="Explorar eventos"
+                            onAction={() => navigate('/')}
                           />
                         )
                       )}
@@ -486,18 +504,34 @@ const Profile = () => {
                   )}
 
                   {activeTab === 'following' && (
-                    <div>
-                      <SectionTitle icon={Users} count={1}>Organizações</SectionTitle>
-                      <div className="p-6 bg-white dark:bg-[#0d0d0d] rounded-[32px] shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
-                        <div className="flex items-center gap-4">
-                           <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center font-black">F</div>
-                           <div>
-                              <h4 className="font-bold text-[#091747] dark:text-white">Fauves Entretenimento</h4>
-                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ">1.9k seguidores</p>
-                           </div>
-                        </div>
-                        <button className="px-5 py-2.5 rounded-full border border-gray-100 dark:border-[#222] text-xs font-black hover:bg-gray-50 transition-colors">Seguindo</button>
-                      </div>
+                    <div className="space-y-4">
+                      <SectionTitle icon={Users} count={following.length}>Organizações Seguidas</SectionTitle>
+                      {followingLoading ? <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-[#2A2AD7]" /></div> : (
+                        following.length > 0 ? (
+                          following.map(org => (
+                            <div key={org.id} className="p-6 bg-white dark:bg-[#0d0d0d] rounded-[32px] shadow-sm flex items-center justify-between group hover:shadow-md transition-all mb-4">
+                              <div className="flex items-center gap-4">
+                                 <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-[#151515] overflow-hidden flex items-center justify-center font-black">
+                                   {org.logoUrl ? <img src={org.logoUrl.startsWith('http') ? org.logoUrl : apiUrl(org.logoUrl)} className="w-full h-full object-cover" /> : org.name.charAt(0)}
+                                 </div>
+                                 <div className="min-w-0">
+                                    <h4 className="font-bold text-[#091747] dark:text-white truncate">{org.name}</h4>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ">Organização verificada</p>
+                                 </div>
+                              </div>
+                              <button className="px-5 py-2.5 rounded-full border border-gray-100 dark:border-[#222] text-xs font-black hover:bg-gray-50 transition-colors shrink-0 ml-4">Seguindo</button>
+                            </div>
+                          ))
+                        ) : (
+                           <EmptyState 
+                            icon={Users} 
+                            title="Nenhuma organização" 
+                            description="As organizações que você seguir aparecerão aqui para acesso rápido."
+                            actionLabel="Explorar Fauves"
+                            onAction={() => navigate('/')}
+                          />
+                        )
+                      )}
                     </div>
                   )}
                </div>
@@ -511,7 +545,7 @@ const Profile = () => {
                   <h3 className="text-2xl font-black leading-tight mb-4 tracking-tighter">Acesso rápido no dia do evento</h3>
                   <p className="text-indigo-100 text-sm font-medium mb-8 leading-relaxed">Seus ingressos possuem QR Codes dinâmicos que se atualizam por segurança. Certifique-se de estar logado!</p>
                   <div className="h-1 bg-white/20 rounded-full w-20 mb-8" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Fauves Safe Ticket v2.0</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Fauves Safe Ticket v2.1</p>
                </div>
                
                <div className="mt-8 p-10 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[40px]">
@@ -520,10 +554,11 @@ const Profile = () => {
                   <button className="text-xs font-black text-[#2A2AD7] uppercase tracking-widest flex items-center gap-2">Suporte Fauves <ChevronRight className="w-4 h-4" /></button>
                </div>
             </div>
-
           </div>
         </div>
       </div>
+
+      <Footer />
 
       {/* Modals Layer */}
       {selectedTicket && <TicketModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />}
