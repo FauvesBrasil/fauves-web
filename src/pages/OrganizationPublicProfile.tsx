@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { apiUrl } from '@/lib/apiBase';
 import Header from '@/components/Header';
@@ -17,12 +17,13 @@ import {
   Calendar, MapPin, Users, Share2, ExternalLink,
   Mail, Globe, Clock, Heart, Loader2, CalendarDays,
   Instagram, Youtube, Music, MessageCircle, Send,
-  Facebook, Twitter, Phone
+  Facebook, Twitter, Phone, ArrowLeft, ChevronRight
 } from 'lucide-react';
 
 const OrganizationPublicProfile: React.FC = () => {
   const { slugOrId, slug: legacySlug } = useParams<{ slugOrId?: string; slug?: string }>();
   const slug = slugOrId || legacySlug;
+  const navigate = useNavigate();
   const [org, setOrg] = React.useState<any | null>(null);
   const [events, setEvents] = React.useState<any[]>([]);
   const [featuredEvent, setFeaturedEvent] = React.useState<any | null>(null);
@@ -43,7 +44,7 @@ const OrganizationPublicProfile: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
         const endpoint = !isUUID
           ? apiUrl(`/api/organization/slug/${encodeURIComponent(slug)}`)
           : apiUrl(`/api/organization/${encodeURIComponent(slug)}`);
@@ -69,6 +70,7 @@ const OrganizationPublicProfile: React.FC = () => {
         }
         setOrg(data);
 
+        // Follow status
         if (user?.id && token) {
           try {
             const fRes = await fetch(apiUrl(`/api/organization/${data.id}/follow`), { headers: { Authorization: `Bearer ${token}` } });
@@ -79,6 +81,7 @@ const OrganizationPublicProfile: React.FC = () => {
           } catch (e) { }
         }
 
+        // Followers count
         try {
           const cRes = await fetch(apiUrl(`/api/organization/${data.id}/followers/count`));
           if (cRes.ok) {
@@ -89,6 +92,7 @@ const OrganizationPublicProfile: React.FC = () => {
           console.warn('followers count fetch failed', e);
         }
 
+        // Events
         try {
           const evRes = await fetch(apiUrl(`/api/organization/${data.id}/events`));
           if (evRes.ok) {
@@ -133,7 +137,11 @@ const OrganizationPublicProfile: React.FC = () => {
     setShowFollowersModal(true);
   };
 
-  const handleFollow = async () => {
+  const handleFollow = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!org?.id) return;
     if (!user?.id || !token) {
       setShowLoginModal(true);
@@ -208,12 +216,9 @@ const OrganizationPublicProfile: React.FC = () => {
     return (
       <div className="min-h-screen bg-white dark:bg-[#0b0b0b]">
         <Header />
-        <main className="max-w-[1100px] mx-auto px-6 py-12">
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-          </div>
+        <main className="max-w-[1100px] mx-auto px-6 py-12 text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-orange-500 mx-auto" />
         </main>
-        <Footer />
       </div>
     );
   }
@@ -223,20 +228,14 @@ const OrganizationPublicProfile: React.FC = () => {
       <div className="min-h-screen bg-white dark:bg-[#0b0b0b]">
         <Header />
         <main className="max-w-[1100px] mx-auto px-6 py-12">
-          <Card className="p-12 text-center">
+          <Card className="p-12 text-center rounded-[3rem] border-2">
             <div className="text-6xl mb-4">🔍</div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Organização não encontrada
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              A organização que você está procurando não existe ou foi removida.
-            </p>
+            <h2 className="text-3xl font-black mb-4">Página de Perfil indisponível</h2>
             <Link to="/">
-              <Button>Voltar ao início</Button>
+              <Button className="h-14 px-8 rounded-2xl bg-orange-600">Voltar ao Início</Button>
             </Link>
           </Card>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -245,113 +244,127 @@ const OrganizationPublicProfile: React.FC = () => {
   const pastEvents = events.filter(ev => new Date(ev.startDate) < new Date());
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0b] text-gray-900 dark:text-white pb-20">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0b] text-gray-900 dark:text-white pb-32">
       <Header />
 
-      {/* Hero Section Imersiva */}
+      {/* Hero Section Master */}
       <div className="relative w-full overflow-hidden">
-        {/* Banner de Capa Premium */}
-        <div className="relative h-[300px] md:h-[400px] w-full">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-900 to-purple-900 animate-gradient-x" />
-          {org.coverUrl ? (
+        {/* Banner com Parallax Suave */}
+        <div className="relative h-[350px] md:h-[450px] w-full group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-orange-950 animate-gradient-x" />
+          {org.coverUrl && (
             <img 
               src={org.coverUrl} 
               alt={org.name} 
-              className="w-full h-full object-cover mix-blend-overlay opacity-40" 
+              className="w-full h-full object-cover mix-blend-overlay opacity-50 transition-transform duration-[5s] group-hover:scale-105" 
             />
-          ) : (
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,100,0,0.3),transparent)]" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#0b0b0b] via-transparent to-black/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#0b0b0b] via-transparent to-black/20" />
+          
+          {/* Botão de Voltar Discreto */}
+          <button 
+            onClick={() => navigate(-1)}
+            className="absolute top-8 left-8 p-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl hover:bg-white/20 transition-all text-white z-20 group/back"
+          >
+            <ArrowLeft className="w-6 h-6 transform group-hover/back:-translate-x-1 transition-transform" />
+          </button>
         </div>
 
-        {/* Informações Centrais (Glassmorphism) */}
-        <div className="max-w-[1100px] mx-auto px-6 -mt-32 md:-mt-40 relative z-10 flex flex-col items-center text-center">
-          {/* Logo Premium */}
-          <div className="relative group">
-            <div className="absolute inset-0 bg-orange-500 rounded-[2.5rem] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
-            <Avatar className="w-32 h-32 md:w-40 md:h-40 border-8 border-white dark:border-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[2.5rem] relative z-10 transform transition-transform duration-500 group-hover:scale-105">
+        {/* Informações da Marca (Centralizadas) */}
+        <div className="max-w-[1100px] mx-auto px-6 -mt-32 md:-mt-44 relative z-10 flex flex-col items-center text-center">
+          {/* Logo Interativa Premium */}
+          <div className="relative group cursor-pointer" onClick={handleFollow}>
+            <div className="absolute inset-0 bg-orange-600 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-700" />
+            <Avatar className="w-36 h-36 md:w-48 md:h-48 border-[10px] border-white dark:border-gray-900 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] rounded-[2.5rem] relative z-10 transform transition-all duration-700 group-hover:scale-110 group-hover:-rotate-3">
               <AvatarImage src={org.logoUrl || ''} alt={org.name} className="object-cover" />
-              <AvatarFallback className="text-4xl md:text-5xl font-black bg-gradient-to-br from-orange-400 to-pink-600 text-white">
+              <AvatarFallback className="text-5xl md:text-6xl font-black bg-gradient-to-br from-orange-400 to-pink-600 text-white">
                 {(org.name || 'O')[0]}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute -bottom-2 -right-2 bg-orange-600 text-white p-2 rounded-xl shadow-lg border-2 border-white dark:border-gray-800 z-20">
-              <Heart className="w-5 h-5 fill-current" />
+            
+            {/* Coração Funcional c/ Feedback */}
+            <div 
+              className={`absolute -bottom-3 -right-3 p-3.5 rounded-[1.2rem] shadow-2xl border-[3px] border-white dark:border-gray-900 z-20 transition-all duration-500 hover:scale-125 ${
+                following 
+                  ? 'bg-orange-600 text-white scale-110' 
+                  : 'bg-white dark:bg-gray-800 text-gray-400 opacity-80'
+              }`}
+            >
+              <Heart className={`w-7 h-7 ${following ? 'fill-current animate-pulse' : ''}`} />
             </div>
           </div>
 
-          <div className="mt-8 mb-4">
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight text-gray-900 dark:text-white drop-shadow-sm">
+          <div className="mt-10 mb-6">
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 pb-2">
               {org.name}
             </h1>
             {org.bio && (
-              <p className="text-gray-600 dark:text-gray-400 mt-4 max-w-2xl text-lg md:text-xl font-medium leading-relaxed">
-                {org.bio}
+              <p className="text-gray-600 dark:text-gray-400 mt-5 max-w-2xl text-xl md:text-2xl font-medium leading-relaxed italic opacity-80">
+                "{org.bio}"
               </p>
             )}
           </div>
 
-          {/* Stats Rápidos */}
-          <div className="flex items-center gap-8 md:gap-12 mt-2">
-            <div className="flex flex-col items-center">
-              <span className="text-2xl font-black text-gray-900 dark:text-white">{events.length}</span>
-              <span className="text-xs uppercase tracking-widest font-bold text-gray-400">Eventos</span>
+          {/* Stats Revisitados */}
+          <div className="flex items-center gap-10 md:gap-16 mt-4">
+            <div className="flex flex-col items-center group/stat">
+              <span className="text-3xl font-black text-gray-900 dark:text-white transition-colors group-hover/stat:text-orange-600">{events.length}</span>
+              <span className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Eventos</span>
             </div>
-            <div className="h-8 w-[1px] bg-gray-200 dark:bg-gray-800" />
-            <div className="flex flex-col items-center cursor-pointer" onClick={() => handleFetchFollowers(org.id)}>
-              <span className="text-2xl font-black text-orange-600">{followersCount || 0}</span>
-              <span className="text-xs uppercase tracking-widest font-bold text-gray-400">Seguidores</span>
+            <div className="flex flex-col items-center group/stat cursor-pointer" onClick={() => handleFetchFollowers(org.id)}>
+              <span className="text-3xl font-black text-gray-900 dark:text-white transition-colors group-hover/stat:text-orange-600">{followersCount || 0}</span>
+              <span className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Seguidores</span>
             </div>
           </div>
 
-          {/* Botões de Ação Principais */}
-          <div className="flex items-center gap-4 mt-10 w-full max-w-md">
+          {/* Call to Actions */}
+          <div className="flex items-center gap-5 mt-12 w-full max-w-lg">
             <Button
               onClick={handleFollow}
               disabled={followLoading}
-              className={`flex-1 h-14 text-lg font-black rounded-2xl shadow-xl transition-all duration-300 ${
+              className={`flex-1 h-16 text-lg font-black rounded-[1.5rem] shadow-2xl transition-all duration-500 active:scale-95 ${
                 following 
-                  ? 'bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700' 
-                  : 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105 active:scale-95'
+                  ? 'bg-gray-100 dark:bg-zinc-900 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-zinc-800 border-2 border-gray-200 dark:border-zinc-800' 
+                  : 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/30 hover:shadow-orange-600/50'
               }`}
             >
               {followLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="w-7 h-7 animate-spin" />
               ) : following ? (
                 'Seguindo'
               ) : (
-                'Seguir Organização'
+                'Seguir Marca'
               )}
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
               onClick={handleShare}
-              className="h-14 w-14 rounded-2xl border-2 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-md"
+              className="h-16 w-16 rounded-[1.5rem] border-2 hover:bg-white dark:hover:bg-zinc-900 shadow-xl transition-all hover:scale-105 active:scale-95"
             >
-              <Share2 className="w-6 h-6" />
+              <Share2 className="w-7 h-7" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Bio Hub (Links Sociais Estilizados) */}
-      <div className="max-w-[1100px] mx-auto px-6 mt-16">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      {/* Bio Hub (Links Sociais Premium) */}
+      <div className="max-w-[1100px] mx-auto px-6 mt-20">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-5">
           {socialLinks.map((link, idx) => (
             <a
               key={idx}
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-[#1a1b1e] border-2 border-transparent hover:border-orange-500 overflow-hidden shadow-sm hover:shadow-2xl rounded-3xl transition-all duration-300 hover:-translate-y-2 relative"
+              className="group flex flex-col items-center justify-center p-8 bg-white dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 hover:border-orange-500 shadow-sm hover:shadow-2xl rounded-[2.5rem] transition-all duration-500 hover:-translate-y-3 relative overflow-hidden"
             >
-              <div className={`p-4 rounded-2xl bg-slate-50 dark:bg-gray-800/50 mb-3 group-hover:scale-110 transition-transform duration-300 ${link.color.replace('text-', 'text-opacity-80 text-')}`}>
-                <link.icon className="w-6 h-6" />
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className={`p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800 group-hover:bg-orange-600/10 mb-4 transition-colors ${link.color}`}>
+                <link.icon className="w-7 h-7 transform group-hover:scale-110 transition-transform duration-500" />
               </div>
-              <span className="text-sm font-black tracking-tight">{link.label}</span>
-              <ExternalLink className="w-3 h-3 absolute top-4 right-4 text-gray-300 group-hover:text-orange-500 transition-colors" />
+              <span className="text-[11px] font-black tracking-widest uppercase opacity-60 group-hover:opacity-100 transition-opacity">{link.label}</span>
+              <ExternalLink className="w-4 h-4 absolute top-5 right-5 opacity-0 group-hover:opacity-40 transition-opacity" />
             </a>
           ))}
           {org.site && !socialLinks.find(l => l.label === 'Website') && (
@@ -359,83 +372,83 @@ const OrganizationPublicProfile: React.FC = () => {
               href={org.site}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-[#1a1b1e] border-2 border-transparent hover:border-orange-500 shadow-sm hover:shadow-2xl rounded-3xl transition-all duration-300 hover:-translate-y-2 relative"
+              className="group flex flex-col items-center justify-center p-8 bg-white dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 hover:border-orange-500 shadow-sm hover:shadow-2xl rounded-[2.5rem] transition-all duration-300 hover:-translate-y-3"
             >
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-gray-800/50 mb-3 group-hover:scale-110 transition-transform duration-300 text-blue-500">
-                <Globe className="w-6 h-6" />
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800 group-hover:bg-orange-600/10 mb-4 text-blue-500">
+                <Globe className="w-7 h-7 transform group-hover:scale-110 transition-transform" />
               </div>
-              <span className="text-sm font-black tracking-tight">Website</span>
-              <ExternalLink className="w-3 h-3 absolute top-4 right-4 text-gray-300" />
+              <span className="text-[11px] font-black tracking-widest uppercase opacity-60">Website</span>
+              <ExternalLink className="w-4 h-4 absolute top-5 right-5 opacity-0 group-hover:opacity-40" />
             </a>
           )}
         </div>
       </div>
 
-      <main className="max-w-[1100px] mx-auto px-6 mt-20">
-        {/* Featured Event Banner (Full Width Hero) */}
+      <main className="max-w-[1200px] mx-auto px-6 mt-32">
+        {/* Featured Card Ultra-Premium */}
         {featuredEvent && (
-          <div className="mb-20">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-black flex items-center gap-3">
-                <span className="bg-orange-600 w-2 h-8 rounded-full" />
-                Destaque da Semana
-              </h2>
+          <div className="mb-32">
+            <div className="flex items-center gap-4 mb-10 pl-2">
+              <div className="h-10 w-1.5 bg-orange-600 rounded-full" />
+              <h2 className="text-4xl font-black tracking-tighter">O Próximo Grande Momento</h2>
             </div>
             <Link to={`/events/${featuredEvent.slug || featuredEvent.id}`}>
-              <div className="relative group overflow-hidden rounded-[2.5rem] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.3)] bg-black h-[400px] md:h-[500px]">
+              <div className="relative group overflow-hidden rounded-[3.5rem] shadow-[0_48px_100px_-12px_rgba(0,0,0,0.5)] bg-black h-[500px] md:h-[650px] transition-all duration-700 hover:shadow-orange-600/20">
                 {featuredEvent.image && (
                   <img 
                     src={featuredEvent.image} 
                     alt={featuredEvent.name} 
-                    className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110 opacity-80" 
+                    className="w-full h-full object-cover transition-transform duration-[4s] group-hover:scale-110 opacity-70" 
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                 
-                <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
-                  <div className="flex flex-wrap items-center gap-3 mb-6">
-                    <Badge className="bg-orange-600 text-white text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full border-2 border-white/20">EVENTO EM DESTAQUE</Badge>
-                    <div className="flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-white text-xs font-black">
+                <div className="absolute bottom-0 left-0 right-0 p-10 md:p-16">
+                  <div className="flex flex-wrap items-center gap-4 mb-8">
+                    <Badge className="bg-orange-600 text-white text-[11px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-full border-2 border-white/20 shadow-xl">EXPERIÊNCIA EM DESTAQUE</Badge>
+                    <div className="flex items-center gap-2.5 px-6 py-2 bg-white/5 backdrop-blur-2xl rounded-full text-white text-[11px] font-black border border-white/10 uppercase tracking-widest">
                       <Clock className="w-4 h-4 text-orange-500" />
-                      COMO CHEGAR
+                      Reserve agora
                     </div>
                   </div>
                   
-                  <h2 className="text-4xl md:text-6xl font-black text-white mb-6 drop-shadow-xl leading-tight max-w-3xl group-hover:text-orange-400 transition-colors">
+                  <h2 className="text-6xl md:text-8xl font-black text-white mb-8 drop-shadow-2xl leading-[0.95] tracking-tighter max-w-4xl group-hover:text-orange-400 transition-all duration-500">
                     {featuredEvent.name}
                   </h2>
                   
-                  <div className="flex flex-wrap items-center gap-6 text-white/90">
-                    <div className="flex items-center gap-2">
-                       <div className="p-2 bg-orange-600 rounded-lg">
-                        <Calendar className="w-5 h-5 text-white" />
+                  <div className="flex flex-wrap items-center gap-10 text-white/80">
+                    <div className="flex items-center gap-4">
+                       <div className="p-3 bg-orange-600/20 backdrop-blur-md rounded-2xl border border-orange-600/30">
+                        <Calendar className="w-6 h-6 text-orange-500" />
                        </div>
                        <div>
-                         <p className="text-[10px] font-black uppercase text-white/50 tracking-widest">Data do Evento</p>
-                         <p className="font-bold">{new Date(featuredEvent.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                         <p className="text-[11px] font-black uppercase text-white/40 tracking-[0.2em] mb-1">Data</p>
+                         <p className="text-xl font-bold">{new Date(featuredEvent.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                        </div>
                     </div>
                     {featuredEvent.locationCity && (
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-indigo-600 rounded-lg">
-                          <MapPin className="w-5 h-5 text-white" />
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-indigo-600/20 backdrop-blur-md rounded-2xl border border-indigo-600/30">
+                          <MapPin className="w-6 h-6 text-indigo-500" />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black uppercase text-white/50 tracking-widest">Localização</p>
-                          <p className="font-bold">{featuredEvent.locationCity}, {featuredEvent.locationUf}</p>
+                          <p className="text-[11px] font-black uppercase text-white/40 tracking-[0.2em] mb-1">Local</p>
+                          <p className="text-xl font-bold">{featuredEvent.locationCity}, {featuredEvent.locationUf}</p>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Countdown / Ticket Button Floating */}
-                <div className="absolute top-8 right-8 hidden lg:block transform group-hover:-translate-y-2 transition-transform">
-                  <div className="bg-white dark:bg-[#1a1b1e] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-4 text-center border-t-4 border-orange-600">
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Ingressos a partir de</p>
-                    <p className="text-3xl font-black text-gray-900 dark:text-white">R$ --,--</p>
-                    <Button className="bg-orange-600 hover:bg-orange-700 h-12 w-full rounded-2xl font-black text-sm px-8 shadow-lg shadow-orange-600/20">
-                      GARANTIR VAGA
+                {/* Floating Price Button */}
+                <div className="absolute top-12 right-12 hidden lg:flex transform group-hover:-translate-y-4 transition-transform duration-700">
+                  <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl p-10 rounded-[3rem] shadow-2xl flex flex-col items-center gap-6 text-center border-t-[6px] border-orange-600 w-72">
+                    <div className="space-y-1">
+                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em]">Lote Atual</p>
+                      <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">R$ --,--</p>
+                    </div>
+                    <Button className="bg-orange-600 hover:bg-orange-700 h-16 w-full rounded-[1.5rem] font-black text-base px-8 shadow-[0_20px_40px_-10px_rgba(234,88,12,0.4)] transition-all">
+                      PEGAR INGRESSO
                     </Button>
                   </div>
                 </div>
@@ -444,84 +457,101 @@ const OrganizationPublicProfile: React.FC = () => {
           </div>
         )}
 
-        <Tabs defaultValue="events" className="mt-8">
-          <TabsList className="w-full justify-start border-b">
-            <TabsTrigger value="events" className="gap-2">
-              <CalendarDays className="w-4 h-4" />
-              Eventos
-            </TabsTrigger>
-            <TabsTrigger value="about" className="gap-2">
-              <Globe className="w-4 h-4" />
-              Sobre
-            </TabsTrigger>
-            {org.artistsMode && (
-              <TabsTrigger value="artists" className="gap-2">
-                <Music className="w-4 h-4" />
-                Artistas
+        {/* Novo Sistema de Tabs (Pill Style) */}
+        <Tabs defaultValue="events" className="mt-16">
+          <div className="flex items-center justify-center mb-16">
+            <TabsList className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl p-2 rounded-[2rem] border border-gray-100 dark:border-white/5 h-16 inline-flex shadow-xl">
+              <TabsTrigger 
+                value="events" 
+                className="rounded-full px-10 h-full gap-3 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black uppercase text-[11px] tracking-widest"
+              >
+                <CalendarDays className="w-5 h-5" />
+                Eventos
               </TabsTrigger>
-            )}
-          </TabsList>
+              <TabsTrigger 
+                value="about" 
+                className="rounded-full px-10 h-full gap-3 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black uppercase text-[11px] tracking-widest"
+              >
+                <Globe className="w-5 h-5" />
+                A Marca
+              </TabsTrigger>
+              {org.artistsMode && (
+                <TabsTrigger 
+                  value="artists" 
+                  className="rounded-full px-10 h-full gap-3 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black uppercase text-[11px] tracking-widest"
+                >
+                  <Music className="w-5 h-5" />
+                  Lineup
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
-          <TabsContent value="events" className="mt-6">
+          <TabsContent value="events" className="mt-0 outline-none">
             {futureEvents.length === 0 && pastEvents.length === 0 ? (
-              <Card className="p-12 text-center">
-                <div className="text-6xl mb-4">📅</div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  Sem eventos agendados
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Esta organização ainda não publicou nenhum evento
+              <Card className="p-24 text-center rounded-[4rem] border-2 border-dashed border-gray-200 dark:border-zinc-800 bg-transparent">
+                <div className="text-8xl mb-8 opacity-20">📅</div>
+                <h3 className="text-3xl font-black mb-4">Silêncio antes do show...</h3>
+                <p className="text-gray-500 mb-10 max-w-md mx-auto text-lg leading-relaxed">
+                  Esta organização está preparando novidades incríveis. 🤫
                 </p>
                 {!following && (
-                  <Button onClick={handleFollow} className="bg-orange-600 hover:bg-orange-700">
-                    <Heart className="w-4 h-4 mr-2" />
-                    Seguir para ser notificado
+                  <Button onClick={handleFollow} className="h-16 px-10 rounded-[1.5rem] bg-orange-600 hover:bg-orange-700 shadow-2xl">
+                    ME AVISE QUANDO SAIR
                   </Button>
                 )}
               </Card>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-32">
                 {futureEvents.length > 0 && (
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4">Próximos Eventos</h2>
-                    <div className="flex flex-wrap gap-4 md:gap-6 justify-center md:justify-start">
+                  <div className="animate-in fade-in slide-in-from-bottom-5 duration-700">
+                    <div className="flex items-center gap-4 mb-12 pl-2">
+                      <div className="h-8 w-1 bg-orange-600 rounded-full" />
+                      <h2 className="text-3xl font-black tracking-tight">Próximos Encontros</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-8 md:gap-12 justify-center lg:justify-start">
                       {futureEvents.map((ev) => (
-                        <EventCard
-                          key={ev.id}
-                          id={ev.id}
-                          slug={ev.slug}
-                          image={ev.image}
-                          date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
-                          title={ev.name}
-                          location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
-                          views={ev.metrics?.views || 0}
-                          interests={ev.metrics?.interests || 0}
-                          categories={ev.categories || []}
-                          size="large"
-                        />
+                        <div key={ev.id} className="transform hover:-translate-y-2 transition-transform duration-500">
+                          <EventCard
+                            id={ev.id}
+                            slug={ev.slug}
+                            image={ev.image}
+                            date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                            title={ev.name}
+                            location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
+                            views={ev.metrics?.views || 0}
+                            interests={ev.metrics?.interests || 0}
+                            categories={ev.categories || []}
+                            size="large"
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
 
                 {pastEvents.length > 0 && (
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4 text-gray-600 dark:text-gray-400">Eventos Passados</h2>
-                    <div className="flex flex-wrap gap-4 md:gap-6 justify-center md:justify-start opacity-70 grayscale-[0.5]">
+                  <div className="animate-in fade-in slide-in-from-bottom-5 duration-700 delay-200">
+                    <div className="flex items-center gap-4 mb-12 pl-2 opacity-50">
+                      <div className="h-8 w-1 bg-gray-400 rounded-full" />
+                      <h2 className="text-3xl font-black tracking-tight uppercase text-gray-500">O que já rolou</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-6 md:gap-10 justify-center lg:justify-start opacity-70 grayscale-[0.4] hover:grayscale-0 transition-all duration-700">
                       {pastEvents.slice(0, 12).map((ev) => (
-                        <EventCard
-                          key={ev.id}
-                          id={ev.id}
-                          slug={ev.slug}
-                          image={ev.image}
-                          date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
-                          title={ev.name}
-                          location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
-                          views={ev.metrics?.views || 0}
-                          interests={ev.metrics?.interests || 0}
-                          categories={ev.categories || []}
-                          size="small"
-                        />
+                        <div key={ev.id} className="transform hover:-translate-y-2 transition-transform duration-500">
+                          <EventCard
+                            id={ev.id}
+                            slug={ev.slug}
+                            image={ev.image}
+                            date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                            title={ev.name}
+                            location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
+                            views={ev.metrics?.views || 0}
+                            interests={ev.metrics?.interests || 0}
+                            categories={ev.categories || []}
+                            size="small"
+                          />
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -530,92 +560,87 @@ const OrganizationPublicProfile: React.FC = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="about" className="mt-6">
-            <div className="space-y-6">
-              <Card className="p-6 rounded-xl">
-                <h3 className="text-xl font-semibold mb-4">Sobre {org.name}</h3>
+          <TabsContent value="about" className="animate-in fade-in zoom-in-95 duration-500 outline-none">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+              <div className="lg:col-span-12">
+                <Card className="p-10 md:p-20 rounded-[4rem] border-none shadow-2xl bg-white dark:bg-zinc-900/50 backdrop-blur-xl">
+                  <div className="max-w-4xl">
+                    <h3 className="text-5xl font-black tracking-tighter mb-12">História de {org.name}</h3>
 
-                {/* Tags */}
-                {tags.length > 0 && (
-                  <div className="mb-6">
-                    <div className="flex flex-wrap gap-2">
-                      {tags.map((tag: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300">
-                          {tag}
-                        </Badge>
-                      ))}
+                    {/* Tags Estilizadas */}
+                    {tags.length > 0 && (
+                      <div className="mb-12">
+                        <div className="flex flex-wrap gap-3">
+                          {tags.map((tag: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="prose prose-xl dark:prose-invert prose-orange-600 max-w-none">
+                      {org.description ? (
+                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-2xl font-medium opacity-90 whitespace-pre-line">
+                          {org.description}
+                        </p>
+                      ) : (
+                        <p className="text-gray-500 italic text-2xl">
+                          Nenhuma descrição disponível ainda. Fique atento! ✨
+                        </p>
+                      )}
                     </div>
-                  </div>
-                )}
 
-                {/* Description */}
-                {org.description ? (
-                  <p className="text-gray-700 dark:text-gray-300 mb-6 whitespace-pre-line">
-                    {org.description}
-                  </p>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 italic mb-6">
-                    Nenhuma descrição disponível.
-                  </p>
-                )}
-
-                {/* Contact Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {org.site && (
-                    <a href={org.site} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-orange-600 hover:underline">
-                      <Globe className="w-4 h-4" />
-                      Website
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                  {org.contactEmail && org.showContactEmail && (
-                    <a href={`mailto:${org.contactEmail}`} className="flex items-center gap-2 text-orange-600 hover:underline">
-                      <Mail className="w-4 h-4" />
-                      {org.contactEmail}
-                    </a>
-                  )}
-                  {org.locationText && (
-                    <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                      <MapPin className="w-4 h-4" />
-                      {org.locationText}
-                    </div>
-                  )}
-                </div>
-
-                {/* Social Links Grid */}
-                {socialLinks.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-3">Redes Sociais</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {socialLinks.map((link, idx) => (
-                        <a
-                          key={idx}
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                        >
-                          <link.icon className={`w-5 h-5 ${link.color}`} />
-                          <span className="text-sm font-medium">{link.label}</span>
-                          <ExternalLink className="w-3 h-3 ml-auto text-gray-400" />
+                    {/* Info de Contato Ultra-Clean */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-20 p-10 bg-black/5 dark:bg-white/5 rounded-[3rem] border border-black/5 dark:border-white/5">
+                      {org.site && (
+                        <a href={org.site} target="_blank" rel="noopener noreferrer" className="flex items-center gap-6 group/link">
+                          <div className="p-4 bg-white dark:bg-zinc-800 rounded-3xl shadow-xl group-hover/link:scale-110 transition-transform">
+                            <Globe className="w-8 h-8 text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Website</p>
+                            <p className="font-bold text-xl group-hover/link:text-orange-500 transition-colors">Visitar Site oficial</p>
+                          </div>
                         </a>
-                      ))}
+                      )}
+                      {org.contactEmail && org.showContactEmail && (
+                        <a href={`mailto:${org.contactEmail}`} className="flex items-center gap-6 group/link">
+                          <div className="p-4 bg-white dark:bg-zinc-800 rounded-3xl shadow-xl group-hover/link:scale-110 transition-transform">
+                            <Mail className="w-8 h-8 text-orange-500" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Email</p>
+                            <p className="font-bold text-xl truncate group-hover/link:text-orange-500 transition-colors">{org.contactEmail}</p>
+                          </div>
+                        </a>
+                      )}
+                      {org.locationText && (
+                        <div className="flex items-center gap-6">
+                          <div className="p-4 bg-white dark:bg-zinc-800 rounded-3xl shadow-xl">
+                            <MapPin className="w-8 h-8 text-indigo-500" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Base</p>
+                            <p className="font-bold text-xl">{org.locationText}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
-              </Card>
+                </Card>
+              </div>
             </div>
           </TabsContent>
 
           {org.artistsMode && (
-            <TabsContent value="artists" className="mt-6">
-              <Card className="p-12 text-center">
-                <div className="text-6xl mb-4">🎸</div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  Artistas em Breve
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Esta seção estará disponível em breve com os artistas que se apresentarão nos eventos.
+            <TabsContent value="artists" className="animate-in fade-in zoom-in-95 duration-500 outline-none">
+              <Card className="p-32 text-center rounded-[4rem] border-none bg-gradient-to-br from-zinc-900 to-black text-white shadow-2xl">
+                <div className="text-9xl mb-12 animate-bounce">🎸</div>
+                <h3 className="text-5xl font-black tracking-tighter mb-6">Lineup em Construção</h3>
+                <p className="text-gray-400 text-2xl max-w-2xl mx-auto font-medium">
+                  Os artistas que farão história com a gente serão revelados em breve. Prepare o coração! 🤘✨
                 </p>
               </Card>
             </TabsContent>
@@ -625,11 +650,9 @@ const OrganizationPublicProfile: React.FC = () => {
 
       <Footer />
 
-      {
-        showLoginModal && (
-          <LoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} onSuccess={() => toast({ title: 'Bem-vindo!' })} />
-        )
-      }
+      {showLoginModal && (
+        <LoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} onSuccess={() => toast({ title: 'Bem-vindo!' })} />
+      )}
       <FollowersModal open={showFollowersModal} onClose={() => setShowFollowersModal(false)} followers={followersList} />
     </div >
   );
