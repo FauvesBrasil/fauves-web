@@ -657,7 +657,7 @@ const Event: React.FC = () => {
                 <div className="flex flex-wrap gap-10 max-md:gap-4 p-5 max-md:p-4 mt-7 max-md:mt-6 rounded-xl bg-white/40 dark:bg-[#242424]/80 backdrop-blur-md border border-white/30 dark:border-[#1F1F1F] shadow-md group border-transparent hover:border-indigo-100 dark:hover:border-indigo-900/30 transition-all">
                   <div className="flex flex-auto gap-5 text-[16px] font-medium text-indigo-950 dark:text-white items-center min-w-0">
                     <Link 
-                      to={org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : '#')}
+                      to={org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : (event?.organizationId || event?.organizerId ? `/org/${event.organizationId || event.organizerId}` : '#'))}
                       className="flex shrink-0 hover:opacity-80 transition-opacity"
                     >
                       {org?.logoUrl ? (
@@ -673,7 +673,7 @@ const Event: React.FC = () => {
                     </Link>
                     <div className="flex-auto my-auto min-w-0">
                       <Link 
-                        to={org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : '#')}
+                        to={org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : (event?.organizationId || event?.organizerId ? `/org/${event.organizationId || event.organizerId}` : '#'))}
                         className="font-bold text-indigo-950 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate block"
                       >
                         {org?.name || event?.organizationName || 'Organização'}
