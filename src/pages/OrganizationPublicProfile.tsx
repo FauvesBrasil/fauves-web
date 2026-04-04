@@ -371,7 +371,7 @@ const OrganizationPublicProfile: React.FC = () => {
               <div className="h-5 w-1 bg-orange-600 rounded-full" />
               <h2 className="text-lg font-bold tracking-tight uppercase opacity-60">Destaque</h2>
             </div>
-            <Link to={`/events/${featuredEvent.slug || featuredEvent.id}`}>
+            <Link to={`/event/${featuredEvent.slug || featuredEvent.id}`}>
               <div className="relative group overflow-hidden rounded-[2.5rem] shadow-2xl bg-black h-[350px] md:h-[420px] transition-all duration-700">
                 {featuredEvent.image && (
                   <img 
@@ -404,43 +404,41 @@ const OrganizationPublicProfile: React.FC = () => {
                     )}
                   </div>
                 </div>
-
-                <div className="absolute top-10 right-10 hidden lg:flex transform group-hover:-translate-y-2 transition-transform duration-700">
-                  <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-3 text-center border-t-4 border-orange-600 w-56">
-                    <p className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter">R$ --</p>
-                    <Button className="bg-orange-600 hover:bg-orange-700 h-12 w-full rounded-xl font-black text-xs">
-                      GARANTIR VAGA
-                    </Button>
-                  </div>
-                </div>
               </div>
             </Link>
           </div>
         )}
 
+        {/* Tabs Estilizadas (Segmented Pill) */}
         <Tabs defaultValue="events" className="mt-12">
           <div className="flex items-center justify-center mb-12">
-            <TabsList className="bg-white/40 dark:bg-zinc-900 p-1 rounded-full border border-gray-100 dark:border-white/5 h-12 inline-flex shadow-md">
+            <TabsList className="bg-white/40 dark:bg-zinc-900 p-1 rounded-full border border-gray-100 dark:border-white/5 h-12 md:h-14 inline-flex shadow-md">
               <TabsTrigger 
                 value="events" 
-                className="rounded-full px-7 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[9px] tracking-widest transition-all"
+                className="rounded-full px-7 md:px-10 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[9px] md:text-[11px] tracking-widest transition-all"
               >
-                <CalendarDays className="w-3.5 h-3.5" />
+                <CalendarDays className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 Eventos
               </TabsTrigger>
-              <TabsTrigger 
-                value="about" 
-                className="rounded-full px-7 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[9px] tracking-widest transition-all"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                A Marca
-              </TabsTrigger>
+              
+              {/* Ocultar "Sobre" se vazio */}
+              {org.description && (
+                <TabsTrigger 
+                  value="about" 
+                  className="rounded-full px-7 md:px-10 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[9px] md:text-[11px] tracking-widest transition-all"
+                >
+                  <Globe className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  Sobre
+                </TabsTrigger>
+              )}
+
+              {/* Ocultar "Lineup" se vazio/off */}
               {org.artistsMode && (
                 <TabsTrigger 
                   value="artists" 
-                  className="rounded-full px-7 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[9px] tracking-widest transition-all"
+                  className="rounded-full px-7 md:px-10 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[9px] md:text-[11px] tracking-widest transition-all"
                 >
-                  <Music className="w-3.5 h-3.5" />
+                  <Music className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   Lineup
                 </TabsTrigger>
               )}
