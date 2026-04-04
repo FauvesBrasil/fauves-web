@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useTrackingPixels } from '@/hooks/useTrackingPixels';
 import InterestButton from '../components/InterestButton';
-import { Eye, Users, Flame, AlertTriangle } from 'lucide-react';
+import { Eye, Users, Flame, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getEventHypeLevel, getHypeBadge } from '../lib/hype';
 import { fetchApi } from '@/lib/apiBase';
@@ -654,25 +654,36 @@ const Event: React.FC = () => {
                   </>
                 )}
                 {/* Organizador */}
-                <div className="flex flex-wrap gap-10 max-md:gap-4 p-5 max-md:p-4 mt-7 max-md:mt-6 rounded-xl bg-white/40 dark:bg-[#242424]/80 backdrop-blur-md border border-white/30 dark:border-[#1F1F1F] shadow-md">
-                  <div className="flex flex-auto gap-5 text-[16px] font-medium text-indigo-950 dark:text-white items-center">
-                    <div className="flex shrink-0">
+                <div className="flex flex-wrap gap-10 max-md:gap-4 p-5 max-md:p-4 mt-7 max-md:mt-6 rounded-xl bg-white/40 dark:bg-[#242424]/80 backdrop-blur-md border border-white/30 dark:border-[#1F1F1F] shadow-md group border-transparent hover:border-indigo-100 dark:hover:border-indigo-900/30 transition-all">
+                  <div className="flex flex-auto gap-5 text-[16px] font-medium text-indigo-950 dark:text-white items-center min-w-0">
+                    <Link 
+                      to={org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : '#')}
+                      className="flex shrink-0 hover:opacity-80 transition-opacity"
+                    >
                       {org?.logoUrl ? (
-                        <Avatar className="w-[50px] h-[50px]">
-                          <AvatarImage src={org.logoUrl} alt={org.name || 'Organização'} />
-                          <AvatarFallback>{(org?.name || 'O')[0]}</AvatarFallback>
+                        <Avatar className="w-[50px] h-[50px] rounded-full border border-gray-100 dark:border-gray-800">
+                          <AvatarImage src={org.logoUrl.startsWith('http') ? org.logoUrl : apiUrl(org.logoUrl)} alt={org.name || 'Organização'} className="object-cover" />
+                          <AvatarFallback className="bg-gray-50 text-indigo-950 font-bold">{(org?.name || 'O')[0]}</AvatarFallback>
                         </Avatar>
                       ) : (
-                        <div className="flex shrink-0 rounded-full bg-zinc-300 h-[50px] w-[50px]" />
+                        <div className="flex shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-950/30 h-[50px] w-[50px] items-center justify-center text-indigo-600 font-bold text-xl uppercase">
+                          {(org?.name || event?.organizationName || 'O')[0]}
+                        </div>
                       )}
-                    </div>
-                    <div className="flex-auto my-auto">
-                      <div className="font-semibold text-indigo-950 dark:text-white">{org?.name || 'Organização'}</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer" onClick={async () => {
+                    </Link>
+                    <div className="flex-auto my-auto min-w-0">
+                      <Link 
+                        to={org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : '#')}
+                        className="font-bold text-indigo-950 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate block"
+                      >
+                        {org?.name || event?.organizationName || 'Organização'}
+                      </Link>
+                      <div className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline inline-block mt-0.5" onClick={async (e) => {
+                        e.preventDefault();
                         if (!org?.id) return;
                         // open followers modal; try to fetch recent followers
                         try {
-                          const r = await fetch(`/api/organization/${encodeURIComponent(org.id)}/followers`);
+                          const r = await fetch(apiUrl(`/api/organization/${encodeURIComponent(org.id)}/followers`));
                           if (r.ok) {
                             const j = await r.json();
                             setFollowersList(j || []);
@@ -686,7 +697,8 @@ const Event: React.FC = () => {
                   </div>
                   <div className="flex items-center">
                     <Button
-                      className={`px-4 py-2 text-sm font-semibold ${following ? 'bg-white/90 text-indigo-700' : 'bg-[#2A2AD7] text-white'}`}
+                      variant={following ? "outline" : "default"}
+                      className={`px-6 h-10 rounded-full text-sm font-bold transition-all ${following ? 'border-indigo-100 text-indigo-600 hover:bg-indigo-50' : 'bg-[#2A2AD7] hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20'}`}
                       onClick={async () => {
                         if (!org?.id) return;
                         if (!user?.id || !token) {
@@ -697,7 +709,7 @@ const Event: React.FC = () => {
                         setFollowLoading(true);
                         try {
                           if (following) {
-                            const r = await fetch(`/api/organization/${encodeURIComponent(org.id)}/follow`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+                            const r = await fetch(apiUrl(`/api/organization/${encodeURIComponent(org.id)}/follow`), { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
                             if (r.ok) {
                               setFollowing(false);
                               setFollowersCount((c) => Math.max(0, (c || 0) - 1));
@@ -707,7 +719,7 @@ const Event: React.FC = () => {
                               toast({ title: 'Erro', description: txt || 'Falha ao deixar de seguir', variant: 'destructive' as any });
                             }
                           } else {
-                            const r = await fetch(`/api/organization/${encodeURIComponent(org.id)}/follow`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+                            const r = await fetch(apiUrl(`/api/organization/${encodeURIComponent(org.id)}/follow`), { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
                             if (r.ok) {
                               setFollowing(true);
                               setFollowersCount((c) => (c || 0) + 1);
@@ -727,7 +739,7 @@ const Event: React.FC = () => {
                       disabled={followLoading}
                     >
                       {followLoading ? (
-                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                        <Loader2 className="animate-spin h-4 w-4" />
                       ) : (following ? 'Seguindo' : 'Seguir')}
                     </Button>
                   </div>
