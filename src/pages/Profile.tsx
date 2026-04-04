@@ -19,12 +19,13 @@ import {
   QrCode,
   Loader2,
   ArrowRightLeft,
-  X, // 👈 FIX: Added missing X icon
+  X,
   Info,
-  HelpCircle
+  HelpCircle,
+  ExternalLink
 } from 'lucide-react';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer'; // 👈 FIX: Added Footer
+import Footer from '@/components/Footer';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import QRCode from 'qrcode';
@@ -141,7 +142,6 @@ const Profile = () => {
   const reloadFollowing = async () => {
     setFollowingLoading(true);
     try {
-      // 👈 FIX: Try to get real organizations related to user
       const res = await fetchApi(`/api/organization?userId=${user?.id}`);
       if (res.ok) {
         const data = await res.json();
@@ -160,7 +160,8 @@ const Profile = () => {
   // --- INTERNAL COMPONENTS ---
 
   const TicketCard = ({ t }: { t: any }) => {
-    const date = t.eventStartDate || t.event?.startDate ? new Date(t.eventStartDate || t.event?.startDate) : null;
+    const dateValue = t.eventStartDate || t.event?.startDate;
+    const date = dateValue ? new Date(dateValue) : null;
     const month = date ? date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase() : '—';
     const day = date ? date.getDate() : '—';
     const isInactive = t.status !== 'ISSUED';
@@ -199,7 +200,8 @@ const Profile = () => {
   };
 
   const OrderCard = ({ order }: { order: any }) => {
-    const date = new Date(order.createdAt || order.date || 0);
+    const dateVal = order.createdAt || order.date || 0;
+    const date = new Date(dateVal);
     const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const total = order.totalAmount ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.totalAmount) : '—';
     
@@ -266,85 +268,162 @@ const Profile = () => {
       } finally { setTransferLoading(false); }
     };
 
+    const startDate = ticket.eventStartDate ? new Date(ticket.eventStartDate) : null;
+    const dateFormatted = startDate ? startDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'Data não informada';
+    const timeFormatted = startDate ? startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + 'h' : '—';
+    const locationName = ticket.eventVenue || 'Local não definido';
+    const locationAddress = ticket.eventLocation || '';
+
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-[#091747]/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
-        <div className="relative w-full max-w-[420px] bg-white dark:bg-[#0b0b0b] rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
-           {/* Header with Event Image */}
-           <div className="relative h-48">
+        <div className="absolute inset-0 bg-[#091747]/90 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
+        <div className="relative w-full max-w-[440px] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+           
+           {/* Header with Event Image & Badge */}
+           <div className="relative h-56 sm:h-64">
              <img 
-               src={ticket.event?.bannerUrl || ticket.event?.image ? ( (ticket.event.bannerUrl || ticket.event.image).startsWith('http') ? (ticket.event.bannerUrl || ticket.event.image) : apiUrl(ticket.event.bannerUrl || ticket.event.image)) : ''} 
+               src={ticket.eventBannerUrl || (ticket.event?.image ? (ticket.event.image.startsWith('http') ? ticket.event.image : apiUrl(ticket.event.image)) : '')} 
                className="w-full h-full object-cover" 
              />
-             <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] to-transparent" />
-             <button onClick={onClose} className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30">
-               <X className="w-5 h-5" />
-             </button>
+             <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] via-transparent to-black/20" />
+             
+             <div className="absolute top-6 left-6 right-6 flex justify-between items-start">
+                <Badge className="bg-[#2A2AD7] text-white border-none px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
+                   {ticket.ticketTypeName || 'Ingresso'}
+                </Badge>
+                <button onClick={onClose} className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/40 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+             </div>
            </div>
 
-           <div className="px-8 pb-10 -mt-10 text-center relative z-10">
-              <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2 leading-tight">{ticket.eventName || ticket.event?.name}</h2>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-8">#{ticket.code}</p>
-              
-              <div className="relative inline-block mb-8 p-6 bg-white rounded-3xl shadow-2xl">
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} className="w-56 h-56 animate-in fade-in zoom-in-90 duration-700" key={refreshKey} />
-                ) : (
-                  <div className="w-56 h-56 flex items-center justify-center"><Loader2 className="animate-spin text-gray-200" /></div>
-                )}
-                <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#2A2AD7] text-white text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-tighter shadow-lg whitespace-nowrap">
-                   Atualiza em tempo real
-                </div>
-              </div>
+           {/* Main Content Area */}
+           <div className="px-8 pb-10 -mt-8 relative z-10">
+              <div className="bg-white dark:bg-[#0b0b0b] rounded-[40px] pt-8">
+                <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-6 leading-tight pr-4">{ticket.eventName}</h2>
+                
+                {/* Event Details Grid */}
+                <div className="space-y-5 mb-8">
+                   <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-orange-600 shrink-0">
+                         <Calendar className="w-4 h-4" />
+                      </div>
+                      <div>
+                         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Data e Horário</p>
+                         <p className="text-sm font-bold text-[#091747] dark:text-gray-100 capitalize">{dateFormatted} <span className="text-orange-600 ml-1">• {timeFormatted}</span></p>
+                      </div>
+                   </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <button 
-                  onClick={() => setTransferOpen(true)}
-                  className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-full text-sm font-bold text-[#091747] dark:text-white hover:bg-gray-100 transition-colors"
-                >
-                  <ArrowRightLeft className="w-4 h-4" /> Transferir
-                </button>
-                <button 
-                  onClick={() => {
-                    const w = window.open('', '_blank');
-                    if (w) {
-                      w.document.write(`<html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;"><img src="${qrDataUrl}" style="width: 80%" /></body></html>`);
-                      w.print();
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-full text-sm font-bold text-[#091747] dark:text-white hover:bg-gray-100 transition-colors"
-                >
-                  <Printer className="w-4 h-4" /> Imprimir
-                </button>
+                   <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-600 shrink-0">
+                         <MapPin className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Localização</p>
+                         <p className="text-sm font-bold text-[#091747] dark:text-gray-100 truncate">{locationName}</p>
+                         {locationAddress && (
+                           <div className="flex items-center gap-2 mt-1">
+                             <p className="text-[11px] text-gray-400 font-medium truncate">{locationAddress}</p>
+                             <a 
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${locationName} ${locationAddress}`)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[#2A2AD7] hover:underline"
+                             >
+                               <ExternalLink className="w-3 h-3" />
+                             </a>
+                           </div>
+                         )}
+                      </div>
+                   </div>
+
+                   <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center text-[#2A2AD7] shrink-0">
+                         <Users className="w-4 h-4" />
+                      </div>
+                      <div>
+                         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Organização</p>
+                         <p className="text-sm font-bold text-[#091747] dark:text-gray-100">{ticket.organizerName || 'Fauves Entretenimento'}</p>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Ticket/QR Separator */}
+                <div className="relative mb-8">
+                   <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-gray-100 dark:border-[#222]" />
+                   <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
+                   <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
+                </div>
+
+                {/* QR Code Section */}
+                <div className="text-center">
+                  <div className="relative inline-block mb-6 p-4 bg-white rounded-3xl shadow-xl ring-1 ring-gray-100 dark:ring-transparent">
+                    {qrDataUrl ? (
+                      <img src={qrDataUrl} className="w-48 h-48 sm:w-56 sm:h-56 animate-in fade-in zoom-in-90 duration-700" key={refreshKey} />
+                    ) : (
+                      <div className="w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center"><Loader2 className="animate-spin text-gray-200" /></div>
+                    )}
+                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#2A2AD7] text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                       Seguro • Atualiza em tempo real
+                    </div>
+                  </div>
+                  <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mb-8">COD: {ticket.code}</p>
+
+                  {/* Actions */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => setTransferOpen(true)}
+                      className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
+                    >
+                      <ArrowRightLeft className="w-4 h-4" /> TRANSFERIR
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const w = window.open('', '_blank');
+                        if (w) {
+                          w.document.write(`<html><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><h2>${ticket.eventName}</h2><p>${ticket.ticketTypeName}</p><img src="${qrDataUrl}" style="width: 80%" /><p>${ticket.code}</p></body></html>`);
+                          w.print();
+                        }
+                      }}
+                      className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
+                    >
+                      <Printer className="w-4 h-4" /> IMPRIMIR
+                    </button>
+                  </div>
+                </div>
               </div>
            </div>
         </div>
 
+        {/* Transfer Dialog */}
         <AlertDialog open={transferOpen} onOpenChange={setTransferOpen}>
-          <AlertDialogContent className="rounded-[32px] border-none shadow-2xl p-8">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-2xl font-black text-[#091747] dark:text-white">Transferir ingresso</AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-500">
-                O destinatário receberá um e-mail com as instruções para acessar o ingresso.
+          <AlertDialogContent className="rounded-[40px] border-none shadow-2xl p-10 max-w-[400px]">
+            <AlertDialogHeader className="mb-6">
+              <div className="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7] mb-4">
+                 <ArrowRightLeft className="w-8 h-8" />
+              </div>
+              <AlertDialogTitle className="text-2xl font-black text-[#091747] dark:text-white tracking-tight">Transferir Ingresso</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-500 font-medium leading-relaxed">
+                Envie seu ingresso para um amigo informando o e-mail dele abaixo. Ele receberá o acesso instantaneamente.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <div className="my-6">
+            <div className="mb-8">
               <input 
                 type="email" 
-                placeholder="E-mail do amigo" 
+                placeholder="E-mail do destinatário" 
                 value={transferEmail}
                 onChange={e => setTransferEmail(e.target.value)}
-                className="w-full h-14 px-6 rounded-full bg-gray-50 dark:bg-[#1A1A1A] border-none focus:ring-2 focus:ring-[#2A2AD7] outline-none"
+                className="w-full h-16 px-8 rounded-2xl bg-gray-50 dark:bg-[#1A1A1A] border-none focus:ring-2 focus:ring-[#2A2AD7] outline-none font-bold text-[#091747] dark:text-white placeholder:text-gray-300"
               />
             </div>
-            <AlertDialogFooter className="flex-row gap-3">
-              <AlertDialogCancel className="w-full h-14 rounded-full font-bold m-0 border-none bg-gray-100">Cancelar</AlertDialogCancel>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-3">
+              <AlertDialogCancel className="h-16 rounded-2xl font-black text-xs uppercase tracking-widest border-none bg-gray-100 dark:bg-[#1A1A1A] dark:text-gray-400 m-0">Cancelar</AlertDialogCancel>
               <button 
                 onClick={handleTransfer}
                 disabled={transferLoading || !transferEmail.includes('@')}
-                className="w-full h-14 bg-[#2A2AD7] text-white rounded-full font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                className="h-16 flex-1 bg-[#2A2AD7] text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
               >
-                {transferLoading && <Loader2 className="w-4 h-4 animate-spin" />} Confirmar
+                {transferLoading && <Loader2 className="w-4 h-4 animate-spin" />} Enviar agora
               </button>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -357,37 +436,37 @@ const Profile = () => {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-[#091747]/60 backdrop-blur-md animate-in fade-in" onClick={onClose} />
-        <div className="relative w-full max-w-[480px] bg-white dark:bg-[#0b0b0b] rounded-[40px] shadow-2xl p-8 overflow-hidden animate-in zoom-in-95">
-           <div className="flex justify-between items-center mb-8">
-             <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-[#1A1A1A] flex items-center justify-center text-[#2A2AD7]">
-                <ShoppingBag className="w-6 h-6" />
+        <div className="relative w-full max-w-[480px] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl p-10 overflow-hidden animate-in zoom-in-95">
+           <div className="flex justify-between items-center mb-10">
+             <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-[#1A1A1A] flex items-center justify-center text-[#2A2AD7]">
+                <ShoppingBag className="w-7 h-7" />
              </div>
-             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+             <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-[#1A1A1A] rounded-full transition-colors"><X className="w-7 h-7" /></button>
            </div>
            
-           <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2">Detalhes do Pedido</h2>
-           <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.2em] mb-8">Pedido #{order.code}</p>
+           <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2 tracking-tight">Detalhes do Pedido</h2>
+           <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.2em] mb-10">Pedido #{order.code}</p>
 
            <div className="space-y-6">
-              <div className="bg-gray-50 dark:bg-[#0d0d0d] rounded-3xl p-6">
+              <div className="bg-gray-50 dark:bg-[#0d0d0d] rounded-[32px] p-8">
                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Evento</h4>
                  <p className="text-lg font-bold text-[#091747] dark:text-white leading-tight">{order.eventName || order.event?.name}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 dark:bg-[#0d0d0d] rounded-3xl p-6">
+                <div className="bg-gray-50 dark:bg-[#0d0d0d] rounded-[32px] p-8">
                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Data</h4>
                    <p className="text-sm font-bold text-[#091747] dark:text-white">{new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
-                <div className="bg-gray-50 dark:bg-[#0d0d0d] rounded-3xl p-6">
+                <div className="bg-gray-50 dark:bg-[#0d0d0d] rounded-[32px] p-8">
                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total</h4>
                    <p className="text-sm font-extrabold text-[#2A2AD7]">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.totalAmount)}</p>
                 </div>
               </div>
            </div>
 
-           <div className="mt-8 pt-8 border-t border-gray-100 dark:border-[#222]">
-              <p className="text-center text-xs text-gray-400">Em caso de dúvidas sobre este pedido, entre em contato com o organizador através do suporte.</p>
+           <div className="mt-10 pt-10 border-t border-gray-100 dark:border-[#222]">
+              <p className="text-center text-xs text-gray-400 font-medium">Em caso de dúvidas sobre este pedido, entre em contato com o organizador através da nossa Central de Ajuda.</p>
            </div>
         </div>
       </div>
@@ -406,7 +485,7 @@ const Profile = () => {
           {/* Hero Section */}
           <div className="flex flex-col md:flex-row items-center gap-6 mb-16 animate-in fade-in slide-in-from-top-4 duration-700">
             <div className="relative group">
-              <div className="w-[110px] h-[110px] sm:w-[140px] sm:h-[140px] rounded-[40px] overflow-hidden border-4 border-white dark:border-[#151515] shadow-2xl relative">
+              <div className="w-[110px] h-[110px] sm:w-[140px] sm:h-[140px] rounded-[48px] overflow-hidden border-4 border-white dark:border-[#151515] shadow-2xl relative">
                 <Avatar className="w-full h-full rounded-none">
                   <AvatarImage src={photoUrl} className="object-cover" />
                   <AvatarFallback className="bg-[#f3f4fe] dark:bg-[#151515] text-[#091747] dark:text-indigo-400 text-3xl font-black">{userName.charAt(0)}</AvatarFallback>
@@ -414,7 +493,7 @@ const Profile = () => {
               </div>
               <button 
                 onClick={() => navigate('/account-settings')}
-                className="absolute -bottom-2 -right-2 w-10 h-10 bg-white dark:bg-[#1A1A1A] rounded-2xl shadow-xl flex items-center justify-center text-[#2A2AD7] hover:scale-110 active:scale-95 transition-all"
+                className="absolute -bottom-2 -right-2 w-11 h-11 bg-white dark:bg-[#1A1A1A] rounded-2xl shadow-xl flex items-center justify-center text-[#2A2AD7] hover:scale-110 active:scale-95 transition-all ring-4 ring-[#FDFDFD] dark:ring-[#0b0b0b]"
               >
                 <Edit className="w-5 h-5" />
               </button>
@@ -423,13 +502,13 @@ const Profile = () => {
             <div className="text-center md:text-left flex-1">
                <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
                  <h1 className="text-3xl sm:text-4xl font-black text-[#091747] dark:text-white tracking-tighter">{userName}</h1>
-                 <Badge className="w-fit mx-auto md:mx-0 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-[#2A2AD7] border-none text-[10px] font-black uppercase tracking-widest rounded-full">Explore</Badge>
+                 <Badge className="w-fit mx-auto md:mx-0 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-[#2A2AD7] border-none text-[10px] font-black uppercase tracking-widest rounded-full">Explorer</Badge>
                </div>
-               <p className="text-gray-400 font-bold text-sm tracking-tight flex items-center justify-center md:justify-start gap-4">
-                  <span className="flex items-center gap-1.5"><Ticket className="w-4 h-4" /> {tickets.length} Ingressos</span>
+               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-gray-400"><Ticket className="w-4 h-4 text-orange-500" /> {tickets.length} Ingressos</span>
                   <span className="hidden sm:inline w-1 h-1 bg-gray-200 rounded-full" />
-                  <span className="flex items-center gap-1.5"><ShoppingBag className="w-4 h-4" /> {orders.length} Pedidos</span>
-               </p>
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-gray-400"><ShoppingBag className="w-4 h-4 text-[#2A2AD7]" /> {orders.length} Pedidos</span>
+               </div>
             </div>
           </div>
 
@@ -441,9 +520,9 @@ const Profile = () => {
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={`
-                        px-6 py-3 rounded-[18px] text-xs font-black uppercase tracking-widest transition-all duration-300
+                        px-8 py-3.5 rounded-[18px] text-xs font-black uppercase tracking-widest transition-all duration-300
                         ${activeTab === tab 
-                          ? 'bg-white dark:bg-[#1a1a1a] text-[#2A2AD7] shadow-sm' 
+                          ? 'bg-white dark:bg-[#1a1a1a] text-[#2A2AD7] shadow-sm scale-[1.02]' 
                           : 'text-gray-400 hover:text-[#091747] dark:hover:text-white'
                         }
                       `}
@@ -539,19 +618,19 @@ const Profile = () => {
 
             {/* Side Sidebar (Desktop) */}
             <div className="hidden lg:block lg:col-span-4 translate-y-12">
-               <div className="bg-[#2A2AD7] rounded-[40px] p-10 text-white relative overflow-hidden group">
+               <div className="bg-[#2A2AD7] rounded-[48px] p-10 text-white relative overflow-hidden group shadow-2xl shadow-indigo-500/20">
                   <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000" />
                   <QrCode className="w-12 h-12 mb-6" />
                   <h3 className="text-2xl font-black leading-tight mb-4 tracking-tighter">Acesso rápido no dia do evento</h3>
-                  <p className="text-indigo-100 text-sm font-medium mb-8 leading-relaxed">Seus ingressos possuem QR Codes dinâmicos que se atualizam por segurança. Certifique-se de estar logado!</p>
+                  <p className="text-indigo-100 text-sm font-medium mb-8 leading-relaxed opacity-90">Seus ingressos possuem QR Codes dinâmicos que se atualizam por segurança. Certifique-se de estar logado!</p>
                   <div className="h-1 bg-white/20 rounded-full w-20 mb-8" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Fauves Safe Ticket v2.1</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Fauves Safe Ticket v2.2</p>
                </div>
                
-               <div className="mt-8 p-10 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[40px]">
+               <div className="mt-8 p-10 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[48px] border border-gray-100 dark:border-transparent">
                   <h4 className="text-[#091747] dark:text-white font-black mb-4">Central de Ajuda</h4>
-                  <p className="text-gray-400 text-xs font-medium mb-6">Precisa de assistência com seus ingressos ou pedidos? Nossa equipe está pronta para ajudar.</p>
-                  <button className="text-xs font-black text-[#2A2AD7] uppercase tracking-widest flex items-center gap-2">Suporte Fauves <ChevronRight className="w-4 h-4" /></button>
+                  <p className="text-gray-400 text-xs font-medium mb-6 leading-relaxed">Precisa de assistência com seus ingressos ou pedidos? Nossa equipe está pronta para ajudar.</p>
+                  <button className="text-xs font-black text-[#2A2AD7] uppercase tracking-widest flex items-center gap-2 hover:translate-x-1 transition-transform">Suporte Fauves <ChevronRight className="w-4 h-4" /></button>
                </div>
             </div>
           </div>
