@@ -181,7 +181,6 @@ const OrganizationPublicProfile: React.FC = () => {
     }
   };
 
-  // Parse tags
   const tags = React.useMemo(() => {
     try {
       if (!org?.tags) return [];
@@ -191,7 +190,6 @@ const OrganizationPublicProfile: React.FC = () => {
     }
   }, [org?.tags]);
 
-  // Social links helper
   const socialLinks = React.useMemo(() => {
     if (!org) return [];
     const links = [];
@@ -247,114 +245,203 @@ const OrganizationPublicProfile: React.FC = () => {
   const pastEvents = events.filter(ev => new Date(ev.startDate) < new Date());
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0b0b0b] text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0b] text-gray-900 dark:text-white pb-20">
       <Header />
 
-      <main className="max-w-[1100px] mx-auto px-6 py-8">
-        {/* Hero Section */}
-        <div className="mb-8">
-          <div className="h-48 md:h-56 rounded-xl overflow-hidden bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 relative">
-            {org.coverUrl && (
-              <img src={org.coverUrl} alt="" className="w-full h-full object-cover" />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          </div>
+      {/* Hero Section Imersiva */}
+      <div className="relative w-full overflow-hidden">
+        {/* Banner de Capa Premium */}
+        <div className="relative h-[300px] md:h-[400px] w-full">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-900 to-purple-900 animate-gradient-x" />
+          {org.coverUrl ? (
+            <img 
+              src={org.coverUrl} 
+              alt={org.name} 
+              className="w-full h-full object-cover mix-blend-overlay opacity-40" 
+            />
+          ) : (
+             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,100,0,0.3),transparent)]" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#0b0b0b] via-transparent to-black/30" />
+        </div>
 
-          {/* Logo flutuante */}
-          <div className="relative px-6 -mt-12">
-            <Avatar className="w-24 h-24 border-4 border-white dark:border-gray-800 shadow-lg rounded-xl">
-              <AvatarImage src={org.logoUrl || ''} alt={org.name} />
-              <AvatarFallback className="text-2xl font-bold bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300">
+        {/* Informações Centrais (Glassmorphism) */}
+        <div className="max-w-[1100px] mx-auto px-6 -mt-32 md:-mt-40 relative z-10 flex flex-col items-center text-center">
+          {/* Logo Premium */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-orange-500 rounded-[2.5rem] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
+            <Avatar className="w-32 h-32 md:w-40 md:h-40 border-8 border-white dark:border-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[2.5rem] relative z-10 transform transition-transform duration-500 group-hover:scale-105">
+              <AvatarImage src={org.logoUrl || ''} alt={org.name} className="object-cover" />
+              <AvatarFallback className="text-4xl md:text-5xl font-black bg-gradient-to-br from-orange-400 to-pink-600 text-white">
                 {(org.name || 'O')[0]}
               </AvatarFallback>
             </Avatar>
-          </div>
-
-          {/* Conteúdo abaixo do banner */}
-          <div className="px-6 mt-4">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {org.name}
-                </h1>
-                {org.bio && (
-                  <p className="text-gray-600 dark:text-gray-400 mt-2 max-w-2xl">{org.bio}</p>
-                )}
-
-                <div className="flex items-center gap-4 mt-3 text-sm text-gray-600 dark:text-gray-400">
-                  <button
-                    onClick={() => { }}
-                    className="flex items-center gap-1 hover:text-orange-600 transition-colors"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    <span className="font-medium">{events.length}</span> eventos
-                  </button>
-                  <button
-                    onClick={() => org.id && handleFetchFollowers(org.id)}
-                    className="flex items-center gap-1 hover:text-orange-600 transition-colors"
-                  >
-                    <Users className="w-4 h-4" />
-                    <span className="font-medium">{followersCount || 0}</span> seguidores
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleFollow}
-                  disabled={followLoading}
-                  className={following ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600' : 'bg-orange-600 hover:bg-orange-700'}
-                >
-                  {followLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : following ? (
-                    <>
-                      <Heart className="w-4 h-4 mr-2 fill-current" />
-                      Seguindo
-                    </>
-                  ) : (
-                    <>
-                      <Heart className="w-4 h-4 mr-2" />
-                      Seguir
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" size="icon" onClick={handleShare}>
-                  <Share2 className="w-4 h-4" />
-                </Button>
-              </div>
+            <div className="absolute -bottom-2 -right-2 bg-orange-600 text-white p-2 rounded-xl shadow-lg border-2 border-white dark:border-gray-800 z-20">
+              <Heart className="w-5 h-5 fill-current" />
             </div>
           </div>
-        </div>
 
-        {/* Featured Event Banner */}
+          <div className="mt-8 mb-4">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight text-gray-900 dark:text-white drop-shadow-sm">
+              {org.name}
+            </h1>
+            {org.bio && (
+              <p className="text-gray-600 dark:text-gray-400 mt-4 max-w-2xl text-lg md:text-xl font-medium leading-relaxed">
+                {org.bio}
+              </p>
+            )}
+          </div>
+
+          {/* Stats Rápidos */}
+          <div className="flex items-center gap-8 md:gap-12 mt-2">
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-black text-gray-900 dark:text-white">{events.length}</span>
+              <span className="text-xs uppercase tracking-widest font-bold text-gray-400">Eventos</span>
+            </div>
+            <div className="h-8 w-[1px] bg-gray-200 dark:bg-gray-800" />
+            <div className="flex flex-col items-center cursor-pointer" onClick={() => handleFetchFollowers(org.id)}>
+              <span className="text-2xl font-black text-orange-600">{followersCount || 0}</span>
+              <span className="text-xs uppercase tracking-widest font-bold text-gray-400">Seguidores</span>
+            </div>
+          </div>
+
+          {/* Botões de Ação Principais */}
+          <div className="flex items-center gap-4 mt-10 w-full max-w-md">
+            <Button
+              onClick={handleFollow}
+              disabled={followLoading}
+              className={`flex-1 h-14 text-lg font-black rounded-2xl shadow-xl transition-all duration-300 ${
+                following 
+                  ? 'bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700' 
+                  : 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105 active:scale-95'
+              }`}
+            >
+              {followLoading ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : following ? (
+                'Seguindo'
+              ) : (
+                'Seguir Organização'
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleShare}
+              className="h-14 w-14 rounded-2xl border-2 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-md"
+            >
+              <Share2 className="w-6 h-6" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Bio Hub (Links Sociais Estilizados) */}
+      <div className="max-w-[1100px] mx-auto px-6 mt-16">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {socialLinks.map((link, idx) => (
+            <a
+              key={idx}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-[#1a1b1e] border-2 border-transparent hover:border-orange-500 overflow-hidden shadow-sm hover:shadow-2xl rounded-3xl transition-all duration-300 hover:-translate-y-2 relative"
+            >
+              <div className={`p-4 rounded-2xl bg-slate-50 dark:bg-gray-800/50 mb-3 group-hover:scale-110 transition-transform duration-300 ${link.color.replace('text-', 'text-opacity-80 text-')}`}>
+                <link.icon className="w-6 h-6" />
+              </div>
+              <span className="text-sm font-black tracking-tight">{link.label}</span>
+              <ExternalLink className="w-3 h-3 absolute top-4 right-4 text-gray-300 group-hover:text-orange-500 transition-colors" />
+            </a>
+          ))}
+          {org.site && !socialLinks.find(l => l.label === 'Website') && (
+            <a
+              href={org.site}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-[#1a1b1e] border-2 border-transparent hover:border-orange-500 shadow-sm hover:shadow-2xl rounded-3xl transition-all duration-300 hover:-translate-y-2 relative"
+            >
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-gray-800/50 mb-3 group-hover:scale-110 transition-transform duration-300 text-blue-500">
+                <Globe className="w-6 h-6" />
+              </div>
+              <span className="text-sm font-black tracking-tight">Website</span>
+              <ExternalLink className="w-3 h-3 absolute top-4 right-4 text-gray-300" />
+            </a>
+          )}
+        </div>
+      </div>
+
+      <main className="max-w-[1100px] mx-auto px-6 mt-20">
+        {/* Featured Event Banner (Full Width Hero) */}
         {featuredEvent && (
-          <Link to={`/events/${featuredEvent.slug || featuredEvent.id}`}>
-            <Card className="mb-8 overflow-hidden group cursor-pointer hover:shadow-xl transition-all rounded-xl">
-              <div className="relative h-32 md:h-40 bg-gradient-to-r from-orange-500 to-pink-600">
+          <div className="mb-20">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-black flex items-center gap-3">
+                <span className="bg-orange-600 w-2 h-8 rounded-full" />
+                Destaque da Semana
+              </h2>
+            </div>
+            <Link to={`/events/${featuredEvent.slug || featuredEvent.id}`}>
+              <div className="relative group overflow-hidden rounded-[2.5rem] shadow-[0_30px_60px_-12px_rgba(0,0,0,0.3)] bg-black h-[400px] md:h-[500px]">
                 {featuredEvent.image && (
-                  <img src={featuredEvent.image} alt={featuredEvent.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <img 
+                    src={featuredEvent.image} 
+                    alt={featuredEvent.name} 
+                    className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110 opacity-80" 
+                  />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                <div className="absolute bottom-4 left-6 right-6">
-                  <Badge className="bg-orange-600 text-white mb-2">Evento em Destaque</Badge>
-                  <h2 className="text-2xl font-bold text-white">{featuredEvent.name}</h2>
-                  <div className="flex items-center gap-4 mt-2 text-white/90 text-sm">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(featuredEvent.startDate).toLocaleDateString('pt-BR')}
-                    </span>
-                    {(featuredEvent.locationCity || featuredEvent.locationUf) && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {featuredEvent.locationCity}, {featuredEvent.locationUf}
-                      </span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                
+                <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+                  <div className="flex flex-wrap items-center gap-3 mb-6">
+                    <Badge className="bg-orange-600 text-white text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full border-2 border-white/20">EVENTO EM DESTAQUE</Badge>
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-white text-xs font-black">
+                      <Clock className="w-4 h-4 text-orange-500" />
+                      COMO CHEGAR
+                    </div>
+                  </div>
+                  
+                  <h2 className="text-4xl md:text-6xl font-black text-white mb-6 drop-shadow-xl leading-tight max-w-3xl group-hover:text-orange-400 transition-colors">
+                    {featuredEvent.name}
+                  </h2>
+                  
+                  <div className="flex flex-wrap items-center gap-6 text-white/90">
+                    <div className="flex items-center gap-2">
+                       <div className="p-2 bg-orange-600 rounded-lg">
+                        <Calendar className="w-5 h-5 text-white" />
+                       </div>
+                       <div>
+                         <p className="text-[10px] font-black uppercase text-white/50 tracking-widest">Data do Evento</p>
+                         <p className="font-bold">{new Date(featuredEvent.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                       </div>
+                    </div>
+                    {featuredEvent.locationCity && (
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-indigo-600 rounded-lg">
+                          <MapPin className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-white/50 tracking-widest">Localização</p>
+                          <p className="font-bold">{featuredEvent.locationCity}, {featuredEvent.locationUf}</p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
+
+                {/* Countdown / Ticket Button Floating */}
+                <div className="absolute top-8 right-8 hidden lg:block transform group-hover:-translate-y-2 transition-transform">
+                  <div className="bg-white dark:bg-[#1a1b1e] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-4 text-center border-t-4 border-orange-600">
+                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Ingressos a partir de</p>
+                    <p className="text-3xl font-black text-gray-900 dark:text-white">R$ --,--</p>
+                    <Button className="bg-orange-600 hover:bg-orange-700 h-12 w-full rounded-2xl font-black text-sm px-8 shadow-lg shadow-orange-600/20">
+                      GARANTIR VAGA
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </Card>
-          </Link>
+            </Link>
+          </div>
         )}
 
         <Tabs defaultValue="events" className="mt-8">
