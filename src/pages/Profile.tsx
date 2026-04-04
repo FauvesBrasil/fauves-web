@@ -22,7 +22,8 @@ import {
   X,
   Info,
   HelpCircle,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -235,9 +236,16 @@ const Profile = () => {
   const TicketModal = ({ ticket, onClose }: { ticket: any; onClose: () => void }) => {
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [transferOpen, setTransferOpen] = useState(false);
+    const [isFlipped, setIsFlipped] = useState(false); // 👈 Flip State
     const [transferEmail, setTransferEmail] = useState('');
     const [transferLoading, setTransferLoading] = useState(false);
+
+    // 👈 FIX: Block body scroll
+    useEffect(() => {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = original; };
+    }, []);
 
     useEffect(() => {
       const gen = () => {
@@ -250,6 +258,7 @@ const Profile = () => {
     }, [ticket.code]);
 
     const handleTransfer = async () => {
+      if (!transferEmail.includes('@')) return;
       setTransferLoading(true);
       try {
         const res = await fetchApi('/api/ticket/transfer', {
@@ -259,7 +268,6 @@ const Profile = () => {
         });
         if (res.ok) {
           toast({ title: 'Sucesso!', description: 'Ingresso transferido com sucesso.' });
-          setTransferOpen(false);
           onClose();
           reloadTickets();
         } else {
@@ -274,171 +282,205 @@ const Profile = () => {
     const locationName = ticket.eventVenue || 'Local não definido';
     const locationAddress = ticket.eventLocation || '';
 
+    // Card dimensions to maintain stability during flip
+    const cardClass = `w-full max-w-[440px] perspective-1000 duration-700 ease-in-out`;
+    const innerClass = `relative w-full transition-transform duration-700 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`;
+
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-[#091747]/90 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose} />
-        <div className="relative w-full max-w-[440px] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
-           
-           {/* Header with Event Image & Badge */}
-           <div className="relative h-56 sm:h-64">
-             <img 
-               src={ticket.eventBannerUrl || (ticket.event?.image ? (ticket.event.image.startsWith('http') ? ticket.event.image : apiUrl(ticket.event.image)) : '')} 
-               className="w-full h-full object-cover" 
-             />
-             <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] via-transparent to-black/20" />
-             
-             <div className="absolute top-6 left-6 right-6 flex justify-between items-start">
-                <Badge className="bg-[#2A2AD7] text-white border-none px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
-                   {ticket.ticketTypeName || 'Ingresso'}
-                </Badge>
-                <button onClick={onClose} className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/40 transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-             </div>
-           </div>
-
-           {/* Main Content Area */}
-           <div className="px-8 pb-10 -mt-8 relative z-10">
-              <div className="bg-white dark:bg-[#0b0b0b] rounded-[40px] pt-8">
-                <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-6 leading-tight pr-4">{ticket.eventName}</h2>
-                
-                {/* Event Details Grid */}
-                <div className="space-y-5 mb-8">
-                   <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-orange-600 shrink-0">
-                         <Calendar className="w-4 h-4" />
-                      </div>
-                      <div>
-                         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Data e Horário</p>
-                         <p className="text-sm font-bold text-[#091747] dark:text-gray-100 capitalize">{dateFormatted} <span className="text-orange-600 ml-1">• {timeFormatted}</span></p>
-                      </div>
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-[#091747]/90 backdrop-blur-xl animate-in fade-in duration-500">
+        <div className="absolute inset-0" onClick={onClose} />
+        
+        <div className={cardClass}>
+           <div className={innerClass}>
+              
+              {/* FRONT: Ticket Details */}
+              <div className="backface-hidden w-full bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+                 {/* Header with Event Image & Badge */}
+                 <div className="relative h-56 sm:h-64">
+                   <img 
+                     src={ticket.eventBannerUrl || (ticket.event?.image ? (ticket.event.image.startsWith('http') ? ticket.event.image : apiUrl(ticket.event.image)) : '')} 
+                     className="w-full h-full object-cover" 
+                   />
+                   <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] via-transparent to-black/20" />
+                   
+                   <div className="absolute top-6 left-6 right-6 flex justify-between items-start">
+                      <Badge className="bg-[#2A2AD7] text-white border-none px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
+                         {ticket.ticketTypeName || 'Ingresso'}
+                      </Badge>
+                      <button onClick={onClose} className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/40 transition-colors">
+                        <X className="w-5 h-5" />
+                      </button>
                    </div>
+                 </div>
 
-                   <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-600 shrink-0">
-                         <MapPin className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Localização</p>
-                         <p className="text-sm font-bold text-[#091747] dark:text-gray-100 truncate">{locationName}</p>
-                         {locationAddress && (
-                           <div className="flex items-center gap-2 mt-1">
-                             <p className="text-[11px] text-gray-400 font-medium truncate">{locationAddress}</p>
-                             <a 
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${locationName} ${locationAddress}`)}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[#2A2AD7] hover:underline"
-                             >
-                               <ExternalLink className="w-3 h-3" />
-                             </a>
-                           </div>
-                         )}
-                      </div>
-                   </div>
+                 {/* Main Content Area (Front) */}
+                 <div className="px-8 pb-10 -mt-8 relative z-10">
+                    <div className="bg-white dark:bg-[#0b0b0b] rounded-[40px] pt-8">
+                      <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-6 leading-tight pr-4">{ticket.eventName}</h2>
+                      
+                      {/* Event Details Grid */}
+                      <div className="space-y-5 mb-8">
+                         <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-orange-600 shrink-0">
+                               <Calendar className="w-4 h-4" />
+                            </div>
+                            <div>
+                               <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Data e Horário</p>
+                               <p className="text-sm font-bold text-[#091747] dark:text-gray-100 capitalize">{dateFormatted} <span className="text-orange-600 ml-1">• {timeFormatted}</span></p>
+                            </div>
+                         </div>
 
-                   <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center text-[#2A2AD7] shrink-0">
-                         <Users className="w-4 h-4" />
+                         <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-600 shrink-0">
+                               <MapPin className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                               <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Localização</p>
+                               <p className="text-sm font-bold text-[#091747] dark:text-gray-100 truncate">{locationName}</p>
+                               {locationAddress && (
+                                 <div className="flex items-center gap-2 mt-1">
+                                   <p className="text-[11px] text-gray-400 font-medium truncate">{locationAddress}</p>
+                                   <a 
+                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${locationName} ${locationAddress}`)}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[#2A2AD7] hover:underline"
+                                   >
+                                     <ExternalLink className="w-3 h-3" />
+                                   </a>
+                                 </div>
+                               )}
+                            </div>
+                         </div>
                       </div>
-                      <div>
-                         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Organização</p>
-                         <p className="text-sm font-bold text-[#091747] dark:text-gray-100">{ticket.organizerName || 'Fauves Entretenimento'}</p>
+
+                      {/* Ticket/QR Separator */}
+                      <div className="relative mb-8">
+                         <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-gray-100 dark:border-[#222]" />
+                         <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
+                         <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
                       </div>
-                   </div>
-                </div>
 
-                {/* Ticket/QR Separator */}
-                <div className="relative mb-8">
-                   <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-gray-100 dark:border-[#222]" />
-                   <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
-                   <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
-                </div>
+                      {/* QR Code Section */}
+                      <div className="text-center">
+                        <div className="relative inline-block mb-6 p-4 bg-white rounded-3xl shadow-xl ring-1 ring-gray-100 dark:ring-transparent">
+                          {qrDataUrl ? (
+                            <img src={qrDataUrl} className="w-48 h-48 sm:w-56 sm:h-56" key={refreshKey} />
+                          ) : (
+                            <div className="w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center"><Loader2 className="animate-spin text-gray-200" /></div>
+                          )}
+                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#2A2AD7] text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                             Seguro • Atualiza em tempo real
+                          </div>
+                        </div>
+                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mb-8">COD: {ticket.code}</p>
 
-                {/* QR Code Section */}
-                <div className="text-center">
-                  <div className="relative inline-block mb-6 p-4 bg-white rounded-3xl shadow-xl ring-1 ring-gray-100 dark:ring-transparent">
-                    {qrDataUrl ? (
-                      <img src={qrDataUrl} className="w-48 h-48 sm:w-56 sm:h-56 animate-in fade-in zoom-in-90 duration-700" key={refreshKey} />
-                    ) : (
-                      <div className="w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center"><Loader2 className="animate-spin text-gray-200" /></div>
-                    )}
-                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#2A2AD7] text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
-                       Seguro • Atualiza em tempo real
+                        <div className="grid grid-cols-2 gap-4">
+                          <button 
+                            onClick={() => setIsFlipped(true)}
+                            className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
+                          >
+                            <ArrowRightLeft className="w-4 h-4" /> TRANSFERIR
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const w = window.open('', '_blank');
+                              if (w) {
+                                w.document.write(`<html><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><h2>${ticket.eventName}</h2><p>${ticket.ticketTypeName}</p><img src="${qrDataUrl}" style="width: 80%" /><p>${ticket.code}</p></body></html>`);
+                                w.print();
+                              }
+                            }}
+                            className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
+                          >
+                            <Printer className="w-4 h-4" /> IMPRIMIR
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mb-8">COD: {ticket.code}</p>
-
-                  {/* Actions */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <button 
-                      onClick={() => setTransferOpen(true)}
-                      className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
-                    >
-                      <ArrowRightLeft className="w-4 h-4" /> TRANSFERIR
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const w = window.open('', '_blank');
-                        if (w) {
-                          w.document.write(`<html><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;"><h2>${ticket.eventName}</h2><p>${ticket.ticketTypeName}</p><img src="${qrDataUrl}" style="width: 80%" /><p>${ticket.code}</p></body></html>`);
-                          w.print();
-                        }
-                      }}
-                      className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
-                    >
-                      <Printer className="w-4 h-4" /> IMPRIMIR
-                    </button>
-                  </div>
-                </div>
+                 </div>
               </div>
+
+              {/* BACK: Transfer Form */}
+              <div className="backface-hidden w-full bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-hidden rotate-y-180 absolute inset-0">
+                 <div className="flex flex-col h-full">
+                    <div className="p-8 pb-4">
+                       <button 
+                        onClick={() => setIsFlipped(false)}
+                        className="w-10 h-10 bg-gray-100 dark:bg-[#1A1A1A] rounded-full flex items-center justify-center text-gray-500 hover:bg-[#2A2AD7] hover:text-white transition-all shadow-sm mb-8"
+                       >
+                         <ChevronLeft className="w-6 h-6" />
+                       </button>
+                       
+                       <div className="w-16 h-16 rounded-[24px] bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7] mb-6">
+                          <ArrowRightLeft className="w-8 h-8" />
+                       </div>
+                       
+                       <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2 tracking-tight">Transferir Ingresso</h2>
+                       <p className="text-gray-500 font-medium leading-relaxed mb-10 pr-4">
+                         Envie este ingresso para um amigo informando o e-mail cadastrado dele na Fauves.
+                       </p>
+
+                       <div className="space-y-6">
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black text-[#2A2AD7] uppercase tracking-widest ml-4">E-mail do destinatário</label>
+                             <input 
+                              type="email" 
+                              placeholder="exemplo@amigo.com" 
+                              value={transferEmail}
+                              onChange={e => setTransferEmail(e.target.value)}
+                              className="w-full h-16 px-8 rounded-[24px] bg-gray-50 dark:bg-[#1A1A1A] border-none focus:ring-2 focus:ring-[#2A2AD7] outline-none font-bold text-[#091747] dark:text-white placeholder:text-gray-300"
+                            />
+                          </div>
+
+                          <Card className="p-6 bg-gray-50 dark:bg-[#0d0d0d] border-none rounded-[32px]">
+                             <div className="flex gap-4">
+                                <Info className="w-5 h-5 text-indigo-400 shrink-0" />
+                                <div className="text-xs text-gray-500 font-medium leading-relaxed">
+                                   Após a transferência, este ingresso sairá da sua conta e o QR Code antigo será invalidado permanentemente.
+                                </div>
+                             </div>
+                          </Card>
+                       </div>
+                    </div>
+
+                    <div className="p-8 mt-auto flex flex-col gap-3">
+                       <button 
+                        onClick={handleTransfer}
+                        disabled={transferLoading || !transferEmail.includes('@')}
+                        className="h-16 w-full bg-[#2A2AD7] text-white rounded-[24px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
+                       >
+                         {transferLoading && <Loader2 className="w-4 h-4 animate-spin" />} Confirmar transferência
+                       </button>
+                       <button 
+                        onClick={() => setIsFlipped(false)}
+                        className="h-14 w-full text-xs font-black text-gray-400 uppercase tracking-widest hover:text-[#091747] dark:hover:text-white transition-colors"
+                       >
+                         Voltar para o ingresso
+                       </button>
+                    </div>
+                 </div>
+              </div>
+
            </div>
         </div>
-
-        {/* Transfer Dialog */}
-        <AlertDialog open={transferOpen} onOpenChange={setTransferOpen}>
-          <AlertDialogContent className="rounded-[40px] border-none shadow-2xl p-10 max-w-[400px]">
-            <AlertDialogHeader className="mb-6">
-              <div className="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7] mb-4">
-                 <ArrowRightLeft className="w-8 h-8" />
-              </div>
-              <AlertDialogTitle className="text-2xl font-black text-[#091747] dark:text-white tracking-tight">Transferir Ingresso</AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-500 font-medium leading-relaxed">
-                Envie seu ingresso para um amigo informando o e-mail dele abaixo. Ele receberá o acesso instantaneamente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="mb-8">
-              <input 
-                type="email" 
-                placeholder="E-mail do destinatário" 
-                value={transferEmail}
-                onChange={e => setTransferEmail(e.target.value)}
-                className="w-full h-16 px-8 rounded-2xl bg-gray-50 dark:bg-[#1A1A1A] border-none focus:ring-2 focus:ring-[#2A2AD7] outline-none font-bold text-[#091747] dark:text-white placeholder:text-gray-300"
-              />
-            </div>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-3">
-              <AlertDialogCancel className="h-16 rounded-2xl font-black text-xs uppercase tracking-widest border-none bg-gray-100 dark:bg-[#1A1A1A] dark:text-gray-400 m-0">Cancelar</AlertDialogCancel>
-              <button 
-                onClick={handleTransfer}
-                disabled={transferLoading || !transferEmail.includes('@')}
-                className="h-16 flex-1 bg-[#2A2AD7] text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
-              >
-                {transferLoading && <Loader2 className="w-4 h-4 animate-spin" />} Enviar agora
-              </button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     );
   };
 
   const OrderModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
+    // 👈 FIX: Block body scroll
+    useEffect(() => {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = original; };
+    }, []);
+
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-[#091747]/60 backdrop-blur-md animate-in fade-in" onClick={onClose} />
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#091747]/60 backdrop-blur-md animate-in fade-in">
+        <div className="absolute inset-0" onClick={onClose} />
         <div className="relative w-full max-w-[480px] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl p-10 overflow-hidden animate-in zoom-in-95">
            <div className="flex justify-between items-center mb-10">
-             <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-[#1A1A1A] flex items-center justify-center text-[#2A2AD7]">
+             <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7]">
                 <ShoppingBag className="w-7 h-7" />
              </div>
              <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-[#1A1A1A] rounded-full transition-colors"><X className="w-7 h-7" /></button>
