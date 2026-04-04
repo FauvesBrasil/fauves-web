@@ -278,31 +278,35 @@ const Profile = () => {
       >
         <div className="absolute inset-0" onClick={onClose} />
         
-        {/* Scroll Custom CSS */}
+        {/* Scroll Custom CSS - Unified for the WHOLE modal container */}
         <style dangerouslySetInnerHTML={{ __html: `
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 5px;
+          .ticket-modal-container::-webkit-scrollbar {
+            width: 6px;
           }
-          .custom-scrollbar::-webkit-scrollbar-track {
+          .ticket-modal-container::-webkit-scrollbar-track {
             background: transparent;
           }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
+          .ticket-modal-container::-webkit-scrollbar-thumb {
             background: rgba(42, 42, 215, 0.2);
             border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: content-box;
           }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          .ticket-modal-container::-webkit-scrollbar-thumb:hover {
             background: rgba(42, 42, 215, 0.4);
+            background-clip: content-box;
           }
         ` }} />
 
-        <div className="w-full max-w-[440px] h-[720px] sm:h-[780px] max-h-[90vh] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-hidden relative flex flex-col animate-in zoom-in-95 duration-300">
+        {/* 👈 FIX: Added ticket-modal-container and overflow-y-auto HERE */}
+        <div className="ticket-modal-container w-full max-w-[440px] h-fit md:h-[780px] max-h-[90vh] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-y-auto overflow-x-hidden relative flex flex-col animate-in zoom-in-95 duration-300">
            
            {/* Modal Header (Unified) */}
            <div className="p-8 pb-0 flex justify-between items-center absolute top-0 left-0 right-0 z-20">
               {showTransfer ? (
                 <button 
                   onClick={() => setShowTransfer(false)}
-                  className="w-10 h-10 bg-gray-100 dark:bg-[#1A1A1A] rounded-full flex items-center justify-center text-gray-500 hover:bg-[#2A2AD7] hover:text-white transition-all shadow-sm"
+                  className="w-10 h-10 bg-white/80 dark:bg-[#1A1A1A]/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-500 hover:bg-[#2A2AD7] hover:text-white transition-all shadow-sm"
                 >
                   <ChevronLeft className="w-6 h-6" />
                 </button>
@@ -313,16 +317,15 @@ const Profile = () => {
               )}
               <button 
                 onClick={onClose} 
-                className="w-10 h-10 bg-white/10 sm:bg-black/10 backdrop-blur-md rounded-full flex items-center justify-center text-[#091747] dark:text-white border border-gray-100 dark:border-white/10 hover:bg-gray-100 transition-colors"
-                style={{ backgroundColor: showTransfer ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)' }}
+                className="w-10 h-10 bg-white/20 dark:bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-[#091747] dark:text-white border border-white/20 hover:bg-white/40 transition-colors"
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
               >
                 <X className="w-5 h-5" />
               </button>
            </div>
 
-           {/* CONTENT AREA: Toggled between Info and Transfer */}
-           {/* 👈 FIX: Added overflow-x-hidden and custom-scrollbar */}
-           <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pt-0">
+           {/* CONTENT AREA */}
+           <div className="flex-1 flex flex-col pt-0">
              
              {!showTransfer ? (
                <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500 overflow-x-hidden">
@@ -336,30 +339,30 @@ const Profile = () => {
                   </div>
 
                   {/* Details Area */}
-                  <div className="px-8 pb-10 -mt-8 relative z-10 flex-1 flex flex-col bg-white dark:bg-[#0b0b0b] rounded-[40px] pt-8 overflow-x-hidden">
+                  <div className="px-8 pb-10 -mt-10 relative z-10 flex-1 flex flex-col bg-white dark:bg-[#0b0b0b] rounded-[48px] pt-10 overflow-x-hidden">
                       <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-6 leading-tight pr-4">{ticket.eventName}</h2>
                       
-                      <div className="space-y-5 mb-8">
+                      <div className="space-y-6 mb-10">
                          <div className="flex items-start gap-3 text-left">
-                            <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-orange-600 shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-orange-600 shrink-0">
                                <Calendar className="w-4 h-4" />
                             </div>
                             <div>
                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Data e Horário</p>
-                               <p className="text-sm font-bold text-[#091747] dark:text-gray-100 capitalize">{dateFormatted} <span className="text-orange-600 ml-1">• {timeFormatted}</span></p>
+                               <p className="text-[15px] font-bold text-[#091747] dark:text-gray-100 capitalize">{dateFormatted} <span className="text-orange-600 ml-1">• {timeFormatted}</span></p>
                             </div>
                          </div>
 
-                         <div className="flex items-start gap-3 text-left">
-                            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-600 shrink-0">
+                         <div className="flex items-start gap-4 text-left">
+                            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-600 shrink-0">
                                <MapPin className="w-4 h-4" />
                             </div>
                             <div className="min-w-0 flex-1">
                                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Localização</p>
-                               <p className="text-sm font-bold text-[#091747] dark:text-gray-100 truncate">{locationName}</p>
+                               <p className="text-[15px] font-bold text-[#091747] dark:text-gray-100 truncate">{locationName}</p>
                                {locationAddress && (
                                  <div className="flex items-center gap-2 mt-1">
-                                   <p className="text-[11px] text-gray-400 font-medium truncate">{locationAddress}</p>
+                                   <p className="text-[12px] text-gray-400 font-medium truncate">{locationAddress}</p>
                                    <a 
                                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${locationName} ${locationAddress}`)}`}
                                       target="_blank"
@@ -374,30 +377,30 @@ const Profile = () => {
                          </div>
                       </div>
 
-                      {/* Decoupled Separator (👈 Adjusted circles padding to avoid horizontal scroll) */}
-                      <div className="relative mb-8 h-8 shrink-0 mx-[-32px]">
+                      {/* Decoupled Separator */}
+                      <div className="relative mb-10 h-8 shrink-0 mx-[-32px]">
                          <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-gray-100 dark:border-[#222]" />
                          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
                          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
                       </div>
 
                       <div className="text-center mt-auto overflow-x-hidden">
-                        <div className="relative inline-block mb-6 p-4 bg-white rounded-3xl shadow-xl ring-1 ring-gray-100 dark:ring-transparent">
+                        <div className="relative inline-block mb-8 p-6 bg-white rounded-[32px] shadow-2xl ring-1 ring-gray-100 dark:ring-transparent">
                           {qrDataUrl ? (
                             <img src={qrDataUrl} className="w-48 h-48 sm:w-56 sm:h-56" key={refreshKey} />
                           ) : (
-                            <div className="w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center"><Loader2 className="animate-spin text-gray-200" /></div>
+                            <div className="w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-100" /></div>
                           )}
-                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#2A2AD7] text-white text-[8px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
+                          <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#2A2AD7] text-white text-[9px] font-black px-5 py-2 rounded-full uppercase tracking-widest shadow-lg whitespace-nowrap">
                              Seguro • Atualiza em tempo real
                           </div>
                         </div>
-                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mb-8">COD: {ticket.code}</p>
+                        <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.4em] mb-10">COD: {ticket.code}</p>
 
-                        <div className="grid grid-cols-2 gap-4 pb-10">
+                        <div className="grid grid-cols-2 gap-4 pb-12">
                           <button 
                             onClick={() => setShowTransfer(true)}
-                            className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
+                            className="flex items-center justify-center gap-2 h-16 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-[11px] font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
                           >
                             <ArrowRightLeft className="w-4 h-4" /> TRANSFERIR
                           </button>
@@ -409,7 +412,7 @@ const Profile = () => {
                                 w.print();
                               }
                             }}
-                            className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
+                            className="flex items-center justify-center gap-2 h-16 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-[11px] font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
                           >
                             <Printer className="w-4 h-4" /> IMPRIMIR
                           </button>
@@ -418,17 +421,17 @@ const Profile = () => {
                   </div>
                </div>
              ) : (
-               <div className="flex-1 flex flex-col p-8 pt-24 animate-in fade-in slide-in-from-left-4 duration-500 overflow-x-hidden">
-                  <div className="w-16 h-16 rounded-[24px] bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7] mb-6">
+               <div className="flex-1 flex flex-col p-10 pt-28 animate-in fade-in slide-in-from-left-4 duration-500 overflow-x-hidden">
+                  <div className="w-16 h-16 rounded-[24px] bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7] mb-8">
                     <ArrowRightLeft className="w-8 h-8" />
                   </div>
                   
-                  <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2 tracking-tight">Transferir Ingresso</h2>
-                  <p className="text-gray-500 font-medium leading-relaxed mb-10">
-                    O ingresso deixará de aparecer em sua conta e será enviado instantaneamente para o destinatário informado.
+                  <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-3 tracking-tight">Transferir Ingresso</h2>
+                  <p className="text-gray-500 font-medium leading-relaxed mb-12">
+                    O ingresso deixará de aparecer em sua conta e será enviado instantaneamente para o e-mail informado.
                   </p>
 
-                  <div className="space-y-6">
+                  <div className="space-y-8">
                     <div className="space-y-2 text-left">
                         <label className="text-[10px] font-black text-[#2A2AD7] uppercase tracking-widest ml-4">E-mail do destinatário</label>
                         <input 
@@ -440,17 +443,17 @@ const Profile = () => {
                       />
                     </div>
 
-                    <Card className="p-6 bg-gray-50 dark:bg-[#0d0d0d] border-none rounded-[32px]">
+                    <Card className="p-8 bg-gray-50 dark:bg-[#0d0d0d] border-none rounded-[32px]">
                         <div className="flex gap-4">
                           <Info className="w-5 h-5 text-indigo-400 shrink-0" />
-                          <div className="text-xs text-gray-500 font-medium leading-relaxed text-left">
-                              Atenção: verifique bem o e-mail. Após o envio, o ingresso original será invalidado.
+                          <div className="text-[13px] text-gray-500 font-medium leading-relaxed text-left">
+                              Atenção: esta ação é irreversível. Verifique bem o e-mail antes de confirmar o envio.
                           </div>
                         </div>
                     </Card>
                   </div>
 
-                  <div className="mt-auto pt-8 flex flex-col gap-3 pb-8">
+                  <div className="mt-auto pt-12 flex flex-col gap-4 pb-12">
                     <button 
                       onClick={handleTransfer}
                       disabled={transferLoading || !transferEmail.includes('@')}
@@ -675,7 +678,7 @@ const Profile = () => {
                   <h3 className="text-2xl font-black leading-tight mb-4 tracking-tighter">Acesso rápido no dia do evento</h3>
                   <p className="text-indigo-100 text-sm font-medium mb-8 leading-relaxed opacity-90">Seus ingressos possuem QR Codes dinâmicos que se atualizam por segurança. Certifique-se de estar logado!</p>
                   <div className="h-1 bg-white/20 rounded-full w-20 mb-8" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Fauves Safe Ticket v2.5</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Fauves Safe Ticket v2.6</p>
                </div>
                
                <div className="mt-8 p-10 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[48px] border border-gray-100 dark:border-transparent">
