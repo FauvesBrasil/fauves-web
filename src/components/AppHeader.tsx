@@ -321,7 +321,11 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
                 </div>
               </div>
 
-              <UserDropdown userName={userName} userEmail={userEmail} />
+              <UserDropdown 
+                userName={userName} 
+                userEmail={userEmail} 
+                isOrganizerContext={true} 
+              />
             </div>
           </div>
         </div>

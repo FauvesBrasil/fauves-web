@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/apiBase';
 
-interface AuthUser { id: string; email: string; name?: string | null; isAdmin?: boolean }
+interface AuthUser { id: string; email: string; name?: string | null; isAdmin?: boolean; photoUrl?: string | null }
 interface AuthState { user: AuthUser | null; token: string | null; loading: boolean }
 interface AuthContextValue extends AuthState { 
   login(email: string, password: string): Promise<boolean>; 
@@ -63,7 +63,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .join(''),
       );
       const payload = JSON.parse(jsonPayload);
-      setUser({ id: payload.sub, email: payload.email, name: payload.name || null, isAdmin: !!payload.isAdmin });
+      setUser({ 
+        id: payload.sub, 
+        email: payload.email, 
+        name: payload.name || null, 
+        isAdmin: !!payload.isAdmin,
+        photoUrl: payload.photoUrl || payload.picture || null 
+      });
 
       // Also try to fetch authoritative user from server (in case name/email changed on backend)
       (async () => {
@@ -73,7 +79,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = await res.json().catch(() => null);
             if (data && (data.id || data.user)) {
               const u = data.user || data;
-              setUser({ id: u.id || u.sub || payload.sub, email: u.email || payload.email, name: u.name ?? u.nome ?? u.full_name ?? payload.name ?? null, isAdmin: !!u.isAdmin || !!payload.isAdmin });
+              setUser({ 
+                id: u.id || u.sub || payload.sub, 
+                email: u.email || payload.email, 
+                name: u.name ?? u.nome ?? u.full_name ?? payload.name ?? null, 
+                isAdmin: !!u.isAdmin || !!payload.isAdmin,
+                photoUrl: u.photoUrl ?? u.photo ?? u.avatarUrl ?? payload.photoUrl ?? payload.picture ?? null
+              });
             }
           } else if (res.status === 401 || res.status === 403) {
             // Token is invalid/expired — clear it so the app stops sending bad credentials
@@ -119,7 +131,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = await res.json().catch(() => null);
         if (data) {
           const u = data.user || data;
-          setUser({ id: u.id || u.sub || user?.id || '', email: u.email || user?.email || '', name: u.name ?? u.nome ?? u.full_name ?? user?.name ?? null, isAdmin: !!u.isAdmin || !!user?.isAdmin });
+          setUser({ 
+            id: u.id || u.sub || user?.id || '', 
+            email: u.email || user?.email || '', 
+            name: u.name ?? u.nome ?? u.full_name ?? user?.name ?? null, 
+            isAdmin: !!u.isAdmin || !!user?.isAdmin,
+            photoUrl: u.photoUrl ?? u.photo ?? u.avatarUrl ?? user?.photoUrl ?? null
+          });
         }
       } catch (e) {
         // ignore
