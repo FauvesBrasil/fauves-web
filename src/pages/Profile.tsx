@@ -30,16 +30,6 @@ import Footer from '@/components/Footer';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import QRCode from 'qrcode';
-import { 
-  AlertDialog, 
-  AlertDialogContent, 
-  AlertDialogHeader, 
-  AlertDialogFooter, 
-  AlertDialogTitle, 
-  AlertDialogDescription, 
-  AlertDialogAction, 
-  AlertDialogCancel 
-} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -191,7 +181,7 @@ const Profile = () => {
              </div>
           </div>
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-[#f3f3fe] dark:bg-[#151515] flex items-center justify-center group-hover:scale-110 transition-transform">
+             <div className="w-10 h-10 rounded-full bg-[#f3f4fe] dark:bg-[#151515] flex items-center justify-center group-hover:scale-110 transition-transform">
                <ChevronRight className="w-5 h-5 text-[#2A2AD7]" />
              </div>
           </div>
@@ -236,7 +226,7 @@ const Profile = () => {
   const TicketModal = ({ ticket, onClose }: { ticket: any; onClose: () => void }) => {
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [isFlipped, setIsFlipped] = useState(false);
+    const [showTransfer, setShowTransfer] = useState(false); // 👈 Toggled state
     const [transferEmail, setTransferEmail] = useState('');
     const [transferLoading, setTransferLoading] = useState(false);
 
@@ -283,48 +273,56 @@ const Profile = () => {
 
     return (
       <div 
-        className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-[#091747]/95 backdrop-blur-2xl animate-in fade-in duration-500" 
-        style={{ zIndex: 99999 }} // 👈 FIX: Maximum Z-Index
+        className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-[#091747]/90 backdrop-blur-2xl animate-in fade-in duration-500" 
+        style={{ zIndex: 99999 }}
       >
         <div className="absolute inset-0" onClick={onClose} />
         
-        {/* Flip Container */}
-        <div className="w-full max-w-[440px] h-[720px] sm:h-[780px] max-h-[90vh] relative perspective-2000">
-           <div 
-              className={`w-full h-full relative transition-transform duration-700 ease-in-out transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}
-           >
-              
-              {/* FRONT: Ticket Details */}
-              <div 
-                className="absolute inset-0 backface-hidden bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-y-auto overflow-x-hidden flex flex-col"
-                style={{ WebkitBackfaceVisibility: 'hidden' }} // 👈 FIX: Crucial for Safari/Chrome
+        <div className="w-full max-w-[440px] h-[720px] sm:h-[780px] max-h-[90vh] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-hidden relative flex flex-col animate-in zoom-in-95 duration-300">
+           
+           {/* Modal Header (Unified) */}
+           <div className="p-8 pb-0 flex justify-between items-center absolute top-0 left-0 right-0 z-20">
+              {showTransfer ? (
+                <button 
+                  onClick={() => setShowTransfer(false)}
+                  className="w-10 h-10 bg-gray-100 dark:bg-[#1A1A1A] rounded-full flex items-center justify-center text-gray-500 hover:bg-[#2A2AD7] hover:text-white transition-all shadow-sm"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+              ) : (
+                <Badge className="bg-[#2A2AD7] text-white border-none px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
+                  {ticket.ticketTypeName || 'Ingresso'}
+                </Badge>
+              )}
+              <button 
+                onClick={onClose} 
+                className="w-10 h-10 bg-white/10 sm:bg-black/10 backdrop-blur-md rounded-full flex items-center justify-center text-[#091747] dark:text-white border border-gray-100 dark:border-white/10 hover:bg-gray-100 transition-colors"
+                style={{ backgroundColor: showTransfer ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)' }}
               >
-                 {/* Header with Event Image & Badge */}
-                 <div className="relative h-56 sm:h-64 shrink-0">
-                   <img 
-                     src={ticket.eventBannerUrl || (ticket.event?.image ? (ticket.event.image.startsWith('http') ? ticket.event.image : apiUrl(ticket.event.image)) : '')} 
-                     className="w-full h-full object-cover" 
-                   />
-                   <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] via-transparent to-black/20" />
-                   
-                   <div className="absolute top-6 left-6 right-6 flex justify-between items-start">
-                      <Badge className="bg-[#2A2AD7] text-white border-none px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">
-                         {ticket.ticketTypeName || 'Ingresso'}
-                      </Badge>
-                      <button onClick={onClose} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/60 transition-colors">
-                        <X className="w-5 h-5" />
-                      </button>
-                   </div>
-                 </div>
+                <X className="w-5 h-5" />
+              </button>
+           </div>
 
-                 {/* Main Content Area (Front) */}
-                 <div className="px-8 pb-10 -mt-8 relative z-10 flex-1 flex flex-col">
-                    <div className="bg-white dark:bg-[#0b0b0b] rounded-[40px] pt-8 flex-1">
+           {/* CONTENT AREA: Toggled between Info and Transfer */}
+           <div className="flex-1 flex flex-col overflow-y-auto pt-0">
+             
+             {!showTransfer ? (
+               <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
+                  {/* Event Image */}
+                  <div className="relative h-56 sm:h-64 shrink-0">
+                    <img 
+                      src={ticket.eventBannerUrl || (ticket.event?.image ? (ticket.event.image.startsWith('http') ? ticket.event.image : apiUrl(ticket.event.image)) : '')} 
+                      className="w-full h-full object-cover" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] via-transparent to-black/20" />
+                  </div>
+
+                  {/* Details Area */}
+                  <div className="px-8 pb-10 -mt-8 relative z-10 flex-1 flex flex-col bg-white dark:bg-[#0b0b0b] rounded-[40px] pt-8">
                       <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-6 leading-tight pr-4">{ticket.eventName}</h2>
                       
-                      {/* Event Details Grid */}
                       <div className="space-y-5 mb-8">
-                         <div className="flex items-start gap-3">
+                         <div className="flex items-start gap-3 text-left">
                             <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center text-orange-600 shrink-0">
                                <Calendar className="w-4 h-4" />
                             </div>
@@ -334,7 +332,7 @@ const Profile = () => {
                             </div>
                          </div>
 
-                         <div className="flex items-start gap-4">
+                         <div className="flex items-start gap-3 text-left">
                             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-600 shrink-0">
                                <MapPin className="w-4 h-4" />
                             </div>
@@ -358,14 +356,13 @@ const Profile = () => {
                          </div>
                       </div>
 
-                      {/* Ticket/QR Separator */}
-                      <div className="relative mb-8 h-8">
+                      {/* Decoupled Separator */}
+                      <div className="relative mb-8 h-8 shrink-0">
                          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-gray-100 dark:border-[#222]" />
                          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
                          <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
                       </div>
 
-                      {/* QR Code Section */}
                       <div className="text-center mt-auto">
                         <div className="relative inline-block mb-6 p-4 bg-white rounded-3xl shadow-xl ring-1 ring-gray-100 dark:ring-transparent">
                           {qrDataUrl ? (
@@ -379,9 +376,9 @@ const Profile = () => {
                         </div>
                         <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mb-8">COD: {ticket.code}</p>
 
-                        <div className="grid grid-cols-2 gap-4 pb-4">
+                        <div className="grid grid-cols-2 gap-4 pb-10">
                           <button 
-                            onClick={() => setIsFlipped(true)}
+                            onClick={() => setShowTransfer(true)}
                             className="flex items-center justify-center gap-2 h-14 bg-gray-50 dark:bg-[#1A1A1A] rounded-2xl text-xs font-black text-[#091747] dark:text-white hover:bg-gray-100 transition-all active:scale-95"
                           >
                             <ArrowRightLeft className="w-4 h-4" /> TRANSFERIR
@@ -400,38 +397,21 @@ const Profile = () => {
                           </button>
                         </div>
                       </div>
-                    </div>
-                 </div>
-              </div>
-
-              {/* BACK: Transfer Form */}
-              <div 
-                className="absolute inset-0 backface-hidden bg-white dark:bg-[#0b0b0b] rounded-[48px] rotate-y-180 flex flex-col p-8 overflow-y-auto"
-                style={{ WebkitBackfaceVisibility: 'hidden' }} // 👈 FIX: Crucial for Safari/Chrome
-              >
-                  <div className="flex items-center justify-between mb-8">
-                     <button 
-                      onClick={() => setIsFlipped(false)}
-                      className="w-10 h-10 bg-gray-100 dark:bg-[#1A1A1A] rounded-full flex items-center justify-center text-gray-500 hover:bg-[#2A2AD7] hover:text-white transition-all shadow-sm"
-                     >
-                       <ChevronLeft className="w-6 h-6" />
-                     </button>
-                     <button onClick={onClose} className="w-10 h-10 bg-gray-100 dark:bg-[#1A1A1A] rounded-full flex items-center justify-center text-gray-500">
-                        <X className="w-5 h-5" />
-                     </button>
                   </div>
-                  
+               </div>
+             ) : (
+               <div className="flex-1 flex flex-col p-8 pt-24 animate-in fade-in slide-in-from-left-4 duration-500">
                   <div className="w-16 h-16 rounded-[24px] bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7] mb-6">
                     <ArrowRightLeft className="w-8 h-8" />
                   </div>
                   
                   <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2 tracking-tight">Transferir Ingresso</h2>
                   <p className="text-gray-500 font-medium leading-relaxed mb-10">
-                    O ingresso deixará de aparecer em sua conta e será enviado instantaneamente para o destinatário.
+                    O ingresso deixará de aparecer em sua conta e será enviado instantaneamente para o destinatário informado.
                   </p>
 
                   <div className="space-y-6">
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                         <label className="text-[10px] font-black text-[#2A2AD7] uppercase tracking-widest ml-4">E-mail do destinatário</label>
                         <input 
                         type="email" 
@@ -445,29 +425,30 @@ const Profile = () => {
                     <Card className="p-6 bg-gray-50 dark:bg-[#0d0d0d] border-none rounded-[32px]">
                         <div className="flex gap-4">
                           <Info className="w-5 h-5 text-indigo-400 shrink-0" />
-                          <div className="text-xs text-gray-500 font-medium leading-relaxed">
-                              Certifique-se de que o e-mail informado esteja correto. Esta ação não pode ser desfeita.
+                          <div className="text-xs text-gray-500 font-medium leading-relaxed text-left">
+                              Atenção: verifique bem o e-mail. Após o envio, o ingresso original será invalidado.
                           </div>
                         </div>
                     </Card>
                   </div>
 
-                  <div className="mt-auto pt-8 flex flex-col gap-3">
+                  <div className="mt-auto pt-8 flex flex-col gap-3 pb-8">
                     <button 
                       onClick={handleTransfer}
                       disabled={transferLoading || !transferEmail.includes('@')}
-                      className="h-16 w-full bg-[#2A2AD7] text-white rounded-[24px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
+                      className="h-16 w-full bg-[#2A2AD7] text-white rounded-[24px] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-indigo-500/20 active:scale-95 transition-all text-center"
                     >
                       {transferLoading && <Loader2 className="w-4 h-4 animate-spin" />} Confirmar envio
                     </button>
                     <button 
-                      onClick={() => setIsFlipped(false)}
-                      className="h-14 w-full text-xs font-black text-gray-400 uppercase tracking-widest hover:text-[#091747] dark:hover:text-white"
+                      onClick={() => setShowTransfer(false)}
+                      className="h-14 w-full text-xs font-black text-gray-400 uppercase tracking-widest hover:text-[#091747] dark:hover:text-white transition-colors text-center"
                     >
-                      Voltar para o ingresso
+                      Cancelar e voltar
                     </button>
                   </div>
-              </div>
+               </div>
+             )}
 
            </div>
         </div>
@@ -502,7 +483,7 @@ const Profile = () => {
            <div className="space-y-6">
               <div className="bg-gray-50 dark:bg-[#0d0d0d] rounded-[32px] p-8">
                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Evento</h4>
-                 <p className="text-lg font-bold text-[#091747] dark:text-white leading-tight">{order.eventName || order.event?.name}</p>
+                 <p className="text-lg font-bold text-[#091747] dark:text-white leading-tight text-left">{order.eventName || order.event?.name}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -676,7 +657,7 @@ const Profile = () => {
                   <h3 className="text-2xl font-black leading-tight mb-4 tracking-tighter">Acesso rápido no dia do evento</h3>
                   <p className="text-indigo-100 text-sm font-medium mb-8 leading-relaxed opacity-90">Seus ingressos possuem QR Codes dinâmicos que se atualizam por segurança. Certifique-se de estar logado!</p>
                   <div className="h-1 bg-white/20 rounded-full w-20 mb-8" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Fauves Safe Ticket v2.3</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Fauves Safe Ticket v2.4</p>
                </div>
                
                <div className="mt-8 p-10 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[48px] border border-gray-100 dark:border-transparent">
