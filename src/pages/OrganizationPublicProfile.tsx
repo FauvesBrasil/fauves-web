@@ -239,12 +239,13 @@ const OrganizationPublicProfile: React.FC = () => {
   const pastEvents = events.filter(ev => new Date(ev.startDate) < new Date());
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0b] text-gray-900 dark:text-white pb-10">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0b] text-gray-900 dark:text-white pb-10 overflow-x-hidden">
       <Header />
 
-      {/* Hero Section Compacto */}
-      <div className="relative w-full overflow-hidden">
-        <div className="relative h-[180px] md:h-[240px] w-full group">
+      {/* Hero Section Master */}
+      <div className="relative w-full">
+        {/* Banner com overflow resolvido */}
+        <div className="relative h-[180px] md:h-[240px] w-full group overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-orange-950 animate-gradient-x" />
           {org.coverUrl && (
             <img 
@@ -263,7 +264,7 @@ const OrganizationPublicProfile: React.FC = () => {
           </button>
         </div>
 
-        {/* Informações da Marca */}
+        {/* Conteúdo Central (Sem overflow pra permitir sombras) */}
         <div className="max-w-[1100px] mx-auto px-6 -mt-16 md:-mt-22 relative z-10 flex flex-col items-center text-center">
           <div className="relative group cursor-pointer" onClick={handleFollow}>
             <div className="absolute inset-0 bg-orange-600 rounded-full blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-700" />
@@ -296,7 +297,6 @@ const OrganizationPublicProfile: React.FC = () => {
             )}
           </div>
 
-          {/* Stats Sutilizados */}
           <div className="flex items-center gap-6 md:gap-10 mt-2">
             <div className="flex flex-col items-center group/stat">
               <span className="text-lg font-black text-gray-900 dark:text-white transition-colors group-hover/stat:text-orange-600">{events.length}</span>
@@ -312,19 +312,19 @@ const OrganizationPublicProfile: React.FC = () => {
             <Button
               onClick={handleFollow}
               disabled={followLoading}
-              className={`flex-1 h-12 text-sm font-black rounded-xl shadow-lg transition-all duration-500 active:scale-95 ${
+              className={`flex-1 h-12 text-sm font-black rounded-xl shadow-[0_10px_30px_-5px_rgba(234,88,12,0.3)] transition-all duration-500 active:scale-95 ${
                 following 
-                  ? 'bg-gray-200 dark:bg-zinc-900 text-gray-900 dark:text-white' 
+                  ? 'bg-gray-200 dark:bg-zinc-900 text-gray-900 dark:text-white shadow-none' 
                   : 'bg-orange-600 hover:bg-orange-700 text-white'
               }`}
             >
-              {following ? 'Seguindo' : 'Seguir Organização'}
+              {following ? 'Seguindo' : 'Seguir'}
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
               onClick={handleShare}
-              className="h-12 w-12 rounded-xl border hover:bg-white dark:hover:bg-zinc-900 shadow-sm"
+              className="h-12 w-12 rounded-xl border border-gray-100 dark:border-white/10 hover:bg-white dark:hover:bg-zinc-900 shadow-lg"
             >
               <Share2 className="w-4 h-4" />
             </Button>
@@ -409,7 +409,7 @@ const OrganizationPublicProfile: React.FC = () => {
           </div>
         )}
 
-        {/* Tabs Estilizadas (Segmented Pill) */}
+        {/* Tabs Estilizadas */}
         <Tabs defaultValue="events" className="mt-12">
           <div className="flex items-center justify-center mb-12">
             <TabsList className="bg-white/40 dark:bg-zinc-900 p-1 rounded-full border border-gray-100 dark:border-white/5 h-12 md:h-14 inline-flex shadow-md">
@@ -421,7 +421,6 @@ const OrganizationPublicProfile: React.FC = () => {
                 Eventos
               </TabsTrigger>
               
-              {/* Ocultar "Sobre" se vazio */}
               {org.description && (
                 <TabsTrigger 
                   value="about" 
@@ -432,7 +431,6 @@ const OrganizationPublicProfile: React.FC = () => {
                 </TabsTrigger>
               )}
 
-              {/* Ocultar "Lineup" se vazio/off */}
               {org.artistsMode && (
                 <TabsTrigger 
                   value="artists" 
@@ -517,7 +515,7 @@ const OrganizationPublicProfile: React.FC = () => {
                     </a>
                   )}
                   {org.locationText && (
-                    <div className="flex items-center gap-3 opacity-50">
+                    <div className="flex items-center gap-4 opacity-50">
                       <MapPin className="w-5 h-5 text-indigo-500" />
                       <span className="font-bold text-sm">{org.locationText}</span>
                     </div>
