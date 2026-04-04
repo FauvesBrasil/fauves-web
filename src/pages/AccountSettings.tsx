@@ -7,7 +7,23 @@ import FacePass from "./account/FacePass";
 import EmailPreferences from "./account/EmailPreferences";
 import CloseAccount from "./account/CloseAccount";
 import PersonalData from "./account/PersonalData";
-import { AlertTriangle, Menu, X } from "lucide-react";
+import { 
+  User, 
+  Mail, 
+  Lock, 
+  Camera, 
+  Bell, 
+  Trash2, 
+  IdCard, 
+  MapPin, 
+  ShieldCheck,
+  Menu,
+  X,
+  ChevronRight,
+  AlertTriangle,
+  Loader2,
+  Check
+} from "lucide-react";
 import AccountSettingsSkeleton from "@/components/skeletons/AccountSettingsSkeleton";
 import { fetchApi, apiUrl } from "@/lib/apiBase";
 import { useAuth } from "@/context/AuthContext";
@@ -26,16 +42,19 @@ const AccountSettings: React.FC = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadError, setUploadError] = useState<string|null>(null);
+
   const menuItems = [
-    "Informações da conta",
-  "Alterar e-mail",
-  "Senha",
-  "FacePass",
-  "Preferências de e-mail",
-  "Encerrar conta",
-  "Dados pessoais"
+    { label: "Informações da conta", icon: User },
+    { label: "Alterar e-mail", icon: Mail },
+    { label: "Senha", icon: Lock },
+    { label: "FacePass", icon: ShieldCheck, alert: true },
+    { label: "Preferências de e-mail", icon: Bell },
+    { label: "Dados pessoais", icon: IdCard },
+    { label: "Encerrar conta", icon: Trash2, danger: true },
   ];
+
   const { user, token, loading } = useAuth();
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -45,15 +64,11 @@ const AccountSettings: React.FC = () => {
         if (!loading) {
           setError('Usuário não autenticado');
           setShowLogin(true);
-        } else {
-          setShowLogin(false);
         }
         setLoadingData(false);
         return;
-      } else {
-        setShowLogin(false);
       }
-      try { localStorage.setItem('userId', user.id); } catch {}
+      setShowLogin(false);
       try {
         const res = await fetchApi('/account-settings', {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -73,22 +88,22 @@ const AccountSettings: React.FC = () => {
               name: data.name || '',
               surname: data.surname || '',
               birth: data.birth ? data.birth.split('T')[0] : '',
-                phone: maskPhone(data.phone || ''),
-                cpf: maskCPF(data.cpf || ''),
-                photoUrl: data.photoUrl || '',
-                cep: maskCEP(data.cep || ''),
-                address: data.address || '',
-                complement: data.complement || '',
-                city: data.city || '',
-                state: data.state || '',
-                country: data.country || ''
+              phone: maskPhone(data.phone || ''),
+              cpf: maskCPF(data.cpf || ''),
+              photoUrl: data.photoUrl || '',
+              cep: maskCEP(data.cep || ''),
+              address: data.address || '',
+              complement: data.complement || '',
+              city: data.city || '',
+              state: data.state || '',
+              country: data.country || ''
             });
           }
         }
-      } catch (e: any) {
+      } catch (e) {
         if (!cancelled) setError('Falha de rede ao buscar dados da conta');
       } finally {
-  if (!cancelled) setLoadingData(false);
+        if (!cancelled) setLoadingData(false);
       }
     }
     load();
@@ -96,42 +111,13 @@ const AccountSettings: React.FC = () => {
   }, [reloadKey, user, token]);
 
   if (loading || loadingData) return <AccountSettingsSkeleton />;
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-[#0b0b0b] dark:text-white relative">
-        <Header />
-        <div className="flex-1 flex flex-col items-center justify-start py-20 px-6">
-          <div className="max-w-md w-full bg-white dark:bg-[#0b0b0b] border border-gray-200 dark:border-[#1F1F1F] rounded-xl shadow p-8 text-center">
-            <p className="text-[#091747] dark:text-white font-semibold mb-2">Não foi possível carregar as configurações</p>
-            <p className="text-sm text-gray-600 dark:text-slate-400 mb-6">{error}</p>
-            {error === 'Usuário não autenticado' ? (
-              <button
-                onClick={() => setShowLogin(true)}
-                className="bg-[#091747] text-white px-6 py-2 rounded font-medium hover:bg-[#2A2AD7] transition-colors"
-              >Fazer login</button>
-            ) : (
-              <button
-                onClick={() => { setError(null); setUserData(null); setReloadKey(k => k + 1); }}
-                className="bg-[#2A2AD7] text-white px-6 py-2 rounded font-medium hover:bg-[#091747] transition-colors"
-              >Tentar novamente</button>
-            )}
-          </div>
-        </div>
-        <LoginModal open={showLogin} onClose={() => { setShowLogin(false); setReloadKey(k => k + 1); }} />
-      </div>
-    );
-  }
-  if (!userData) return <AccountSettingsSkeleton />; // fallback segurança
 
-  // Helpers de máscara / normalização
+  // Helpers de máscara
   function onlyDigits(v: string) { return v.replace(/\D+/g,''); }
   function maskCPF(v: string) {
     const d = onlyDigits(v).slice(0,11);
     if (!d) return '';
-    return d
-      .replace(/^(\d{3})(\d)/, '$1.$2')
-      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
-      .replace(/\.(\d{3})(\d)/, '.$1-$2');
+    return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2');
   }
   function maskCEP(v: string) {
     const d = onlyDigits(v).slice(0,8);
@@ -153,300 +139,321 @@ const AccountSettings: React.FC = () => {
     setCepStatus('loading');
     try {
       const res = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
-      if (!res.ok) throw new Error('CEP lookup fail');
       const data = await res.json();
-      if (data.erro) throw new Error('CEP não encontrado');
+      if (data.erro) throw new Error();
       setEditData((prev: any) => ({
         ...prev,
         address: `${data.logradouro || ''}`.trim(),
         city: data.localidade || '',
         state: data.uf || '',
-        country: prev.country || 'Brasil'
+        country: 'Brasil'
       }));
       setCepStatus('filled');
-    } catch (e) {
+    } catch {
       setCepStatus('error');
     }
   }
 
-  // Util para compor URL absoluta para imagens (caso backend esteja em outra origem)
   function fullImageUrl(u: string) {
     if (!u) return '';
-    if (u.startsWith('http://') || u.startsWith('https://')) return u;
-    // Se veio como /uploads/... prefixar com base detectada
-    if (u.startsWith('/uploads/')) return apiUrl(u); // apiUrl já anexa base
-    return u;
+    if (u.startsWith('http')) return u;
+    return apiUrl(u.startsWith('/') ? u : '/' + u);
   }
 
-  // Bloqueios
-  const cpfLocked = !!userData?.cpf; // já salvo no banco
-  const addressLocked = !!(userData?.cep || userData?.address || userData?.city || userData?.state || userData?.country);
+  const cpfLocked = !!userData?.cpf;
+  const addressLocked = !!(userData?.cep || userData?.address);
 
-  // Renderização dinâmica do conteúdo principal
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        ...editData,
+        cpf: unmask(editData.cpf),
+        phone: unmask(editData.phone),
+        cep: unmask(editData.cep),
+      };
+      const res = await fetchApi('/account-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setError(j.error || 'Erro ao salvar');
+      } else {
+        const data = await res.json();
+        setUserData(data);
+        window.dispatchEvent(new Event('profile-updated'));
+        setError(null);
+      }
+    } catch {
+      setError('Falha de rede ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const menuButtonClass = (item: any) => `
+    w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300
+    ${activeMenuItem === item.label 
+      ? 'bg-[#2A2AD7] text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/40 translate-x-1' 
+      : item.danger 
+        ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 hover:translate-x-1'
+        : 'text-[#091747] dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1A1A1A] hover:translate-x-1'
+    }
+  `;
+
   let MainContent;
   switch (activeMenuItem) {
     case "Informações da conta":
       MainContent = (
-        <>
-          <div className="flex flex-col max-sm:gap-2 sm:flex-row sm:justify-between sm:items-center mb-2">
-            <h1 className="text-3xl max-sm:text-2xl font-bold text-[#091747] dark:text-white">Informações da conta</h1>
-            <span className="text-sm max-sm:text-xs text-[#091747] dark:text-white opacity-70">
-              Conta criada em: {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '--'}
-            </span>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-8 gap-4">
+            <div>
+              <h1 className="text-3xl font-extrabold text-[#091747] dark:text-white tracking-tight mb-1">Configurações</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Gerencie suas informações pessoais e segurança</p>
+            </div>
+            <div className="text-xs font-semibold px-3 py-1.5 bg-gray-100 dark:bg-[#1A1A1A] rounded-full text-gray-500 uppercase tracking-wider">
+              ID: {userData?.id?.slice(0, 8)}...
+            </div>
           </div>
-          <hr className="my-6 max-sm:my-4 border-gray-200" />
-          {/* Foto do perfil */}
-          <div className="mb-8 max-sm:mb-6">
-            <h2 className="text-lg max-sm:text-base font-bold text-[#091747] dark:text-white mb-3">Foto do perfil</h2>
-            <div className="flex max-sm:flex-col gap-6 max-sm:gap-4 items-center max-sm:items-start">
-              <div
-                className="relative group w-[140px] h-[140px] max-sm:w-[100px] max-sm:h-[100px] bg-gray-50 border border-gray-200 rounded-2xl max-sm:rounded-xl flex items-center justify-center overflow-hidden cursor-pointer transition-colors hover:border-[#2A2AD7]"
-                onClick={() => document.getElementById('profile-photo-input')?.click()}
-                onDragOver={(e)=>{e.preventDefault(); e.stopPropagation();}}
-                onDrop={async (e)=>{
-                    e.preventDefault(); e.stopPropagation();
-                    const file = e.dataTransfer.files?.[0];
+
+          {/* Section: Profile Photo */}
+          <div className="bg-gray-50 dark:bg-[#121212] rounded-[24px] p-6 mb-8 border border-gray-100 dark:border-[#222]">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="relative group">
+                <div className="w-[124px] h-[124px] rounded-full overflow-hidden border-4 border-white dark:border-[#1A1A1A] shadow-xl transition-transform group-hover:scale-105 duration-300">
+                  {editData.photoUrl ? (
+                    <img src={fullImageUrl(editData.photoUrl)} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-[#F3F4FE] dark:bg-[#1A1A1A] flex items-center justify-center text-3xl font-bold text-[#2A2AD7]">
+                      {editData.name?.charAt(0) || user?.name?.charAt(0) || '?'}
+                    </div>
+                  )}
+                  {uploadingPhoto && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={() => document.getElementById('photo-input')?.click()}
+                  className="absolute bottom-1 right-1 w-10 h-10 bg-[#2A2AD7] text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all"
+                >
+                  <Camera className="w-5 h-5" />
+                </button>
+                <input 
+                  id="photo-input" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
                     if (!file) return;
-                    setUploadError(null);
-                    if (!file.type.startsWith('image/')) { setUploadError('Arquivo não é imagem'); return; }
-                    if (file.size > 5*1024*1024) { setUploadError('Tamanho máximo 5MB'); return; }
                     setUploadingPhoto(true);
+                    setUploadError(null);
                     try {
                       const form = new FormData(); form.append('file', file);
                       const res = await fetch(apiUrl('/api/upload'), { method: 'POST', body: form });
-                      if (!res.ok) { let msg='Falha no upload'; try{const j=await res.json(); if(j?.error) msg=j.error;}catch{} setUploadError(msg); return; }
-                      const data = await res.json();
-                      if (data?.url) setEditData((p:any)=>({...p, photoUrl: data.url})); else setUploadError('Resposta inesperada');
-                    } catch { setUploadError('Erro de rede no upload'); }
+                      const d = await res.json();
+                      if (d.url) setEditData(p => ({...p, photoUrl: d.url}));
+                    } catch { setUploadError('Falha no upload'); }
                     finally { setUploadingPhoto(false); }
                   }}
-                >
-                  {editData.photoUrl ? (
-                    <img src={fullImageUrl(editData.photoUrl)} alt="avatar" className="w-full h-full object-cover" onError={(e)=>{(e.currentTarget as any).style.display='none'; setUploadError('Imagem não carregou (link inválido)');}} />
-                  ) : (
-                    <span className="text-xs text-gray-400 text-center px-2">Clique ou arraste uma imagem</span>
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-2 text-white text-xs transition-opacity">
-                    {uploadingPhoto ? <span>Enviando...</span> : (
-                      <>
-                        <span className="font-medium">Alterar foto</span>
-                        {editData.photoUrl && <button type="button" onClick={(e)=>{e.stopPropagation(); setEditData((p:any)=>({...p, photoUrl: ''}));}} className="px-2 py-1 bg-red-600/80 hover:bg-red-700 rounded">Remover</button>}
-                      </>
-                    )}
-                  </div>
-                  <input
-                    id="profile-photo-input"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e)=>{
-                      const file = e.target.files?.[0];
-                      setUploadError(null);
-                      if (!file) return;
-                      if (!file.type.startsWith('image/')) { setUploadError('Arquivo não é imagem'); return; }
-                      if (file.size > 5*1024*1024) { setUploadError('Tamanho máximo 5MB'); return; }
-                      setUploadingPhoto(true);
-                      try {
-                        const form = new FormData(); form.append('file', file);
-                        const res = await fetch(apiUrl('/api/upload'), { method: 'POST', body: form });
-                        if (!res.ok) { let msg='Falha no upload'; try{const j=await res.json(); if(j?.error) msg=j.error;}catch{} setUploadError(msg); return; }
-                        const data = await res.json();
-                        if (data?.url) setEditData((p:any)=>({...p, photoUrl: data.url})); else setUploadError('Resposta inesperada');
-                      } catch { setUploadError('Erro de rede no upload'); }
-                      finally { setUploadingPhoto(false); if (e.target) e.target.value=''; }
-                    }}
-                  />
-                </div>
-                <p className="text-sm max-sm:text-xs text-[#091747] dark:text-white opacity-80 max-w-[340px]">Clique ou arraste uma imagem quadrada. Máx 5MB. <a href="#" className="text-[#2A2AD7] underline">Saiba mais</a></p>
-              </div>
-              <div className="mt-3 min-h-[18px]">
-                {uploadError && <span className="text-xs text-red-600">{uploadError}</span>}
-                {!uploadError && editData.photoUrl && !uploadingPhoto && <span className="text-xs text-green-600">Foto pronta para salvar</span>}
-              </div>
-            </div>
-            {/* Informações do usuário */}
-            <h2 className="text-lg max-sm:text-base font-bold text-[#091747] dark:text-white mb-3 mt-8 max-sm:mt-6">Informações do usuário</h2>
-              <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 max-sm:gap-3 mb-6 max-sm:mb-4">
-              <input type="text" placeholder="Nome" value={editData.name} onChange={e => setEditData({ ...editData, name: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
-              <input type="text" placeholder="Sobrenome" value={editData.surname} onChange={e => setEditData({ ...editData, surname: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
-            </div>
-            <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 max-sm:gap-3 mb-6 max-sm:mb-4">
-              <input type="date" placeholder="Nascimento" value={editData.birth} onChange={e => setEditData({ ...editData, birth: e.target.value })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
-              <input type="text" placeholder="Celular" value={editData.phone} onChange={e => setEditData({ ...editData, phone: maskPhone(e.target.value) })} className="col-span-1 border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
-            </div>
-            <div className="mb-6 max-sm:mb-4">
-              <input type="text" placeholder="CPF" value={editData.cpf} disabled={cpfLocked} onChange={e => setEditData({ ...editData, cpf: maskCPF(e.target.value) })} className={`w-full border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${cpfLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
-              {cpfLocked && <p className="text-xs text-gray-500 mt-1">CPF já cadastrado e não pode ser alterado.</p>}
-            </div>
-            {/* Endereço */}
-            <h2 className="text-lg max-sm:text-base font-bold text-[#091747] dark:text-white mb-3 mt-8 max-sm:mt-6">Endereço</h2>
-            <div className="grid grid-cols-2 max-sm:grid-cols-1 gap-4 max-sm:gap-3 mb-6 max-sm:mb-4">
-              <div className="relative col-span-1">
-                <input type="text" placeholder="CEP" value={editData.cep} disabled={addressLocked}
-                  onChange={e => {
-                    const masked = maskCEP(e.target.value);
-                    setEditData({ ...editData, cep: masked });
-                    if (!addressLocked) {
-                      const raw = unmask(masked);
-                      if (raw.length === 8) fetchCEP(masked);
-                    }
-                  }}
-                  className={`w-full border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`}
                 />
-                {cepStatus === 'loading' && <span className="absolute right-3 top-2 text-xs text-gray-500">Buscando...</span>}
-                {cepStatus === 'error' && <span className="absolute right-3 top-2 text-xs text-red-500">CEP inválido</span>}
-                {cepStatus === 'filled' && !addressLocked && <span className="absolute right-3 top-2 text-xs text-green-600">OK</span>}
               </div>
-              <input type="text" placeholder="Endereço" value={editData.address} disabled={addressLocked} onChange={e => setEditData({ ...editData, address: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-lg font-bold text-[#091747] dark:text-white mb-1">Sua foto de perfil</h3>
+                <p className="text-sm text-gray-500 mb-4">Recomendamos uma imagem quadrada de no mínimo 400x400px.</p>
+                <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                  <button 
+                    onClick={() => document.getElementById('photo-input')?.click()}
+                    className="text-xs font-bold px-4 py-2 bg-white dark:bg-[#1A1A1A] border border-gray-200 dark:border-[#333] rounded-full hover:bg-gray-50 transition-colors"
+                  >Alterar foto</button>
+                  {editData.photoUrl && (
+                    <button 
+                      onClick={() => setEditData(p => ({...p, photoUrl: ''}))}
+                      className="text-xs font-bold px-4 py-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                    >Remover</button>
+                  )}
+                </div>
+                {uploadError && <p className="text-xs text-red-500 mt-2">{uploadError}</p>}
+              </div>
             </div>
-            <div className="mb-6 max-sm:mb-4">
-              <input type="text" placeholder="Complemento" value={editData.complement} onChange={e => setEditData({ ...editData, complement: e.target.value })} className="w-full border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7]" />
+          </div>
+
+          {/* Section: Basic Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">Nome</label>
+              <input 
+                type="text" 
+                value={editData.name} 
+                onChange={e => setEditData({...editData, name: e.target.value})}
+                className="w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7] outline-none transition-all font-medium"
+              />
             </div>
-            <div className="grid grid-cols-3 max-sm:grid-cols-1 gap-4 max-sm:gap-3 mb-8 max-sm:mb-6">
-              <input type="text" placeholder="Cidade" value={editData.city} disabled={addressLocked} onChange={e => setEditData({ ...editData, city: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
-              <input type="text" placeholder="Estado" value={editData.state} disabled={addressLocked} onChange={e => setEditData({ ...editData, state: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
-              <input type="text" placeholder="País" value={editData.country} disabled={addressLocked} onChange={e => setEditData({ ...editData, country: e.target.value })} className={`col-span-1 border border-gray-300 rounded-lg px-4 py-2 max-sm:text-sm bg-white dark:bg-[#242424] focus:outline-none focus:ring-2 focus:ring-[#2A2AD7] ${addressLocked ? 'bg-gray-100 dark:bg-[#1F1F1F] cursor-not-allowed' : ''}`} />
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">Sobrenome</label>
+              <input 
+                type="text" 
+                value={editData.surname} 
+                onChange={e => setEditData({...editData, surname: e.target.value})}
+                className="w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7] outline-none transition-all font-medium"
+              />
             </div>
-            <div className="flex justify-end max-sm:justify-stretch mt-6 max-sm:mt-4">
-              <button
-                type="button"
-                //disabled={saving}
-                className={`bg-[#2A2AD7] text-white font-bold px-8 py-3 max-sm:w-full rounded-lg text-lg max-sm:text-base shadow hover:bg-[#091747] transition-colors`}
-                onClick={async () => {
-                  setSaving(true);
-                  if (!user || !token) { setError('Usuário não autenticado'); return; }
-                  try { localStorage.setItem('userId', user.id); } catch {}
-                  // Desfazer máscaras antes de enviar
-                  const payload = {
-                    ...editData,
-                    cpf: unmask(editData.cpf),
-                    phone: unmask(editData.phone),
-                    cep: unmask(editData.cep),
-                  };
-                  console.log('[AccountSettings] Enviando payload para backend:', payload);
-                  try {
-                    const res = await fetchApi('/account-settings', {
-                      method: 'PUT',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                      },
-                      body: JSON.stringify(payload)
-                    });
-                    let responseBody;
-                    try { responseBody = await res.clone().json(); } catch { responseBody = null; }
-                    console.log('[AccountSettings] Resposta do backend:', res.status, responseBody);
-                    if (!res.ok) {
-                      let msg = `Erro ao salvar (status ${res.status})`;
-                      if (responseBody && responseBody.error) msg = responseBody.error;
-                      setError(msg);
-                    } else {
-                      const data = responseBody;
-                      console.log('[AccountSettings] Dados recebidos do backend:', data);
-                      setUserData(data);
-                      try { window.dispatchEvent(new Event('profile-updated')); } catch {}
-                      // Reaplica máscaras após salvar / travar
-                      setEditData((prev: any) => ({
-                        ...prev,
-                        cpf: maskCPF(data.cpf || prev.cpf || ''),
-                        phone: maskPhone(data.phone || prev.phone || ''),
-                        cep: maskCEP(data.cep || prev.cep || ''),
-                      }));
-                    }
-                  } catch (err) {
-                    setError('Falha de rede ao salvar');
-                    console.error('[AccountSettings] Erro ao salvar:', err);
-                  } finally {
-                    setSaving(false);
-                    console.log('Estado saving:', saving);
-                  }
-                }}
-              >{saving ? 'Salvando...' : 'Salvar'}</button>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">CPF</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={editData.cpf} 
+                  disabled={cpfLocked}
+                  onChange={e => setEditData({...editData, cpf: maskCPF(e.target.value)})}
+                  className={`w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] outline-none transition-all font-medium ${cpfLocked ? 'opacity-60 cursor-not-allowed bg-gray-50' : 'focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7]'}`}
+                />
+                {cpfLocked && <ShieldCheck className="absolute right-5 top-4.5 w-5 h-5 text-green-500" />}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">WhatsApp / Celular</label>
+              <input 
+                type="text" 
+                value={editData.phone} 
+                onChange={e => setEditData({...editData, phone: maskPhone(e.target.value)})}
+                className="w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7] outline-none transition-all font-medium"
+              />
+            </div>
+          </div>
+
+          {/* Section: Address */}
+          <div className="mb-8">
+            <h3 className="text-lg font-bold text-[#091747] dark:text-white mb-6 ml-2 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-[#2A2AD7]" /> Endereço residencial
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="space-y-2 md:col-span-1">
+                <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">CEP</label>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={editData.cep} 
+                    onChange={e => {
+                      const m = maskCEP(e.target.value);
+                      setEditData({...editData, cep: m});
+                      if (m.length === 9) fetchCEP(m);
+                    }}
+                    className="w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7] outline-none transition-all font-medium"
+                  />
+                  {cepStatus === 'loading' && <Loader2 className="absolute right-5 top-4.5 w-5 h-5 text-[#2A2AD7] animate-spin" />}
+                </div>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">Logradouro / Rua</label>
+                <input 
+                  type="text" 
+                  value={editData.address} 
+                  onChange={e => setEditData({...editData, address: e.target.value})}
+                  className="w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7] outline-none transition-all font-medium"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">Cidade</label>
+                <input 
+                  type="text" 
+                  value={editData.city} 
+                  onChange={e => setEditData({...editData, city: e.target.value})}
+                  className="w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7] outline-none transition-all font-medium"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">UF</label>
+                <input 
+                  type="text" 
+                  value={editData.state} 
+                  onChange={e => setEditData({...editData, state: e.target.value})}
+                  className="w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7] outline-none transition-all font-medium"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-[#091747] dark:text-gray-400 ml-4 uppercase tracking-widest">Complemento</label>
+                <input 
+                  type="text" 
+                  value={editData.complement} 
+                  onChange={e => setEditData({...editData, complement: e.target.value})}
+                  className="w-full h-14 px-6 rounded-full border border-gray-100 dark:border-[#222] bg-white dark:bg-[#1A1A1A] focus:ring-2 focus:ring-indigo-500/20 focus:border-[#2A2AD7] outline-none transition-all font-medium"
+                />
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950/20 text-red-600 rounded-2xl mb-6">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm font-medium">{error}</p>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button 
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center justify-center gap-2 h-14 px-10 rounded-full bg-[#2A2AD7] text-white font-extrabold shadow-xl shadow-indigo-100 dark:shadow-none hover:bg-[#1e1eb8] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:translate-y-0"
+            >
+              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+          </div>
         </div>
-        </>
       );
       break;
-    case "Alterar e-mail":
-      MainContent = (<><ChangeEmail /></>);
-      break;
-    case "Senha":
-      MainContent = (<><ChangePassword /></>);
-      break;
-    case "FacePass":
-      MainContent = (<><FacePass /></>);
-      break;
-    case "Preferências de e-mail":
-      MainContent = (<><EmailPreferences /></>);
-      break;
-    case "Encerrar conta":
-      MainContent = (<><CloseAccount /></>);
-      break;
-    case "Dados pessoais":
-      MainContent = (<><PersonalData /></>);
-      break;
-    default:
-      MainContent = null;
+    case "Alterar e-mail": MainContent = <ChangeEmail />; break;
+    case "Senha": MainContent = <ChangePassword />; break;
+    case "FacePass": MainContent = <FacePass />; break;
+    case "Preferências de e-mail": MainContent = <EmailPreferences />; break;
+    case "Encerrar conta": MainContent = <CloseAccount />; break;
+    case "Dados pessoais": MainContent = <PersonalData />; break;
+    default: MainContent = null;
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0b0b0b] dark:text-white">
+    <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0b0b0b] text-[#091747] dark:text-gray-100 selection:bg-indigo-100">
       <Header hideSearchOnMobile={true} />
       
       {/* Mobile Top Bar */}
-      <div className="hidden max-sm:flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-[#1F1F1F] bg-white dark:bg-[#0b0b0b]">
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-[#1F1F1F] rounded-lg transition-colors"
-        >
+      <div className="max-sm:flex hidden items-center justify-between px-6 py-4 bg-white dark:bg-[#0b0b0b] border-b border-gray-100 dark:border-[#1A1A1A] sticky top-0 z-40">
+        <button onClick={() => setMobileMenuOpen(true)} className="p-2 -ml-2">
           <Menu className="w-6 h-6" />
         </button>
-        <h1 className="text-base font-bold">{activeMenuItem}</h1>
-        <div className="w-10" /> {/* Spacer for centering */}
+        <span className="font-bold text-sm tracking-tight capitalize">{activeMenuItem}</span>
+        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-100">
+           <img src={fullImageUrl(userData?.photoUrl)} alt="" className="w-full h-full object-cover" />
+        </div>
       </div>
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 hidden max-sm:block">
-          {/* Overlay */}
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          
-          {/* Drawer */}
-          <div className="absolute left-0 top-0 bottom-0 w-[280px] bg-white dark:bg-[#0b0b0b] shadow-xl">
+        <div className="fixed inset-0 z-[60] sm:hidden">
+          <div className="absolute inset-0 bg-[#091747]/40 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <div className="absolute left-0 top-0 bottom-0 w-[300px] bg-white dark:bg-[#0b0b0b] shadow-2xl animate-in slide-in-from-left duration-300">
             <div className="flex flex-col h-full">
-              {/* Close button */}
-              <div className="flex justify-end p-4 border-b border-gray-200 dark:border-[#1F1F1F]">
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-[#1F1F1F] rounded-lg transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+              <div className="flex items-center justify-between p-6">
+                <span className="text-xl font-black text-[#091747] dark:text-white">Menu</span>
+                <button onClick={() => setMobileMenuOpen(false)} className="p-2"><X className="w-6 h-6" /></button>
               </div>
-              
-              {/* Menu items */}
-              <div className="flex flex-col gap-11 items-start p-8 pt-5">
-                {menuItems.map((item) => (
-                  <div key={item} className="flex justify-between items-center w-full">
-                    <button
-                      onClick={() => {
-                        setActiveMenuItem(item);
-                        setMobileMenuOpen(false);
-                      }}
-                      className={`w-full text-sm font-bold text-left px-3 py-2 rounded transition-colors ${
-                        activeMenuItem === item
-                          ? 'text-[#2A2AD7] dark:text-[#EF4118] bg-gray-100 dark:bg-[#242424]'
-                          : 'text-[#091747] dark:text-white hover:text-[#2A2AD7] dark:hover:text-[#EF4118] hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                    {item === "FacePass" && (
-                      <AlertTriangle className="w-4 h-4 text-[#F9C900] ml-2" />
-                    )}
-                  </div>
+              <div className="flex-1 px-4 space-y-2">
+                {menuItems.map(item => (
+                  <button
+                    key={item.label}
+                    onClick={() => { setActiveMenuItem(item.label); setMobileMenuOpen(false); }}
+                    className={menuButtonClass(item)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="w-5 h-5" />
+                      <span className="font-bold text-sm">{item.label}</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-50" />
+                  </button>
                 ))}
               </div>
             </div>
@@ -454,38 +461,47 @@ const AccountSettings: React.FC = () => {
         </div>
       )}
 
-      <div className="flex">
-        {/* Sidebar */}
-        <div className="w-[280px] h-[100vh] bg-gray-50 dark:bg-[#0b0b0b] border-r border-gray-100 dark:border-[#1F1F1F] max-md:w-[250px] max-sm:hidden">
-          <div className="flex flex-col">
-            <div className="flex flex-col gap-11 items-start p-8 pt-5">
-              {menuItems.map((item) => (
-                <div key={item} className="flex justify-between items-center w-full">
-                  <button
-                    onClick={() => setActiveMenuItem(item)}
-                    className={`w-full text-sm font-bold text-left px-3 py-2 rounded transition-colors ${
-                      activeMenuItem === item
-                        ? 'text-[#2A2AD7] dark:text-[#EF4118] bg-gray-100 dark:bg-[#242424]'
-                        : 'text-[#091747] dark:text-white hover:text-[#2A2AD7] dark:hover:text-[#EF4118] hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
-                    }`}
-                  >
-                    {item}
-                  </button>
-                  {item === "FacePass" && (
-                    <AlertTriangle className="w-4 h-4 text-[#F9C900] ml-2" />
-                  )}
-                </div>
+      <div className="max-w-[1280px] mx-auto flex gap-8 px-6 py-10">
+        {/* Desktop Sidebar */}
+        <div className="hidden sm:block w-[320px] shrink-0">
+          <div className="bg-white dark:bg-[#0d0d0d] rounded-[32px] p-6 shadow-xl shadow-gray-100 dark:shadow-none border border-gray-50 dark:border-[#1A1A1A] sticky top-28">
+            <div className="flex items-center gap-4 mb-8 px-2">
+              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-indigo-50 p-0.5">
+                <img src={fullImageUrl(userData?.photoUrl)} alt="" className="w-full h-full object-cover rounded-full" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-[#091747] dark:text-white truncate max-w-[180px]">{userData?.name}</p>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{userData?.role === 'organizer' ? 'Organizador' : 'Participante'}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              {menuItems.map(item => (
+                <button
+                  key={item.label}
+                  onClick={() => setActiveMenuItem(item.label)}
+                  className={menuButtonClass(item)}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5" />
+                    <span className="font-bold text-sm tracking-tight">{item.label}</span>
+                  </div>
+                  {item.alert && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                  {!item.alert && <ChevronRight className={`w-4 h-4 transition-opacity ${activeMenuItem === item.label ? 'opacity-100' : 'opacity-0'}`} />}
+                </button>
               ))}
             </div>
           </div>
         </div>
-        {/* Conteúdo dinâmico */}
-        <div className="flex-1 flex justify-center items-start py-12 px-8 max-sm:px-4 max-sm:py-6 bg-[#F8F7FA] dark:bg-[#0b0b0b]">
-          <div className="w-full max-w-[700px] bg-white dark:bg-[#0b0b0b] rounded-3xl shadow-xl p-10 max-sm:p-6 max-sm:rounded-2xl border border-gray-100 dark:border-[#1F1F1F]">
+
+        {/* Content Area */}
+        <div className="flex-1 max-w-[800px]">
+          <div className="bg-white dark:bg-[#0d0d0d] rounded-[40px] p-10 max-sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none border border-gray-50 dark:border-[#1A1A1A] min-h-[600px]">
             {MainContent}
           </div>
         </div>
       </div>
+
       <LoginModal open={showLogin} onClose={() => { setShowLogin(false); setReloadKey(k => k + 1); }} />
     </div>
   );
