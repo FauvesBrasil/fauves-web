@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoginModal from '@/components/LoginModal';
 import FollowersModal from '../components/FollowersModal';
+import EventCard from '@/components/EventCard';
 import { useToast } from '@/hooks/use-toast';
 import {
   Calendar, MapPin, Users, Share2, ExternalLink,
@@ -396,38 +397,21 @@ const OrganizationPublicProfile: React.FC = () => {
                 {futureEvents.length > 0 && (
                   <div>
                     <h2 className="text-xl font-semibold mb-4">Próximos Eventos</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="flex flex-wrap gap-4 md:gap-6 justify-center md:justify-start">
                       {futureEvents.map((ev) => (
-                        <Link key={ev.id} to={`/events/${ev.slug || ev.id}`}>
-                          <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer rounded-xl">
-                            <div className="relative h-48 bg-gradient-to-br from-orange-400 to-pink-600 overflow-hidden">
-                              {ev.image && (
-                                <img src={ev.image} alt={ev.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
-                              )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                              <div className="absolute top-3 right-3">
-                                <Badge className="bg-orange-600 text-white">
-                                  {new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="p-4">
-                              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                                <Clock className="w-3 h-3" />
-                                {new Date(ev.startDate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                              <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">
-                                {ev.name}
-                              </h3>
-                              {(ev.locationCity || ev.locationUf) && (
-                                <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
-                                  <MapPin className="w-4 h-4" />
-                                  {ev.locationCity}, {ev.locationUf}
-                                </div>
-                              )}
-                            </div>
-                          </Card>
-                        </Link>
+                        <EventCard
+                          key={ev.id}
+                          id={ev.id}
+                          slug={ev.slug}
+                          image={ev.image}
+                          date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                          title={ev.name}
+                          location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
+                          views={ev.metrics?.views || 0}
+                          interests={ev.metrics?.interests || 0}
+                          categories={ev.categories || []}
+                          size="large"
+                        />
                       ))}
                     </div>
                   </div>
@@ -436,25 +420,21 @@ const OrganizationPublicProfile: React.FC = () => {
                 {pastEvents.length > 0 && (
                   <div>
                     <h2 className="text-xl font-semibold mb-4 text-gray-600 dark:text-gray-400">Eventos Passados</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-60">
-                      {pastEvents.slice(0, 6).map((ev) => (
-                        <Link key={ev.id} to={`/events/${ev.slug || ev.id}`}>
-                          <Card className="overflow-hidden group cursor-pointer rounded-xl">
-                            <div className="relative h-32 bg-gray-200 dark:bg-gray-800">
-                              {ev.image && (
-                                <img src={ev.image} alt={ev.name} className="w-full h-full object-cover grayscale" />
-                              )}
-                            </div>
-                            <div className="p-3">
-                              <h3 className="font-medium text-sm text-gray-700 dark:text-gray-300 line-clamp-1">
-                                {ev.name}
-                              </h3>
-                              <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                                {new Date(ev.startDate).toLocaleDateString('pt-BR')}
-                              </div>
-                            </div>
-                          </Card>
-                        </Link>
+                    <div className="flex flex-wrap gap-4 md:gap-6 justify-center md:justify-start opacity-70 grayscale-[0.5]">
+                      {pastEvents.slice(0, 12).map((ev) => (
+                        <EventCard
+                          key={ev.id}
+                          id={ev.id}
+                          slug={ev.slug}
+                          image={ev.image}
+                          date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                          title={ev.name}
+                          location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
+                          views={ev.metrics?.views || 0}
+                          interests={ev.metrics?.interests || 0}
+                          categories={ev.categories || []}
+                          size="small"
+                        />
                       ))}
                     </div>
                   </div>
