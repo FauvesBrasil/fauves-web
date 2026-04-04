@@ -657,26 +657,26 @@ const Event: React.FC = () => {
                 <div className="flex flex-wrap gap-10 max-md:gap-4 p-5 max-md:p-4 mt-7 max-md:mt-6 rounded-xl bg-white/40 dark:bg-[#242424]/80 backdrop-blur-md border border-white/30 dark:border-[#1F1F1F] shadow-md group border-transparent hover:border-indigo-100 dark:hover:border-indigo-900/30 transition-all">
                   <div className="flex flex-auto gap-5 text-[16px] font-medium text-indigo-950 dark:text-white items-center min-w-0">
                     <Link 
-                      to={org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : (event?.organizationId || event?.organizerId ? `/org/${event.organizationId || event.organizerId}` : '#'))}
+                      to={event?.organization?.slug ? `/org/${event.organization.slug}` : (event?.organization?.id ? `/org/${event.organization.id}` : (org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : '#')))}
                       className="flex shrink-0 hover:opacity-80 transition-opacity"
                     >
-                      {org?.logoUrl ? (
+                      {event?.organization?.logoUrl || org?.logoUrl ? (
                         <Avatar className="w-[50px] h-[50px] rounded-full border border-gray-100 dark:border-gray-800">
-                          <AvatarImage src={org.logoUrl.startsWith('http') ? org.logoUrl : apiUrl(org.logoUrl)} alt={org.name || 'Organização'} className="object-cover" />
-                          <AvatarFallback className="bg-gray-50 text-indigo-950 font-bold">{(org?.name || 'O')[0]}</AvatarFallback>
+                          <AvatarImage src={(event?.organization?.logoUrl || org?.logoUrl || '').startsWith('http') ? (event?.organization?.logoUrl || org?.logoUrl) : apiUrl(event?.organization?.logoUrl || org?.logoUrl)} alt={event?.organization?.name || org?.name || 'Organização'} className="object-cover" />
+                          <AvatarFallback className="bg-gray-50 text-indigo-950 font-bold">{(event?.organization?.name || org?.name || 'O')[0]}</AvatarFallback>
                         </Avatar>
                       ) : (
                         <div className="flex shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-950/30 h-[50px] w-[50px] items-center justify-center text-indigo-600 font-bold text-xl uppercase">
-                          {(org?.name || event?.organizationName || 'O')[0]}
+                          {(event?.organization?.name || org?.name || event?.organizationName || 'O')[0]}
                         </div>
                       )}
                     </Link>
                     <div className="flex-auto my-auto min-w-0">
                       <Link 
-                        to={org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : (event?.organizationId || event?.organizerId ? `/org/${event.organizationId || event.organizerId}` : '#'))}
+                        to={event?.organization?.slug ? `/org/${event.organization.slug}` : (event?.organization?.id ? `/org/${event.organization.id}` : (org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : '#')))}
                         className="font-bold text-indigo-950 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate block"
                       >
-                        {org?.name || event?.organizationName || 'Organização'}
+                        {event?.organization?.name || org?.name || event?.organizationName || 'Organização'}
                       </Link>
                       <div className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline inline-block mt-0.5" onClick={async (e) => {
                         e.preventDefault();
