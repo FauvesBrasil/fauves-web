@@ -17,7 +17,7 @@ import {
   Calendar, MapPin, Users, Share2, ExternalLink,
   Mail, Globe, Clock, Heart, Loader2, CalendarDays,
   Instagram, Youtube, Music, MessageCircle, Send,
-  Facebook, Twitter, Phone, ArrowLeft, ChevronRight
+  Facebook, Twitter, Phone, ArrowLeft
 } from 'lucide-react';
 
 const OrganizationPublicProfile: React.FC = () => {
@@ -44,7 +44,7 @@ const OrganizationPublicProfile: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
         const endpoint = !isUUID
           ? apiUrl(`/api/organization/slug/${encodeURIComponent(slug)}`)
           : apiUrl(`/api/organization/${encodeURIComponent(slug)}`);
@@ -70,7 +70,6 @@ const OrganizationPublicProfile: React.FC = () => {
         }
         setOrg(data);
 
-        // Follow status
         if (user?.id && token) {
           try {
             const fRes = await fetch(apiUrl(`/api/organization/${data.id}/follow`), { headers: { Authorization: `Bearer ${token}` } });
@@ -81,7 +80,6 @@ const OrganizationPublicProfile: React.FC = () => {
           } catch (e) { }
         }
 
-        // Followers count
         try {
           const cRes = await fetch(apiUrl(`/api/organization/${data.id}/followers/count`));
           if (cRes.ok) {
@@ -92,7 +90,6 @@ const OrganizationPublicProfile: React.FC = () => {
           console.warn('followers count fetch failed', e);
         }
 
-        // Events
         try {
           const evRes = await fetch(apiUrl(`/api/organization/${data.id}/events`));
           if (evRes.ok) {
@@ -103,7 +100,6 @@ const OrganizationPublicProfile: React.FC = () => {
           console.warn('events fetch failed', e);
         }
 
-        // Featured event
         try {
           const featRes = await fetch(apiUrl(`/api/organization/${data.id}/events/next`));
           if (featRes.ok) {
@@ -245,126 +241,117 @@ const OrganizationPublicProfile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0b] text-gray-900 dark:text-white pb-32">
-      <Header />
+      <div className="opacity-40 hover:opacity-100 transition-opacity duration-500">
+        <Header />
+      </div>
 
       {/* Hero Section Master */}
       <div className="relative w-full overflow-hidden">
         {/* Banner com Parallax Suave */}
-        <div className="relative h-[350px] md:h-[450px] w-full group">
+        <div className="relative h-[250px] md:h-[350px] w-full group">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-orange-950 animate-gradient-x" />
           {org.coverUrl && (
             <img 
               src={org.coverUrl} 
               alt={org.name} 
-              className="w-full h-full object-cover mix-blend-overlay opacity-50 transition-transform duration-[5s] group-hover:scale-105" 
+              className="w-full h-full object-cover mix-blend-overlay opacity-40 transition-transform duration-[5s] group-hover:scale-105" 
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#0b0b0b] via-transparent to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#0b0b0b] via-transparent to-black/10" />
           
-          {/* Botão de Voltar Discreto */}
           <button 
             onClick={() => navigate(-1)}
-            className="absolute top-8 left-8 p-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl hover:bg-white/20 transition-all text-white z-20 group/back"
+            className="absolute top-4 left-6 p-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl hover:bg-white/20 transition-all text-white z-20 group/back"
           >
-            <ArrowLeft className="w-6 h-6 transform group-hover/back:-translate-x-1 transition-transform" />
+            <ArrowLeft className="w-5 h-5 transform group-hover/back:-translate-x-1 transition-transform" />
           </button>
         </div>
 
         {/* Informações da Marca (Centralizadas) */}
-        <div className="max-w-[1100px] mx-auto px-6 -mt-32 md:-mt-44 relative z-10 flex flex-col items-center text-center">
-          {/* Logo Interativa Premium */}
+        <div className="max-w-[1100px] mx-auto px-6 -mt-32 md:-mt-40 relative z-10 flex flex-col items-center text-center">
+          {/* Logo Circular Premium (Minimalista) */}
           <div className="relative group cursor-pointer" onClick={handleFollow}>
-            <div className="absolute inset-0 bg-orange-600 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-700" />
-            <Avatar className="w-36 h-36 md:w-48 md:h-48 border-[10px] border-white dark:border-gray-900 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] rounded-[2.5rem] relative z-10 transform transition-all duration-700 group-hover:scale-110 group-hover:-rotate-3">
-              <AvatarImage src={org.logoUrl || ''} alt={org.name} className="object-cover" />
-              <AvatarFallback className="text-5xl md:text-6xl font-black bg-gradient-to-br from-orange-400 to-pink-600 text-white">
+            <div className="absolute inset-0 bg-orange-600 rounded-full blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-700" />
+            <Avatar className="w-32 h-32 md:w-36 md:h-36 border-4 border-white dark:border-gray-900 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.3)] rounded-full relative z-10 transform transition-all duration-700 group-hover:scale-110">
+              <AvatarImage src={org.logoUrl || ''} alt={org.name} className="object-cover rounded-full" />
+              <AvatarFallback className="text-4xl md:text-5xl font-black bg-gradient-to-br from-orange-400 to-pink-600 text-white rounded-full">
                 {(org.name || 'O')[0]}
               </AvatarFallback>
             </Avatar>
             
             {/* Coração Funcional c/ Feedback */}
             <div 
-              className={`absolute -bottom-3 -right-3 p-3.5 rounded-[1.2rem] shadow-2xl border-[3px] border-white dark:border-gray-900 z-20 transition-all duration-500 hover:scale-125 ${
+              className={`absolute bottom-0 right-0 p-2.5 rounded-full shadow-xl border-2 border-white dark:border-gray-900 z-20 transition-all duration-500 hover:scale-125 ${
                 following 
-                  ? 'bg-orange-600 text-white scale-110' 
-                  : 'bg-white dark:bg-gray-800 text-gray-400 opacity-80'
+                  ? 'bg-orange-600 text-white' 
+                  : 'bg-white dark:bg-gray-800 text-gray-400'
               }`}
             >
-              <Heart className={`w-7 h-7 ${following ? 'fill-current animate-pulse' : ''}`} />
+              <Heart className={`w-5 h-5 ${following ? 'fill-current animate-pulse' : ''}`} />
             </div>
           </div>
 
-          <div className="mt-10 mb-6">
-            <h1 className="text-5xl md:text-7xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 pb-2">
+          <div className="mt-8 mb-4">
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight text-gray-900 dark:text-white drop-shadow-sm">
               {org.name}
             </h1>
             {org.bio && (
-              <p className="text-gray-600 dark:text-gray-400 mt-5 max-w-2xl text-xl md:text-2xl font-medium leading-relaxed italic opacity-80">
-                "{org.bio}"
+              <p className="text-gray-500 dark:text-gray-400 mt-4 max-w-xl text-lg font-medium leading-relaxed opacity-90">
+                {org.bio}
               </p>
             )}
           </div>
 
-          {/* Stats Revisitados */}
-          <div className="flex items-center gap-10 md:gap-16 mt-4">
+          {/* Stats Revisitados (Links Sutilizados) */}
+          <div className="flex items-center gap-8 md:gap-12 mt-2">
             <div className="flex flex-col items-center group/stat">
-              <span className="text-3xl font-black text-gray-900 dark:text-white transition-colors group-hover/stat:text-orange-600">{events.length}</span>
-              <span className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Eventos</span>
+              <span className="text-xl font-black text-gray-900 dark:text-white transition-colors group-hover/stat:text-orange-600">{events.length}</span>
+              <span className="text-[9px] uppercase tracking-[0.2em] font-black text-gray-400">Eventos</span>
             </div>
             <div className="flex flex-col items-center group/stat cursor-pointer" onClick={() => handleFetchFollowers(org.id)}>
-              <span className="text-3xl font-black text-gray-900 dark:text-white transition-colors group-hover/stat:text-orange-600">{followersCount || 0}</span>
-              <span className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-400">Seguidores</span>
+              <span className="text-xl font-black text-gray-900 dark:text-white transition-colors group-hover/stat:text-orange-600">{followersCount || 0}</span>
+              <span className="text-[9px] uppercase tracking-[0.2em] font-black text-gray-400">Seguidores</span>
             </div>
           </div>
 
-          {/* Call to Actions */}
-          <div className="flex items-center gap-5 mt-12 w-full max-w-lg">
+          <div className="flex items-center gap-4 mt-10 w-full max-w-sm">
             <Button
               onClick={handleFollow}
               disabled={followLoading}
-              className={`flex-1 h-16 text-lg font-black rounded-[1.5rem] shadow-2xl transition-all duration-500 active:scale-95 ${
+              className={`flex-1 h-14 text-base font-black rounded-2xl shadow-xl transition-all duration-500 active:scale-95 ${
                 following 
-                  ? 'bg-gray-100 dark:bg-zinc-900 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-zinc-800 border-2 border-gray-200 dark:border-zinc-800' 
-                  : 'bg-orange-600 hover:bg-orange-700 text-white shadow-orange-600/30 hover:shadow-orange-600/50'
+                  ? 'bg-gray-200 dark:bg-zinc-900 text-gray-900 dark:text-white' 
+                  : 'bg-orange-600 hover:bg-orange-700 text-white'
               }`}
             >
-              {followLoading ? (
-                <Loader2 className="w-7 h-7 animate-spin" />
-              ) : following ? (
-                'Seguindo'
-              ) : (
-                'Seguir Marca'
-              )}
+              {following ? 'Seguindo' : 'Seguir Organização'}
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
               onClick={handleShare}
-              className="h-16 w-16 rounded-[1.5rem] border-2 hover:bg-white dark:hover:bg-zinc-900 shadow-xl transition-all hover:scale-105 active:scale-95"
+              className="h-14 w-14 rounded-2xl border hover:bg-white dark:hover:bg-zinc-900 shadow-md"
             >
-              <Share2 className="w-7 h-7" />
+              <Share2 className="w-5 h-5" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Bio Hub (Links Sociais Premium) */}
-      <div className="max-w-[1100px] mx-auto px-6 mt-20">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-5">
+      <div className="max-w-[1100px] mx-auto px-6 mt-16">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
           {socialLinks.map((link, idx) => (
             <a
               key={idx}
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col items-center justify-center p-8 bg-white dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 hover:border-orange-500 shadow-sm hover:shadow-2xl rounded-[2.5rem] transition-all duration-500 hover:-translate-y-3 relative overflow-hidden"
+              className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 hover:border-orange-500 shadow-sm rounded-[1.5rem] transition-all duration-300 hover:-translate-y-2"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className={`p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800 group-hover:bg-orange-600/10 mb-4 transition-colors ${link.color}`}>
-                <link.icon className="w-7 h-7 transform group-hover:scale-110 transition-transform duration-500" />
+              <div className={`p-3 rounded-xl bg-slate-50 dark:bg-zinc-800 mb-3 ${link.color}`}>
+                <link.icon className="w-5 h-5" />
               </div>
-              <span className="text-[11px] font-black tracking-widest uppercase opacity-60 group-hover:opacity-100 transition-opacity">{link.label}</span>
-              <ExternalLink className="w-4 h-4 absolute top-5 right-5 opacity-0 group-hover:opacity-40 transition-opacity" />
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{link.label}</span>
             </a>
           ))}
           {org.site && !socialLinks.find(l => l.label === 'Website') && (
@@ -372,83 +359,64 @@ const OrganizationPublicProfile: React.FC = () => {
               href={org.site}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col items-center justify-center p-8 bg-white dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 hover:border-orange-500 shadow-sm hover:shadow-2xl rounded-[2.5rem] transition-all duration-300 hover:-translate-y-3"
+              className="group flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900/50 backdrop-blur-md border border-gray-100 dark:border-white/5 hover:border-orange-500 shadow-sm rounded-[1.5rem] transition-all duration-300 hover:-translate-y-2"
             >
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-zinc-800 group-hover:bg-orange-600/10 mb-4 text-blue-500">
-                <Globe className="w-7 h-7 transform group-hover:scale-110 transition-transform" />
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-zinc-800 mb-3 text-blue-500">
+                <Globe className="w-5 h-5" />
               </div>
-              <span className="text-[11px] font-black tracking-widest uppercase opacity-60">Website</span>
-              <ExternalLink className="w-4 h-4 absolute top-5 right-5 opacity-0 group-hover:opacity-40" />
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Website</span>
             </a>
           )}
         </div>
       </div>
 
-      <main className="max-w-[1200px] mx-auto px-6 mt-32">
-        {/* Featured Card Ultra-Premium */}
+      <main className="max-w-[1100px] mx-auto px-6 mt-24">
+        {/* Featured Card Equilibrado */}
         {featuredEvent && (
-          <div className="mb-32">
-            <div className="flex items-center gap-4 mb-10 pl-2">
-              <div className="h-10 w-1.5 bg-orange-600 rounded-full" />
-              <h2 className="text-4xl font-black tracking-tighter">O Próximo Grande Momento</h2>
+          <div className="mb-24">
+            <div className="flex items-center gap-3 mb-8 pl-1">
+              <div className="h-6 w-1 bg-orange-600 rounded-full" />
+              <h2 className="text-xl font-bold tracking-tight uppercase opacity-60">Destaque</h2>
             </div>
             <Link to={`/events/${featuredEvent.slug || featuredEvent.id}`}>
-              <div className="relative group overflow-hidden rounded-[3.5rem] shadow-[0_48px_100px_-12px_rgba(0,0,0,0.5)] bg-black h-[500px] md:h-[650px] transition-all duration-700 hover:shadow-orange-600/20">
+              <div className="relative group overflow-hidden rounded-[2.5rem] shadow-2xl bg-black h-[400px] md:h-[450px] transition-all duration-700">
                 {featuredEvent.image && (
                   <img 
                     src={featuredEvent.image} 
                     alt={featuredEvent.name} 
-                    className="w-full h-full object-cover transition-transform duration-[4s] group-hover:scale-110 opacity-70" 
+                    className="w-full h-full object-cover transition-transform duration-[4s] group-hover:scale-105 opacity-60" 
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                 
-                <div className="absolute bottom-0 left-0 right-0 p-10 md:p-16">
-                  <div className="flex flex-wrap items-center gap-4 mb-8">
-                    <Badge className="bg-orange-600 text-white text-[11px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-full border-2 border-white/20 shadow-xl">EXPERIÊNCIA EM DESTAQUE</Badge>
-                    <div className="flex items-center gap-2.5 px-6 py-2 bg-white/5 backdrop-blur-2xl rounded-full text-white text-[11px] font-black border border-white/10 uppercase tracking-widest">
-                      <Clock className="w-4 h-4 text-orange-500" />
-                      Reserve agora
-                    </div>
+                <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+                  <div className="flex flex-wrap items-center gap-3 mb-6">
+                    <Badge className="bg-orange-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full border border-white/20">PRÓXIMO SHOW</Badge>
                   </div>
                   
-                  <h2 className="text-6xl md:text-8xl font-black text-white mb-8 drop-shadow-2xl leading-[0.95] tracking-tighter max-w-4xl group-hover:text-orange-400 transition-all duration-500">
+                  <h2 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight max-w-2xl group-hover:text-orange-400 transition-colors">
                     {featuredEvent.name}
                   </h2>
                   
-                  <div className="flex flex-wrap items-center gap-10 text-white/80">
-                    <div className="flex items-center gap-4">
-                       <div className="p-3 bg-orange-600/20 backdrop-blur-md rounded-2xl border border-orange-600/30">
-                        <Calendar className="w-6 h-6 text-orange-500" />
-                       </div>
-                       <div>
-                         <p className="text-[11px] font-black uppercase text-white/40 tracking-[0.2em] mb-1">Data</p>
-                         <p className="text-xl font-bold">{new Date(featuredEvent.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-                       </div>
+                  <div className="flex flex-wrap items-center gap-6 text-white/80">
+                    <div className="flex items-center gap-3">
+                       <Calendar className="w-5 h-5 text-orange-500" />
+                       <p className="font-bold">{new Date(featuredEvent.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                     </div>
                     {featuredEvent.locationCity && (
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-indigo-600/20 backdrop-blur-md rounded-2xl border border-indigo-600/30">
-                          <MapPin className="w-6 h-6 text-indigo-500" />
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-black uppercase text-white/40 tracking-[0.2em] mb-1">Local</p>
-                          <p className="text-xl font-bold">{featuredEvent.locationCity}, {featuredEvent.locationUf}</p>
-                        </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <MapPin className="w-5 h-5 text-indigo-500" />
+                        <p className="font-bold">{featuredEvent.locationCity}, {featuredEvent.locationUf}</p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Floating Price Button */}
-                <div className="absolute top-12 right-12 hidden lg:flex transform group-hover:-translate-y-4 transition-transform duration-700">
-                  <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-2xl p-10 rounded-[3rem] shadow-2xl flex flex-col items-center gap-6 text-center border-t-[6px] border-orange-600 w-72">
-                    <div className="space-y-1">
-                      <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em]">Lote Atual</p>
-                      <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">R$ --,--</p>
-                    </div>
-                    <Button className="bg-orange-600 hover:bg-orange-700 h-16 w-full rounded-[1.5rem] font-black text-base px-8 shadow-[0_20px_40px_-10px_rgba(234,88,12,0.4)] transition-all">
-                      PEGAR INGRESSO
+                <div className="absolute top-10 right-10 hidden lg:flex transform group-hover:-translate-y-2 transition-transform duration-700">
+                  <div className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl p-8 rounded-[2rem] shadow-2xl flex flex-col items-center gap-4 text-center border-t-4 border-orange-600 w-64">
+                    <p className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter">R$ --</p>
+                    <Button className="bg-orange-600 hover:bg-orange-700 h-14 w-full rounded-2xl font-black text-sm">
+                      GARANTIR VAGA
                     </Button>
                   </div>
                 </div>
@@ -457,30 +425,30 @@ const OrganizationPublicProfile: React.FC = () => {
           </div>
         )}
 
-        {/* Novo Sistema de Tabs (Pill Style) */}
+        {/* Tabs Estilizadas (Segmented Pill) */}
         <Tabs defaultValue="events" className="mt-16">
           <div className="flex items-center justify-center mb-16">
-            <TabsList className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl p-2 rounded-[2rem] border border-gray-100 dark:border-white/5 h-16 inline-flex shadow-xl">
+            <TabsList className="bg-white/40 dark:bg-zinc-900 p-1 rounded-full border border-gray-100 dark:border-white/5 h-14 inline-flex shadow-lg">
               <TabsTrigger 
                 value="events" 
-                className="rounded-full px-10 h-full gap-3 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black uppercase text-[11px] tracking-widest"
+                className="rounded-full px-8 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all"
               >
-                <CalendarDays className="w-5 h-5" />
+                <CalendarDays className="w-4 h-4" />
                 Eventos
               </TabsTrigger>
               <TabsTrigger 
                 value="about" 
-                className="rounded-full px-10 h-full gap-3 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black uppercase text-[11px] tracking-widest"
+                className="rounded-full px-8 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all"
               >
-                <Globe className="w-5 h-5" />
+                <Globe className="w-4 h-4" />
                 A Marca
               </TabsTrigger>
               {org.artistsMode && (
                 <TabsTrigger 
                   value="artists" 
-                  className="rounded-full px-10 h-full gap-3 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-black uppercase text-[11px] tracking-widest"
+                  className="rounded-full px-8 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[10px] tracking-widest transition-all"
                 >
-                  <Music className="w-5 h-5" />
+                  <Music className="w-4 h-4" />
                   Lineup
                 </TabsTrigger>
               )}
@@ -489,69 +457,61 @@ const OrganizationPublicProfile: React.FC = () => {
 
           <TabsContent value="events" className="mt-0 outline-none">
             {futureEvents.length === 0 && pastEvents.length === 0 ? (
-              <Card className="p-24 text-center rounded-[4rem] border-2 border-dashed border-gray-200 dark:border-zinc-800 bg-transparent">
-                <div className="text-8xl mb-8 opacity-20">📅</div>
-                <h3 className="text-3xl font-black mb-4">Silêncio antes do show...</h3>
-                <p className="text-gray-500 mb-10 max-w-md mx-auto text-lg leading-relaxed">
-                  Esta organização está preparando novidades incríveis. 🤫
+              <Card className="p-20 text-center rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-zinc-800 bg-transparent">
+                <div className="text-6xl mb-6 opacity-20">📅</div>
+                <h3 className="text-2xl font-black mb-2 opacity-60">Sem eventos no radar</h3>
+                <p className="text-gray-500 mb-8 max-w-xs mx-auto">
+                  Acompanhe para saber das próximas festas.
                 </p>
                 {!following && (
-                  <Button onClick={handleFollow} className="h-16 px-10 rounded-[1.5rem] bg-orange-600 hover:bg-orange-700 shadow-2xl">
-                    ME AVISE QUANDO SAIR
+                  <Button onClick={handleFollow} className="h-14 px-8 rounded-2xl bg-orange-600 hover:bg-orange-700">
+                    SEGUIR AGORA
                   </Button>
                 )}
               </Card>
             ) : (
-              <div className="space-y-32">
+              <div className="space-y-24">
                 {futureEvents.length > 0 && (
-                  <div className="animate-in fade-in slide-in-from-bottom-5 duration-700">
-                    <div className="flex items-center gap-4 mb-12 pl-2">
-                      <div className="h-8 w-1 bg-orange-600 rounded-full" />
-                      <h2 className="text-3xl font-black tracking-tight">Próximos Encontros</h2>
-                    </div>
-                    <div className="flex flex-wrap gap-8 md:gap-12 justify-center lg:justify-start">
+                  <div>
+                    <h2 className="text-xl font-bold mb-10 pl-2 uppercase tracking-widest opacity-40">Próximos Show</h2>
+                    <div className="flex flex-wrap gap-8 justify-center lg:justify-start">
                       {futureEvents.map((ev) => (
-                        <div key={ev.id} className="transform hover:-translate-y-2 transition-transform duration-500">
-                          <EventCard
-                            id={ev.id}
-                            slug={ev.slug}
-                            image={ev.image}
-                            date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
-                            title={ev.name}
-                            location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
-                            views={ev.metrics?.views || 0}
-                            interests={ev.metrics?.interests || 0}
-                            categories={ev.categories || []}
-                            size="large"
-                          />
-                        </div>
+                        <EventCard
+                          key={ev.id}
+                          id={ev.id}
+                          slug={ev.slug}
+                          image={ev.image}
+                          date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                          title={ev.name}
+                          location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
+                          views={ev.metrics?.views || 0}
+                          interests={ev.metrics?.interests || 0}
+                          categories={ev.categories || []}
+                          size="large"
+                        />
                       ))}
                     </div>
                   </div>
                 )}
 
                 {pastEvents.length > 0 && (
-                  <div className="animate-in fade-in slide-in-from-bottom-5 duration-700 delay-200">
-                    <div className="flex items-center gap-4 mb-12 pl-2 opacity-50">
-                      <div className="h-8 w-1 bg-gray-400 rounded-full" />
-                      <h2 className="text-3xl font-black tracking-tight uppercase text-gray-500">O que já rolou</h2>
-                    </div>
-                    <div className="flex flex-wrap gap-6 md:gap-10 justify-center lg:justify-start opacity-70 grayscale-[0.4] hover:grayscale-0 transition-all duration-700">
-                      {pastEvents.slice(0, 12).map((ev) => (
-                        <div key={ev.id} className="transform hover:-translate-y-2 transition-transform duration-500">
-                          <EventCard
-                            id={ev.id}
-                            slug={ev.slug}
-                            image={ev.image}
-                            date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
-                            title={ev.name}
-                            location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
-                            views={ev.metrics?.views || 0}
-                            interests={ev.metrics?.interests || 0}
-                            categories={ev.categories || []}
-                            size="small"
-                          />
-                        </div>
+                  <div>
+                    <h2 className="text-xl font-bold mb-10 pl-2 uppercase tracking-widest opacity-20">Passados</h2>
+                    <div className="flex flex-wrap gap-6 justify-center lg:justify-start opacity-60 grayscale-[0.5] hover:grayscale-0 transition-all duration-700">
+                      {pastEvents.slice(0, 8).map((ev) => (
+                        <EventCard
+                          key={ev.id}
+                          id={ev.id}
+                          slug={ev.slug}
+                          image={ev.image}
+                          date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                          title={ev.name}
+                          location={`${ev.locationCity || ''}${ev.locationCity && ev.locationUf ? ', ' : ''}${ev.locationUf || ''}`}
+                          views={ev.metrics?.views || 0}
+                          interests={ev.metrics?.interests || 0}
+                          categories={ev.categories || []}
+                          size="small"
+                        />
                       ))}
                     </div>
                   </div>
@@ -560,88 +520,45 @@ const OrganizationPublicProfile: React.FC = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="about" className="animate-in fade-in zoom-in-95 duration-500 outline-none">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-              <div className="lg:col-span-12">
-                <Card className="p-10 md:p-20 rounded-[4rem] border-none shadow-2xl bg-white dark:bg-zinc-900/50 backdrop-blur-xl">
-                  <div className="max-w-4xl">
-                    <h3 className="text-5xl font-black tracking-tighter mb-12">História de {org.name}</h3>
-
-                    {/* Tags Estilizadas */}
-                    {tags.length > 0 && (
-                      <div className="mb-12">
-                        <div className="flex flex-wrap gap-3">
-                          {tags.map((tag: string, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="prose prose-xl dark:prose-invert prose-orange-600 max-w-none">
-                      {org.description ? (
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-2xl font-medium opacity-90 whitespace-pre-line">
-                          {org.description}
-                        </p>
-                      ) : (
-                        <p className="text-gray-500 italic text-2xl">
-                          Nenhuma descrição disponível ainda. Fique atento! ✨
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Info de Contato Ultra-Clean */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-20 p-10 bg-black/5 dark:bg-white/5 rounded-[3rem] border border-black/5 dark:border-white/5">
-                      {org.site && (
-                        <a href={org.site} target="_blank" rel="noopener noreferrer" className="flex items-center gap-6 group/link">
-                          <div className="p-4 bg-white dark:bg-zinc-800 rounded-3xl shadow-xl group-hover/link:scale-110 transition-transform">
-                            <Globe className="w-8 h-8 text-blue-500" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Website</p>
-                            <p className="font-bold text-xl group-hover/link:text-orange-500 transition-colors">Visitar Site oficial</p>
-                          </div>
-                        </a>
-                      )}
-                      {org.contactEmail && org.showContactEmail && (
-                        <a href={`mailto:${org.contactEmail}`} className="flex items-center gap-6 group/link">
-                          <div className="p-4 bg-white dark:bg-zinc-800 rounded-3xl shadow-xl group-hover/link:scale-110 transition-transform">
-                            <Mail className="w-8 h-8 text-orange-500" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Email</p>
-                            <p className="font-bold text-xl truncate group-hover/link:text-orange-500 transition-colors">{org.contactEmail}</p>
-                          </div>
-                        </a>
-                      )}
-                      {org.locationText && (
-                        <div className="flex items-center gap-6">
-                          <div className="p-4 bg-white dark:bg-zinc-800 rounded-3xl shadow-xl">
-                            <MapPin className="w-8 h-8 text-indigo-500" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Base</p>
-                            <p className="font-bold text-xl">{org.locationText}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+          <TabsContent value="about" className="outline-none">
+            <Card className="p-10 md:p-16 rounded-[3rem] border-none shadow-xl bg-white dark:bg-zinc-900/50 backdrop-blur-xl">
+              <div className="max-w-3xl">
+                <h3 className="text-3xl font-black mb-8 opacity-80">Sobre</h3>
+                {tags.length > 0 && (
+                  <div className="mb-8 flex flex-wrap gap-2">
+                    {tags.map((tag: string, idx: number) => (
+                      <Badge key={idx} variant="secondary" className="bg-orange-500/5 text-orange-600 dark:text-orange-400 px-4 py-1 rounded-full text-[10px] uppercase tracking-widest border border-orange-500/10">
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
-                </Card>
+                )}
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg font-medium opacity-90 whitespace-pre-line">
+                  {org.description || "Nenhuma descrição disponível ainda."}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-16 pt-8 border-t border-gray-100 dark:border-white/5">
+                  {org.site && (
+                    <a href={org.site} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 group/link">
+                      <Globe className="w-6 h-6 text-blue-500" />
+                      <span className="font-bold opacity-70 group-hover/link:opacity-100 transition-opacity">Website oficial</span>
+                    </a>
+                  )}
+                  {org.locationText && (
+                    <div className="flex items-center gap-4 opacity-50">
+                      <MapPin className="w-6 h-6 text-indigo-500" />
+                      <span className="font-bold">{org.locationText}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            </Card>
           </TabsContent>
 
           {org.artistsMode && (
-            <TabsContent value="artists" className="animate-in fade-in zoom-in-95 duration-500 outline-none">
-              <Card className="p-32 text-center rounded-[4rem] border-none bg-gradient-to-br from-zinc-900 to-black text-white shadow-2xl">
-                <div className="text-9xl mb-12 animate-bounce">🎸</div>
-                <h3 className="text-5xl font-black tracking-tighter mb-6">Lineup em Construção</h3>
-                <p className="text-gray-400 text-2xl max-w-2xl mx-auto font-medium">
-                  Os artistas que farão história com a gente serão revelados em breve. Prepare o coração! 🤘✨
-                </p>
+            <TabsContent value="artists" className="outline-none">
+              <Card className="p-20 text-center rounded-[3rem] border-none bg-zinc-100 dark:bg-zinc-900">
+                <div className="text-7xl mb-8 opacity-10">🎸</div>
+                <h3 className="text-2xl font-black mb-2 opacity-50">Lineup em breve</h3>
               </Card>
             </TabsContent>
           )}
