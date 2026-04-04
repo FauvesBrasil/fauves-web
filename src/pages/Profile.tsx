@@ -226,7 +226,7 @@ const Profile = () => {
   const TicketModal = ({ ticket, onClose }: { ticket: any; onClose: () => void }) => {
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [showTransfer, setShowTransfer] = useState(false); // 👈 Toggled state
+    const [showTransfer, setShowTransfer] = useState(false);
     const [transferEmail, setTransferEmail] = useState('');
     const [transferLoading, setTransferLoading] = useState(false);
 
@@ -273,11 +273,28 @@ const Profile = () => {
 
     return (
       <div 
-        className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-[#091747]/90 backdrop-blur-2xl animate-in fade-in duration-500" 
+        className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 bg-[#091747]/90 backdrop-blur-2xl animate-in fade-in duration-500 overflow-hidden" 
         style={{ zIndex: 99999 }}
       >
         <div className="absolute inset-0" onClick={onClose} />
         
+        {/* Scroll Custom CSS */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(42, 42, 215, 0.2);
+            border-radius: 10px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(42, 42, 215, 0.4);
+          }
+        ` }} />
+
         <div className="w-full max-w-[440px] h-[720px] sm:h-[780px] max-h-[90vh] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-hidden relative flex flex-col animate-in zoom-in-95 duration-300">
            
            {/* Modal Header (Unified) */}
@@ -304,12 +321,13 @@ const Profile = () => {
            </div>
 
            {/* CONTENT AREA: Toggled between Info and Transfer */}
-           <div className="flex-1 flex flex-col overflow-y-auto pt-0">
+           {/* 👈 FIX: Added overflow-x-hidden and custom-scrollbar */}
+           <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden custom-scrollbar pt-0">
              
              {!showTransfer ? (
-               <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
+               <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-right-4 duration-500 overflow-x-hidden">
                   {/* Event Image */}
-                  <div className="relative h-56 sm:h-64 shrink-0">
+                  <div className="relative h-56 sm:h-64 shrink-0 overflow-hidden">
                     <img 
                       src={ticket.eventBannerUrl || (ticket.event?.image ? (ticket.event.image.startsWith('http') ? ticket.event.image : apiUrl(ticket.event.image)) : '')} 
                       className="w-full h-full object-cover" 
@@ -318,7 +336,7 @@ const Profile = () => {
                   </div>
 
                   {/* Details Area */}
-                  <div className="px-8 pb-10 -mt-8 relative z-10 flex-1 flex flex-col bg-white dark:bg-[#0b0b0b] rounded-[40px] pt-8">
+                  <div className="px-8 pb-10 -mt-8 relative z-10 flex-1 flex flex-col bg-white dark:bg-[#0b0b0b] rounded-[40px] pt-8 overflow-x-hidden">
                       <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-6 leading-tight pr-4">{ticket.eventName}</h2>
                       
                       <div className="space-y-5 mb-8">
@@ -356,14 +374,14 @@ const Profile = () => {
                          </div>
                       </div>
 
-                      {/* Decoupled Separator */}
-                      <div className="relative mb-8 h-8 shrink-0">
-                         <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-gray-100 dark:border-[#222]" />
-                         <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
-                         <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
+                      {/* Decoupled Separator (👈 Adjusted circles padding to avoid horizontal scroll) */}
+                      <div className="relative mb-8 h-8 shrink-0 mx-[-32px]">
+                         <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 border-t-2 border-dashed border-gray-100 dark:border-[#222]" />
+                         <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
+                         <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-8 h-8 bg-[#091747] dark:bg-[#0b0b0b] rounded-full" />
                       </div>
 
-                      <div className="text-center mt-auto">
+                      <div className="text-center mt-auto overflow-x-hidden">
                         <div className="relative inline-block mb-6 p-4 bg-white rounded-3xl shadow-xl ring-1 ring-gray-100 dark:ring-transparent">
                           {qrDataUrl ? (
                             <img src={qrDataUrl} className="w-48 h-48 sm:w-56 sm:h-56" key={refreshKey} />
@@ -400,7 +418,7 @@ const Profile = () => {
                   </div>
                </div>
              ) : (
-               <div className="flex-1 flex flex-col p-8 pt-24 animate-in fade-in slide-in-from-left-4 duration-500">
+               <div className="flex-1 flex flex-col p-8 pt-24 animate-in fade-in slide-in-from-left-4 duration-500 overflow-x-hidden">
                   <div className="w-16 h-16 rounded-[24px] bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7] mb-6">
                     <ArrowRightLeft className="w-8 h-8" />
                   </div>
@@ -657,7 +675,7 @@ const Profile = () => {
                   <h3 className="text-2xl font-black leading-tight mb-4 tracking-tighter">Acesso rápido no dia do evento</h3>
                   <p className="text-indigo-100 text-sm font-medium mb-8 leading-relaxed opacity-90">Seus ingressos possuem QR Codes dinâmicos que se atualizam por segurança. Certifique-se de estar logado!</p>
                   <div className="h-1 bg-white/20 rounded-full w-20 mb-8" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Fauves Safe Ticket v2.4</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">Fauves Safe Ticket v2.5</p>
                </div>
                
                <div className="mt-8 p-10 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[48px] border border-gray-100 dark:border-transparent">
