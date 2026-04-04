@@ -185,6 +185,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTimeout(() => setLoginModalRedirect(undefined), 300);
   }, []);
 
+  useEffect(() => {
+    const handleUpdate = () => {
+      console.log('[AuthContext] Evento profile-updated detectado. Sincronizando dados do usuário...');
+      refreshUser();
+    };
+    window.addEventListener('profile-updated', handleUpdate);
+    return () => window.removeEventListener('profile-updated', handleUpdate);
+  }, [refreshUser]);
+
   const value: AuthContextValue = { 
     user, 
     token, 
