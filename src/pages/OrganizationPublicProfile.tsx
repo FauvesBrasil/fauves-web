@@ -3,7 +3,6 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { apiUrl } from '@/lib/apiBase';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -14,9 +13,9 @@ import FollowersModal from '../components/FollowersModal';
 import EventCard from '@/components/EventCard';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Calendar, MapPin, Users, Share2, ExternalLink,
+  Calendar, MapPin, Share2, ExternalLink,
   Mail, Globe, Clock, Heart, Loader2, CalendarDays,
-  Instagram, Youtube, Music, MessageCircle, Send,
+  Instagram, Youtube, Music, Send,
   Facebook, Twitter, Phone, ArrowLeft
 } from 'lucide-react';
 
@@ -240,12 +239,11 @@ const OrganizationPublicProfile: React.FC = () => {
   const pastEvents = events.filter(ev => new Date(ev.startDate) < new Date());
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0b] text-gray-900 dark:text-white pb-32">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0b0b0b] text-gray-900 dark:text-white pb-10">
       <Header />
 
       {/* Hero Section Compacto */}
       <div className="relative w-full overflow-hidden">
-        {/* Banner mais sutil */}
         <div className="relative h-[180px] md:h-[240px] w-full group">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-orange-950 animate-gradient-x" />
           {org.coverUrl && (
@@ -265,9 +263,8 @@ const OrganizationPublicProfile: React.FC = () => {
           </button>
         </div>
 
-        {/* Informações da Marca (Mais próximo do topo) */}
+        {/* Informações da Marca */}
         <div className="max-w-[1100px] mx-auto px-6 -mt-16 md:-mt-22 relative z-10 flex flex-col items-center text-center">
-          {/* Logo Circular Master */}
           <div className="relative group cursor-pointer" onClick={handleFollow}>
             <div className="absolute inset-0 bg-orange-600 rounded-full blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-700" />
             <Avatar className="w-28 h-28 md:w-32 md:h-32 border-4 border-white dark:border-gray-900 shadow-2xl rounded-full relative z-10 transform transition-all duration-700 group-hover:scale-110">
@@ -368,7 +365,6 @@ const OrganizationPublicProfile: React.FC = () => {
       </div>
 
       <main className="max-w-[1100px] mx-auto px-6 mt-20">
-        {/* Featured Card Equilibrado */}
         {featuredEvent && (
           <div className="mb-20">
             <div className="flex items-center gap-3 mb-6 pl-1">
@@ -422,7 +418,6 @@ const OrganizationPublicProfile: React.FC = () => {
           </div>
         )}
 
-        {/* Tabs Estilizadas (Segmented Pill) */}
         <Tabs defaultValue="events" className="mt-12">
           <div className="flex items-center justify-center mb-12">
             <TabsList className="bg-white/40 dark:bg-zinc-900 p-1 rounded-full border border-gray-100 dark:border-white/5 h-12 inline-flex shadow-md">
@@ -536,7 +531,15 @@ const OrganizationPublicProfile: React.FC = () => {
         </Tabs>
       </main >
 
-      <Footer />
+      {/* Footer Minimalista Fauves */}
+      <footer className="mt-40 pb-12 flex flex-col items-center justify-center border-t border-gray-100 dark:border-white/5 pt-12">
+         <span className="text-2xl font-black tracking-tighter text-gray-300 dark:text-zinc-700 select-none">
+           Fauves
+         </span>
+         <p className="text-[10px] uppercase tracking-[0.3em] font-black text-gray-400 dark:text-zinc-600 mt-2">
+           Discover the vibe
+         </p>
+      </footer>
 
       {showLoginModal && (
         <LoginModal open={showLoginModal} onClose={() => setShowLoginModal(false)} onSuccess={() => toast({ title: 'Bem-vindo!' })} />
