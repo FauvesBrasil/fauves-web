@@ -17,6 +17,36 @@ const LeadCapture: React.FC<LeadCaptureProps> = ({
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
+  const isPhoneNumber = (val: string) => {
+    const raw = val.replace(/\D/g, '');
+    return raw.length > 0 && /^\d+$/.test(raw) && !val.includes('@');
+  };
+
+  const formatPhone = (val: string) => {
+    const raw = val.replace(/\D/g, '');
+    if (raw.length <= 10) {
+      return raw.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+               .replace(/(\d{2})(\d{4})/, '($1) $2')
+               .replace(/(\d{2})/, '($1');
+    }
+    return raw.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+             .replace(/(\d{2})(\d{5})/, '($1) $2')
+             .replace(/(\d{2})/, '($1');
+  };
+
+  const handleContactChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value;
+    const raw = val.replace(/\D/g, '');
+    
+    // If it looks like a phone number (start with digits and no @)
+    if (raw.length > 0 && !val.includes('@') && /^\d/.test(val.replace(/[()-\s]/g, ''))) {
+      val = formatPhone(val);
+      if (val.length > 15) val = val.substring(0, 15);
+    }
+    
+    setContact(val);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contact.trim()) return;
@@ -34,7 +64,7 @@ const LeadCapture: React.FC<LeadCaptureProps> = ({
       const res = await fetchApi('/api/event-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact, source })
+        body: JSON.stringify({ contact: contact.trim(), source })
       });
 
       if (!res.ok) {
@@ -65,9 +95,11 @@ const LeadCapture: React.FC<LeadCaptureProps> = ({
     );
   }
 
+  const showPhoneIcon = isPhoneNumber(contact);
+
   return (
     <div className="w-full max-w-[1352px] mx-auto px-[156px] py-12 max-md:px-5 max-sm:px-4">
-      <div className="bg-white dark:bg-[#121212] border border-gray-100 dark:border-white/5 rounded-3xl p-12 max-md:p-8 flex flex-col md:flex-row items-center gap-12 shadow-xl relative overflow-hidden group">
+      <div className="bg-white dark:bg-[#121212] border border-gray-100 dark:border-white/5 rounded-3xl p-12 max-md:p-8 flex flex-col md:flex-row items-center gap-12 relative overflow-hidden group">
         {/* Background accent */}
         <div className="absolute top-[-50%] left-[-20%] w-[500px] h-[500px] bg-[#2A2AD7]/5 blur-[120px] rounded-full pointer-events-none group-hover:bg-[#2A2AD7]/10 transition-colors"></div>
         <div className="absolute bottom-[-50%] right-[-10%] w-[400px] h-[400px] bg-[#FF3F00]/5 blur-[100px] rounded-full pointer-events-none group-hover:bg-[#FF3F00]/10 transition-colors"></div>
@@ -84,12 +116,20 @@ const LeadCapture: React.FC<LeadCaptureProps> = ({
         <div className="w-full max-w-[460px] relative z-10">
           <form onSubmit={handleSubmit} className="relative flex flex-col gap-3">
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              {showPhoneIcon ? (
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 animate-in zoom-in duration-300">
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                </div>
+              ) : (
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 animate-in zoom-in duration-300" size={20} />
+              )}
               <input
                 type="text"
                 placeholder="E-mail ou WhatsApp"
                 value={contact}
-                onChange={(e) => setContact(e.target.value)}
+                onChange={handleContactChange}
                 required
                 disabled={status === 'loading'}
                 className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl py-5 pl-12 pr-4 text-lg focus:outline-none focus:ring-4 focus:ring-[#2A2AD7]/20 transition-all font-semibold"
