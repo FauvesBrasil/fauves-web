@@ -6,6 +6,8 @@ import SearchBar from '@/components/SearchBar';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Calendar, Filter, ChevronDown } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
+
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -26,6 +28,16 @@ const SearchResults: React.FC = () => {
   const [sort, setSort] = useState<string>(sortParam || 'relevance');
   const [localSearchTerm, setLocalSearchTerm] = useState(q);
   const navigate = useNavigate();
+
+  // SEO dinâmico: title muda conforme o termo buscado
+  useSEO({
+    title: q ? `Resultados para "${q}"` : 'Buscar Eventos',
+    description: q
+      ? `Encontre eventos relacionados a "${q}" na Fauves. Shows, festas, festivais e muito mais.`
+      : 'Busque por shows, festas, festivais e eventos em todo o Brasil na Fauves.',
+    noIndex: true, // páginas de busca geralmente não devem ser indexadas
+  });
+
 
   useEffect(() => {
     // load categories once

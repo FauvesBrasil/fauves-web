@@ -18,6 +18,8 @@ import {
   Instagram, Youtube, Music, Send,
   Facebook, Twitter, Phone, ArrowLeft
 } from 'lucide-react';
+import { useSEO, buildOrganizationJsonLd } from '@/hooks/useSEO';
+
 
 const OrganizationPublicProfile: React.FC = () => {
   const { slugOrId, slug: legacySlug } = useParams<{ slugOrId?: string; slug?: string }>();
@@ -36,6 +38,16 @@ const OrganizationPublicProfile: React.FC = () => {
   const [followersList, setFollowersList] = React.useState<any[]>([]);
   const [showFollowersModal, setShowFollowersModal] = React.useState(false);
   const { toast } = useToast();
+
+  // SEO dinâmico: atualiza title/OG quando org carregar
+  useSEO({
+    title: org ? org.name : undefined,
+    description: org ? (org.bio || org.description || `Confira os eventos e informações de ${org.name} na Fauves.`) : undefined,
+    image: org?.logoUrl || org?.coverUrl || undefined,
+    url: org ? `/org/${org.slug || org.id}` : undefined,
+    type: 'profile',
+    jsonLd: org ? buildOrganizationJsonLd(org) : undefined,
+  });
 
   React.useEffect(() => {
     if (!slug) return;

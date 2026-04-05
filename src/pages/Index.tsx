@@ -19,6 +19,8 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import WeekendHighlights from '@/components/WeekendHighlights';
 import TrendingHighlights from '@/components/TrendingHighlights';
 import LeadCapture from '@/components/LeadCapture';
+import { useSEO, WEBSITE_JSON_LD } from '@/hooks/useSEO';
+
 
 // OBS: removido supabase e spinner não utilizados; carregamento é puramente via backend /events
 
@@ -52,6 +54,16 @@ const Index = () => {
 
   // Keep hooks order stable: read location context here so it's not called conditionally later
   const { selectedUf } = useLocation();
+
+  // SEO da home page
+  const locationLabel = selectedUf ? ` em ${selectedUf}` : ' no Brasil';
+  useSEO({
+    title: `Descubra Eventos${locationLabel}`,
+    description: `Encontre shows, festas, festivais e eventos${locationLabel}. Compre ingressos online com segurança na Fauves.`,
+    keywords: `eventos${locationLabel}, shows, festas, baladas, ingressos online, agenda cultural`,
+    jsonLd: WEBSITE_JSON_LD,
+  });
+
 
   function buildErrorMessage(status?: number, detail?: string) {
     const metaEnv = (import.meta as unknown as { env?: Record<string, string | undefined> });

@@ -6,6 +6,8 @@ import CategoryFilter from '@/components/CategoryFilter';
 import EmptyStateOrganizerCTA from '@/components/EmptyStateOrganizerCTA';
 import { fetchApi, apiUrl } from '@/lib/apiBase';
 import { Loader2 } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
+
 
 interface Category {
   id: string;
@@ -29,6 +31,16 @@ const EventsByCategory = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // SEO dinâmico por categoria
+  useSEO({
+    title: category ? `Eventos de ${category.name} no Brasil` : undefined,
+    description: category
+      ? `Confira os melhores eventos de ${category.name} no Brasil. Compre ingressos online com segurança na Fauves.`
+      : undefined,
+    url: categorySlug ? `/eventos/${categorySlug}` : undefined,
+  });
+
 
   useEffect(() => {
     const loadData = async () => {
@@ -77,20 +89,7 @@ const EventsByCategory = () => {
 
         setEvents(mapped);
 
-        // Update SEO
-        const title = `Eventos de ${catData.name} em Fortaleza | Fauves`;
-        const description = `Veja os melhores eventos de ${catData.name} em Fortaleza. Descubra o que fazer e encontre festas atualizadas.`;
-        document.title = title;
-        
-        let metaDesc = document.querySelector('meta[name="description"]');
-        if (metaDesc) {
-          metaDesc.setAttribute('content', description);
-        } else {
-          metaDesc = document.createElement('meta');
-          metaDesc.setAttribute('name', 'description');
-          metaDesc.setAttribute('content', description);
-          document.head.appendChild(metaDesc);
-        }
+        // SEO is managed by useSEO hook above
 
       } catch (err: any) {
         console.error('Error loading category page:', err);

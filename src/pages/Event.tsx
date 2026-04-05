@@ -19,6 +19,7 @@ import { Eye, Users, Flame, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getEventHypeLevel, getHypeBadge } from '../lib/hype';
 import { fetchApi } from '@/lib/apiBase';
+import { useSEO, buildEventJsonLd } from '@/hooks/useSEO';
 
 // Modal de denúncia
 function ReportModal({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: (reason: string, email: string, description: string) => void }) {
@@ -193,6 +194,19 @@ const Event: React.FC = () => {
       });
     }
   }, [event?.id, event?.name, event?.category, trackPageView]);
+
+  // SEO dinâmico: atualiza title, description, OG e JSON-LD quando o evento carrega
+  const eventDescription = event
+    ? `${event.name} — ${event.locationCity ? `${event.locationCity}, ` : ''}${new Date(event.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}. ${event.description?.slice(0, 150) || 'Garanta já seu ingresso na Fauves!'}`
+    : undefined;
+  useSEO({
+    title: event?.name,
+    description: eventDescription,
+    image: event?.image,
+    url: event ? `/event/${event.slug || event.id}` : undefined,
+    type: 'event',
+    jsonLd: event ? buildEventJsonLd(event) : undefined,
+  });
 
   // Registrar visualização de link rastreável (utm) ou direto (orgânico)
   useEffect(() => {
