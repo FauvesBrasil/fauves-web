@@ -24,14 +24,13 @@ const LeadCapture: React.FC<LeadCaptureProps> = ({
 
   const formatPhone = (val: string) => {
     const raw = val.replace(/\D/g, '');
+    if (raw.length === 0) return '';
+    if (raw.length <= 2) return `(${raw}`;
+    if (raw.length <= 6) return `(${raw.substring(0, 2)}) ${raw.substring(2)}`;
     if (raw.length <= 10) {
-      return raw.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
-               .replace(/(\d{2})(\d{4})/, '($1) $2')
-               .replace(/(\d{2})/, '($1');
+      return `(${raw.substring(0, 2)}) ${raw.substring(2, 6)}-${raw.substring(6)}`;
     }
-    return raw.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-             .replace(/(\d{2})(\d{5})/, '($1) $2')
-             .replace(/(\d{2})/, '($1');
+    return `(${raw.substring(0, 2)}) ${raw.substring(2, 7)}-${raw.substring(7, 11)}`;
   };
 
   const handleContactChange = (e: React.ChangeEvent<HTMLInputElement>) => {
