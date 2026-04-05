@@ -89,6 +89,7 @@ const AdminTicketDetail = React.lazy(() => import('./pages/AdminTicketDetail'));
 const AdminLiveChat = React.lazy(() => import('./pages/AdminLiveChat'));
 const AdminHelpdesk = React.lazy(() => import('./pages/AdminHelpdesk'));
 const AdminKnowledgeBase = React.lazy(() => import('./pages/AdminKnowledgeBase'));
+const AdminLeads = React.lazy(() => import('./pages/AdminLeads'));
 
 // Non-admin imports (still eager loaded)
 import ParticipantesPedidos from "./pages/ParticipantesPedidos";
@@ -230,6 +231,7 @@ const AppInner = () => {
             <Route path="slides" element={<Suspense fallback={<div>Carregando...</div>}><AdminSlidesLazy /></Suspense>} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="order/:orderId" element={<AdminOrderDetails />} />
+            <Route path="leads" element={<AdminLeads />} />
 
             {/* Helpdesk Section */}
             <Route path="helpdesk" element={<AdminHelpdesk />} />
