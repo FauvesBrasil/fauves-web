@@ -83,11 +83,18 @@ const LeadCapture: React.FC<LeadCaptureProps> = ({
   if (status === 'success') {
     return (
       <div className="w-full max-w-[1352px] mx-auto px-[156px] py-12 max-md:px-5 max-sm:px-4">
-        <div className="bg-gradient-to-r from-[#2A2AD7] to-[#FF3F00] rounded-3xl p-12 text-center text-white shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
+        <div className="bg-white dark:bg-[#121212] border border-emerald-100 dark:border-emerald-900/30 rounded-3xl p-12 text-center relative overflow-hidden animate-in fade-in zoom-in duration-500">
+          <div className="absolute top-0 left-0 w-full h-full opacity-5 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
           <div className="relative z-10 flex flex-col items-center gap-4">
-            <CheckCircle2 size={64} className="text-white animate-bounce mb-2" />
-            <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">{message}</h2>
+            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mb-2">
+              <CheckCircle2 size={32} className="text-emerald-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-[#091747] dark:text-white leading-tight">
+              {message}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 font-medium">
+              Você entrará na nossa lista VIP de novidades.
+            </p>
           </div>
         </div>
       </div>
@@ -98,16 +105,16 @@ const LeadCapture: React.FC<LeadCaptureProps> = ({
 
   return (
     <div className="w-full max-w-[1352px] mx-auto px-[156px] py-12 max-md:px-5 max-sm:px-4">
-      <div className="bg-white dark:bg-[#121212] border border-gray-100 dark:border-white/5 rounded-3xl p-12 max-md:p-8 flex flex-col md:flex-row items-center gap-12 relative overflow-hidden group">
-        {/* Background accent */}
-        <div className="absolute top-[-50%] left-[-20%] w-[500px] h-[500px] bg-[#2A2AD7]/5 blur-[120px] rounded-full pointer-events-none group-hover:bg-[#2A2AD7]/10 transition-colors"></div>
-        <div className="absolute bottom-[-50%] right-[-10%] w-[400px] h-[400px] bg-[#FF3F00]/5 blur-[100px] rounded-full pointer-events-none group-hover:bg-[#FF3F00]/10 transition-colors"></div>
+      <div className="bg-white dark:bg-[#121212] border border-gray-100 dark:border-white/5 rounded-3xl p-12 max-md:p-8 flex flex-col md:flex-row items-center gap-12 relative overflow-hidden group transition-all duration-300">
+        {/* Background accent - more subtle */}
+        <div className="absolute top-[-50%] left-[-20%] w-[500px] h-[500px] bg-[#2A2AD7]/3 blur-[120px] rounded-full pointer-events-none group-hover:bg-[#2A2AD7]/5 transition-colors"></div>
+        <div className="absolute bottom-[-50%] right-[-10%] w-[400px] h-[400px] bg-[#FF3F00]/3 blur-[100px] rounded-full pointer-events-none group-hover:bg-[#FF3F00]/5 transition-colors"></div>
 
         <div className="flex-1 relative z-10 text-left">
-          <h2 className="text-4xl max-md:text-3xl font-black text-[#091747] dark:text-white uppercase tracking-tighter leading-tight mb-4">
+          <h2 className="text-3xl max-md:text-2xl font-bold text-[#091747] dark:text-white leading-tight mb-3">
             {title}
           </h2>
-          <p className="text-lg text-gray-500 dark:text-gray-400 font-medium">
+          <p className="text-base text-gray-500 dark:text-gray-400 font-medium">
             {subtitle}
           </p>
         </div>
@@ -131,14 +138,14 @@ const LeadCapture: React.FC<LeadCaptureProps> = ({
                 onChange={handleContactChange}
                 required
                 disabled={status === 'loading'}
-                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl py-5 pl-12 pr-4 text-lg focus:outline-none focus:ring-4 focus:ring-[#2A2AD7]/20 transition-all font-semibold"
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl py-4 pl-12 pr-4 text-base focus:outline-none focus:border-[#2A2AD7]/50 focus:ring-4 focus:ring-[#2A2AD7]/10 transition-all font-medium"
               />
             </div>
             
             <button
               type="submit"
               disabled={status === 'loading'}
-              className="w-full bg-gradient-to-r from-[#2A2AD7] to-[#4F46E5] text-white py-5 rounded-2xl text-lg font-black uppercase tracking-widest shadow-lg shadow-[#2A2AD7]/30 hover:shadow-[#2A2AD7]/50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group/btn"
+              className="w-full bg-[#091747] dark:bg-white dark:text-[#091747] text-white py-4 rounded-2xl text-base font-bold shadow-sm hover:shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 group/btn"
             >
               {status === 'loading' ? (
                 <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
