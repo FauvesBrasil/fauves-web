@@ -183,8 +183,8 @@ const WhatToDoCity = () => {
     };
 
     const heroImage = citySlug === 'fortaleza' 
-        ? 'https://images.unsplash.com/photo-1594911776510-7e18987d6056?auto=format&fit=crop&q=80&w=2000'
-        : 'https://images.unsplash.com/photo-1463620910506-d0458143143e?auto=format&fit=crop&q=80&w=2000';
+        ? 'https://images.unsplash.com/photo-1591836336324-5d466f68961a?q=80&w=2000&auto=format&fit=crop'
+        : 'https://images.unsplash.com/photo-1463620910506-d0458143143e?q=80&w=2000&auto=format&fit=crop';
 
     return (
         <AppShell>
@@ -194,6 +194,11 @@ const WhatToDoCity = () => {
                     src={heroImage} 
                     alt={cityName}
                     className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => {
+                        // Fallback in case Unsplash ID fails
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://images.unsplash.com/photo-1463620910506-d0458143143e?q=80&w=2000';
+                    }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                 
@@ -221,7 +226,7 @@ const WhatToDoCity = () => {
             <main className="max-w-[1352px] mx-auto pt-12 pb-20">
                 {/* Intro SEO Text */}
                 <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mb-12">
-                    <div className="max-w-4xl p-8 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-3xl">
+                    <div className="p-8 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-3xl">
                         <p className="text-lg text-[#4b5563] dark:text-gray-300 leading-relaxed italic">
                             "Se você está procurando o que fazer em {cityName} hoje, aqui você encontra os melhores eventos, 
                             festas, shows e experiências acontecendo na cidade. A Fauves reúne opções atualizadas diariamente 
@@ -283,7 +288,7 @@ const WhatToDoCity = () => {
 
                 {/* SEO Footer Content */}
                 <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mt-16">
-                    <div className="max-w-4xl border-t border-gray-100 dark:border-white/5 pt-16">
+                    <div className="border-t border-gray-100 dark:border-white/5 pt-16">
                         <h2 className="text-2xl font-bold text-[#091747] dark:text-white mb-8">Programação Cultural em {cityName}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-[#4b5563] dark:text-gray-400 leading-relaxed text-sm">
                             <div className="space-y-4">
