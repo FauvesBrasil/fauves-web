@@ -182,9 +182,24 @@ const WhatToDoCity = () => {
         );
     };
 
-    const heroImage = citySlug === 'fortaleza' 
-        ? 'https://images.unsplash.com/photo-1591836336324-5d466f68961a?q=80&w=2000&auto=format&fit=crop'
-        : 'https://images.unsplash.com/photo-1463620910506-d0458143143e?q=80&w=2000&auto=format&fit=crop';
+    const getCityImage = (slug: string) => {
+        const cityImages: Record<string, string> = {
+            'fortaleza': '1591836336324-5d466f68961a',
+            'sao-paulo': '1544256718-ebe11eed4911',
+            'rio-de-janeiro': '1483729558449-99ef05a13d9f',
+            'salvador': '1591461537233-0443fe0364d0',
+            'belo-horizonte': '1593995863951-b79bc19599ba',
+            'curitiba': '1596464716127-f2a829d4de30',
+            'brasilia': '1595111090623-11f845d47053',
+            'recife': '1594911776510-7e18987d6056',
+            'florianopolis': '1593021151203-01e4f62629b3'
+        };
+
+        const id = cityImages[slug.toLowerCase()] || '1463620910506-d0458143143e';
+        return `https://images.unsplash.com/photo-${id}?q=80&w=2000&auto=format&fit=crop`;
+    };
+
+    const heroImage = getCityImage(citySlug || '');
 
     return (
         <AppShell>
@@ -195,15 +210,14 @@ const WhatToDoCity = () => {
                     alt={cityName}
                     className="absolute inset-0 w-full h-full object-cover"
                     onError={(e) => {
-                        // Fallback in case Unsplash ID fails
                         const target = e.target as HTMLImageElement;
                         target.src = 'https://images.unsplash.com/photo-1463620910506-d0458143143e?q=80&w=2000';
                     }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                 
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
-                    <div className="max-w-[1352px] w-full px-6 md:px-[156px] pointer-events-auto">
+                <div className="absolute inset-0 flex flex-col items-start justify-center text-left px-6 pointer-events-none">
+                    <div className="max-w-[1352px] w-full mx-auto px-6 md:px-[156px] pointer-events-auto">
                         <h1 className="text-6xl md:text-8xl font-black text-white mb-4 tracking-tighter animate-in fade-in slide-in-from-bottom-8 duration-700">
                             {cityName}
                         </h1>
@@ -211,7 +225,7 @@ const WhatToDoCity = () => {
                             Eventos, festas e experiências acontecendo agora
                         </p>
                         
-                        <div className="mt-8 relative max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+                        <div className="mt-8 relative max-w-md animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                             <input 
                                 type="text"
