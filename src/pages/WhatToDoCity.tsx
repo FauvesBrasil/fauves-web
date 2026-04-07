@@ -203,8 +203,8 @@ const WhatToDoCity = () => {
             return `https://images.unsplash.com/photo-${val}?q=80&w=2000&auto=format&fit=crop`;
         }
         
-        // Fallback dinâmico: busca automática por nome da cidade (+ Brasil + City para ser mais preciso)
-        return `https://images.unsplash.com/featured/?${encodeURIComponent(name)},brazil,city`;
+        // Fallback dinâmico: busca automática por nome da cidade (+ pontos turísticos para ser mais preciso)
+        return `https://images.unsplash.com/featured/?${encodeURIComponent(name)},brazil,sightseeing,landmark,tourism`;
     };
 
     const heroImage = getCityImage(citySlug || '', cityName);
