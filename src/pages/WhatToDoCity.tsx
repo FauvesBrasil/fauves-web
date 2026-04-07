@@ -75,7 +75,19 @@ const WhatToDoCity = () => {
             }
         };
         load();
-        document.title = `O que fazer em ${cityName} | Fauves`;
+        
+        // SEO: Meta Tags
+        document.title = `O que fazer em ${cityName} hoje | Eventos, festas e shows | Fauves`;
+        
+        // Adiciona/Atualiza Meta Description
+        let metaDesc = document.querySelector('meta[name="description"]');
+        if (!metaDesc) {
+            metaDesc = document.createElement('meta');
+            metaDesc.setAttribute('name', 'description');
+            document.head.appendChild(metaDesc);
+        }
+        metaDesc.setAttribute('content', `Descubra os melhores eventos em ${cityName} hoje. Encontre festas, shows e experiências atualizadas diariamente na Fauves.`);
+
     }, [citySlug, cityName]);
 
     const now = new Date();
@@ -99,11 +111,14 @@ const WhatToDoCity = () => {
         return evDate >= now && evDate <= endOfSunday;
     });
 
-    const upcomingEvents = [...events].sort((a, b) => 
+    const upcomingEvents = events.filter(ev => {
+        if (!ev.startDate) return false;
+        return new Date(ev.startDate) > endOfSunday;
+    }).sort((a, b) => 
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     );
 
-    const renderEventsSection = (title: string, evList: Event[], emptyMsg: string) => (
+    const renderEventsSection = (title: string, evList: Event[], emptyMsg: React.ReactNode) => (
         <section className="mb-16">
             <h2 className="text-2xl font-bold text-[#091747] mb-6 flex items-center gap-2">
                 {title}
@@ -125,7 +140,9 @@ const WhatToDoCity = () => {
                 </div>
             ) : (
                 <div className="bg-[#f8f9fc] border border-dashed border-[#cbd5e1] rounded-2xl py-12 px-6 text-center">
-                    <p className="text-[#64748b] text-base">{emptyMsg}</p>
+                    <div className="text-[#64748b] text-base leading-relaxed max-w-2xl mx-auto">
+                        {emptyMsg}
+                    </div>
                 </div>
             )}
         </section>
@@ -136,13 +153,14 @@ const WhatToDoCity = () => {
             <Header />
             
             <main className="max-w-[1352px] mx-auto px-4 py-12">
-                <div className="mb-16 max-w-2xl">
+                <div className="mb-16 max-w-3xl">
                     <h1 className="text-4xl md:text-5xl font-extrabold text-[#091747] mb-6 leading-tight">
-                        O que fazer em {cityName}
+                        O que fazer em {cityName} hoje: eventos, festas e shows atualizados
                     </h1>
                     <p className="text-lg text-[#4b5563] leading-relaxed">
-                        Descubra os melhores eventos, festas e experiências acontecendo em {cityName}. 
-                        Encontre opções para hoje, fim de semana e próximos dias de forma rápida e segura na Fauves.
+                        Se você está procurando o que fazer em {cityName} hoje, aqui você encontra os melhores eventos, 
+                        festas, shows e experiências acontecendo na cidade. A Fauves reúne opções atualizadas diariamente 
+                        para você aproveitar ao máximo {cityName}, seja durante a semana ou no fim de semana.
                     </p>
                 </div>
 
@@ -156,22 +174,62 @@ const WhatToDoCity = () => {
                         {renderEventsSection(
                             `Eventos hoje em ${cityName}`, 
                             todayEvents, 
-                            `Nenhum evento cadastrado para hoje em ${cityName}. Confira as opções de fim de semana!`
+                            <>
+                                Atualmente não há eventos cadastrados para hoje em {cityName}, mas você pode conferir os 
+                                <strong> próximos eventos disponíveis</strong> ou explorar opções para o 
+                                <strong> fim de semana</strong>. Novos eventos são adicionados diariamente.
+                            </>
                         )}
 
                         {renderEventsSection(
                             `Eventos este fim de semana em ${cityName}`, 
                             weekendEvents, 
-                            `Ainda não há eventos confirmados para este fim de semana em ${cityName}.`
+                            <>
+                                Ainda não há eventos confirmados para este fim de semana em {cityName}, mas você pode 
+                                explorar os <strong>próximos eventos</strong> ou voltar em breve para novas atualizações.
+                            </>
                         )}
 
                         {renderEventsSection(
                             `Próximos eventos em ${cityName}`, 
                             upcomingEvents, 
-                            `Em breve, novos eventos serão anunciados em ${cityName}. Fique atento!`
+                            <>
+                                Em breve, novos eventos serão anunciados em {cityName}. 
+                                Fique atento para descobrir o que fazer na cidade nos próximos dias!
+                            </>
                         )}
                     </>
                 )}
+
+                {/* SEO Footer Content */}
+                <div className="mt-20 border-t border-gray-100 pt-16 pb-12">
+                    <div className="max-w-4xl">
+                        <h2 className="text-xl font-bold text-[#091747] mb-6">Programação Cultural em {cityName}</h2>
+                        <div className="space-y-4 text-[#4b5563] leading-relaxed">
+                            <p>
+                                {cityName} é um dos principais destinos de entretenimento do Brasil, com uma agenda intensa 
+                                de eventos ao longo de todo o ano. Entre festas, shows, eventos culturais e experiências 
+                                gastronômicas, sempre há algo acontecendo na cidade.
+                            </p>
+                            <p>
+                                Se você está em dúvida sobre o que fazer em {cityName} hoje ou no fim de semana, a Fauves 
+                                facilita sua busca reunindo os melhores eventos em um só lugar, de forma prática e atualizada.
+                            </p>
+                            <p>
+                                Acompanhe esta página para descobrir novos eventos, planejar sua programação e aproveitar 
+                                tudo o que {cityName} tem a oferecer.
+                            </p>
+                        </div>
+                        <div className="mt-8 flex flex-wrap gap-4">
+                            <a href="/events" className="text-[#2A2AD7] font-semibold hover:underline text-sm flex items-center gap-1.5">
+                                Ver todos os eventos
+                            </a>
+                            <a href={`/o-que-fazer-em/${citySlug}`} className="text-[#2A2AD7] font-semibold hover:underline text-sm flex items-center gap-1.5">
+                                Explorar mais eventos em {cityName}
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
                 <LeadCapture source="city-page" />
             </main>
