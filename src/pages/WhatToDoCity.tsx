@@ -182,7 +182,7 @@ const WhatToDoCity = () => {
         );
     };
 
-    const getCityImage = (slug: string) => {
+    const getCityImage = (slug: string, name: string) => {
         const cityImages: Record<string, string> = {
             'fortaleza': 'https://images.trvl-media.com/place/6142832/917c6b31-1da4-4e62-9869-79b2c991dec8.jpg',
             'sao-paulo': 'https://visitesaopaulo.com/wp-content/uploads/2023/05/banner-i.jpg',
@@ -196,16 +196,18 @@ const WhatToDoCity = () => {
         };
 
         const val = cityImages[slug.toLowerCase()];
-        if (!val) return 'https://images.unsplash.com/photo-1463620910506-d0458143143e?q=80&w=2000&auto=format&fit=crop';
         
-        // Se for uma URL completa, retorna ela
-        if (val.startsWith('http')) return val;
+        // Se houver mapeamento específico
+        if (val) {
+            if (val.startsWith('http')) return val;
+            return `https://images.unsplash.com/photo-${val}?q=80&w=2000&auto=format&fit=crop`;
+        }
         
-        // Se for apenas o ID do Unsplash
-        return `https://images.unsplash.com/photo-${val}?q=80&w=2000&auto=format&fit=crop`;
+        // Fallback dinâmico: busca automática por nome da cidade (+ Brasil + City para ser mais preciso)
+        return `https://images.unsplash.com/featured/?${encodeURIComponent(name)},brazil,city`;
     };
 
-    const heroImage = getCityImage(citySlug || '');
+    const heroImage = getCityImage(citySlug || '', cityName);
 
     return (
         <AppShell>
