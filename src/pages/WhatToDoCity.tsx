@@ -6,6 +6,7 @@ import EventCard from '../components/EventCard';
 import { fetchApi } from '@/lib/apiBase';
 import { Loader2 } from 'lucide-react';
 import LeadCapture from '../components/LeadCapture';
+import AppShell from '../components/AppShell';
 
 interface Event {
     id: string;
@@ -149,11 +150,9 @@ const WhatToDoCity = () => {
     );
 
     return (
-        <div className="min-h-screen bg-white">
-            <Header />
-            
-            <main className="max-w-[1352px] mx-auto px-4 py-12">
-                <div className="mb-16 max-w-3xl">
+        <AppShell>
+            <main className="max-w-[1352px] mx-auto py-12">
+                <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mb-16 max-w-3xl">
                     <h1 className="text-4xl md:text-5xl font-extrabold text-[#091747] mb-6 leading-tight">
                         O que fazer em {cityName} hoje: eventos, festas e shows atualizados
                     </h1>
@@ -164,46 +163,50 @@ const WhatToDoCity = () => {
                     </p>
                 </div>
 
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                        <Loader2 className="w-10 h-10 animate-spin text-[#2A2AD7] mb-4" />
-                        <p className="text-gray-500 font-medium">Buscando os melhores eventos em {cityName}...</p>
-                    </div>
-                ) : (
-                    <>
-                        {renderEventsSection(
-                            `Eventos hoje em ${cityName}`, 
-                            todayEvents, 
-                            <>
-                                Atualmente não há eventos cadastrados para hoje em {cityName}, mas você pode conferir os 
-                                <strong> próximos eventos disponíveis</strong> ou explorar opções para o 
-                                <strong> fim de semana</strong>. Novos eventos são adicionados diariamente.
-                            </>
-                        )}
+                <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <Loader2 className="w-10 h-10 animate-spin text-[#2A2AD7] mb-4" />
+                            <p className="text-gray-500 font-medium">Buscando os melhores eventos em {cityName}...</p>
+                        </div>
+                    ) : (
+                        <>
+                            {renderEventsSection(
+                                `Eventos hoje em ${cityName}`, 
+                                todayEvents, 
+                                <>
+                                    Atualmente não há eventos cadastrados para hoje em {cityName}, mas você pode conferir os 
+                                    <strong> próximos eventos disponíveis</strong> ou explorar opções para o 
+                                    <strong> fim de semana</strong>. Novos eventos são adicionados diariamente.
+                                </>
+                            )}
 
-                        {renderEventsSection(
-                            `Eventos este fim de semana em ${cityName}`, 
-                            weekendEvents, 
-                            <>
-                                Ainda não há eventos confirmados para este fim de semana em {cityName}, mas você pode 
-                                explorar os <strong>próximos eventos</strong> ou voltar em breve para novas atualizações.
-                            </>
-                        )}
+                            {renderEventsSection(
+                                `Eventos este fim de semana em ${cityName}`, 
+                                weekendEvents, 
+                                <>
+                                    Ainda não há eventos confirmados para este fim de semana em {cityName}, mas você pode 
+                                    explorar os <strong>próximos eventos</strong> ou voltar em breve para novas atualizações.
+                                </>
+                            )}
 
-                        {renderEventsSection(
-                            `Próximos eventos em ${cityName}`, 
-                            upcomingEvents, 
-                            <>
-                                Em breve, novos eventos serão anunciados em {cityName}. 
-                                Fique atento para descobrir o que fazer na cidade nos próximos dias!
-                            </>
-                        )}
-                    </>
-                )}
+                            {renderEventsSection(
+                                `Próximos eventos em ${cityName}`, 
+                                upcomingEvents, 
+                                <>
+                                    Em breve, novos eventos serão anunciados em {cityName}. 
+                                    Fique atento para descobrir o que fazer na cidade nos próximos dias!
+                                </>
+                            )}
+                        </>
+                    )}
+                </div>
+
+                <LeadCapture source="city-page" />
 
                 {/* SEO Footer Content */}
-                <div className="mt-20 border-t border-gray-100 pt-16 pb-12">
-                    <div className="max-w-4xl">
+                <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mt-8 pb-12">
+                    <div className="max-w-4xl border-t border-gray-100 pt-16">
                         <h2 className="text-xl font-bold text-[#091747] mb-6">Programação Cultural em {cityName}</h2>
                         <div className="space-y-4 text-[#4b5563] leading-relaxed">
                             <p>
@@ -230,12 +233,8 @@ const WhatToDoCity = () => {
                         </div>
                     </div>
                 </div>
-
-                <LeadCapture source="city-page" />
             </main>
-
-            <Footer />
-        </div>
+        </AppShell>
     );
 };
 
