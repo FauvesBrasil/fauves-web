@@ -184,8 +184,8 @@ const WhatToDoCity = () => {
 
     const getCityImage = (slug: string) => {
         const cityImages: Record<string, string> = {
-            'fortaleza': '1591836336324-5d466f68961a',
-            'sao-paulo': '1544256718-ebe11eed4911',
+            'fortaleza': 'https://images.trvl-media.com/place/6142832/917c6b31-1da4-4e62-9869-79b2c991dec8.jpg',
+            'sao-paulo': 'https://visitesaopaulo.com/wp-content/uploads/2023/05/banner-i.jpg',
             'rio-de-janeiro': '1483729558449-99ef05a13d9f',
             'salvador': '1591461537233-0443fe0364d0',
             'belo-horizonte': '1593995863951-b79bc19599ba',
@@ -195,8 +195,14 @@ const WhatToDoCity = () => {
             'florianopolis': '1593021151203-01e4f62629b3'
         };
 
-        const id = cityImages[slug.toLowerCase()] || '1463620910506-d0458143143e';
-        return `https://images.unsplash.com/photo-${id}?q=80&w=2000&auto=format&fit=crop`;
+        const val = cityImages[slug.toLowerCase()];
+        if (!val) return 'https://images.unsplash.com/photo-1463620910506-d0458143143e?q=80&w=2000&auto=format&fit=crop';
+        
+        // Se for uma URL completa, retorna ela
+        if (val.startsWith('http')) return val;
+        
+        // Se for apenas o ID do Unsplash
+        return `https://images.unsplash.com/photo-${val}?q=80&w=2000&auto=format&fit=crop`;
     };
 
     const heroImage = getCityImage(citySlug || '');
