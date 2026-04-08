@@ -112,7 +112,7 @@ const Profile = () => {
         setTickets(Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
       }
     } catch (e) {
-      console.error('Error loading tickets:', e);
+      // Handle error
     } finally { setTicketsLoading(false); }
   };
 
@@ -126,7 +126,7 @@ const Profile = () => {
         setOrders(Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []));
       }
     } catch (e) {
-      console.error('Error loading orders:', e);
+      // Handle error
     } finally { setOrdersLoading(false); }
   };
 
@@ -139,7 +139,7 @@ const Profile = () => {
         setFollowing(Array.isArray(data) ? data : []);
       }
     } catch (e) {
-      console.error('Error loading following:', e);
+      // Handle error
     } finally { setFollowingLoading(false); }
   };
 

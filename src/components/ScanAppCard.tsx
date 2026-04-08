@@ -13,7 +13,6 @@ export const ScanAppCard = ({ accessCode, eventId }: ScanAppCardProps) => {
     const [copied, setCopied] = useState(false);
 
     // DEBUG: Log para verificar renderização
-    console.log('🔍 ScanAppCard renderizado!', { accessCode, eventId });
 
     // URL do APK - ajustar quando publicado
     const apkUrl = 'https://github.com/fauvesbrasil/fauves-scan/releases/latest/download/FauvesScan.apk';
@@ -25,7 +24,7 @@ export const ScanAppCard = ({ accessCode, eventId }: ScanAppCardProps) => {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
             } catch (e) {
-                console.error('Failed to copy code:', e);
+                // no-op
             }
         }
     };

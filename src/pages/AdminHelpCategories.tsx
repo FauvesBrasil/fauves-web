@@ -37,7 +37,7 @@ export default function AdminHelpCategories() {
             const data = await response.json();
             setCategories(data);
         } catch (error) {
-            console.error('Error loading categories:', error);
+            // no-op
         } finally {
             setLoading(false);
         }
@@ -67,7 +67,7 @@ export default function AdminHelpCategories() {
                 alert(error.message || 'Erro ao salvar categoria');
             }
         } catch (error) {
-            console.error('Error saving category:', error);
+            // no-op
             alert('Erro ao salvar categoria');
         }
     };
@@ -102,7 +102,7 @@ export default function AdminHelpCategories() {
                 alert(error.message || 'Erro ao deletar categoria');
             }
         } catch (error) {
-            console.error('Error deleting category:', error);
+            // no-op
             alert('Erro ao deletar categoria');
         }
     };

@@ -123,6 +123,8 @@ export function buildEventJsonLd(event: {
   id: string;
   priceFrom?: number;
   organization?: { name: string; slug?: string };
+  artists?: Array<{ id?: string; name: string; imageUrl?: string; }>;
+  createdAt?: string;
 }) {
   const eventUrl = `${BASE_URL}/event/${event.slug || event.id}`;
 
@@ -130,7 +132,7 @@ export function buildEventJsonLd(event: {
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: event.name,
-    description: event.description,
+    description: event.description || `${event.name} na Fauves. Garanta seu ingresso!`,
     image: event.image,
     startDate: event.startDate,
     endDate: event.endDate || event.startDate,
@@ -160,12 +162,18 @@ export function buildEventJsonLd(event: {
       name: event.organization.name,
       url: event.organization.slug ? `${BASE_URL}/org/${event.organization.slug}` : undefined,
     } : undefined,
-    offers: event.priceFrom !== undefined ? {
+    performer: (event.artists && event.artists.length > 0) ? event.artists.map(a => ({
+      '@type': 'Person',
+      name: a.name,
+      image: a.imageUrl,
+    })) : undefined,
+    offers: (event.priceFrom !== undefined && event.priceFrom !== null) ? {
       '@type': 'Offer',
-      price: event.priceFrom,
+      price: Number(event.priceFrom) || 0,
       priceCurrency: 'BRL',
       availability: 'https://schema.org/InStock',
       url: eventUrl,
+      validFrom: event.createdAt || new Date().toISOString(),
     } : undefined,
   };
 }

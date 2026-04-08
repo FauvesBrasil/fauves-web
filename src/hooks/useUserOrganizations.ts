@@ -10,7 +10,6 @@ export function useUserOrganizations(enabled: boolean = true) {
   const fetchOrgs = async () => {
     setLoading(true);
     const userId = user?.id;
-    console.log('[useUserOrganizations] userId usado para buscar organizações:', userId);
     if (!userId) {
       setOrgs([]);
       setLoading(false);
@@ -30,11 +29,9 @@ export function useUserOrganizations(enabled: boolean = true) {
         }
       } else {
         setOrgs([]);
-        console.warn('[useUserOrganizations] rota /api/organization/list falhou status', res?.status);
       }
     } catch (e) {
       setOrgs([]);
-      console.warn('[useUserOrganizations] erro ao chamar /api/organization/list', e);
     }
     setLoading(false);
   };

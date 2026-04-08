@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import MobileTopBar from '@/components/MobileTopBar';
 import MobileDrawerMenu from '@/components/MobileDrawerMenu';
@@ -185,7 +185,6 @@ const OrdersManager: React.FC = () => {
 
   // Use user from AuthContext instead of Supabase
   useEffect(() => {
-    console.log('[OrdersManager] User from AuthContext:', user);
     if (user) {
       setUserId(user.id);
       setUserEmail(user.email);
@@ -197,10 +196,8 @@ const OrdersManager: React.FC = () => {
 
   const fetchData = async () => {
     if (!userId) {
-      console.log('[OrdersManager] No userId, skipping fetch');
       return;
     }
-    console.log('[OrdersManager] Fetching with userId:', userId);
     setLoading(true);
     try {
       const qs = new URLSearchParams({ userId, limit: String(pageSize), offset: String(page * pageSize) });
@@ -213,10 +210,8 @@ const OrdersManager: React.FC = () => {
       }
       if (debounced) qs.set('search', debounced);
       if (statusFilter !== 'all') qs.set('paymentStatus', statusFilter);
-      console.log('[OrdersManager] Fetching orders with params:', qs.toString());
       const r = await fetch(`/api/orders?${qs.toString()}`);
       const j = await r.json();
-      console.log('[OrdersManager] Received orders:', j);
       setOrders(j.items || []);
       setTotal(j.total || 0);
       // events dropdown (lazy derive from orders first; fallback fetch by-user)

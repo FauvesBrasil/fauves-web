@@ -41,7 +41,7 @@ export function useInfiniteScroll<T>({
             if (result.total !== undefined) setTotal(result.total);
             setPage(prev => prev + 1);
         } catch (error) {
-            console.error('Error loading more items:', error);
+            // no-op
         } finally {
             setLoading(false);
         }

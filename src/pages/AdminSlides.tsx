@@ -100,7 +100,7 @@ export default function AdminSlides() {
             const data = await res.json();
             setSlides(Array.isArray(data) ? data : []);
         } catch (e) {
-            console.error(e);
+            // no-op
             toast({ title: 'Erro', description: 'Falha ao carregar slides', variant: 'destructive' });
         } finally { setLoading(false); }
     }
@@ -123,7 +123,7 @@ export default function AdminSlides() {
             }
             setEvents(Array.isArray(eventsList) ? eventsList : []);
         } catch (e) {
-            console.error('Error searching events:', e);
+            // no-op
             setEvents([]);
         } finally { setEventSearchLoading(false); }
     }
@@ -176,7 +176,7 @@ export default function AdminSlides() {
             setModalOpen(false);
             toast({ title: 'Salvo', description: 'Slide salvo com sucesso' });
         } catch (e: any) {
-            console.error(e);
+            // no-op
             toast({ title: 'Erro', description: 'Falha ao salvar slide', variant: 'destructive' });
         }
     };
@@ -191,7 +191,7 @@ export default function AdminSlides() {
             await loadSlides();
             toast({ title: 'Removido', description: 'Slide excluído' });
         } catch (e) {
-            console.error(e);
+            // no-op
             toast({ title: 'Erro', description: 'Erro ao excluir', variant: 'destructive' });
         } finally {
             setShowDeleteConfirm(false);

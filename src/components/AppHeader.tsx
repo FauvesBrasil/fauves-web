@@ -189,7 +189,7 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
           setUnreadCount(data.unreadCount || 0);
         }
       } catch (e) {
-        console.error('Failed to load notifications:', e);
+        // no-op
       }
     };
 
@@ -210,7 +210,7 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (e) {
-      console.error('Failed to mark notification as read:', e);
+      // no-op
     }
   };
 

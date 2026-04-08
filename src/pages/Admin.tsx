@@ -73,7 +73,7 @@ const AdminLayout: React.FC = () => {
           activeChats: 0, // TODO: Get from chat stats
         });
       } catch (error) {
-        console.error('Error fetching notifications:', error);
+        // no-op
       }
     };
 

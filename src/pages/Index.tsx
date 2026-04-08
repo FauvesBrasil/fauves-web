@@ -140,7 +140,7 @@ const Index = () => {
                 }));
               }
             }
-          } catch (e) { console.error('Error fetching slides:', e); }
+          } catch (e) { }
           return slides;
         };
 
@@ -153,7 +153,7 @@ const Index = () => {
                 setCategories(data.filter((c: any) => c.isActive));
               }
             }
-          } catch (e) { console.error('Error fetching categories:', e); }
+          } catch (e) { }
         };
 
         const fetchInitEvents = async () => {
@@ -169,7 +169,7 @@ const Index = () => {
                 setInitialEvents(items);
               }
             }
-          } catch (e) { console.error('Error fetching initial events:', e); }
+          } catch (e) { }
           setLoadingInitialEvents(false);
           return events;
         };
@@ -208,7 +208,6 @@ const Index = () => {
         setLoadingHero(false);
 
       } catch (e) {
-        console.error('Core loading failed:', e);
         setLoadingHero(false);
         setLoadingInitialEvents(false);
       } finally {

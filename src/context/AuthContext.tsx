@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })();
     } catch (e) {
       // token inválido -> limpar
-      console.warn('[Auth] falha ao decodificar token', e);
+      // no-op
       setUser(null);
     }
   }, [token]);
@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return false;
     } catch (e) {
-      console.warn('[Auth] login error', e);
+      // no-op
       return false;
     }
   }, []);
@@ -187,7 +187,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const handleUpdate = () => {
-      console.log('[AuthContext] Evento profile-updated detectado. Sincronizando dados do usuário...');
       refreshUser();
     };
     window.addEventListener('profile-updated', handleUpdate);

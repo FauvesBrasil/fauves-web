@@ -205,7 +205,10 @@ const Event: React.FC = () => {
     image: event?.image,
     url: event ? `/event/${event.slug || event.id}` : undefined,
     type: 'event',
-    jsonLd: event ? buildEventJsonLd(event) : undefined,
+    jsonLd: event ? buildEventJsonLd({
+      ...event,
+      artists: event.artists?.map((ea: any) => ea.artist || ea) || []
+    }) : undefined,
   });
 
   // Registrar visualização de link rastreável (utm) ou direto (orgânico)
@@ -242,7 +245,7 @@ const Event: React.FC = () => {
             }));
           }
         })
-        .catch(err => console.error('Failed to increment view:', err));
+        .catch(() => {});
     }
   }, [event?.id]);
   // Efeito blur/degradê no topo da tela será definido após checar loading/error/event
@@ -355,7 +358,7 @@ const Event: React.FC = () => {
             fetch(apiUrl(`/api/organization/${encodeURIComponent(orgId)}`))
               .then(r => r.ok ? r.json() : null)
               .then(o => setOrg(o || null))
-              .catch(e => console.warn('org fetch failed', e)),
+              .catch(() => {}),
 
             fetch(apiUrl(`/api/organization/${encodeURIComponent(orgId)}/followers/count`))
               .then(c => c.ok ? c.json() : null)
@@ -363,7 +366,7 @@ const Event: React.FC = () => {
                 const num = Number(jc?.count ?? jc?.total ?? 0);
                 setFollowersCount(num);
               })
-              .catch(e => console.warn('followers count failed', e))
+              .catch(() => {})
           ]);
 
           // Check follow status if user is logged in
@@ -412,7 +415,6 @@ const Event: React.FC = () => {
   const handlePurchase = (selectedTickets: any[]) => {
     setShowTicketModal(false);
     // Here you would typically redirect to a payment page or handle the purchase
-    console.log('Selected tickets:', selectedTickets);
     // For demo purposes, just show a success message
     setReportSent(true);
     setTimeout(() => setReportSent(false), 2500);
@@ -744,7 +746,6 @@ const Event: React.FC = () => {
                             }
                           }
                         } catch (e: any) {
-                          console.warn('follow toggle failed', e);
                           toast({ title: 'Erro', description: e?.message || 'Erro ao processar ação', variant: 'destructive' as any });
                         } finally {
                           setFollowLoading(false);
@@ -914,7 +915,6 @@ const Event: React.FC = () => {
       </div>
     );
   } catch (err: any) {
-    console.error('[Event render] falhou', err);
     return <div style={{ padding: 40 }}><h2>Erro ao renderizar evento</h2><p>Tente recarregar a página.</p></div>;
   }
   return content as any;

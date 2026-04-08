@@ -40,7 +40,7 @@ export function useFetchProducerHistory(organizationId?: string) {
                 }
             } catch (e) {
                 if (!cancelled) {
-                    console.error('Failed to load producer history:', e);
+                    // no-op
                     setError('Erro ao carregar histórico');
                 }
             } finally {

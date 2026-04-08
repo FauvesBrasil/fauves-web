@@ -38,7 +38,6 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
   // Removido: supabase. Usuário agora vem do AuthContext/JWT.
   const handleCreate = async () => {
     setError("");
-    console.log('[RequireOrganization] Clique no botão Criar organização');
     if (userLoading || user === undefined) {
       setError("Aguardando autenticação do usuário...");
       return;
@@ -121,31 +120,23 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
     // Wait for network + min animation to finish. When network resolves, call onCreated and await its promise as well.
     try {
       const org = await networkPromise;
-      console.log('[RequireOrganization] Organization created successfully:', org?.id);
 
       // call parent's onCreated (may return a promise)
       let parentPromise: Promise<any> | void = undefined;
       try {
         parentPromise = onCreated(org) as any;
-        console.log('[RequireOrganization] onCreated called, waiting for parent...');
       } catch (e) {
-        console.warn('[RequireOrganization] onCreated threw', e);
-        // Don't fail the whole flow if onCreated fails - organization was created successfully
       }
 
       // Wait for both animation minimum and parent refresh (if present)
       if (parentPromise && typeof parentPromise.then === 'function') {
         try {
           await Promise.all([animPromise, parentPromise]);
-          console.log('[RequireOrganization] Both animation and parent promises resolved');
         } catch (e) {
-          console.warn('[RequireOrganization] Parent promise failed, but continuing:', e);
-          // Just wait for animation if parent fails
           await animPromise;
         }
       } else {
         await animPromise;
-        console.log('[RequireOrganization] Animation completed');
       }
 
       // show a final flourish (confetti / lights) for 700ms
@@ -160,12 +151,11 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
       setPhase(0);
       setLoading(false);
 
-      console.log('[RequireOrganization] Closing modal and calling onClose');
       if (onClose) onClose();
       else { try { navigate(-1); } catch (e) { window.history.back(); } }
     } catch (e: any) {
       // network failed — stop animation and show error inside modal
-      console.error('[RequireOrganization] Organization creation failed', e);
+      // no-op
       // clear timers
       timers.forEach(t => clearTimeout(t));
       // play a short exit animation to avoid abrupt removal

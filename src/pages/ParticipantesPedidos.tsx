@@ -152,9 +152,7 @@ export default function ParticipantesPedidos() {
   useEffect(() => {
     let mounted = true;
     async function loadOrders() {
-      console.log('[ParticipantesPedidos] loadOrders check:', { eventId, userId: user?.id });
       if (!eventId || !user?.id) {
-        console.log('[ParticipantesPedidos] Skipping loadOrders - missing eventId or userId');
         return;
       }
       setOrdersLoading(true);
@@ -164,14 +162,11 @@ export default function ParticipantesPedidos() {
           eventId: eventId,
           limit: '100'
         });
-        console.log('[ParticipantesPedidos] Fetching orders:', `/api/orders?${params}`);
         const res = await fetchApi(`/api/orders?${params}`);
         if (!res?.ok) {
-          console.error('[ParticipantesPedidos] API error:', res?.status);
           return;
         }
         const data = await res.json();
-        console.log('[ParticipantesPedidos] Orders loaded:', data);
         if (!mounted) return;
 
         // Map API response to OrderRow format - same structure as OrdersManager
@@ -192,7 +187,6 @@ export default function ParticipantesPedidos() {
         }));
         setOrders(mappedOrders);
       } catch (e) {
-        console.error('Failed to load orders:', e);
       } finally {
         if (mounted) setOrdersLoading(false);
       }

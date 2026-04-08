@@ -54,7 +54,7 @@ const InterestButton: React.FC<InterestButtonProps> = ({ eventId, variant = 'car
                 setIsInterested(data.interested);
             }
         } catch (error) {
-            console.error('Error fetching interest data:', error);
+            // no-op
         }
     };
 

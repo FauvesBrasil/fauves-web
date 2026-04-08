@@ -45,8 +45,7 @@ const MyTickets = () => {
             const ticketsArray = Array.isArray(data) ? data : (data?.tickets || []);
             setTickets(ticketsArray);
         } catch (error) {
-            console.error('Error loading tickets:', error);
-            setTickets([]); // Set empty array on error
+            // no-op
         } finally {
             setLoading(false);
         }

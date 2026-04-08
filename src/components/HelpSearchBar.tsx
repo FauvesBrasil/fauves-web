@@ -47,7 +47,7 @@ const HelpSearchBar = () => {
                 setResults(data);
                 setIsOpen(true);
             } catch (error) {
-                console.error('Error searching articles:', error);
+                // no-op
                 setResults([]);
             } finally {
                 setLoading(false);

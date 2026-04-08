@@ -52,7 +52,6 @@ export const useAdminAnnouncements = () => {
                 throw new Error(`Erro ao carregar anúncios: ${response.status}`);
             }
         } catch (err: any) {
-            console.error('Error fetching announcements:', err);
             setError(err.message || 'Failed to load announcements');
         } finally {
             setLoading(false);
@@ -77,7 +76,6 @@ export const useAdminAnnouncements = () => {
                 throw new Error(errorData.message || 'Failed to create announcement');
             }
         } catch (err: any) {
-            console.error('Error creating announcement:', err);
             setError(err.message || 'Failed to create announcement');
             throw err;
         }
@@ -101,7 +99,6 @@ export const useAdminAnnouncements = () => {
                 throw new Error(errorData.message || 'Failed to update announcement');
             }
         } catch (err: any) {
-            console.error('Error updating announcement:', err);
             setError(err.message || 'Failed to update announcement');
             throw err;
         }
@@ -121,7 +118,6 @@ export const useAdminAnnouncements = () => {
                 throw new Error('Failed to delete announcement');
             }
         } catch (err: any) {
-            console.error('Error deleting announcement:', err);
             setError(err.message || 'Failed to delete announcement');
             throw err;
         }
@@ -142,7 +138,6 @@ export const useAdminAnnouncements = () => {
                 throw new Error('Failed to toggle announcement');
             }
         } catch (err: any) {
-            console.error('Error toggling announcement:', err);
             setError(err.message || 'Failed to toggle announcement');
             throw err;
         }

@@ -92,7 +92,6 @@ const EventsByCategory = () => {
         // SEO is managed by useSEO hook above
 
       } catch (err: any) {
-        console.error('Error loading category page:', err);
         setError(err.message);
       } finally {
         setLoading(false);

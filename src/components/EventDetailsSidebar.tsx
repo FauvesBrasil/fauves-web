@@ -856,7 +856,6 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                         <div
                           className={`flex gap-2.5 items-center p-6 w-full min-h-[65px] transition-colors ${active ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'bg-gray-50 dark:bg-[#0b0b0b]'} ${isPanelItem ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isAnalytics ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isEquipe ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isSatisfaction ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''}`}
                           onClick={() => {
-                            console.log('[EventSidebar] Clicked:', item.title, 'eventId:', eventId, 'isAnalytics:', isAnalytics);
                             if (isPanelItem && eventId) navigate(panelRoute);
                             else if (isAnalytics && eventId) navigate(`/painel-evento/${eventId}/analytics`);
                             else if (isEquipe && eventId) navigate(`/gerenciar-equipe/${eventId}`);

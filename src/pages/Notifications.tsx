@@ -35,7 +35,7 @@ const Notifications: React.FC = () => {
                     setNotifications(data.notifications || []);
                 }
             } catch (e) {
-                console.error('Failed to load notifications:', e);
+                // no-op
             } finally {
                 setLoading(false);
             }
@@ -60,7 +60,7 @@ const Notifications: React.FC = () => {
 
             setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
         } catch (e) {
-            console.error('Failed to mark as read:', e);
+            // no-op
         }
     };
 
@@ -81,7 +81,7 @@ const Notifications: React.FC = () => {
 
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         } catch (e) {
-            console.error('Failed to mark all as read:', e);
+            // no-op
         }
     };
 

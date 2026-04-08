@@ -72,7 +72,7 @@ const IssuedTickets: React.FC = () => {
                 setEvent(data);
             }
         } catch (error) {
-            console.error('Error loading event:', error);
+            // no-op
         }
     };
 
@@ -97,7 +97,7 @@ const IssuedTickets: React.FC = () => {
                 setTotal(data.total);
             }
         } catch (error) {
-            console.error('Error loading tickets:', error);
+            // no-op
         } finally {
             setLoading(false);
         }

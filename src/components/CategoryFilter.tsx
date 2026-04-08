@@ -40,7 +40,7 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({ onSelect, selectedSlug,
           setCategories(data);
         }
       } catch (error) {
-        console.error('Failed to fetch categories:', error);
+        // no-op
       } finally {
         setLoading(false);
       }

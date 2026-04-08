@@ -73,8 +73,8 @@ export default function AdminAnalytics() {
                 const recoveryData = await recoveryRes.json();
                 setRecoveryMetrics(recoveryData);
             }
-        } catch (e) {
-            console.error('Failed to load analytics:', e);
+        } catch (err) {
+            // no-op
         } finally {
             setLoading(false);
         }

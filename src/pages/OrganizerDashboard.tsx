@@ -116,10 +116,7 @@ const OrganizerDashboard = () => {
       try {
         await refreshUser();
       } catch (err) {
-        // Non-fatal: log and continue. We don't want to crash the dashboard if
-        // the call fails (network, 401, etc.).
-        // eslint-disable-next-line no-console
-        console.warn('[OrganizerDashboard] refreshUser failed', err);
+        // Non-fatal
       }
     })();
     return () => { cancelled = true; };
@@ -190,12 +187,10 @@ const OrganizerDashboard = () => {
 
               setNextEventStats({ sold, capacity });
             } catch (e) {
-              console.error('Failed to fetch event stats:', e);
             }
           }
         }
 
-        (window as any).__dbgDashboardOrgData = { orgRes, countRes, nextRes };
       } finally {
         if (!cancelled) { setLoadingOrg(false); setLoadingEvent(false); }
       }
@@ -229,17 +224,13 @@ const OrganizerDashboard = () => {
     try {
       if (!user || !user.email) return;
       if (loadingOrgs) return;
-      if (!hasAttemptedRefresh) return; // Aguarda pelo menos uma tentativa de carregamento
-      
       const hasOrgs = Array.isArray(orgs) && orgs.length > 0;
       if (!hasOrgs && !modalAutoOpenedRef.current) {
-        console.debug('[OrganizerDashboard] No organizations found for user, opening RequireOrganization modal');
         modalAutoOpenedRef.current = true;
         setShowCreateOrgModal(true);
       }
       if (hasOrgs) modalAutoOpenedRef.current = false;
     } catch (e) {
-      console.warn('[OrganizerDashboard] auto-open org modal effect failed', e);
     }
   }, [user, loadingOrgs, orgs, hasAttemptedRefresh]);
 
@@ -257,7 +248,6 @@ const OrganizerDashboard = () => {
           setHelpCategories(data.slice(0, 4));
         }
       } catch (e) {
-        console.error('Failed to load help categories', e);
       } finally {
         setLoadingHelp(false);
       }
@@ -398,7 +388,6 @@ const OrganizerDashboard = () => {
               {showCreateOrgModal && (
                 <RequireOrganization
                   onCreated={async (org) => {
-                    console.log('[OrganizerDashboard] Organization created, calling refresh:', org?.id);
                     try {
                       // Add organization directly to context first
                       if (org?.id && org?.name) {
@@ -410,9 +399,7 @@ const OrganizerDashboard = () => {
                       }
                       // Then refresh to sync with backend
                       await refresh();
-                      console.log('[OrganizerDashboard] Refresh completed successfully');
                     } catch (e) {
-                      console.error('[OrganizerDashboard] Refresh failed but organization was created:', e);
                       // Don't throw error - organization was created successfully
                     }
                   }}

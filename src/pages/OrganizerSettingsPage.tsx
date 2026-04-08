@@ -166,13 +166,11 @@ const OrganizerSettingsPage: React.FC = () => {
     setSaving(true);
     setSaveError(null);
     try {
-      console.debug('[OrganizerSettings] Deleting org id=', id);
       const res = await fetchApi(`/api/organization/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const text = await res.text().catch(()=>null);
         let data = null;
         try { data = text ? JSON.parse(text) : null; } catch(e) { /* not json */ }
-        console.error('[OrganizerSettings] Delete failed', { status: res.status, data, text });
         setSaveError(data?.error || data?.message || text || 'Erro ao excluir organização');
         setSaving(false);
         return;
@@ -184,7 +182,6 @@ const OrganizerSettingsPage: React.FC = () => {
       setDrawerOpen(false);
       await refresh();
     } catch (e: any) {
-      console.error('[OrganizerSettings] Delete exception', e);
       setSaveError(e?.message || 'Erro ao excluir organização');
     } finally {
       setSaving(false);
@@ -214,7 +211,7 @@ const OrganizerSettingsPage: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <div className="text-4xl font-extrabold text-teal-600 dark:text-teal-400">
-                    {orgs[0].platformFeePercent || 15}%
+                    {(orgs[0] as any).platformFeePercent || 15}%
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">por evento</p>
                 </div>
@@ -230,7 +227,7 @@ const OrganizerSettingsPage: React.FC = () => {
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                         <TrendingDown className="w-4 h-4 text-green-600" />
-                        <span>Você recebe: <strong className="text-slate-900 dark:text-white">{100 - (orgs[0].platformFeePercent || 15)}%</strong> do valor bruto</span>
+                        <span>Você recebe: <strong className="text-slate-900 dark:text-white">{100 - ((orgs[0] as any).platformFeePercent || 15)}%</strong> do valor bruto</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                         <Percent className="w-4 h-4 text-teal-600" />

@@ -129,7 +129,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
             window.location.reload();
           }
         } catch (e) {
-          console.warn('oauth message handler error', e);
+          // no-op
         }
       };
       window.addEventListener('message', handler);

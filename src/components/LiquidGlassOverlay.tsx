@@ -47,7 +47,7 @@ function createShader(gl: WebGLRenderingContext, type: number, source: string) {
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     // eslint-disable-next-line no-console
-    console.warn('Shader compile error', gl.getShaderInfoLog(shader));
+    // no-op
     gl.deleteShader(shader);
     return null;
   }

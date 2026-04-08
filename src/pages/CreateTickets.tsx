@@ -307,7 +307,6 @@ const CreateTickets: React.FC = () => {
           }
         }
       } catch (e) {
-        console.error('Error loading event details:', e);
       }
     };
     loadEventDetails();
@@ -324,7 +323,6 @@ const CreateTickets: React.FC = () => {
         const map = data?.map || null;
         if (map) setMapPreview(map);
       } catch (e) {
-        // ignore
       }
     };
     loadEventMap();
@@ -380,11 +378,9 @@ const CreateTickets: React.FC = () => {
         setCategories(Array.isArray(data) ? data : []);
       } else {
         setCategories([]);
-        console.error('Erro ao listar categorias');
       }
     } catch (err) {
       setCategories([]);
-      console.error('Erro ao carregar categorias:', err);
     }
   };
 
@@ -2804,12 +2800,9 @@ const CreateTickets: React.FC = () => {
                 setDeleteCategoryId(null);
                 setDeleteCategoryName("");
               } else {
-                const errorText = await response?.text().catch(() => 'Erro desconhecido');
-                console.error('Erro na resposta:', errorText);
-                throw new Error(errorText || 'Falha ao excluir categoria');
+                throw new Error('Falha ao excluir categoria');
               }
             } catch (e: any) {
-              console.error('Erro ao excluir categoria:', e);
               toast({
                 title: "Erro ao excluir",
                 description: e?.message || "Não foi possível excluir a categoria. Tente novamente.",

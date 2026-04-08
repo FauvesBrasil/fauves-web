@@ -128,7 +128,6 @@ const ChatWidget = () => {
             socketRef.current = socket;
 
             socket.on('connect', () => {
-                console.log('✅ Socket connected!');
                 setIsConnected(true);
             });
 
@@ -171,7 +170,7 @@ const ChatWidget = () => {
                 setChatHistory(data);
             }
         } catch (error) {
-            console.error('Error loading chat history:', error);
+            // no-op
         } finally {
             setLoadingHistory(false);
         }
@@ -270,7 +269,7 @@ const ChatWidget = () => {
                     // Update list locally if needed, or re-fetch history
                     loadChatHistory();
                 } else {
-                    console.error('Failed to start chat:', response.error);
+                    // no-op
                 }
             });
         }
@@ -301,7 +300,7 @@ const ChatWidget = () => {
                 setFeaturedArticles(featuredData);
             }
         } catch (error) {
-            console.error('Error loading help content:', error);
+            // no-op
         } finally {
             setLoadingHelpContent(false);
         }
@@ -316,7 +315,7 @@ const ChatWidget = () => {
                 setPopularArticles(data);
             }
         } catch (error) {
-            console.error('Error loading popular articles:', error);
+            // no-op
         } finally {
             setLoadingArticles(false);
         }
@@ -332,7 +331,7 @@ const ChatWidget = () => {
                 setSelectedArticle(data);
             }
         } catch (error) {
-            console.error('Error loading article:', error);
+            // no-op
             setShowArticleViewer(false);
         } finally {
             setLoadingArticleContent(false);
@@ -354,7 +353,7 @@ const ChatWidget = () => {
                 setCategoryArticles(data.articles || []);
             }
         } catch (error) {
-            console.error('Error loading category articles:', error);
+            // no-op
         } finally {
             setLoadingCategoryArticles(false);
         }
@@ -445,7 +444,7 @@ const ChatWidget = () => {
         try {
             await fetchApi(`/api/chat/${conversationId}`, { method: 'DELETE' });
         } catch (error) {
-            console.error('Error deleting conversation:', error);
+            // no-op
             loadChatHistory();
         }
     };

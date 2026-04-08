@@ -95,8 +95,6 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             // capture a minimal stack to help trace caller sites (may be empty in some browsers)
             const err = new Error('org-refresh-trace');
             const stack = err.stack ? err.stack.split('\n').slice(2, 6).join('\n') : '(no-stack)';
-            // eslint-disable-next-line no-console
-            console.debug('[OrganizationContext] refresh() called (dev); recent count=', (window as any).__ORG_REFRESH_CALLS__, '\n', stack);
           } catch (e) {}
           (window as any).__ORG_REFRESH_LAST_LOG__ = Date.now();
         }
@@ -106,8 +104,6 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const now = Date.now();
     const MIN_INTERVAL = 2000;
     // BUILD_INFO log para confirmar deploy (DEBUG_20260330_2)
-    console.debug(`[OrganizationContext] refresh() starting for user: ${user?.email} (v:20260330_1520)`);
-    console.log('[OrganizationContext] refresh() triggered. userLoading:', userLoading, 'userId:', user?.id);
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
     
     // Disable interval-based throttling temporarily to ensure we pick up DB fixes
@@ -122,14 +118,10 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const uid = user?.id; // keep local reference
       
       try {
-        // Busca userId do usuário logado via AuthContext
         const userId = uid;
         if (!userId) {
-          console.log('[OrganizationContext] No userId available, can\'t refresh list');
           setOrgs([]); setSelectedOrg(null); setLoading(false); return;
         }
-
-        console.log('[OrganizationContext] Fetching from /api/organization/list for:', userId);
 
         let finalList: Organization[] = [];
         
@@ -148,18 +140,15 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               
               if (relList && relList.length > 0) {
                 finalList = relList;
-                console.debug('[OrganizationContext] Loaded orgs via primary endpoint', { count: finalList.length });
                 try { window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: finalList })); } catch {}
                 setOrgs(finalList);
                 applySelection(finalList, localStorage.getItem(LS_KEY));
                 setLoading(false);
                 return;
               }
-              console.debug('[OrganizationContext] Primary endpoint returned empty list, trying candidates');
             }
           }
         } catch (e) {
-          console.debug('[OrganizationContext] Primary endpoint fetch error', e);
         }
 
         // 2. Parallel attempts for legacy or alternative endpoints
@@ -200,12 +189,10 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           if (s.status === 'fulfilled' && s.value) {
             const val = s.value;
             if (val.unauth) {
-              console.warn('[OrganizationContext] Path unauth:', val.path);
               continue;
             }
             if (val.list && val.list.length > 0) {
               finalList = val.list;
-              console.debug('[OrganizationContext] Loaded orgs via candidate', { path: val.path, count: finalList.length });
               break;
             }
           }
@@ -216,16 +203,13 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           setOrgs(finalList);
           applySelection(finalList, localStorage.getItem(LS_KEY));
         } else {
-          console.warn('[OrganizationContext] No organizations found for user after all probes.', { email: user?.email, userId: user?.id });
           if (prevOrgs && prevOrgs.length) {
-            console.warn('[OrganizationContext] Preserving existing cached orgs to avoid UI blank-out');
           } else {
             setOrgs([]);
             setSelectedOrg(null);
           }
         }
       } catch (e: any) {
-        console.error('[OrganizationContext] Fatal error during refresh():', e);
         setError(e?.message || 'Falha ao carregar organizações');
       } finally {
         setLoading(false);
@@ -265,32 +249,24 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const addOrganization = useCallback((org: Organization) => {
-    console.log('[OrganizationContext] addOrganization called with:', org?.id, org?.name);
     setOrgs(prev => {
       if (prev.some(o => o.id === org.id)) {
-        console.log('[OrganizationContext] Organization already exists, not adding');
         return prev;
       }
       const next = [...prev, org];
-      console.log('[OrganizationContext] Adding organization, new count:', next.length);
       try { 
         window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: next })); 
-        console.log('[OrganizationContext] Updated localStorage cache');
       } catch (e) {
-        console.warn('[OrganizationContext] Failed to update cache:', e);
       }
       return next;
     });
     setSelectedOrg(prev => {
       if (prev?.id === org.id) {
-        console.log('[OrganizationContext] Organization already selected');
         return prev;
       }
       try { 
         localStorage.setItem(LS_KEY, org.id); 
-        console.log('[OrganizationContext] Set selected org in localStorage:', org.id);
       } catch (e) {
-        console.warn('[OrganizationContext] Failed to set selected org:', e);
       }
       return org;
     });
@@ -317,7 +293,6 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Only trigger refresh once the auth state is settled to avoid repeated probes while
     // the AuthContext is still initializing (userLoading=true).
     if (!userLoading && user?.id) {
-      console.log('[OrganizationContext] User ready, triggering aggressive refresh for:', user.id);
       void refresh();
     }
     // Atualiza organizações quando usuário muda

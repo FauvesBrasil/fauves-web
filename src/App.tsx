@@ -132,7 +132,7 @@ const queryClient = new QueryClient({
 class AppErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
   constructor(props: any) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
-  componentDidCatch(error: any, info: any) { console.error('[AppErrorBoundary]', error, info); }
+  componentDidCatch(error: any, info: any) { /* no-op in prod */ }
   render() {
     if (this.state.hasError) {
       return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>
@@ -360,7 +360,7 @@ function Bootstrap() {
   React.useEffect(() => {
     // when user becomes available, prefetch organizations
     if (!authLoading && user) {
-      try { refresh(); } catch (e) { console.warn('prefetch orgs failed', e); }
+      try { refresh(); } catch (e) { }
     }
   }, [user, authLoading, refresh]);
 

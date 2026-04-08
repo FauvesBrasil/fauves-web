@@ -74,7 +74,6 @@ const SearchResults: React.FC = () => {
         if (!active) return;
         setEvents(data.events || []);
       } catch (e) {
-        console.warn('search failed', e);
         setEvents([]);
       } finally { if (active) setLoading(false); }
     };

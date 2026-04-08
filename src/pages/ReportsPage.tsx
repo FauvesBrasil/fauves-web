@@ -280,7 +280,6 @@ function OrganizerReportsPage() {
   // Buscar dados de vendas quando evento é selecionado
   React.useEffect(() => {
     if (!activeEventId) {
-      console.log('[ReportsPage] Skipping fetch - no activeEventId');
       setSalesData(prev => ({ ...prev, loading: false }));
       return;
     }
@@ -292,17 +291,14 @@ function OrganizerReportsPage() {
         const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
         
         if (!r.ok) {
-          console.log('[ReportsPage] No financial data (status ' + r.status + ')');
           setSalesData(prev => ({ ...prev, loading: false }));
           return;
         }
 
         const finData = await r.json().catch(() => null);
-        console.log('[ReportsPage] Financial data received:', finData);
 
         if (finData && finData.ok && finData.financial) {
           const fin = finData.financial;
-          console.log('[ReportsPage] Financial object details:', JSON.stringify(fin, null, 2));
 
           // Dados financeiros da API
           const totalGross = fin.grossRevenue || 0;
@@ -328,7 +324,6 @@ function OrganizerReportsPage() {
           const paidOrders = totalOrders;
           const pendingOrders = 0;
 
-          console.log('[ReportsPage] Sales data calculated:', { totalGross, totalOrders, netRevenue, availableBalance });
           setSalesData({
             totalGross,
             totalOrders,
@@ -342,11 +337,9 @@ function OrganizerReportsPage() {
             loading: false,
           });
         } else {
-          console.log('[ReportsPage] No financial data');
           setSalesData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching sales data:', err);
         setSalesData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -365,7 +358,6 @@ function OrganizerReportsPage() {
         const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
         if (!r.ok) {
-          console.log('[ReportsPage] No promoter data');
           setPromoterData(prev => ({ ...prev, loading: false }));
           return;
         }
@@ -385,7 +377,6 @@ function OrganizerReportsPage() {
           });
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching promoter data:', err);
         setPromoterData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -404,7 +395,6 @@ function OrganizerReportsPage() {
         const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
         if (!r.ok) {
-          console.log('[ReportsPage] No traffic data');
           setTrafficData(prev => ({ ...prev, loading: false }));
           return;
         }
@@ -421,7 +411,6 @@ function OrganizerReportsPage() {
           });
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching traffic data:', err);
         setTrafficData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -440,7 +429,6 @@ function OrganizerReportsPage() {
         const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
         if (!r.ok) {
-          console.log('[ReportsPage] No org traffic data');
           setOrgTrafficData(prev => ({ ...prev, loading: false }));
           return;
         }
@@ -466,7 +454,6 @@ function OrganizerReportsPage() {
           );
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching org traffic data:', err);
         setOrgTrafficData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -485,7 +472,6 @@ function OrganizerReportsPage() {
         const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
         if (!r.ok) {
-          console.log('[ReportsPage] No community data');
           setCommunityData(prev => ({ ...prev, loading: false }));
           return;
         }
@@ -511,7 +497,6 @@ function OrganizerReportsPage() {
           );
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching community data:', err);
         setCommunityData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -550,7 +535,6 @@ function OrganizerReportsPage() {
           setBehaviorData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching behavior:', err);
         setBehaviorData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -587,7 +571,6 @@ function OrganizerReportsPage() {
           setDemographicsData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching demographics:', err);
         setDemographicsData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -622,7 +605,6 @@ function OrganizerReportsPage() {
           setMusicTastesData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching music tastes:', err);
         setMusicTastesData(prev => ({ ...prev, loading: false }));
       }
     })();

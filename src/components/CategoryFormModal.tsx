@@ -78,7 +78,7 @@ export default function CategoryFormModal({ open, onClose, onSave, initial }: an
       await onSave(payload);
       onClose();
     } catch (e: any) {
-      console.error(e);
+      // no-op
       toast({
         title: 'Erro',
         description: e?.message || 'Falha ao salvar',

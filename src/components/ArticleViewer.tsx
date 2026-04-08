@@ -30,7 +30,7 @@ const ArticleViewer: React.FC<ArticleViewerProps> = ({
             await fetchApi(`/api/help/articles/${article.id}/vote/${type}`);
             // Optionally show success message
         } catch (error) {
-            console.error('Error voting:', error);
+            // no-op
         }
     };
 

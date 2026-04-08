@@ -18,7 +18,6 @@ export default function GoogleAdsPixelModal({ open, onClose, onSave }: GoogleAds
   if (!open) return null;
 
   // DEBUG: Modal aberto
-  console.log('GoogleAdsPixelModal aberto');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">

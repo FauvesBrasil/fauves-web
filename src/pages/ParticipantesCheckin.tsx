@@ -62,7 +62,6 @@ export default function ParticipantesCheckin() {
         }));
         setParticipantes(mapped);
       } catch (e) {
-        console.error('Failed to load participants:', e);
       } finally {
         if (mounted) setLoading(false);
       }

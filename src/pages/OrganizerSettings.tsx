@@ -47,7 +47,6 @@ const EditOrgModal: React.FC<EditOrgModalProps> = ({ org, open, onClose, onUpdat
   };
 
   const handleSave = async () => {
-    console.log('handleSave chamado');
     setLoading(true);
     setError('');
     if (!org || !org.id) {
@@ -59,36 +58,27 @@ const EditOrgModal: React.FC<EditOrgModalProps> = ({ org, open, onClose, onUpdat
     try {
       // Upload da imagem, se houver
       if (logoFile) {
-        console.log('Preparando upload do arquivo:', logoFile);
         const formData = new FormData();
         formData.append('file', logoFile, logoFile.name || 'logo.png');
-        console.log('Enviando fetch para /api/upload...');
         const uploadRes = await fetchApi('/api/upload', {
           method: 'POST',
           body: formData
         });
-        console.log('Resposta upload:', uploadRes);
         if (!uploadRes.ok) {
           const errText = await uploadRes.text();
-          console.error('Erro upload:', errText);
           setError('Erro ao enviar imagem: ' + errText);
           setLoading(false);
           return;
         }
         const data = await uploadRes.json();
-        console.log('Dados upload:', data);
         if (!data.url) {
-          console.error('Upload não retornou URL:', data);
           setError('Upload não retornou URL');
           setLoading(false);
           return;
         }
         finalLogoUrl = data.url;
-      } else {
-        console.warn('Nenhum arquivo selecionado para upload. Usando logoUrl existente:', logoUrl);
       }
     } catch (e: any) {
-      console.error('Catch upload:', e);
       setError(e?.message || 'Erro ao enviar imagem');
       setLoading(false);
       return;
@@ -101,7 +91,6 @@ const EditOrgModal: React.FC<EditOrgModalProps> = ({ org, open, onClose, onUpdat
       });
       if (!res.ok) {
         const errText = await res.text();
-        console.error('Erro PUT:', errText);
         setError('Falha ao atualizar organização: ' + errText);
         setLoading(false);
         return;
@@ -111,7 +100,6 @@ const EditOrgModal: React.FC<EditOrgModalProps> = ({ org, open, onClose, onUpdat
       setLoading(false);
       onClose();
     } catch (e: any) {
-      console.error('Catch PUT:', e);
       setError(e?.message || 'Erro ao salvar organização');
       setLoading(false);
     }

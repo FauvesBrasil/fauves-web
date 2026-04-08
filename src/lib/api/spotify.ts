@@ -19,7 +19,7 @@ export async function searchSpotifyArtists(query: string, limit: number = 10): P
         const data = await response.json();
         return data.artists || [];
     } catch (error) {
-        console.error('searchSpotifyArtists error:', error);
+        // no-op
         return [];
     }
 }
@@ -32,7 +32,7 @@ export async function getSpotifyArtist(id: string): Promise<SpotifyArtist | null
         const data = await response.json();
         return data.artist || null;
     } catch (error) {
-        console.error('getSpotifyArtist error:', error);
+        // no-op
         return null;
     }
 }
@@ -47,7 +47,7 @@ export async function getSpotifyArtists(ids: string[]): Promise<SpotifyArtist[]>
         const data = await response.json();
         return data.artists || [];
     } catch (error) {
-        console.error('getSpotifyArtists error:', error);
+        // no-op
         return [];
     }
 }

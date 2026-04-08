@@ -33,7 +33,7 @@ const AdminLeads: React.FC = () => {
         setLeads(data);
       }
     } catch (error) {
-      console.error('Error fetching leads:', error);
+      // no-op
       toast.error('Erro ao carregar leads');
     } finally {
       setLoading(false);

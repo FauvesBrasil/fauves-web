@@ -67,7 +67,7 @@ const AdminTicketDetail = () => {
                 setTicket(data);
             }
         } catch (error) {
-            console.error('Error loading ticket:', error);
+            // no-op
         } finally {
             setLoading(false);
         }
@@ -81,7 +81,7 @@ const AdminTicketDetail = () => {
                 setAdminUsers(data);
             }
         } catch (error) {
-            console.error('Error loading admin users:', error);
+            // no-op
         }
     };
 
@@ -101,7 +101,7 @@ const AdminTicketDetail = () => {
                     const payload = JSON.parse(atob(authToken.split('.')[1]));
                     userId = payload.userId;
                 } catch (e) {
-                    console.error('Failed to decode token:', e);
+                    // no-op
                 }
             }
 
@@ -119,7 +119,7 @@ const AdminTicketDetail = () => {
                 await loadTicket();
             }
         } catch (error) {
-            console.error('Error sending reply:', error);
+            // no-op
         } finally {
             setSending(false);
         }
@@ -139,7 +139,7 @@ const AdminTicketDetail = () => {
                 await loadTicket();
             }
         } catch (error) {
-            console.error('Error updating status:', error);
+            // no-op
         }
     };
 
@@ -157,7 +157,7 @@ const AdminTicketDetail = () => {
                 await loadTicket();
             }
         } catch (error) {
-            console.error('Error updating priority:', error);
+            // no-op
         }
     };
 
@@ -176,7 +176,7 @@ const AdminTicketDetail = () => {
                 await loadTicket();
             }
         } catch (error) {
-            console.error('Error assigning ticket:', error);
+            // no-op
         } finally {
             setAssigning(false);
         }

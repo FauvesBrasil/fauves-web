@@ -47,7 +47,7 @@ const HelpCenter = () => {
             setCategories(categoriesData);
             setPopularArticles(articlesData);
         } catch (error) {
-            console.error('Error loading help center data:', error);
+            // no-op
         } finally {
             setLoading(false);
         }

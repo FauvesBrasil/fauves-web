@@ -62,7 +62,7 @@ function Checkout() {
     try {
       if (logout) await logout();
       window.location.reload();
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
   // Login modal will be used for guest authentication (inline form removed)
 
@@ -151,7 +151,6 @@ function Checkout() {
           setSelection(null);
         }
       } catch (error) {
-        console.error('Error loading checkout session:', error);
         setSelection(null);
       }
       finally {
@@ -277,13 +276,11 @@ function Checkout() {
             }
           }
         } catch (e) {
-          console.warn('Failed to check profile completeness', e);
           setLoadingProfile(false);
         }
         try { sessionStorage.removeItem('checkoutBuyer:v1'); } catch { }
       }, 300);
     } catch (e) {
-      console.warn('Failed to resume checkout draft', e);
     }
   }, [user]);
 
@@ -423,12 +420,10 @@ function Checkout() {
       try {
         json = await res.json();
       } catch (err) {
-        console.error('Erro ao converter resposta da API:', err);
         setError('Erro ao processar resposta da API.');
         return;
       }
       if (!res.ok || json?.error) {
-        console.error('Erro da API:', json, res.status, res.statusText);
         setError(json?.error ? `Erro: ${json.error}` : `HTTP ${res.status} - ${res.statusText}`);
       } else {
         clearCheckoutSelection();
@@ -437,7 +432,6 @@ function Checkout() {
         navigate(`/checkout/pix?orderId=${encodeURIComponent(json.id)}${exp}`);
       }
     } catch (e: any) {
-      console.error('Erro inesperado no submit:', e);
       setError(e?.message || 'Falha inesperada');
     }
     finally { setSubmitting(false); }
@@ -559,13 +553,9 @@ function Checkout() {
                         headers: { 'Content-Type': 'application/json', ...(userId ? { 'x-user-id': userId } : {}) },
                         body: JSON.stringify(upd)
                       }).then(response => {
-                        if (!response.ok) {
-                          console.warn('Failed to save profile data:', response.status);
-                        } else {
-                          console.log('Profile data saved successfully');
+                        if (response.ok) {
                         }
                       }).catch(err => {
-                        console.error('Error saving profile data:', err);
                       });
                     }
 

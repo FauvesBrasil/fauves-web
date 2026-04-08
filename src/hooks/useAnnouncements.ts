@@ -34,7 +34,6 @@ export const useAnnouncements = (target: 'organizer' | 'customer' = 'organizer')
                 throw new Error('Failed to fetch announcements');
             }
         } catch (err) {
-            console.error('Error fetching announcements:', err);
             setError('Failed to load announcements');
             // Fallback to empty array on error
             setAnnouncements([]);

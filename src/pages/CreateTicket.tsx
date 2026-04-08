@@ -49,7 +49,7 @@ const CreateTicket = () => {
                 alert(error.message || 'Erro ao criar ticket');
             }
         } catch (error) {
-            console.error('Error creating ticket:', error);
+            // no-op
             alert('Erro ao criar ticket');
         } finally {
             setLoading(false);

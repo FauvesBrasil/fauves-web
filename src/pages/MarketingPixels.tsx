@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { fetchApi } from '@/lib/apiBase';
+import StepFlowOverlay from "@/components/overlays/StepFlowOverlay";
+import { useToast } from "@/hooks/use-toast";
+import { PageLoadingWrapper } from "@/components/PageLoadingWrapper";
 import AppHeader from '@/components/AppHeader';
 import { OrganizerLayout } from '@/components/OrganizerLayout';
 import SidebarMenu from '@/components/SidebarMenu';
@@ -19,6 +22,7 @@ import xLogo from '@/assets/x-2.svg';
 
 export default function MarketingPixels() {
   const { id } = useParams();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -202,12 +206,11 @@ export default function MarketingPixels() {
         body: JSON.stringify(payload)
       });
 
-      if (res.ok) {
-        const newPixel = await res.json();
-        setSavedPixels(prev => [newPixel, ...prev]);
-      }
+      if (!res.ok) throw new Error('Failed to save pixel');
+      const newPixel = await res.json();
+      setSavedPixels(prev => [newPixel, ...prev]);
     } catch (e) {
-      console.error('Failed to save pixel:', e);
+      toast({ title: 'Erro', description: 'Não foi possível salvar o pixel.' });
     } finally {
       setSavingPixel(false);
       setModalOpen(false);
@@ -239,11 +242,10 @@ export default function MarketingPixels() {
       const res = await fetchApi(`/api/event/${id}/pixels/${pixelId}`, {
         method: 'DELETE'
       });
-      if (res.ok) {
-        setSavedPixels(prev => prev.filter(p => p.id !== pixelId));
-      }
+      if (!res.ok) throw new Error('Failed to delete pixel');
+      setSavedPixels(prev => prev.filter(p => p.id !== pixelId));
     } catch (e) {
-      console.error('Failed to delete pixel:', e);
+      toast({ title: 'Erro', description: 'Não foi possível remover o pixel.' });
     }
   }
 
@@ -285,7 +287,6 @@ export default function MarketingPixels() {
     <div className="bg-white dark:bg-[#0b0b0b] w-full">
       {/* Mobile Menus */}
       <MobileTopBar
-        isOpen={mobileMenuOpen}
         onMenuOpen={() => setMobileMenuOpen(true)}
       />
       <MobileDrawerMenu
@@ -296,12 +297,8 @@ export default function MarketingPixels() {
       />
 
       <EventMobileTopBar
-        isOpen={eventMenuOpen}
         onMenuOpen={() => setEventMenuOpen(true)}
-        title="Pixels de Rastreamento"
-        eventName={eventName}
-        eventDate={eventDate}
-        eventStatus={eventStatus}
+        title="Pixels"
       />
       <EventMobileDrawer
         isOpen={eventMenuOpen}

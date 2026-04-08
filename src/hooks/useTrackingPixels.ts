@@ -76,7 +76,7 @@ export function useTrackingPixels(eventId: string | undefined) {
                     });
                 }
             } catch (e) {
-                console.warn('[TrackingPixels] Failed to load pixels:', e);
+                // no-op
             }
         }
 
@@ -112,7 +112,7 @@ export function useTrackingPixels(eventId: string | undefined) {
             try {
                 firePixelEvent(pixel, eventType, data);
             } catch (e) {
-                console.warn(`[TrackingPixels] Error firing ${pixel.type}:`, e);
+                // no-op
             }
         });
     }, []);

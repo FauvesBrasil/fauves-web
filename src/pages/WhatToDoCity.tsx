@@ -72,7 +72,7 @@ const WhatToDoCity = () => {
                     setEvents(filtered);
                 }
             } catch (err) {
-                console.error(`Falha ao carregar eventos para ${cityName}:`, err);
+                // Silently handle or show error UI if needed
             } finally {
                 setLoading(false);
             }

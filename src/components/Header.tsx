@@ -87,7 +87,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
           setUnreadCount(data.unreadCount || 0);
         }
       } catch (e) {
-        console.error('Failed to load notifications:', e);
+        // no-op
       }
     };
 
@@ -110,7 +110,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (e) {
-      console.error('Failed to mark notification as read:', e);
+      // no-op
     }
   };
 

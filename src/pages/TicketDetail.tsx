@@ -48,22 +48,17 @@ const TicketDetail = () => {
 
     const loadTicket = async () => {
         try {
-            console.log('[TicketDetail] Loading ticket:', id);
             const response = await fetchApi(`/api/tickets/${id}`);
-            console.log('[TicketDetail] Response status:', response.status, 'OK:', response.ok);
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('[TicketDetail] Ticket data received:', data);
                 setTicket(data);
             } else {
                 const errorText = await response.text();
-                console.error('[TicketDetail] Failed to load ticket. Status:', response.status, 'Error:', errorText);
                 alert(`Erro ao carregar ticket: ${response.status} - ${errorText}`);
                 navigate('/ajuda/tickets');
             }
         } catch (error) {
-            console.error('[TicketDetail] Error loading ticket:', error);
             alert('Erro ao carregar ticket: ' + error);
             navigate('/tickets');
         } finally {
@@ -88,7 +83,7 @@ const TicketDetail = () => {
                 await loadTicket();
             }
         } catch (error) {
-            console.error('Error sending message:', error);
+            // Silently fail or handle error
         } finally {
             setSending(false);
         }
@@ -106,7 +101,7 @@ const TicketDetail = () => {
                 await loadTicket();
             }
         } catch (error) {
-            console.error('Error closing ticket:', error);
+            // Handle error
         }
     };
 
@@ -122,7 +117,7 @@ const TicketDetail = () => {
                 await loadTicket();
             }
         } catch (error) {
-            console.error('Error reopening ticket:', error);
+            // Handle error
         }
     };
 

@@ -44,10 +44,8 @@ export default function AdminEventDetails() {
       });
       if (!eventRes.ok) throw new Error('Erro ao carregar evento');
       const eventResponse = await eventRes.json();
-      console.log('[AdminEventDetails] Event response:', eventResponse);
       
       const eventData = eventResponse.ok ? eventResponse.event : eventResponse;
-      console.log('[AdminEventDetails] Event data:', eventData);
       setEvent(eventData);
 
       // Load analytics
@@ -63,15 +61,11 @@ export default function AdminEventDetails() {
       const financialRes = await fetch(`/api/admin/event/${eventId}/financial`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('[AdminEventDetails] Financial response status:', financialRes.status);
       if (financialRes.ok) {
         const financialData = await financialRes.json();
-        console.log('[AdminEventDetails] Financial data:', financialData);
         if (financialData.ok) {
           setFinancial(financialData.financial);
         }
-      } else {
-        console.error('[AdminEventDetails] Financial API error:', await financialRes.text());
       }
 
       // Load reports/complaints
@@ -85,21 +79,15 @@ export default function AdminEventDetails() {
 
       // Load organization data if organizationId exists
       if (eventData.organizationId) {
-        console.log('[AdminEventDetails] Loading organization:', eventData.organizationId);
         const orgRes = await fetch(`/api/admin/organization/${eventData.organizationId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (orgRes.ok) {
           const orgData = await orgRes.json();
-          console.log('[AdminEventDetails] Organization data:', orgData);
           if (orgData.ok && orgData.organization) {
             setOrganizationData(orgData.organization);
           }
-        } else {
-          console.error('[AdminEventDetails] Failed to load organization:', await orgRes.text());
         }
-      } else {
-        console.warn('[AdminEventDetails] Event has no organizationId');
       }
     } catch (err: any) {
       setError(err?.message || 'Erro ao carregar detalhes');

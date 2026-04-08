@@ -51,7 +51,6 @@ export function useFetchProducerJourney(organizationId?: string) {
                     }
                 }
             } catch (e: any) {
-                console.error('Failed to load producer journey:', e);
                 if (!cancelled) {
                     setError(e?.message || 'Unknown error');
                 }

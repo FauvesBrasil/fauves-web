@@ -110,7 +110,7 @@ export default function OrganizerSettingsV2() {
           setExtendedOrg(org);
         }
       } catch (e) {
-        console.error('Failed to fetch org details', e);
+        // Silently fail or handle error appropriately if needed
       }
     };
     buildUrl();
@@ -158,7 +158,7 @@ export default function OrganizerSettingsV2() {
           setConfirmOwner(true);
         }
       } catch (e) {
-        console.error('Failed to parse banking info', e);
+        // Silently fail or handle error appropriately if needed
       }
     }
   }, [extendedOrg]);
@@ -506,9 +506,6 @@ export default function OrganizerSettingsV2() {
 
   const openVisuals = () => {
     if (!selectedOrg) return;
-    console.log('[DEBUG openVisuals] selectedOrg:', selectedOrg);
-    console.log('[DEBUG openVisuals] logoUrl:', (selectedOrg as any).logoUrl);
-    console.log('[DEBUG openVisuals] coverUrl:', (selectedOrg as any).coverUrl);
     setVisualsOpen(true);
     setLogoFile(null); setCoverFile(null);
     setLogoPreview((selectedOrg as any).logoUrl || '');

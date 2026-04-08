@@ -98,7 +98,6 @@ const OrganizationPublicProfile: React.FC = () => {
             if (mounted) setFollowersCount(Number(c.count || 0));
           }
         } catch (e) {
-          console.warn('followers count fetch failed', e);
         }
 
         try {
@@ -108,7 +107,6 @@ const OrganizationPublicProfile: React.FC = () => {
             if (mounted) setEvents(ev || []);
           }
         } catch (e) {
-          console.warn('events fetch failed', e);
         }
 
         try {
@@ -118,13 +116,11 @@ const OrganizationPublicProfile: React.FC = () => {
             if (mounted && feat?.id) setFeaturedEvent(feat);
           }
         } catch (e) {
-          console.warn('featured event fetch failed', e);
         }
 
         setLoading(false);
       } catch (e: any) {
         if (!mounted) return;
-        console.error('fetch org error', e);
         setError(e?.message || 'Erro desconhecido');
         setLoading(false);
       }

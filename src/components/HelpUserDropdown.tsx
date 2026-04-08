@@ -27,7 +27,7 @@ const HelpUserDropdown: React.FC<HelpUserDropdownProps> = ({ userName, userEmail
             // Navega para home
             navigate("/");
         } catch (error) {
-            console.error('Erro ao fazer logout:', error);
+            // no-op
             // Mesmo com erro, limpa o token e redireciona
             localStorage.removeItem('AUTH_TOKEN_V1');
             navigate("/");
