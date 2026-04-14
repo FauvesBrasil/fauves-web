@@ -3,8 +3,8 @@ import { useLocation } from 'react-router-dom';
 import LogoFauves from '@/components/LogoFauves';
 import { HelpCircle } from 'lucide-react';
 
-export default function CheckoutHeader() {
-  const [secondsLeft, setSecondsLeft] = useState<number>(600);
+export default function CheckoutHeader({ expiresAt, onExpire }: { expiresAt?: string; onExpire?: () => void } = {}) {
+  const [secondsLeft, setSecondsLeft] = useState<number>(0);
   const [, setTick] = useState(0); // Force re-render
 
   const location = useLocation();
@@ -13,53 +13,55 @@ export default function CheckoutHeader() {
   useEffect(() => {
     if (hideTimer) return;
 
+    if (expiresAt) {
+      let rafId: number;
+      const updateTimer = () => {
+        const remaining = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+        setSecondsLeft(remaining);
+        if (remaining > 0) {
+          rafId = requestAnimationFrame(updateTimer);
+        } else if (onExpire) {
+          onExpire();
+        }
+      };
+      updateTimer();
+      return () => { if (rafId) cancelAnimationFrame(rafId); };
+    }
+
     try {
       const t = require('@/lib/checkoutTimer');
       t.ensureTimerStarted();
 
-      // Use requestAnimationFrame for accurate timing even when tab is inactive
       let rafId: number;
-
-      const updateTimer = () => {
+      const updateTimerSession = () => {
         const remaining = t.getSecondsLeft();
         setSecondsLeft(remaining);
-
         if (remaining > 0) {
-          rafId = requestAnimationFrame(updateTimer);
+          rafId = requestAnimationFrame(updateTimerSession);
         }
       };
-
-      updateTimer();
-
-      return () => {
-        if (rafId) cancelAnimationFrame(rafId);
-      };
+      updateTimerSession();
+      return () => { if (rafId) cancelAnimationFrame(rafId); };
     } catch (e) {
-      // Fallback: decrement from 600
       const startTime = Date.now();
       let rafId: number;
-
       const updateFallback = () => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const remaining = Math.max(0, 600 - elapsed);
         setSecondsLeft(remaining);
-
         if (remaining > 0) {
           rafId = requestAnimationFrame(updateFallback);
         }
       };
-
       updateFallback();
-
-      return () => {
-        if (rafId) cancelAnimationFrame(rafId);
-      };
+      return () => { if (rafId) cancelAnimationFrame(rafId); };
     }
-  }, [hideTimer]);
+  }, [hideTimer, expiresAt, onExpire]);
 
-  // Cancel order when timer reaches 0
+  // Cancel order when session timer reaches 0
   useEffect(() => {
-    if (hideTimer || secondsLeft > 0) return;
+    if (hideTimer || expiresAt || secondsLeft > 0) return;
+
 
     // Timer reached 0 - cancel the order
     const cancelExpiredOrder = async () => {

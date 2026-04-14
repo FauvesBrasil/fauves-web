@@ -306,7 +306,7 @@ export default function CheckoutPix() {
 
   return (
     <div className="flex h-screen w-screen overflow-y-auto bg-white dark:bg-[#0b0b0b] flex-col">
-      <CheckoutHeader />
+      <CheckoutHeader expiresAt={expiresAt || undefined} onExpire={onExpire} />
 
       {/* Show loading overlay while we fetch order/intent data. If user needs to fill details,
           the normal form will appear after loading completes. */}
