@@ -136,11 +136,13 @@ function Review() {
   function handleCardNumberChange(raw: string) {
     const digits = raw.replace(/\D/g, '').slice(0, 19);
     const brand = detectCardBrand(digits);
-    setCardBrand(brand);
+    if (brand !== cardBrand) {
+      setCardBrand(brand);
+      setInstallments([]);
+      setSelectedInstallment(1);
+      setInstallmentTotal(null);
+    }
     setCardNumber(formatCardNumber(digits, brand));
-    setInstallments([]);
-    setSelectedInstallment(1);
-    setInstallmentTotal(null);
   }
 
   function handleExpiryChange(raw: string) {
@@ -267,8 +269,18 @@ function Review() {
 
     try {
       const raw = sessionStorage.getItem('checkoutBuyer:v1');
-      if (raw) setBuyer(JSON.parse(raw));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setBuyer(parsed);
+        // Preenche CPF do titular com o CPF do comprador se estiver vazio
+        if (parsed.cpf && !holderCPF) setHolderCPF(parsed.cpf);
+      }
     } catch { }
+
+    // Fallback para CPF do usuário logado
+    if (!holderCPF && (user as any)?.cpf) {
+      setHolderCPF((user as any).cpf);
+    }
 
     try {
       const t = require('@/lib/checkoutTimer');
@@ -388,6 +400,11 @@ function Review() {
         const efiBrands = ['visa', 'mastercard', 'amex', 'elo', 'hipercard'];
         const brand = efiBrands.includes(cardBrand) ? cardBrand : 'visa';
 
+        const hCPF = holderCPF.replace(/\D/g, '');
+        if (!hCPF || hCPF.length !== 11) {
+          throw new Error('CPF do titular inválido ou incompleto');
+        }
+
         const tokenResult = await sdk.CreditCard
           .setAccount(EFI_PAYEE_CODE)
           .setEnvironment(EFI_ENVIRONMENT)
@@ -398,7 +415,7 @@ function Review() {
             expirationMonth: expMonth?.padStart(2, '0'),
             expirationYear: expYear?.length === 2 ? `20${expYear}` : expYear,
             holderName: cardHolderName,
-            holderDocument: (isDifferentHolder ? holderCPF : (buyer?.cpf || (user as any)?.cpf || '')).replace(/\D/g, ''),
+            holderDocument: hCPF,
             reuse: saveCard,
           })
           .getPaymentToken();
@@ -600,37 +617,32 @@ function Review() {
                   />
                 </div>
 
-                {/* Titular Diferente */}
+                {/* Dados do Titular (Sempre visível para conferência) */}
                 <div className="space-y-3 pt-1">
-                  <AnimatedCheckbox
-                    checked={isDifferentHolder}
-                    onCheckedChange={setIsDifferentHolder}
-                    label="O titular do cartão é diferente do comprador"
-                    className="text-sm max-md:text-xs font-medium text-slate-700 dark:text-slate-300"
-                  />
-                  {isDifferentHolder && (
-                    <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="col-span-2 md:col-span-1">
-                        <Input
-                          placeholder="CPF do titular"
-                          value={holderCPF}
-                          onChange={e => {
-                            const d = e.target.value.replace(/\D/g, '').slice(0, 11);
-                            setHolderCPF(d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"));
-                          }}
-                          className="h-11 max-md:h-10 rounded-xl text-sm"
-                          inputMode="numeric"
-                        />
-                      </div>
-                      <div className="col-span-2 md:col-span-1">
-                        <Input
-                          placeholder="Nome do titular"
-                          className="h-11 max-md:h-10 rounded-xl text-sm uppercase"
-                          onChange={e => setCardHolderName(e.target.value.toUpperCase())}
-                        />
-                      </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2 md:col-span-1">
+                      <label className="block text-xs text-slate-500 mb-1 ml-1 font-medium">CPF do Titular</label>
+                      <Input
+                        placeholder="CPF do titular"
+                        value={holderCPF}
+                        onChange={e => {
+                          const d = e.target.value.replace(/\D/g, '').slice(0, 11);
+                          setHolderCPF(d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"));
+                        }}
+                        className="h-11 max-md:h-10 rounded-xl text-sm"
+                        inputMode="numeric"
+                      />
                     </div>
-                  )}
+                    <div className="col-span-2 md:col-span-1">
+                      <label className="block text-xs text-slate-500 mb-1 ml-1 font-medium">Nome no Cartão</label>
+                      <Input
+                        placeholder="Nome como no cartão"
+                        value={cardHolderName}
+                        className="h-11 max-md:h-10 rounded-xl text-sm uppercase"
+                        onChange={e => setCardHolderName(e.target.value.toUpperCase())}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Parcelamento */}
