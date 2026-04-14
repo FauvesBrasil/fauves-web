@@ -140,7 +140,6 @@ export default function CheckoutPix() {
       }
       const json: PixIntent = await res.json();
       console.log('[CheckoutPix] Intent received:', json);
-      // If provider didn't return a code yet, keep polling and don't try to render QR
       if (json.code && json.code.length > 0) {
         setIntent(json);
         // We have a valid code now; start payment status polling.
@@ -150,10 +149,6 @@ export default function CheckoutPix() {
           setQrDataUrl(url);
         } catch (e) {
           console.warn('Failed to generate QR image', e);
-        }
-        // Caso expParam exista preferimos ele, senão usamos expiresAt da intent se vier
-        if (!expParam && !expiresAt && json.expiresAt) {
-          setExpiresAt(json.expiresAt);
         }
       } else {
         // No code yet: keep polling enabled so the GET poll can pick up updates.
