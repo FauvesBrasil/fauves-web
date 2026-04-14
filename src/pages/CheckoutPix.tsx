@@ -232,24 +232,7 @@ export default function CheckoutPix() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [polling, orderId, expired]);
 
-  const onExpire = () => {
-    // Don't cancel if payment was already confirmed
-    if (paymentConfirmed) return;
-    
-    // When timer expires, mark expired, stop polling and attempt to cancel the order
-    setExpired(true);
-    setPolling(false);
-    // best-effort cancel and redirect
-    (async () => {
-      try {
-        await cancelOrderAndRedirect('expired');
-      } catch (e) {
-        // ignore: user will see expired UI below
-      }
-    })();
-  };
-
-  async function cancelOrderAndRedirect(reason: 'expired' | 'manual' = 'manual') {
+  const cancelOrderAndRedirect = useCallback(async (reason: 'expired' | 'manual' = 'manual') => {
     if (!orderId) return;
     if (actionBusy) return;
     setActionBusy(true);
@@ -281,7 +264,24 @@ export default function CheckoutPix() {
       setActionBusy(false);
       setShowCancelConfirm(false);
     }
-  }
+  }, [actionBusy, navigate, order, orderId, user]);
+
+  const onExpire = useCallback(() => {
+    // Don't cancel if payment was already confirmed
+    if (paymentConfirmed) return;
+    
+    // When timer expires, mark expired, stop polling and attempt to cancel the order
+    setExpired(true);
+    setPolling(false);
+    // best-effort cancel and redirect
+    (async () => {
+      try {
+        await cancelOrderAndRedirect('expired');
+      } catch (e) {
+        // ignore: user will see expired UI below
+      }
+    })();
+  }, [paymentConfirmed, cancelOrderAndRedirect]);
 
   const copyCode = async () => {
     if (!intent) return;
