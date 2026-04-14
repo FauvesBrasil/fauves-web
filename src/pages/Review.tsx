@@ -274,12 +274,19 @@ function Review() {
         setBuyer(parsed);
         // Preenche CPF do titular com o CPF do comprador se estiver vazio
         if (parsed.cpf && !holderCPF) setHolderCPF(parsed.cpf);
+        // Preenche Nome do titular se estiver vazio
+        if ((parsed.buyerName || parsed.buyerSurname) && !cardHolderName) {
+          setCardHolderName(`${parsed.buyerName || ''} ${parsed.buyerSurname || ''}`.trim().toUpperCase());
+        }
       }
     } catch { }
 
-    // Fallback para CPF do usuário logado
+    // Fallback para dados do usuário logado
     if (!holderCPF && (user as any)?.cpf) {
       setHolderCPF((user as any).cpf);
+    }
+    if (!cardHolderName && user?.name) {
+      setCardHolderName(user.name.toUpperCase());
     }
 
     try {
@@ -403,6 +410,9 @@ function Review() {
         const hCPF = holderCPF.replace(/\D/g, '');
         if (!hCPF || hCPF.length !== 11) {
           throw new Error('CPF do titular inválido ou incompleto');
+        }
+        if (!cardHolderName || cardHolderName.trim().length < 3) {
+          throw new Error('Informe o nome impresso no cartão');
         }
 
         const tokenResult = await sdk.CreditCard
@@ -528,37 +538,41 @@ function Review() {
 
             {/* ─── Forma de Pagamento ───────────────────────────────────── */}
             <h3 className="text-lg max-md:text-base font-semibold mb-2 text-indigo-950 dark:text-white">Forma de pagamento</h3>
-            <div className="flex gap-4 max-md:gap-2 mb-4 max-md:mb-3">
-              <button
-                onClick={() => setPaymentMethod('pix')}
-                className={`flex-1 p-4 max-md:p-3 border-2 rounded-xl transition-all ${paymentMethod === 'pix'
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-400 shadow-md shadow-indigo-500/20'
-                  : 'border-gray-200 dark:border-[#1F1F1F] hover:border-gray-300 dark:hover:border-gray-700'}`}
-              >
-                <div className="flex items-center gap-3 max-md:gap-2">
-                  <img src={PixIcon} alt="pix" className="w-6 h-6 max-md:w-5 max-md:h-5 flex-shrink-0" />
-                  <div className="text-left">
-                    <div className="font-semibold text-indigo-950 dark:text-white max-md:text-sm">Pix</div>
-                    <span className="text-sm max-md:text-xs text-slate-500 dark:text-slate-400">Aprovação instantânea</span>
+            
+            <form onSubmit={e => { e.preventDefault(); handlePay(); }}>
+              <div className="flex gap-4 max-md:gap-2 mb-4 max-md:mb-3">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('pix')}
+                  className={`flex-1 p-4 max-md:p-3 border-2 rounded-xl transition-all ${paymentMethod === 'pix'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-400 shadow-md shadow-indigo-500/20'
+                    : 'border-gray-200 dark:border-[#1F1F1F] hover:border-gray-300 dark:hover:border-gray-700'}`}
+                >
+                  <div className="flex items-center gap-3 max-md:gap-2">
+                    <img src={PixIcon} alt="pix" className="w-6 h-6 max-md:w-5 max-md:h-5 flex-shrink-0" />
+                    <div className="text-left">
+                      <div className="font-semibold text-indigo-950 dark:text-white max-md:text-sm">Pix</div>
+                      <span className="text-sm max-md:text-xs text-slate-500 dark:text-slate-400">Aprovação instantânea</span>
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
 
-              <button
-                onClick={() => setPaymentMethod('card')}
-                className={`flex-1 p-4 max-md:p-3 border-2 rounded-xl transition-all ${paymentMethod === 'card'
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-400 shadow-md shadow-indigo-500/20'
-                  : 'border-gray-200 dark:border-[#1F1F1F] hover:border-gray-300 dark:hover:border-gray-700'}`}
-              >
-                <div className="flex items-center gap-3 max-md:gap-2">
-                  <img src={CardIcon} alt="cartao" className="w-6 h-6 max-md:w-5 max-md:h-5 flex-shrink-0" />
-                  <div className="text-left">
-                    <div className="font-semibold text-indigo-950 dark:text-white max-md:text-sm">Cartão</div>
-                    <span className="text-sm max-md:text-xs text-slate-500 dark:text-slate-400">em até 12×</span>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('card')}
+                  className={`flex-1 p-4 max-md:p-3 border-2 rounded-xl transition-all ${paymentMethod === 'card'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/20 dark:border-indigo-400 shadow-md shadow-indigo-500/20'
+                    : 'border-gray-200 dark:border-[#1F1F1F] hover:border-gray-300 dark:hover:border-gray-700'}`}
+                >
+                  <div className="flex items-center gap-3 max-md:gap-2">
+                    <img src={CardIcon} alt="cartao" className="w-6 h-6 max-md:w-5 max-md:h-5 flex-shrink-0" />
+                    <div className="text-left">
+                      <div className="font-semibold text-indigo-950 dark:text-white max-md:text-sm">Cartão</div>
+                      <span className="text-sm max-md:text-xs text-slate-500 dark:text-slate-400">em até 12×</span>
+                    </div>
                   </div>
-                </div>
-              </button>
-            </div>
+                </button>
+              </div>
 
             {/* ─── Formulário de Cartão ─────────────────────────────────── */}
             {paymentMethod === 'card' && (
@@ -742,8 +756,8 @@ function Review() {
             <div className="max-md:hidden">
               <button
                 id="btn-pay"
+                type="submit"
                 disabled={submitting}
-                onClick={handlePay}
                 className="w-full h-14 max-md:h-12 rounded-xl bg-gradient-to-r from-[#2A2AD7] to-indigo-700 hover:from-[#2020c0] hover:to-indigo-800 text-white font-semibold flex items-center justify-center gap-3 shadow-lg shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed max-md:text-sm"
               >
                 {submitting ? (
@@ -805,8 +819,8 @@ function Review() {
           </div>
         </div>
         <button
+          type="submit"
           disabled={submitting}
-          onClick={handlePay}
           className="w-full h-12 rounded-xl bg-gradient-to-r from-[#2A2AD7] to-indigo-700 hover:from-[#2020c0] hover:to-indigo-800 text-white font-semibold flex items-center justify-center gap-3 shadow-lg shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         >
           {submitting ? (
@@ -827,16 +841,10 @@ function Review() {
         {error && (
           <div className="text-red-600 dark:text-red-400 mt-2 text-xs bg-red-50 dark:bg-red-950/20 p-2 rounded-lg font-medium">
             {error}
-            {error.toLowerCase().includes('cartão') || error.toLowerCase().includes('recusado') ? (
-              <button
-                className="block mt-1 text-indigo-600 dark:text-indigo-400 underline text-xs font-semibold"
-                onClick={() => setPaymentMethod('pix')}
-              >
-                Tentar pagar com Pix
-              </button>
-            ) : null}
+            <div className="text-[10px] opacity-60 mt-1 font-mono">Dica: Confira o nome e CPF do titular.</div>
           </div>
         )}
+      </form>
       </div>
     </div>
   );
