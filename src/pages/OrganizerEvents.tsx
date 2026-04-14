@@ -117,7 +117,13 @@ const OrganizerEvents: React.FC = () => {
       if (!need.length) return;
       const updated: OrganizationOption[] = [];
       for (const o of need) {
-        try { const r = await fetch(`/api/organization/${o.id}`); const data = await r.json(); if (data?.name) updated.push({ id: o.id, name: data.name }); } catch { }
+        try { 
+          const r = await fetchApi(`/api/organization/${o.id}`); 
+          if (r.ok) {
+            const data = await r.json(); 
+            if (data?.name) updated.push({ id: o.id, name: data.name }); 
+          }
+        } catch { }
       }
       if (updated.length) setOrganizations(prev => prev.map(p => updated.find(u => u.id === p.id) || p));
     };
@@ -157,10 +163,7 @@ const OrganizerEvents: React.FC = () => {
         if (!selectedOrg) {
           setEvents(Array.isArray(eventsData) ? eventsData : []);
         }
-        (window as any).__dbgEventsByUser = eventsData;
 
-        if (Array.isArray(orgsData)) setOrganizations(orgsData);
-        (window as any).__dbgOrgsByUser = orgsData;
 
         setCollectionsLoading(true);
         if (Array.isArray(rawCollections) && rawCollections.length) {
@@ -172,7 +175,6 @@ const OrganizerEvents: React.FC = () => {
 
         const orgEquipeRes = await fetchApi(`/api/organization/equipe?userId=${uid}`);
         const orgEquipe = orgEquipeRes.ok ? await orgEquipeRes.json() : null;
-        (window as any).__dbgOrgEquipe = orgEquipe;
         const oid = orgEquipe?.organizationId;
         if (oid) {
           setOrganizations(prev => prev.some(o => o.id === oid) ? prev : [...prev, { id: oid, name: 'Organização' }]);
@@ -186,9 +188,7 @@ const OrganizerEvents: React.FC = () => {
             try { sessionStorage.setItem('collections-cache', JSON.stringify(normCols)); } catch { }
           }
         }
-        (window as any).__dbgCollections = { initial: rawCollections, afterOrg: (window as any).__dbgCollections?.afterOrg };
       } catch (e) {
-        console.warn('[OrganizerEvents.boot] falhou', e);
       } finally { setLoading(false); }
     };
     boot();
@@ -204,27 +204,12 @@ const OrganizerEvents: React.FC = () => {
 
     (async () => {
       try {
-        const attempts = [
-          apiUrl(`/api/organization/${orgId}/events`),
-          `http://localhost:4000/api/organization/${orgId}/events`,
-          `http://localhost:3000/api/organization/${orgId}/events`
-        ];
-        let loaded: any[] | null = null;
-        for (const u of attempts) {
-          try {
-            const r = await fetch(u);
-            if (r.ok) {
-              const data = await r.json();
-              if (Array.isArray(data)) {
-                loaded = data;
-                break;
-              }
-            }
-          } catch { }
-        }
-        if (!cancelled && Array.isArray(loaded)) {
-          setEvents(loaded);
-          (window as any).__dbgEventsScoped = { orgId, loaded };
+        const res = await fetchApi(`/api/organization/${orgId}/events`);
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setEvents(data);
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -249,7 +234,6 @@ const OrganizerEvents: React.FC = () => {
         if (!cancelled && Array.isArray(loaded)) {
           const norm = normalizeCollections(loaded, orgId);
           setCollections(norm);
-          (window as any).__dbgCollectionsScoped = { orgId, loaded: norm };
         }
       } finally {
         // no-op
@@ -330,19 +314,14 @@ const OrganizerEvents: React.FC = () => {
   const refresh = async () => {
     if (!userId) return;
     try {
-      if (selectedOrg) {
-        const attempts = [
-          apiUrl(`/api/organization/${selectedOrg.id}/events`),
-          `http://localhost:4000/api/organization/${selectedOrg.id}/events`
-        ];
-        for (const u of attempts) {
-          try { const r = await fetch(u); if (r.ok) { const list = await r.json(); if (Array.isArray(list)) { setEvents(list); (window as any).__dbgEventsScopedRefresh = list; break; } } } catch { }
-        }
-      } else {
-        const attempts = [apiUrl(`/api/events/by-user?userId=${userId}`), `http://localhost:4000/api/events/by-user?userId=${userId}`];
-        for (const u of attempts) {
-          try { const r = await fetch(u); if (r.ok) { const list = await r.json(); setEvents(Array.isArray(list) ? list : []); (window as any).__dbgEventsByUser = list; break; } } catch { }
-        }
+      const path = selectedOrg 
+        ? `/api/organization/${selectedOrg.id}/events`
+        : `/api/events/by-user?userId=${userId}`;
+      
+      const res = await fetchApi(path);
+      if (res.ok) {
+        const list = await res.json();
+        setEvents(Array.isArray(list) ? list : []);
       }
     } catch { }
   };
@@ -351,9 +330,12 @@ const OrganizerEvents: React.FC = () => {
   const onDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const urls = [apiUrl(`/api/event/${deleteTarget}`), `http://localhost:4000/api/event/${deleteTarget}`];
-      for (const u of urls) {
-        try { const res = await fetch(u, { method: 'DELETE' }); if (res.ok) { const j = await res.json(); if (j?.ok) { await refresh(); break; } } } catch { }
+      const res = await fetchApi(`/api/event/${deleteTarget}`, { method: 'DELETE' });
+      if (res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (j?.ok || res.status === 200) {
+          await refresh();
+        }
       }
     } finally { setDeleteTarget(null); }
   };
@@ -365,29 +347,36 @@ const OrganizerEvents: React.FC = () => {
     const fetchCollectionsIfNeeded = async () => {
       if (!showCollections || collections.length > 0) return;
       try {
-        const attempt = async (path: string) => {
-          const bases = [apiUrl(path), `http://localhost:4000${path}`];
-          for (const b of bases) { try { const r = await fetch(b); if (r.ok) return r.json(); } catch { } }
+        const attemptPath = async (path: string) => {
+          try { 
+            const r = await fetchApi(path); 
+            if (r.ok) return r.json(); 
+          } catch { }
           return null;
         };
         // Prefer explicit selectedOrg when present, otherwise fall back to discovered organizations
         let oid: string | null = selectedOrg?.id || organizations[0]?.id || null;
-        if (!oid && userId) { const orgJ = await attempt(`/api/organization/equipe?userId=${userId}`); oid = orgJ?.organizationId || null; }
+        if (!oid && userId) { const orgJ = await attemptPath(`/api/organization/equipe?userId=${userId}`); oid = orgJ?.organizationId || null; }
         if (collections.length === 0 && userId) {
-          const allCols = await attempt(`/api/collections/by-user/${userId}`);
+          const allCols = await attemptPath(`/api/collections/by-user/${userId}`);
           if (Array.isArray(allCols) && allCols.length) { const norm = normalizeCollections(allCols, oid); setCollections(norm); return; }
         }
         if (oid) {
-          const list = await attempt(`/api/organization/${oid}/collections`);
+          const list = await attemptPath(`/api/organization/${oid}/collections`);
           if (Array.isArray(list) && list.length) { const norm = normalizeCollections(list, oid); setCollections(prev => prev.length ? prev : norm); try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch { } }
         }
         if (collections.length === 0 && organizations.length > 1) {
           for (const o of organizations) {
-            const ll = await attempt(`/api/organization/${o.id}/collections`);
-            if (Array.isArray(ll) && ll.length) { const norm = normalizeCollections(ll, o.id); setCollections(prev => prev.length ? prev : norm); try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch { }; break; }
+            const ll = await attemptPath(`/api/organization/${o.id}/collections`);
+            if (Array.isArray(ll) && ll.length) { 
+              const norm = normalizeCollections(ll, o.id); 
+              setCollections(prev => prev.length ? prev : norm); 
+              try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch { }
+              break; 
+            }
           }
         }
-      } catch (e) { console.warn('[OrganizerEvents] fetchCollectionsIfNeeded failed', e); }
+      } catch (e) { }
     };
     fetchCollectionsIfNeeded();
   }, [showCollections, collections.length, organizations, userId]);
@@ -399,13 +388,37 @@ const OrganizerEvents: React.FC = () => {
       let oid = col.organizerId;
       if (!oid && userId) {
         const attempts = [apiUrl(`/api/organization/equipe?userId=${userId}`), `http://localhost:4000/api/organization/equipe?userId=${userId}`];
-        for (const u of attempts) { try { const r = await fetch(u); if (r.ok) { const j = await r.json(); if (j?.organizationId) { oid = j.organizationId; break; } } } catch { } }
+        for (const u of attempts) { 
+          try { 
+            const r = await fetch(u); 
+            if (r.ok) { 
+              const j = await r.json(); 
+              if (j?.organizationId) { 
+                oid = j.organizationId; 
+                break; 
+              } 
+            } 
+          } catch { } 
+        }
       }
       if (oid) {
         const attempts = [apiUrl(`/api/organization/${oid}/collections`), `http://localhost:4000/api/organization/${oid}/collections`];
-        for (const u of attempts) { try { const r = await fetch(u); if (r.ok) { const list = await r.json(); if (Array.isArray(list) && list.length) { const norm = normalizeCollections(list, oid); setCollections(norm); try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch { }; break; } } } catch { } }
+        for (const u of attempts) { 
+          try { 
+            const r = await fetch(u); 
+            if (r.ok) { 
+              const list = await r.json(); 
+              if (Array.isArray(list) && list.length) { 
+                const norm = normalizeCollections(list, oid); 
+                setCollections(norm); 
+                try { sessionStorage.setItem('collections-cache', JSON.stringify(norm)); } catch { }
+                break; 
+              } 
+            } 
+          } catch { } 
+        }
       }
-    } catch (e) { console.error('[OrganizerEvents] refresh collections after save failed', e); }
+    } catch (e) { }
     finally { setShowCollections(true); setShowCollectionDrawer(false); }
   };
 

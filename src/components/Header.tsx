@@ -4,6 +4,7 @@ import LogoFauves from '@/components/LogoFauves';
 import LocationSelector from '@/components/LocationSelector';
 import SearchBar from '@/components/SearchBar';
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getFirstName, getDisplayName } from '@/lib/user';
 import { useTheme } from '@/context/ThemeContext';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -12,6 +13,7 @@ import LoginModal from './LoginModal';
 import RequireOrganization from './RequireOrganization';
 import { useOrganization } from '@/context/OrganizationContext';
 import { fetchApi, apiUrl } from '@/lib/apiBase';
+import UserDropdown from '@/components/UserDropdown';
 
 interface HeaderProps {
   hideSearchOnMobile?: boolean;
@@ -22,11 +24,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
   const { isDark } = useTheme();
   const headerTextClass = isDark ? 'text-white' : 'text-[#091747]';
   const headerIconClass = isDark ? 'text-white' : 'text-[#091747]';
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { user, logout, token } = useAuth();
-  const [showLogin, setShowLogin] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+  const { user, logout, token, loading: authLoading, isLoginModalOpen, openLoginModal } = useAuth();
   const [showCreateOrg, setShowCreateOrg] = useState(false);
   const [mobileSearchActive, setMobileSearchActive] = useState(false);
   const { refresh, addOrganization } = useOrganization();
@@ -37,8 +35,6 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
   const [showNotif, setShowNotif] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
   const notifButtonRef = useRef<HTMLButtonElement | null>(null);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const userButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Notifications from API
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; link?: string; isRead?: boolean; createdAt?: string }>>([]);
@@ -47,9 +43,6 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       const target = e.target as Node;
-      if (dropdownRef.current && !dropdownRef.current.contains(target) && userButtonRef.current && !userButtonRef.current.contains(target)) {
-        setShowDropdown(false);
-      }
       if (notifRef.current && !notifRef.current.contains(target) && notifButtonRef.current && !notifButtonRef.current.contains(target)) {
         setShowNotif(false);
       }
@@ -57,6 +50,23 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
   }, []);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Auto-open login modal if ?login=true and user is not authenticated
+  useEffect(() => {
+    if (searchParams.get('login') === 'true' && !user && !authLoading) {
+      const redirect = searchParams.get('redirect') || undefined;
+      openLoginModal(redirect);
+      
+      // Clean up the URL after opening the modal
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('login');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, user, authLoading, setSearchParams, openLoginModal]);
+
+  const redirectPath = searchParams.get('redirect') || undefined;
 
   // Load notifications from API
   useEffect(() => {
@@ -77,7 +87,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
           setUnreadCount(data.unreadCount || 0);
         }
       } catch (e) {
-        console.error('Failed to load notifications:', e);
+        // no-op
       }
     };
 
@@ -100,45 +110,13 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (e) {
-      console.error('Failed to mark notification as read:', e);
+      // no-op
     }
   };
 
   // profile load (if needed) - placeholder: keep as-is
-  useEffect(() => {
-    // Optionally fetch profile info here
-    if (user?.id) {
-      // Fetch tickets count
-      const q = `userId=${encodeURIComponent(user.id)}`;
-      fetch(`/api/my/tickets?${q}`)
-        .then(r => r.json())
-        .then(data => {
-          const items = Array.isArray(data.items) ? data.items : [];
-          setTicketsCount(items.length);
-        })
-        .catch(() => setTicketsCount(0));
-
-      // TODO: Fetch following count when API is ready
-      // For now keeping at 0
-      setFollowingCount(0);
-    }
-  }, [user]);
-
-  function fullImageUrl(url: string) {
-    if (!url) return url;
-    if (url.startsWith('http')) return url;
-    return apiUrl + url;
-  }
-
-  async function handleLogout() {
-    setIsLoggingOut(true);
-    try {
-      await logout();
-    } catch (e) {
-      void e;
-    }
-    setIsLoggingOut(false);
-  }
+  const userName = getFirstName(user) || 'Visitante';
+  const userEmail = user?.email || "";
 
   return (
     <header className="sticky top-0 z-[9999] w-full bg-background px-4 py-2 border-b border-border dark:border-[#161616] overflow-visible max-md:fixed max-md:left-0 max-md:right-0" style={{ boxSizing: 'border-box' }}>
@@ -226,35 +204,14 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
                   </div>
                 </div>
 
-                <div className="relative">
-                  <button ref={userButtonRef} className="flex items-center gap-2 bg-card rounded-full pl-1 pr-3 py-1 cursor-pointer focus:outline-none transition hover:bg-card/90" onClick={() => setShowDropdown(v => !v)} aria-haspopup="true" aria-expanded={showDropdown ? 'true' : 'false'}>
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                      {profile && typeof profile.photoUrl === 'string' && profile.photoUrl.length > 0 ? (
-                        <img src={fullImageUrl(profile.photoUrl)} alt="avatar" className="w-8 h-8 object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                      ) : (
-                        <span className={`${headerTextClass} text-xs font-semibold`}>{(getDisplayName(user, profile as Record<string, unknown>) || '?').substring(0, 1).toUpperCase()}</span>
-                      )}
-                    </div>
-
-                    <span className={`${headerTextClass} font-bold text-[15px] max-sm:hidden`}>{getFirstName(user, profile) || ''}</span>
-
-                    <span className="relative w-5 h-5 flex items-center justify-center">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" className={(showDropdown ? 'opacity-0 rotate-45 scale-75' : 'opacity-100 rotate-0 scale-100') + ' absolute transition-all duration-300 ease-in-out ' + headerIconClass} style={{ left: 0, top: 0 }}><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" className={(showDropdown ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-45 scale-75') + ' absolute transition-all duration-300 ease-in-out ' + headerIconClass} style={{ left: 0, top: 0 }}><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
-                    </span>
-                  </button>
-
-                  <div ref={dropdownRef} className={'absolute right-0 mt-2 w-56 bg-card rounded-xl shadow-lg border border-border z-[9999] flex flex-col text-foreground text-[15px] font-bold transition-all duration-300 ease-in-out ' + (showDropdown ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none') + ' max-sm:fixed max-sm:left-0 max-sm:right-0 max-sm:w-full max-sm:rounded-none max-sm:mt-0 max-sm:h-screen max-sm:z-[9999] max-sm:top-[56px]'} style={{ top: undefined }}>
-                    <Link to="/organizer-dashboard" className="text-left px-5 py-3 hover:bg-gray-50 border-t border-gray-100" onClick={() => setShowDropdown(false)}>Gerenciar meus eventos</Link>
-                    <Link to="/profile" className="text-left px-5 py-3 hover:bg-gray-50 border-t border-gray-100" onClick={() => setShowDropdown(false)}>Ingressos ({ticketsCount})</Link>
-                    <Link to="/profile" className="text-left px-5 py-3 hover:bg-gray-50 border-t border-gray-100" onClick={() => setShowDropdown(false)}>Seguindo ({followingCount})</Link>
-                    <Link to="/account-settings" className="text-left px-5 py-3 hover:bg-gray-50 border-t border-gray-100 block" onClick={() => setShowDropdown(false)}>Configurações de conta</Link>
-                    <button className="text-left px-5 py-3 hover:bg-gray-50 border-t border-gray-100 rounded-b-xl text-[#EF4118]" onClick={handleLogout}>{isLoggingOut ? <span className="flex items-center justify-center"><svg className="animate-spin h-5 w-5 text-[#EF4118]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg><span className="ml-2">Saindo...</span></span> : 'Sair'}</button>
-                  </div>
-                </div>
+                <UserDropdown 
+                  userName={userName} 
+                  userEmail={userEmail} 
+                  ticketsCount={ticketsCount} 
+                />
               </div>
             ) : (
-              <button className="w-[68px] h-[33px] flex items-center justify-center bg-[#0205D3] rounded-[95px] hover:bg-[#2A2AD7] transition-colors max-sm:w-auto max-sm:px-4 max-sm:h-9" onClick={() => setShowLogin(true)}>
+              <button className="w-[68px] h-[33px] flex items-center justify-center bg-[#0205D3] rounded-[95px] hover:bg-[#2A2AD7] transition-colors max-sm:w-auto max-sm:px-4 max-sm:h-9" onClick={() => openLoginModal()}>
                 <span className="text-white text-center text-[15px] font-bold">Entrar</span>
               </button>
             )}
@@ -278,7 +235,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
         </div>
       )}
 
-      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
+      {/* Global LoginModal is now rendered in App.tsx */}
 
       {showCreateOrg && (
         <RequireOrganization onCreated={(org) => {

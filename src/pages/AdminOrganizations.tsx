@@ -38,7 +38,7 @@ export default function AdminOrganizations() {
       setPage(data.page || p);
       setPerPage(data.perPage || pp);
     } catch (e: any) {
-      console.error('[AdminOrganizations] Error:', e);
+      // no-op
       setError(e?.message || 'Erro ao carregar organizações');
     } finally {
       setLoading(false);

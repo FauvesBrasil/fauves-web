@@ -21,6 +21,17 @@ export default function AdminUserDetails() {
   const [editForm, setEditForm] = useState({
     email: '',
     name: '',
+    surname: '',
+    birth: '',
+    phone: '',
+    cpf: '',
+    role: '',
+    address: '',
+    cep: '',
+    city: '',
+    complement: '',
+    country: '',
+    state: '',
     isAdmin: false
   });
   const [saving, setSaving] = useState(false);
@@ -50,6 +61,17 @@ export default function AdminUserDetails() {
       setEditForm({
         email: userData.user.email || '',
         name: userData.user.name || '',
+        surname: userData.user.surname || '',
+        birth: userData.user.birth ? new Date(userData.user.birth).toISOString().split('T')[0] : '',
+        phone: userData.user.phone || '',
+        cpf: userData.user.cpf || '',
+        role: userData.user.role || '',
+        address: userData.user.address || '',
+        cep: userData.user.cep || '',
+        city: userData.user.city || '',
+        complement: userData.user.complement || '',
+        country: userData.user.country || '',
+        state: userData.user.state || '',
         isAdmin: userData.user.isAdmin || false
       });
 
@@ -91,6 +113,17 @@ export default function AdminUserDetails() {
       setEditForm({
         email: user.email || '',
         name: user.name || '',
+        surname: user.surname || '',
+        birth: user.birth ? new Date(user.birth).toISOString().split('T')[0] : '',
+        phone: user.phone || '',
+        cpf: user.cpf || '',
+        role: user.role || '',
+        address: user.address || '',
+        cep: user.cep || '',
+        city: user.city || '',
+        complement: user.complement || '',
+        country: user.country || '',
+        state: user.state || '',
         isAdmin: user.isAdmin || false
       });
     }
@@ -163,6 +196,34 @@ export default function AdminUserDetails() {
     }
   };
 
+  const handleToggleStatus = async () => {
+    if (!user || !token) return;
+    const newActive = user.disabled; // If currently disabled, new state is active
+    
+    if (!confirm(`Tem certeza que deseja ${newActive ? 'ativar' : 'desativar'} o acesso deste usuário?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/toggle-user-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId, active: newActive })
+      });
+
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || 'Erro ao alterar status');
+      
+      setUser({ ...user, disabled: !newActive });
+      alert('Status do usuário atualizado!');
+    } catch (err: any) {
+      alert(`Erro: ${err.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -214,7 +275,9 @@ export default function AdminUserDetails() {
                   {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{user.name || 'Sem nome'}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {user.name || 'Sem'} {user.surname || 'nome'}
+                  </h1>
                   <p className="text-sm text-gray-500">{user.email}</p>
                 </div>
               </div>
@@ -275,32 +338,74 @@ export default function AdminUserDetails() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Informações do Usuário</h2>
               
               {isEditing ? (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nome
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
                     <input
                       type="text"
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Sobrenome</label>
+                    <input
+                      type="text"
+                      value={editForm.surname}
+                      onChange={(e) => setEditForm({ ...editForm, surname: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <input
                       type="email"
                       value={editForm.email}
                       onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
-                  
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                    <input
+                      type="text"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                    <input
+                      type="text"
+                      value={editForm.cpf}
+                      onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento</label>
+                    <input
+                      type="date"
+                      value={editForm.birth}
+                      onChange={(e) => setEditForm({ ...editForm, birth: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Função (Role)</label>
+                    <select
+                      value={editForm.role}
+                      onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="ATTENDEE">Participante</option>
+                      <option value="ORGANIZER">Organizador</option>
+                      <option value="ADMIN">Admin</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -308,39 +413,46 @@ export default function AdminUserDetails() {
                         onChange={(e) => setEditForm({ ...editForm, isAdmin: e.target.checked })}
                         className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
                       />
-                      <span className="text-sm font-medium text-gray-700">
-                        Permissões de Administrador
-                      </span>
+                      <span className="text-sm font-medium text-gray-700">Administrador do Sistema</span>
                     </label>
-                    <p className="text-xs text-gray-500 mt-1 ml-6">
-                      Administradores têm acesso total ao painel admin
-                    </p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6">
                   <div>
-                    <p className="text-sm text-gray-500">Nome</p>
-                    <p className="text-gray-900 font-medium">{user.name || '—'}</p>
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">Nome Completo</p>
+                    <p className="text-gray-900 font-medium">
+                      {user.name || '—'} {user.surname || ''}
+                    </p>
                   </div>
-                  
                   <div>
-                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">Email</p>
                     <p className="text-gray-900 font-medium">{user.email}</p>
                   </div>
-                  
                   <div>
-                    <p className="text-sm text-gray-500">Permissões</p>
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">Telefone</p>
+                    <p className="text-gray-900 font-medium">{user.phone || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">CPF</p>
+                    <p className="text-gray-900 font-medium">{user.cpf || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">Nascimento</p>
                     <p className="text-gray-900 font-medium">
-                      {user.isAdmin ? (
-                        <span className="inline-flex items-center gap-1 text-purple-700">
-                          <Shield className="w-4 h-4" />
-                          Administrador
-                        </span>
-                      ) : (
-                        'Usuário comum'
-                      )}
+                      {user.birth ? new Date(user.birth).toLocaleDateString('pt-BR') : '—'}
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-medium mb-1">Permissões</p>
+                    <div className="flex items-center gap-2">
+                       <span className="text-gray-900 font-medium">{user.role || 'Usuário'}</span>
+                       {user.isAdmin && (
+                         <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full uppercase">
+                           Admin
+                         </span>
+                       )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -422,64 +534,73 @@ export default function AdminUserDetails() {
               )}
             </div>
 
-            {/* Personal Data Complete */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Dados Pessoais Completos
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Nome Completo</p>
-                  <p className="text-gray-900 font-medium">
-                    {user.name && user.surname ? `${user.name} ${user.surname}` : user.name || '—'}
-                  </p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="text-gray-900 font-medium">{user.email}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    Telefone
-                  </p>
-                  <p className="text-gray-900 font-medium">{user.phone || '—'}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-gray-500">CPF</p>
-                  <p className="text-gray-900 font-medium">{user.cpf || '—'}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    Data de Nascimento
-                  </p>
-                  <p className="text-gray-900 font-medium">
-                    {user.birth ? new Date(user.birth).toLocaleDateString('pt-BR') : '—'}
-                  </p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-gray-500">Função</p>
-                  <p className="text-gray-900 font-medium">{user.role || 'Usuário'}</p>
-                </div>
-              </div>
-            </div>
+            {/* Personal Data Complete - Removed to consolidate with basic info above */}
 
             {/* Address */}
-            {(user.address || user.city || user.state || user.cep) && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Endereço
-                </h2>
-                
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Endereço
+              </h2>
+              
+              {isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Logradouro</label>
+                    <input
+                      type="text"
+                      value={editForm.address}
+                      onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                    <input
+                      type="text"
+                      value={editForm.complement}
+                      onChange={(e) => setEditForm({ ...editForm, complement: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                    <input
+                      type="text"
+                      value={editForm.city}
+                      onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <input
+                      type="text"
+                      value={editForm.state}
+                      onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                    <input
+                      type="text"
+                      value={editForm.cep}
+                      onChange={(e) => setEditForm({ ...editForm, cep: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">País</label>
+                    <input
+                      type="text"
+                      value={editForm.country}
+                      onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+              ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <p className="text-sm text-gray-500">Logradouro</p>
@@ -513,8 +634,8 @@ export default function AdminUserDetails() {
                     <p className="text-gray-900 font-medium">{user.country || 'Brasil'}</p>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Organizations */}
             <div className="bg-white rounded-lg shadow-sm p-6">
@@ -592,12 +713,24 @@ export default function AdminUserDetails() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${user.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                    <span className="text-sm font-medium text-gray-700">Status</span>
+                    <div className={`w-2 h-2 rounded-full ${user.disabled ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                    <span className="text-sm font-medium text-gray-700">Status da Conta</span>
                   </div>
-                  <span className={`text-sm font-semibold ${user.isOnline ? 'text-green-600' : 'text-gray-500'}`}>
-                    {user.isOnline ? 'Online' : 'Offline'}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-sm font-semibold ${user.disabled ? 'text-red-600' : 'text-green-600'}`}>
+                      {user.disabled ? 'Desativada' : 'Ativa'}
+                    </span>
+                    <button
+                      onClick={handleToggleStatus}
+                      className={`px-3 py-1 rounded-md text-xs font-medium border ${
+                        user.disabled 
+                          ? 'border-green-600 text-green-600 hover:bg-green-50' 
+                          : 'border-red-600 text-red-600 hover:bg-red-50'
+                      } transition-colors`}
+                    >
+                      {user.disabled ? 'Ativar' : 'Desativar'}
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -606,7 +739,9 @@ export default function AdminUserDetails() {
                     <span className="text-sm font-medium text-gray-700">Último Acesso</span>
                   </div>
                   <span className="text-sm text-gray-600">
-                    {user.lastAccess ? new Date(user.lastAccess).toLocaleString('pt-BR') : '—'}
+                    {user.lastAccess && new Date(user.lastAccess).getFullYear() > 1970 
+                      ? new Date(user.lastAccess).toLocaleString('pt-BR') 
+                      : 'Nunca acessou'}
                   </span>
                 </div>
                 
@@ -621,6 +756,45 @@ export default function AdminUserDetails() {
                 </div>
               </div>
             </div>
+
+            {/* Audit Logs */}
+            {user.auditLogs && user.auditLogs.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Logs de Atividade
+                </h2>
+                <div className="overflow-hidden border border-gray-200 rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {user.auditLogs.map((log: any) => (
+                        <tr key={log.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+                            {new Date(log.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                          </td>
+                          <td className="px-4 py-3 text-xs font-medium text-gray-900">
+                            {log.action}
+                            {log.detail && (
+                              <p className="text-[10px] text-gray-500 font-normal mt-0.5">{log.detail}</p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+                            {log.ip || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Privacy Preferences */}
             {user.emailPreferences && (

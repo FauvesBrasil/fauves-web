@@ -34,6 +34,7 @@ const menu = [
   { key: 'emails', to: '/admin/emails', label: 'Emails', icon: Mail },
   { key: 'organizations', to: '/admin/organizations', label: 'Organizações', icon: Building2 },
   { key: 'users', to: '/admin/users', label: 'Usuários', icon: Users },
+  { key: 'leads', to: '/admin/leads', label: 'Leads & Newsletter', icon: UserCog },
   { key: 'finance', to: '/admin/orders', label: 'Financeiro', icon: DollarSign },
 ];
 
@@ -72,7 +73,7 @@ const AdminLayout: React.FC = () => {
           activeChats: 0, // TODO: Get from chat stats
         });
       } catch (error) {
-        console.error('Error fetching notifications:', error);
+        // no-op
       }
     };
 

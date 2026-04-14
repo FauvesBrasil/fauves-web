@@ -14,9 +14,8 @@ export function useEvents() {
         .order('startDate', { ascending: true });
 
       if (error) {
-        console.error("Erro ao buscar eventos:", error.message);
+        // no-op
       } else if (data) {
-        console.log("Eventos recebidos:", data);
         // Enviar tudo para ambos, só para teste
         setUpcomingEvents(data);
         setBrazilEvents(data);

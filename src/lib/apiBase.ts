@@ -34,7 +34,6 @@ if (isProd) {
 // host like :3000). Keep this only for non-production to avoid breaking intended setups.
 try {
   if (!isProd && finalEnvBase && /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(finalEnvBase)) {
-    console.debug('[apiBase] ignoring VITE_API_BASE pointing to localhost in dev:', finalEnvBase);
     finalEnvBase = null;
   }
 } catch (e) { }
@@ -48,25 +47,33 @@ if (typeof window !== 'undefined') {
       (window as any).__apiFetchPatched = true;
       window.fetch = async (input: RequestInfo, init?: RequestInit) => {
         try {
+          // Injection: add Authorization header if token exists and not already present
+          let token: string | null = null;
+          try { token = window.localStorage.getItem('AUTH_TOKEN_V1'); } catch (e) {}
+          if (token) {
+            const headers = new Headers(init?.headers || {});
+            if (!headers.has('Authorization')) {
+              headers.set('Authorization', 'Bearer ' + token);
+              init = { ...init, headers };
+            }
+          }
+
           // Rewrite string URLs starting with /api or absolute same-origin /api
           if (typeof input === 'string') {
             if (input.startsWith('/api/') || input === '/api' || input.startsWith('/api?')) {
               const rewritten = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + input;
-              console.debug('[apiBase] fetch override: rewriting', input, '->', rewritten);
               input = rewritten;
             }
             // also handle relative paths that start with './api' or without leading slash
             else if (/^\.?\/?api\//.test(input)) {
               const path = input.replace(/^\.?\//, '/');
               const rewritten = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + path;
-              console.debug('[apiBase] fetch override: rewriting', input, '->', rewritten);
               input = rewritten;
             }
           } else if (input instanceof Request) {
             const reqUrl = new URL(input.url, window.location.origin);
             if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
               const newUrl = DEFAULT_PROD_BACKEND.replace(/\/$/, '') + reqUrl.pathname + reqUrl.search;
-              console.debug('[apiBase] fetch override: rewriting Request ->', newUrl);
               input = new Request(newUrl, input);
             }
           }
@@ -110,7 +117,6 @@ if (typeof window !== 'undefined') {
           }
           return originalFetchDev(input as any, init);
         };
-        console.debug('[apiBase] fetch override (dev): rewriting /api -> http://127.0.0.1:4000');
       }
     }
   } catch (e) { }
@@ -122,7 +128,6 @@ try {
     const origin = window.location.origin.replace(/\/$/, '');
     const norm = finalEnvBase.replace(/\/$/, '');
     if (norm === origin || norm.startsWith(origin + '/')) {
-      console.debug('[apiBase] detected VITE_API_BASE pointing to frontend origin; switching to default backend');
       finalEnvBase = DEFAULT_PROD_BACKEND;
     }
   }
@@ -200,7 +205,6 @@ export async function ensureApiBase(force = false): Promise<string> {
   try {
     if (typeof window !== 'undefined' && window.location && window.location.hostname === 'app.fauves.com.br') {
       resolvedBase = DEFAULT_PROD_BACKEND;
-      console.debug('[apiBase] runtime override: using DEFAULT_PROD_BACKEND for app.fauves.com.br');
       return resolvedBase;
     }
   } catch (e) { }
@@ -214,7 +218,6 @@ export async function ensureApiBase(force = false): Promise<string> {
         const wanted = 'http://127.0.0.1:4000';
         if (resolvedBase !== wanted) {
           resolvedBase = wanted;
-          console.debug('[apiBase] dev fetch override active — short-circuiting resolution to', resolvedBase);
         }
         return resolvedBase;
       }
@@ -229,28 +232,23 @@ export async function ensureApiBase(force = false): Promise<string> {
     // pointing the client to a VITE_API_BASE that is unreachable from the current environment.
     if (isProd) {
       resolvedBase = finalEnvBase;
-      console.debug('[apiBase] using env VITE_API_BASE (production)');
       return resolvedBase;
     }
     // Non-production: probe the envBase quickly. If it responds, use it; otherwise continue resolution.
     try {
       // If we've recently seen envBase fail, skip re-probing for a while
       if (Date.now() < envBaseBackoffUntil) {
-        console.debug('[apiBase] skipping env VITE_API_BASE probe due to backoff');
       } else {
         // quick probe with a short timeout
         const ok = await probe(finalEnvBase);
         if (ok) {
           resolvedBase = finalEnvBase;
-          console.debug('[apiBase] using env VITE_API_BASE (build-time)');
           return resolvedBase;
         }
         // env base failed -> set backoff so we don't spam it
         envBaseBackoffUntil = Date.now() + ENVBASE_BACKOFF_MS;
-        console.debug('[apiBase] env VITE_API_BASE did not respond, falling back to probing candidates and backing off for', ENVBASE_BACKOFF_MS, 'ms');
       }
     } catch (e) {
-      console.log('[apiBase] probe of VITE_API_BASE failed, falling back to candidates', e);
       envBaseBackoffUntil = Date.now() + ENVBASE_BACKOFF_MS;
     }
   }
@@ -294,8 +292,6 @@ export async function ensureApiBase(force = false): Promise<string> {
       const changed = picked !== resolvedBase;
       resolvedBase = picked;
       lastResolutionTs = Date.now();
-      try { if (picked && Date.now() < backendDownUntil) { /* não persistir se sabemos que está down */ } else if (typeof window !== 'undefined') window.localStorage.setItem(LS_KEY, picked); } catch { }
-      if (changed) console.debug('[apiBase] base resolvida', picked);
     }
     resolving = false;
     resolvingPromise = null;
@@ -413,7 +409,6 @@ export function initApiDetection() {
             const ok = await probe(storedCandidate).catch(() => false);
             if (!ok) {
               try { window.localStorage.removeItem(LS_KEY); } catch (e) { }
-              console.debug('[apiBase] removed stored API_BASE_WORKING because probe failed', storedCandidate);
             }
           }
         } catch (e) {

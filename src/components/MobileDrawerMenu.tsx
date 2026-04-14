@@ -5,6 +5,8 @@ import logoSquare from "@/assets/logo-square-fauves-blue.svg";
 import { getFirstName, getDisplayName } from '@/lib/user';
 import ProducerJourneyBadge from '@/components/ProducerJourneyBadge';
 import { useFetchProducerJourney } from '@/hooks/useFetchProducerJourney';
+import { useAuth } from '@/context/AuthContext';
+import { apiUrl } from '@/lib/apiBase';
 
 interface MobileDrawerMenuProps {
   isOpen: boolean;
@@ -26,6 +28,7 @@ const MobileDrawerMenu: React.FC<MobileDrawerMenuProps> = ({
   user
 }) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [isClosing, setIsClosing] = React.useState(false);
   const [orgSelectorOpen, setOrgSelectorOpen] = React.useState(false);
 
@@ -89,8 +92,16 @@ const MobileDrawerMenu: React.FC<MobileDrawerMenuProps> = ({
         {/* User section */}
         <div className="p-4 border-b border-[#E5E7EB] dark:border-[#1F1F1F]">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-              {userName.charAt(0)}
+            <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center overflow-hidden border border-indigo-200 dark:border-indigo-900/50">
+              {user?.photoUrl ? (
+                <img 
+                  src={user.photoUrl.startsWith('http') ? user.photoUrl : apiUrl(user.photoUrl.startsWith('/') ? user.photoUrl : '/' + user.photoUrl)} 
+                  alt="Avatar" 
+                  className="w-full h-full object-cover" 
+                />
+              ) : (
+                <span className="text-indigo-600 dark:text-indigo-400 font-bold">{userName.charAt(0)}</span>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-medium text-[#091747] dark:text-white truncate">{userName}</div>
@@ -277,9 +288,9 @@ const MobileDrawerMenu: React.FC<MobileDrawerMenuProps> = ({
             </button>
 
             <button
-              onClick={() => {
-                // Logout logic here - you can add your logout function
-                handleNavigation('/login');
+              onClick={async () => {
+                await logout();
+                handleNavigation('/');
               }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
             >

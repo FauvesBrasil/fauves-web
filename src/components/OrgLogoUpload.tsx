@@ -32,10 +32,8 @@ const OrgLogoUpload = ({ onSelect, logoUrl }: { onSelect: (file: File) => void; 
           onChange={e => {
             const file = e.target.files?.[0];
             if (file) {
-              console.log('OrgLogoUpload: arquivo selecionado', file);
               onSelect(file);
             } else {
-              console.log('OrgLogoUpload: nenhum arquivo selecionado');
             }
           }}
         />

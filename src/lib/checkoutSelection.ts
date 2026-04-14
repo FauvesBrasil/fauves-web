@@ -24,7 +24,7 @@ export function saveCheckoutSelection(sel: CheckoutSelection) {
   try {
     sessionStorage.setItem(KEY, JSON.stringify(sel));
   } catch (e) {
-    console.warn('[checkoutSelection] falha ao salvar', e);
+    // no-op
   }
 }
 
@@ -36,7 +36,7 @@ export function loadCheckoutSelection(): CheckoutSelection | null {
     if (!parsed || !Array.isArray(parsed.items)) return null;
     return parsed;
   } catch (e) {
-    console.warn('[checkoutSelection] falha ao ler', e);
+    // no-op
     return null;
   }
 }

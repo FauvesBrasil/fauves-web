@@ -34,7 +34,7 @@ const AdminHelpdesk = () => {
                 articles: { total: 0, views: 0 }, // TODO: Implement article stats
             });
         } catch (error) {
-            console.error('Error loading stats:', error);
+            // no-op
         } finally {
             setLoading(false);
         }

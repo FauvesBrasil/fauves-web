@@ -15,10 +15,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useTrackingPixels } from '@/hooks/useTrackingPixels';
 import InterestButton from '../components/InterestButton';
-import { Eye, Users, Flame, AlertTriangle } from 'lucide-react';
+import { Eye, Users, Flame, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getEventHypeLevel, getHypeBadge } from '../lib/hype';
 import { fetchApi } from '@/lib/apiBase';
+import { useSEO, buildEventJsonLd } from '@/hooks/useSEO';
 
 // Modal de denúncia
 function ReportModal({ isOpen, onClose, onSubmit }: { isOpen: boolean; onClose: () => void; onSubmit: (reason: string, email: string, description: string) => void }) {
@@ -178,7 +179,7 @@ const Event: React.FC = () => {
   // Importante: hooks precisam ficar antes de qualquer return condicional para não mudar a ordem entre renders
   const [mainImgErrored, setMainImgErrored] = useState(false);
   const { toast } = useToast();
-  const [categoriesMap, setCategoriesMap] = useState<Record<string, string>>({});
+  const [categoriesMap, setCategoriesMap] = useState<Record<string, { name: string; slug: string }>>({});
 
   // Tracking pixels integration
   const { trackPageView } = useTrackingPixels(event?.id);
@@ -193,6 +194,22 @@ const Event: React.FC = () => {
       });
     }
   }, [event?.id, event?.name, event?.category, trackPageView]);
+
+  // SEO dinâmico: atualiza title, description, OG e JSON-LD quando o evento carrega
+  const eventDescription = event
+    ? `${event.name} — ${event.locationCity ? `${event.locationCity}, ` : ''}${new Date(event.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}. ${event.description?.slice(0, 150) || 'Garanta já seu ingresso na Fauves!'}`
+    : undefined;
+  useSEO({
+    title: event?.name,
+    description: eventDescription,
+    image: event?.image,
+    url: event ? `/event/${event.slug || event.id}` : undefined,
+    type: 'event',
+    jsonLd: event ? buildEventJsonLd({
+      ...event,
+      artists: event.artists?.map((ea: any) => ea.artist || ea) || []
+    }) : undefined,
+  });
 
   // Registrar visualização de link rastreável (utm) ou direto (orgânico)
   useEffect(() => {
@@ -228,7 +245,7 @@ const Event: React.FC = () => {
             }));
           }
         })
-        .catch(err => console.error('Failed to increment view:', err));
+        .catch(() => {});
     }
   }, [event?.id]);
   // Efeito blur/degradê no topo da tela será definido após checar loading/error/event
@@ -249,16 +266,18 @@ const Event: React.FC = () => {
         if (!r.ok) return;
         const list = await r.json();
         if (!Array.isArray(list)) return;
-        const map: Record<string, string> = {};
+        const map: Record<string, { name: string; slug: string }> = {};
         for (const c of list) {
           if (!c) continue;
-          const slug = c.slug || c.name;
-          const name = c.name || c.slug || String(slug || '');
-          if (slug) map[slug] = name;
+          const name = c.name || c.slug || 'Geral';
+          const slug = c.slug || c.name || 'geral';
+          const item = { name, slug };
+          if (c.slug) map[c.slug] = item;
+          if (c.id) map[c.id] = item;
         }
         if (mounted) setCategoriesMap(map);
       } catch (e) {
-        // ignore failures, we'll fallback to slug humanization
+        // ignore failures
       }
     })();
     return () => { mounted = false; };
@@ -339,7 +358,7 @@ const Event: React.FC = () => {
             fetch(apiUrl(`/api/organization/${encodeURIComponent(orgId)}`))
               .then(r => r.ok ? r.json() : null)
               .then(o => setOrg(o || null))
-              .catch(e => console.warn('org fetch failed', e)),
+              .catch(() => {}),
 
             fetch(apiUrl(`/api/organization/${encodeURIComponent(orgId)}/followers/count`))
               .then(c => c.ok ? c.json() : null)
@@ -347,7 +366,7 @@ const Event: React.FC = () => {
                 const num = Number(jc?.count ?? jc?.total ?? 0);
                 setFollowersCount(num);
               })
-              .catch(e => console.warn('followers count failed', e))
+              .catch(() => {})
           ]);
 
           // Check follow status if user is logged in
@@ -396,7 +415,6 @@ const Event: React.FC = () => {
   const handlePurchase = (selectedTickets: any[]) => {
     setShowTicketModal(false);
     // Here you would typically redirect to a payment page or handle the purchase
-    console.log('Selected tickets:', selectedTickets);
     // For demo purposes, just show a success message
     setReportSent(true);
     setTimeout(() => setReportSent(false), 2500);
@@ -475,52 +493,69 @@ const Event: React.FC = () => {
             </div>
           )}
 
-          <div className="flex flex-col items-center mx-auto mt-5 max-w-[1000px] max-md:max-w-full max-md:px-4" style={{ marginBottom: 100 }}>
-            {/* Alerta de Evento Externo */}
+          <div className="flex flex-col mx-auto mt-5 max-w-[1000px] max-md:max-w-full max-md:px-4" style={{ marginBottom: 100 }}>
+            {/* Alerta de Evento Externo - Versão Sutil */}
             {event?.isExternal && (
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full mb-6"
+                className="w-full mb-4"
               >
-                <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 rounded-2xl p-5 flex items-start gap-4 shadow-sm backdrop-blur-sm">
-                  <div className="bg-orange-500 rounded-full p-2 text-white shrink-0 shadow-md">
-                    <AlertTriangle size={24} />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-orange-950 dark:text-orange-200 font-bold text-base">Atenção: Evento Externo</h4>
-                    <p className="text-orange-800 dark:text-orange-300 text-sm mt-1 leading-relaxed">
-                      Este evento não é vendido diretamente pela <strong>Fauves</strong>. Ao clicar em comprar, você será redirecionado para o site oficial do organizador para concluir sua compra com segurança.
-                    </p>
-                  </div>
+                <div className="bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm backdrop-blur-sm">
+                  <AlertTriangle size={18} className="text-orange-500 shrink-0" />
+                  <p className="text-orange-800 dark:text-orange-300 text-[13px] leading-snug">
+                    <span className="font-bold">Evento Externo:</span> Este evento não é vendido pela Fauves. Você será redirecionado para o site oficial ao clicar em comprar.
+                  </p>
                 </div>
               </motion.div>
             )}
             {/* Imagem Mobile (Hero) */}
-            <div className="w-full md:hidden mb-6 rounded-2xl overflow-hidden shadow-lg">
+            <div className="w-full md:hidden mb-6 rounded-2xl overflow-hidden shadow-lg relative">
               <img
                 src={eventMainImage}
                 onError={(e) => { if (!mainImgErrored) setMainImgErrored(true); }}
                 className="object-cover w-full aspect-video"
                 alt={event.name || 'Imagem do evento'}
               />
+              {/* Overlaid Interest Button for Mobile */}
+              <div className="absolute top-4 right-4 z-10 scale-110">
+                <InterestButton eventId={event.id} variant="card" />
+              </div>
             </div>
 
-            <div className="flex flex-row gap-8 w-full mt-6 max-md:flex-col max-md:gap-0">
+            <div className="flex flex-row items-stretch gap-8 w-full mt-6 max-md:flex-col max-md:gap-0">
               {/* Coluna Esquerda */}
               <div className="flex flex-col w-[62%] max-md:w-full">
                 {(() => {
                   const cats = event?.categories || [];
-                  const categoryName = Array.isArray(cats) && cats.length > 0 
-                    ? cats[0].name 
-                    : (event?.category ? String(event?.category).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : 'Geral');
-                  const categorySlug = Array.isArray(cats) && cats.length > 0 
-                    ? `/eventos/${cats[0].slug}` 
-                    : (event?.category ? `/eventos/${event.category}` : '#');
+                  let categoryName = 'Geral';
+                  let categorySlugValue = '';
+
+                  if (Array.isArray(cats) && cats.length > 0) {
+                    categoryName = cats[0].name;
+                    categorySlugValue = cats[0].slug;
+                  } else if (event?.category) {
+                    const mapped = categoriesMap[event.category];
+                    if (mapped) {
+                      categoryName = mapped.name;
+                      categorySlugValue = mapped.slug;
+                    } else {
+                      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(event.category);
+                      if (!isUUID) {
+                        categoryName = String(event.category).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                        categorySlugValue = event.category;
+                      }
+                    }
+                  }
+
+                  const uf = event.locationUf || event.locationDetails?.uf || event.uf || 'CE';
+                  const categoryLink = categorySlugValue 
+                    ? `/search?category=${categorySlugValue}&uf=${uf}` 
+                    : '#';
 
                   return (
                     <Link 
-                      to={categorySlug}
+                      to={categoryLink}
                       className="flex flex-col justify-center px-4 py-1.5 max-md:px-2.5 max-md:py-0.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 transition-colors rounded-[100px] w-fit"
                     >
                       {categoryName}
@@ -546,11 +581,6 @@ const Event: React.FC = () => {
                     <Eye size={16} className="text-gray-400" />
                     <span>{event?.metrics?.views || 0} visualizações</span>
                   </div>
-                  
-                  <div className="flex items-center gap-1.5 text-sm font-bold text-orange-600 dark:text-orange-500">
-                    <Users size={16} className="text-orange-400" />
-                    <span>{event?.metrics?.interests || 0} interessados</span>
-                  </div>
                 </div>
                 <div className="mt-2.5 text-4xl max-md:text-3xl font-bold text-indigo-950 dark:text-white leading-tight">
                   {event.name || "Nome do evento"}
@@ -559,8 +589,6 @@ const Event: React.FC = () => {
                   {event.subtitle || "Subtítulo do evento"}
                 </div>
 
-                {/* Nova Funcionalidade: Tenho Interesse */}
-                <InterestButton eventId={event.id} variant="detail" />
 
                 {/* Data e hora + Localização lado a lado */}
                 <div className="flex flex-row gap-4 mt-8 mb-4 w-full max-md:flex-col max-md:gap-3">
@@ -636,31 +664,42 @@ const Event: React.FC = () => {
                       Sobre este evento
                     </div>
                     <div
-                      className="mt-5 max-md:mt-4 text-base max-md:text-[15px] max-md:leading-relaxed text-indigo-950 dark:text-slate-300 w-full max-w-[600px] max-md:max-w-full prose dark:prose-invert"
+                      className="mt-5 max-md:mt-4 text-base max-md:text-[15px] max-md:leading-relaxed text-indigo-950 dark:text-slate-300 w-full max-w-[600px] max-md:max-w-full prose dark:prose-invert whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{ __html: event.description }}
                     />
                   </>
                 )}
                 {/* Organizador */}
-                <div className="flex flex-wrap gap-10 max-md:gap-4 p-5 max-md:p-4 mt-7 max-md:mt-6 rounded-xl bg-white/40 dark:bg-[#242424]/80 backdrop-blur-md border border-white/30 dark:border-[#1F1F1F] shadow-md">
-                  <div className="flex flex-auto gap-5 text-[16px] font-medium text-indigo-950 dark:text-white items-center">
-                    <div className="flex shrink-0">
-                      {org?.logoUrl ? (
-                        <Avatar className="w-[50px] h-[50px]">
-                          <AvatarImage src={org.logoUrl} alt={org.name || 'Organização'} />
-                          <AvatarFallback>{(org?.name || 'O')[0]}</AvatarFallback>
+                <div className="flex flex-wrap gap-10 max-md:gap-4 p-5 max-md:p-4 mt-7 max-md:mt-6 rounded-xl bg-white/40 dark:bg-[#242424]/80 backdrop-blur-md border border-white/30 dark:border-[#1F1F1F] shadow-md group border-transparent hover:border-indigo-100 dark:hover:border-indigo-900/30 transition-all">
+                  <div className="flex flex-auto gap-5 text-[16px] font-medium text-indigo-950 dark:text-white items-center min-w-0">
+                    <Link 
+                      to={event?.organization?.slug ? `/org/${event.organization.slug}` : (event?.organization?.id ? `/org/${event.organization.id}` : (org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : '#')))}
+                      className="flex shrink-0 hover:opacity-80 transition-opacity"
+                    >
+                      {event?.organization?.logoUrl || org?.logoUrl ? (
+                        <Avatar className="w-[50px] h-[50px] rounded-full border border-gray-100 dark:border-gray-800">
+                          <AvatarImage src={(event?.organization?.logoUrl || org?.logoUrl || '').startsWith('http') ? (event?.organization?.logoUrl || org?.logoUrl) : apiUrl(event?.organization?.logoUrl || org?.logoUrl)} alt={event?.organization?.name || org?.name || 'Organização'} className="object-cover" />
+                          <AvatarFallback className="bg-gray-50 text-indigo-950 font-bold">{(event?.organization?.name || org?.name || 'O')[0]}</AvatarFallback>
                         </Avatar>
                       ) : (
-                        <div className="flex shrink-0 rounded-full bg-zinc-300 h-[50px] w-[50px]" />
+                        <div className="flex shrink-0 rounded-full bg-indigo-50 dark:bg-indigo-950/30 h-[50px] w-[50px] items-center justify-center text-indigo-600 font-bold text-xl uppercase">
+                          {(event?.organization?.name || org?.name || event?.organizationName || 'O')[0]}
+                        </div>
                       )}
-                    </div>
-                    <div className="flex-auto my-auto">
-                      <div className="font-semibold text-indigo-950 dark:text-white">{org?.name || 'Organização'}</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer" onClick={async () => {
+                    </Link>
+                    <div className="flex-auto my-auto min-w-0">
+                      <Link 
+                        to={event?.organization?.slug ? `/org/${event.organization.slug}` : (event?.organization?.id ? `/org/${event.organization.id}` : (org?.slug ? `/org/${org.slug}` : (org?.id ? `/org/${org.id}` : '#')))}
+                        className="font-bold text-indigo-950 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate block"
+                      >
+                        {event?.organization?.name || org?.name || event?.organizationName || 'Organização'}
+                      </Link>
+                      <div className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline inline-block mt-0.5" onClick={async (e) => {
+                        e.preventDefault();
                         if (!org?.id) return;
                         // open followers modal; try to fetch recent followers
                         try {
-                          const r = await fetch(`/api/organization/${encodeURIComponent(org.id)}/followers`);
+                          const r = await fetch(apiUrl(`/api/organization/${encodeURIComponent(org.id)}/followers`));
                           if (r.ok) {
                             const j = await r.json();
                             setFollowersList(j || []);
@@ -674,7 +713,8 @@ const Event: React.FC = () => {
                   </div>
                   <div className="flex items-center">
                     <Button
-                      className={`px-4 py-2 text-sm font-semibold ${following ? 'bg-white/90 text-indigo-700' : 'bg-[#2A2AD7] text-white'}`}
+                      variant={following ? "outline" : "default"}
+                      className={`px-6 h-10 rounded-full text-sm font-bold transition-all ${following ? 'border-indigo-100 text-indigo-600 hover:bg-indigo-50' : 'bg-[#2A2AD7] hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20'}`}
                       onClick={async () => {
                         if (!org?.id) return;
                         if (!user?.id || !token) {
@@ -685,7 +725,7 @@ const Event: React.FC = () => {
                         setFollowLoading(true);
                         try {
                           if (following) {
-                            const r = await fetch(`/api/organization/${encodeURIComponent(org.id)}/follow`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+                            const r = await fetch(apiUrl(`/api/organization/${encodeURIComponent(org.id)}/follow`), { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
                             if (r.ok) {
                               setFollowing(false);
                               setFollowersCount((c) => Math.max(0, (c || 0) - 1));
@@ -695,7 +735,7 @@ const Event: React.FC = () => {
                               toast({ title: 'Erro', description: txt || 'Falha ao deixar de seguir', variant: 'destructive' as any });
                             }
                           } else {
-                            const r = await fetch(`/api/organization/${encodeURIComponent(org.id)}/follow`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+                            const r = await fetch(apiUrl(`/api/organization/${encodeURIComponent(org.id)}/follow`), { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
                             if (r.ok) {
                               setFollowing(true);
                               setFollowersCount((c) => (c || 0) + 1);
@@ -706,7 +746,6 @@ const Event: React.FC = () => {
                             }
                           }
                         } catch (e: any) {
-                          console.warn('follow toggle failed', e);
                           toast({ title: 'Erro', description: e?.message || 'Erro ao processar ação', variant: 'destructive' as any });
                         } finally {
                           setFollowLoading(false);
@@ -715,7 +754,7 @@ const Event: React.FC = () => {
                       disabled={followLoading}
                     >
                       {followLoading ? (
-                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                        <Loader2 className="animate-spin h-4 w-4" />
                       ) : (following ? 'Seguindo' : 'Seguir')}
                     </Button>
                   </div>
@@ -736,9 +775,9 @@ const Event: React.FC = () => {
               </div>
               {/* Coluna Direita */}
               <div className="flex flex-col w-[38%] max-md:w-full ml-5 max-md:ml-0">
-                <div className="sticky top-10 flex flex-col gap-4">
+                <div className="sticky top-[90px] flex flex-col gap-4 self-start z-10 w-full">
                   <div>
-                    <div className="w-full rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#1b1b1b] hidden md:block">
+                    <div className="w-full rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#1b1b1b] hidden md:block relative">
                       <img
                         src={eventMainImage}
                         onError={(e) => { if (!mainImgErrored) setMainImgErrored(true); }}
@@ -749,6 +788,10 @@ const Event: React.FC = () => {
                         }}
                         alt={event.name || 'Imagem do evento'}
                       />
+                      {/* Overlaid Interest Button for Desktop */}
+                      <div className="absolute top-4 right-4 z-10 scale-125 origin-top-right">
+                        <InterestButton eventId={event.id} variant="card" />
+                      </div>
                     </div>
                     {/* Seção de ingressos - escondida quando evento encerrado e no mobile */}
                     {event?.status !== 'ENCERRADO' && (
@@ -764,7 +807,7 @@ const Event: React.FC = () => {
                           <>
                             <div className="self-center text-lg text-indigo-950 dark:text-white min-h-[28px] flex items-center">
                               {ticketsError && <span className="text-red-600 text-sm">{ticketsError}</span>}
-                              {!ticketsError && ticketTypes.length === 0 && 'Nenhum ingresso disponível'}
+                              {!ticketsError && ticketTypes.length === 0 && !event?.isExternal && 'Nenhum ingresso disponível'}
                               {!ticketsError && ticketTypes.length > 0 && `Ingressos a partir de R$${(Math.min(...ticketTypes.map(t => t.price)) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                             </div>
                             {event?.isExternal ? (
@@ -872,7 +915,6 @@ const Event: React.FC = () => {
       </div>
     );
   } catch (err: any) {
-    console.error('[Event render] falhou', err);
     return <div style={{ padding: 40 }}><h2>Erro ao renderizar evento</h2><p>Tente recarregar a página.</p></div>;
   }
   return content as any;

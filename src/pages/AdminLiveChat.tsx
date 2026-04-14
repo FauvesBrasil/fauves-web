@@ -129,13 +129,6 @@ const AdminLiveChat = () => {
         });
 
         socket.on('new-message', (data: any) => {
-            console.log('📨 Admin received new-message:', {
-                conversationId: data.conversationId,
-                selectedChat: selectedChatRef.current,
-                willAdd: selectedChatRef.current === data.conversationId,
-                message: data.message
-            });
-
             // Converter timestamp para Date
             const messageWithDate = {
                 ...data,
@@ -164,7 +157,6 @@ const AdminLiveChat = () => {
                             Math.abs(new Date(m.timestamp).getTime() - new Date(messageWithDate.timestamp).getTime()) < 1000)
                     );
                     if (exists) {
-                        console.log('⚠️ Duplicate message detected in admin, skipping');
                         return prev;
                     }
                     return [...prev, messageWithDate];
@@ -193,7 +185,6 @@ const AdminLiveChat = () => {
         });
 
         socket.on('chat-history', (data: any) => {
-            console.log('📜 Chat history received:', data);
             // Converter timestamps de string para Date
             const messagesWithDates = (data.messages || []).map((msg: any) => ({
                 ...msg,
@@ -294,7 +285,6 @@ const AdminLiveChat = () => {
         );
 
         if (socketRef.current) {
-            console.log('📤 Admin joining chat:', conversationId);
             socketRef.current.emit('admin-join-chat', { conversationId });
         }
 

@@ -71,7 +71,7 @@ export default function CheckoutHeader() {
         const draft = JSON.parse(draftStr);
         if (!draft.orderId) return;
 
-        console.log('[CheckoutHeader] Timer expired, canceling order:', draft.orderId);
+        // no-op
 
         // Call cancel API
         const res = await fetch(`/api/orders/${draft.orderId}/cancel?userId=${draft.userId || 'guest'}&userEmail=${draft.buyerEmail || ''}`, {
@@ -81,7 +81,7 @@ export default function CheckoutHeader() {
         });
 
         if (res.ok) {
-          console.log('[CheckoutHeader] Order canceled successfully');
+          // no-op
         }
 
         // Clear checkout data
@@ -92,7 +92,7 @@ export default function CheckoutHeader() {
         // Redirect to canceled page
         window.location.href = '/checkout/canceled?reason=timeout';
       } catch (e) {
-        console.error('[CheckoutHeader] Failed to cancel order:', e);
+        // no-op
         // Still redirect to canceled page
         window.location.href = '/checkout/canceled?reason=timeout';
       }

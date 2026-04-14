@@ -75,7 +75,7 @@ export function SpotifyArtistSearch({ selectedArtists, onArtistsChange, classNam
                         }));
                         combined = [...mappedLocal];
                     } catch (e) {
-                        console.error('Error parsing local artists', e);
+                        // no-op
                     }
                 }
 
@@ -96,7 +96,7 @@ export function SpotifyArtistSearch({ selectedArtists, onArtistsChange, classNam
                 setResults(combined);
                 setIsOpen(true);
             } catch (error) {
-                console.error('Failed to search artists', error);
+                // no-op
                 toast.error('Erro ao buscar artistas');
             } finally {
                 setLoading(false);
@@ -151,7 +151,7 @@ export function SpotifyArtistSearch({ selectedArtists, onArtistsChange, classNam
             setNewName('');
             toast.success('Artista criado com sucesso!');
         } catch (error) {
-            console.error('Failed to create artist', error);
+            // no-op
             toast.error('Erro ao criar artista. Tente novamente.');
         } finally {
             setIsSaving(false);

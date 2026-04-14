@@ -68,20 +68,16 @@ const SelectTickets: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       if (!eventId) return;
-      console.log('Loading data for event:', eventId);
       setLoading(true);
       try {
         // Load event
         const eventRes = await fetchApi(`/api/event/${eventId}`);
-        console.log('Event response status:', eventRes.status);
         if (eventRes.ok) {
           const eventData = await eventRes.json();
-          console.log('Event data:', eventData);
           setEvent(eventData);
 
           // Redirecionamento de segurança para eventos externos
           if (eventData.isExternal && eventData.externalUrl) {
-            console.log('External event detected, redirecting to:', eventData.externalUrl);
             window.location.href = eventData.externalUrl;
             return;
           }
@@ -91,24 +87,19 @@ const SelectTickets: React.FC = () => {
         const categoriesRes = await fetchApi(`/api/ticket-category/event/${eventId}`);
         if (categoriesRes.ok) {
           const categoriesData = await categoriesRes.json();
-          console.log('Categories loaded:', categoriesData);
           setCategories(categoriesData);
         }
 
         // Load ticket types
         const ticketsRes = await fetchApi(`/api/ticket-type/event/${eventId}/with-stats`);
-        console.log('Tickets response status:', ticketsRes.status);
         if (ticketsRes.ok) {
           const ticketsData = await ticketsRes.json();
-          console.log('Tickets loaded:', ticketsData);
-          console.log('Tickets array length:', ticketsData.length);
 
           // Normalize tickets (include sold out ones)
           const normalizedTickets = ticketsData.map((t: any) => {
             const available = typeof t.available === 'number'
               ? t.available
               : Math.max((t.maxQuantity ?? 0) - (t.sold ?? 0), 0);
-            console.log(`Ticket ${t.name}: available=${t.available}, maxQuantity=${t.maxQuantity}, sold=${t.sold}, calculated=${available}, isOnSale=${t.isOnSale}`);
             return {
               id: t.id,
               name: t.name,
@@ -124,11 +115,9 @@ const SelectTickets: React.FC = () => {
             };
           });
 
-          console.log('All tickets:', normalizedTickets);
           setTicketTypes(normalizedTickets);
         }
       } catch (error) {
-        console.error('Error loading data:', error);
         toast({
           title: 'Erro',
           description: 'Não foi possível carregar os ingressos',
@@ -301,23 +290,16 @@ const SelectTickets: React.FC = () => {
     }
 
     try {
-      console.log('[SelectTickets] selectedTickets state:', selectedTickets);
-      console.log('[SelectTickets] Total tickets:', totalTickets);
-
       const ticketsArray = Object.entries(selectedTickets).map(([ticketTypeId, quantity]) => ({
         ticketTypeId,
         quantity
       }));
-
-      console.log('[SelectTickets] Tickets array to send:', ticketsArray);
 
       const requestBody = {
         eventId,
         tickets: ticketsArray,
         couponCode: appliedCoupon?.code
       };
-
-      console.log('[SelectTickets] Request body:', JSON.stringify(requestBody, null, 2));
 
       // Create checkout session on backend
       const response = await fetchApi('/api/checkout/create-session', {
@@ -332,8 +314,6 @@ const SelectTickets: React.FC = () => {
       }
 
       const responseData = await response.json();
-      console.log('[SelectTickets] Backend response:', responseData);
-      console.log('[SelectTickets] Items returned from backend:', responseData.items);
 
       const { sessionId, items, eventId: backendEventId } = responseData;
 

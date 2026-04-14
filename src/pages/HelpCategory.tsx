@@ -46,7 +46,7 @@ const HelpCategory = () => {
             const data = await response.json();
             setCategory(data);
         } catch (error) {
-            console.error('Error loading category:', error);
+            // no-op
             setError(true);
         } finally {
             setLoading(false);

@@ -1,9 +1,17 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/apiBase';
 
-interface AuthUser { id: string; email: string; name?: string | null; isAdmin?: boolean }
+interface AuthUser { id: string; email: string; name?: string | null; isAdmin?: boolean; photoUrl?: string | null }
 interface AuthState { user: AuthUser | null; token: string | null; loading: boolean }
-interface AuthContextValue extends AuthState { login(email: string, password: string): Promise<boolean>; logout(): void; refreshUser(): Promise<void> }
+interface AuthContextValue extends AuthState { 
+  login(email: string, password: string): Promise<boolean>; 
+  logout(): void; 
+  refreshUser(): Promise<void>;
+  isLoginModalOpen: boolean;
+  loginModalRedirect: string | undefined;
+  openLoginModal(redirect?: string): void;
+  closeLoginModal(): void;
+}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -13,6 +21,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginModalRedirect, setLoginModalRedirect] = useState<string | undefined>(undefined);
 
   // Carrega token inicial
   useEffect(() => {
@@ -53,7 +63,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .join(''),
       );
       const payload = JSON.parse(jsonPayload);
-      setUser({ id: payload.sub, email: payload.email, name: payload.name || null, isAdmin: !!payload.isAdmin });
+      setUser({ 
+        id: payload.sub, 
+        email: payload.email, 
+        name: payload.name || null, 
+        isAdmin: !!payload.isAdmin,
+        photoUrl: payload.photoUrl || payload.picture || null 
+      });
 
       // Also try to fetch authoritative user from server (in case name/email changed on backend)
       (async () => {
@@ -63,7 +79,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const data = await res.json().catch(() => null);
             if (data && (data.id || data.user)) {
               const u = data.user || data;
-              setUser({ id: u.id || u.sub || payload.sub, email: u.email || payload.email, name: u.name ?? u.nome ?? u.full_name ?? payload.name ?? null, isAdmin: !!u.isAdmin || !!payload.isAdmin });
+              setUser({ 
+                id: u.id || u.sub || payload.sub, 
+                email: u.email || payload.email, 
+                name: u.name ?? u.nome ?? u.full_name ?? payload.name ?? null, 
+                isAdmin: !!u.isAdmin || !!payload.isAdmin,
+                photoUrl: u.photoUrl ?? u.photo ?? u.avatarUrl ?? payload.photoUrl ?? payload.picture ?? null
+              });
             }
           } else if (res.status === 401 || res.status === 403) {
             // Token is invalid/expired — clear it so the app stops sending bad credentials
@@ -77,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })();
     } catch (e) {
       // token inválido -> limpar
-      console.warn('[Auth] falha ao decodificar token', e);
+      // no-op
       setUser(null);
     }
   }, [token]);
@@ -109,7 +131,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = await res.json().catch(() => null);
         if (data) {
           const u = data.user || data;
-          setUser({ id: u.id || u.sub || user?.id || '', email: u.email || user?.email || '', name: u.name ?? u.nome ?? u.full_name ?? user?.name ?? null, isAdmin: !!u.isAdmin || !!user?.isAdmin });
+          setUser({ 
+            id: u.id || u.sub || user?.id || '', 
+            email: u.email || user?.email || '', 
+            name: u.name ?? u.nome ?? u.full_name ?? user?.name ?? null, 
+            isAdmin: !!u.isAdmin || !!user?.isAdmin,
+            photoUrl: u.photoUrl ?? u.photo ?? u.avatarUrl ?? user?.photoUrl ?? null
+          });
         }
       } catch (e) {
         // ignore
@@ -134,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return false;
     } catch (e) {
-      console.warn('[Auth] login error', e);
+      // no-op
       return false;
     }
   }, []);
@@ -146,7 +174,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTimeout(() => window.location.reload(), 100);
   }, []);
 
-  const value: AuthContextValue = { user, token, loading, login, logout, refreshUser };
+  const openLoginModal = useCallback((redirect?: string) => {
+    setLoginModalRedirect(redirect);
+    setIsLoginModalOpen(true);
+  }, []);
+
+  const closeLoginModal = useCallback(() => {
+    setIsLoginModalOpen(false);
+    // Delay clearing redirect so modal can finish transitions if needed
+    setTimeout(() => setLoginModalRedirect(undefined), 300);
+  }, []);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      refreshUser();
+    };
+    window.addEventListener('profile-updated', handleUpdate);
+    return () => window.removeEventListener('profile-updated', handleUpdate);
+  }, [refreshUser]);
+
+  const value: AuthContextValue = { 
+    user, 
+    token, 
+    loading, 
+    login, 
+    logout, 
+    refreshUser,
+    isLoginModalOpen,
+    loginModalRedirect,
+    openLoginModal,
+    closeLoginModal
+  };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 

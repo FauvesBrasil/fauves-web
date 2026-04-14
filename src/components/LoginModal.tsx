@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiUrl } from '@/lib/apiBase';
@@ -20,6 +21,7 @@ interface LoginModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   initialEmail?: string;
+  redirectPath?: string;
 }
 
 const WIDTH = 360;
@@ -31,7 +33,8 @@ const Spinner: React.FC<{ className?: string }> = ({ className = '' }) => (
   </svg>
 );
 
-const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initialEmail }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initialEmail, redirectPath }) => {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const [step, setStep] = useState<0 | 1 | 2>(0);
@@ -119,10 +122,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
           try { window.localStorage.setItem('AUTH_TOKEN_V1', ev.data.token); } catch (e) { }
           window.removeEventListener('message', handler);
           try { popup.close(); } catch (e) { }
-          // reload to refresh auth state
-          window.location.reload();
+          // reload or redirect to refresh auth state
+          if (redirectPath) {
+            window.location.href = redirectPath;
+          } else {
+            window.location.reload();
+          }
         } catch (e) {
-          console.warn('oauth message handler error', e);
+          // no-op
         }
       };
       window.addEventListener('message', handler);
@@ -151,7 +158,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
       throw new Error('Credenciais inválidas');
     }
     onSuccess?.();
-    setTimeout(() => handleClose(), 1500);
+    setTimeout(() => {
+      handleClose();
+      if (redirectPath) {
+        navigate(redirectPath);
+      }
+    }, 1500);
   };
 
   const submitSignup = async (e?: React.FormEvent) => {
@@ -251,7 +263,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
                         <span className="font-medium">Continuar com o Google</span>
                       </button>
                       <button
-                        onClick={() => setStep(1)}
+                        onClick={(e) => { 
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setStep(1); 
+                        }}
                         className="flex items-center gap-3 justify-center rounded-full h-12 px-4 bg-brand-primary text-brand-primary-foreground hover:opacity-95 transition w-full"
                       >
                         <MailIco className="w-5 h-5 stroke-white" />

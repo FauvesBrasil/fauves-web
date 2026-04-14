@@ -1,5 +1,6 @@
 import { ArrowLeft, ThumbsUp, ThumbsDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { fetchApi } from '@/lib/apiBase';
 
 interface ArticleViewerProps {
     article: {
@@ -26,10 +27,10 @@ const ArticleViewer: React.FC<ArticleViewerProps> = ({
     const handleVote = async (type: 'helpful' | 'not-helpful') => {
         if (!article) return;
         try {
-            await fetch(`/api/help/articles/${article.id}/vote/${type}`);
+            await fetchApi(`/api/help/articles/${article.id}/vote/${type}`);
             // Optionally show success message
         } catch (error) {
-            console.error('Error voting:', error);
+            // no-op
         }
     };
 

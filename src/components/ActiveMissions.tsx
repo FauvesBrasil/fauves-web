@@ -31,7 +31,7 @@ export const ActiveMissions: React.FC<Props> = ({ organizationId, compact = fals
         const success = await claimReward(missionId);
         if (success) {
             // Show success message (could use toast notification)
-            console.log('Recompensa resgatada!');
+            // no-op
         }
     };
 

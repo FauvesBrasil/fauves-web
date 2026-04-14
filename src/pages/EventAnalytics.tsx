@@ -90,7 +90,7 @@ export default function EventAnalytics() {
                 setEvent(evt);
             }
         } catch (e) {
-            console.error('Failed to load event:', e);
+            // no-op
         }
     };
 
@@ -99,11 +99,10 @@ export default function EventAnalytics() {
         try {
             if (!id) throw new Error('Event ID not found');
             const res = await fetch(`/api/events/${id}/analytics/abandonment?days=${days}`);
-            if (!res.ok) throw new Error('Failed to load analytics');
+            if (!res.ok) throw new Error('Failed to load chart data');
             const data = await res.json();
             setMetrics(data);
-        } catch (e) {
-            console.error('Failed to load analytics:', e);
+        } catch (err) {
         } finally {
             setLoading(false);
         }

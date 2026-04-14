@@ -1,12 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Music, Mic2, Radio, Guitar, Sparkles, PartyPopper } from 'lucide-react';
+import { Music, Mic2, Radio, Guitar, Sparkles, PartyPopper, Trophy, Baby, HeartPulse, Theater } from 'lucide-react';
 import { apiUrl } from '@/lib/apiBase';
 
 interface Category {
     id: string;
     name: string;
     slug?: string;
+    icon?: string;
+    color?: string;
     imageUrl?: string;
     isActive: boolean;
 }
@@ -32,43 +34,120 @@ const StyleDiscovery: React.FC<StyleDiscoveryProps> = ({ events, selectedUf, cat
     const navigate = useNavigate();
 
     // Mapeamento de ícones por nome de categoria (fallback quando não tem imagem)
-    const getIconForCategory = (name: string) => {
+    const getIconForCategory = (category: Category) => {
+        const { icon, name } = category;
+        
+        // Use custom icon if available
+        if (icon) {
+            if (icon === 'Music') return <Music className="w-8 h-8" />;
+            if (icon === 'Mic2') return <Mic2 className="w-8 h-8" />;
+            if (icon === 'Guitar') return <Guitar className="w-8 h-8" />;
+            if (icon === 'Headphones') return <Headphones className="w-8 h-8" />;
+            if (icon === 'Mic') return <Mic className="w-8 h-8" />;
+            if (icon === 'Volume2') return <Volume2 className="w-8 h-8" />;
+            if (icon === 'Disc') return <Disc className="w-8 h-8" />;
+            if (icon === 'Film') return <Film className="w-8 h-8" />;
+            if (icon === 'Palette') return <Palette className="w-8 h-8" />;
+            if (icon === 'Utensils') return <Utensils className="w-8 h-8" />;
+            if (icon === 'Plane') return <Plane className="w-8 h-8" />;
+        }
+
         const lowerName = name.toLowerCase();
         if (lowerName.includes('rock')) return <Guitar className="w-8 h-8" />;
+        // ... rest of the existing hardcoded logic
         if (lowerName.includes('eletrônica') || lowerName.includes('eletronica')) return <Radio className="w-8 h-8" />;
         if (lowerName.includes('festa') || lowerName.includes('show')) return <PartyPopper className="w-8 h-8" />;
-        if (lowerName.includes('sertanejo') || lowerName.includes('mpb') || lowerName.includes('hip')) return <Mic2 className="w-8 h-8" />;
+        if (lowerName.includes('sertanejo') || lowerName.includes('mpb') || lowerName.includes('hip') || lowerName.includes('comedy') || lowerName.includes('stand up')) return <Mic2 className="w-8 h-8" />;
         if (lowerName.includes('jazz') || lowerName.includes('clássica')) return <Music className="w-8 h-8" />;
+        if (lowerName.includes('esporte')) return <Trophy className="w-8 h-8" />;
+        if (lowerName.includes('infantil')) return <Baby className="w-8 h-8" />;
+        if (lowerName.includes('religião') || lowerName.includes('espiritualidade')) return <HeartPulse className="w-8 h-8" />;
+        if (lowerName.includes('teatro') || lowerName.includes('espetáculo') || lowerName.includes('espetaculo')) return <Theater className="w-8 h-8" />;
         return <Sparkles className="w-8 h-8" />; // default
     };
 
     // Mapeamento de cores por categoria (fallback quando não tem imagem)
-    const getGradientForCategory = (name: string) => {
+    const getGradientForCategory = (category: Category) => {
+        const { color: customColor, name } = category;
+
+        // Use custom color if available
+        if (customColor) {
+            if (customColor === 'indigo') return {
+                color: 'from-indigo-500 to-purple-600',
+                bg: 'bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-950/20 dark:to-purple-950/30'
+            };
+            if (customColor === 'teal') return {
+                color: 'from-teal-400 to-emerald-600',
+                bg: 'bg-gradient-to-br from-teal-500/10 to-emerald-500/10 dark:from-teal-950/20 dark:to-emerald-950/30'
+            };
+            if (customColor === 'rose') return {
+                color: 'from-pink-500 to-rose-600',
+                bg: 'bg-gradient-to-br from-pink-500/10 to-rose-500/10 dark:from-pink-950/20 dark:to-rose-950/30'
+            };
+            if (customColor === 'amber') return {
+                color: 'from-amber-400 to-orange-600',
+                bg: 'bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-950/20 dark:to-orange-950/30'
+            };
+            if (customColor === 'cyan') return {
+                color: 'from-cyan-400 to-blue-600',
+                bg: 'bg-gradient-to-br from-cyan-500/10 to-blue-500/10 dark:from-cyan-950/20 dark:to-blue-950/30'
+            };
+            if (customColor === 'emerald') return {
+                color: 'from-emerald-400 to-teal-600',
+                bg: 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10 dark:from-emerald-950/20 dark:to-teal-950/30'
+            };
+            if (customColor === 'purple') return {
+                color: 'from-purple-500 to-violet-700',
+                bg: 'bg-gradient-to-br from-purple-500/10 to-violet-500/10 dark:from-purple-950/20 dark:to-violet-950/30'
+            };
+            if (customColor === 'zinc') return {
+                color: 'from-zinc-500 to-zinc-700',
+                bg: 'bg-gradient-to-br from-zinc-500/10 to-zinc-700/10 dark:from-zinc-900/30 dark:to-black/40'
+            };
+        }
+
         const lowerName = name.toLowerCase();
+        // ... rest of the existing hardcoded logic
         if (lowerName.includes('rock')) return {
-            color: 'from-red-500 to-orange-500',
-            bg: 'bg-gradient-to-br from-red-500/10 to-orange-500/10 dark:from-red-900/20 dark:to-orange-900/20'
+            color: 'from-zinc-600 to-zinc-900',
+            bg: 'bg-gradient-to-br from-zinc-500/10 to-zinc-900/10 dark:from-zinc-900/30 dark:to-black/40'
         };
         if (lowerName.includes('eletrônica') || lowerName.includes('eletronica')) return {
-            color: 'from-cyan-500 to-blue-500',
-            bg: 'bg-gradient-to-br from-cyan-500/10 to-blue-500/10 dark:from-cyan-900/20 dark:to-blue-900/20'
+            color: 'from-cyan-400 to-blue-600',
+            bg: 'bg-gradient-to-br from-cyan-500/10 to-blue-500/10 dark:from-cyan-950/20 dark:to-blue-950/30'
         };
         if (lowerName.includes('festa') || lowerName.includes('show')) return {
-            color: 'from-purple-500 to-pink-500',
-            bg: 'bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-900/20 dark:to-pink-900/20'
+            color: 'from-pink-500 to-rose-600',
+            bg: 'bg-gradient-to-br from-pink-500/10 to-rose-500/10 dark:from-pink-950/20 dark:to-rose-950/30'
         };
         if (lowerName.includes('sertanejo')) return {
-            color: 'from-amber-500 to-yellow-500',
-            bg: 'bg-gradient-to-br from-amber-500/10 to-yellow-500/10 dark:from-amber-900/20 dark:to-yellow-900/20'
+            color: 'from-orange-400 to-amber-600',
+            bg: 'bg-gradient-to-br from-orange-500/10 to-amber-500/10 dark:from-orange-950/20 dark:to-amber-950/30'
         };
         if (lowerName.includes('mpb')) return {
-            color: 'from-emerald-500 to-green-500',
-            bg: 'bg-gradient-to-br from-emerald-500/10 to-green-500/10 dark:from-emerald-900/20 dark:to-green-900/20'
+            color: 'from-emerald-400 to-teal-600',
+            bg: 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10 dark:from-emerald-950/20 dark:to-teal-950/30'
+        };
+        if (lowerName.includes('esporte')) return {
+            color: 'from-blue-500 to-indigo-700',
+            bg: 'bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-950/20 dark:to-indigo-950/30'
+        };
+        if (lowerName.includes('infantil')) return {
+            color: 'from-yellow-400 to-orange-500',
+            bg: 'bg-gradient-to-br from-yellow-500/10 to-orange-500/10 dark:from-yellow-950/20 dark:to-orange-950/30'
+        };
+        if (lowerName.includes('religião') || lowerName.includes('espiritualidade')) return {
+            color: 'from-purple-400 to-violet-600',
+            bg: 'bg-gradient-to-br from-purple-500/10 to-violet-500/10 dark:from-purple-950/20 dark:to-violet-950/30'
+        };
+        if (lowerName.includes('teatro') || lowerName.includes('espetáculo') || lowerName.includes('espetaculo')) return {
+            color: 'from-red-500 to-rose-700',
+            bg: 'bg-gradient-to-br from-red-500/10 to-rose-500/10 dark:from-red-950/20 dark:to-rose-950/30'
         };
         // Default gradient
         return {
-            color: 'from-violet-500 to-purple-500',
-            bg: 'bg-gradient-to-br from-violet-500/10 to-purple-500/10 dark:from-violet-900/20 dark:to-purple-900/20'
+            color: 'from-indigo-500 to-purple-600',
+            bg: 'bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-950/20 dark:to-purple-950/30'
         };
     };
 
@@ -115,9 +194,9 @@ const StyleDiscovery: React.FC<StyleDiscoveryProps> = ({ events, selectedUf, cat
     return (
         <section className="px-[156px] py-5 max-md:px-5 max-md:py-4 max-sm:px-4 max-sm:py-4">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 max-md:gap-3">
-                {displayCategories.map((category) => {
-                    const gradient = getGradientForCategory(category.name);
-                    const icon = getIconForCategory(category.name);
+                {displayCategories.map((category: any) => {
+                    const gradient = getGradientForCategory(category);
+                    const icon = getIconForCategory(category);
                     const imageUrl = category.imageUrl ? apiUrl(category.imageUrl) : null;
 
                     return (

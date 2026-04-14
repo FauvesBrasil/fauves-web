@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { getApiBase } from '@/lib/apiBase';
+import { fetchApi } from '@/lib/apiBase';
 
 interface EmailTemplate {
     id: string;
@@ -35,7 +35,7 @@ export default function AdminEmails() {
 
     const fetchTemplates = async () => {
         try {
-            const res = await fetch(`${getApiBase()}/api/admin/emails/templates`, {
+            const res = await fetchApi(`/api/admin/emails/templates`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
@@ -43,7 +43,7 @@ export default function AdminEmails() {
                 setTemplates(data);
             }
         } catch (e) {
-            console.error('Failed to fetch templates', e);
+            // no-op
         } finally {
             setLoading(false);
         }

@@ -47,7 +47,7 @@ const HelpArticle = () => {
             const data = await response.json();
             setArticle(data);
         } catch (error) {
-            console.error('Error loading article:', error);
+            // no-op
             setError(true);
         } finally {
             setLoading(false);
@@ -64,7 +64,7 @@ const HelpArticle = () => {
                 method: 'GET',
             });
         } catch (error) {
-            console.error('Error sending feedback:', error);
+            // no-op
         }
     };
 

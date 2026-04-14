@@ -52,7 +52,7 @@ export default function AdminUsers(){
       const j = await res.json();
       setUsers(u=>u.map(x=> x.id===id ? { ...x, isAdmin: j.user.isAdmin } : x));
     }catch(e){
-      console.error('toggle admin error', e);
+      // no-op
     }
   };
 

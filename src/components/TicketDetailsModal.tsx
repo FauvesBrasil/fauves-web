@@ -26,30 +26,26 @@ const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ ticketId, onClo
     useEffect(() => {
         const loadHistory = async () => {
             if (!token) {
-                console.log('No token available');
+                return;
                 return;
             }
 
-            console.log('Loading ticket history for:', ticketId);
 
             try {
                 const response = await fetch(`/api/ticket/${ticketId}/history`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                console.log('Response status:', response.status);
 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('Ticket data loaded:', data);
                     setTicket(data.ticket);
                     setEvents(data.events || []);
                 } else {
-                    const errorText = await response.text();
-                    console.error('Failed to load ticket:', response.status, errorText);
+                    // no-op
                 }
             } catch (error) {
-                console.error('Error loading ticket history:', error);
+                // no-op
             } finally {
                 setLoading(false);
             }
@@ -250,7 +246,7 @@ const TicketDetailsModal: React.FC<TicketDetailsModalProps> = ({ ticketId, onClo
                                         alert(`Erro ao cancelar: ${err.message || 'Erro desconhecido'}`);
                                     }
                                 } catch (error) {
-                                    console.error('Error canceling ticket:', error);
+                                    // no-op
                                     alert('Erro de conexão ao cancelar ingresso.');
                                 } finally {
                                     setCanceling(false);

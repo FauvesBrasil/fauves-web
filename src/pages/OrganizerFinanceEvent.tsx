@@ -161,7 +161,6 @@ export default function OrganizerFinanceEvent() {
             }
           }
         } catch (err) {
-          console.error('Failed to fetch event:', err);
           setEvent({ id: eventId, name: 'Evento', startDate: null, image: null });
         }
         
@@ -185,7 +184,6 @@ export default function OrganizerFinanceEvent() {
               }
             }
           } catch (err) {
-            console.error('Failed to fetch financial data:', err);
           }
         }
       } finally {

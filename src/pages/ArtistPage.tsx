@@ -9,6 +9,8 @@ import LoginModal from '@/components/LoginModal';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { Calendar, MapPin, Users, Music, BadgeCheck } from 'lucide-react';
+import { useSEO } from '@/hooks/useSEO';
+
 
 interface Artist {
     id: string;
@@ -49,6 +51,28 @@ const ArtistPage: React.FC = () => {
     const [followLoading, setFollowLoading] = useState(false);
     const [showLoginModal, setShowLoginModal] = useState(false);
 
+    // SEO dinâmico para o artista
+    const genresLabel = artist?.genres?.slice(0, 3).join(', ');
+    useSEO({
+      title: artist ? artist.name : undefined,
+      description: artist
+        ? `${artist.name}${genresLabel ? ` — ${genresLabel}` : ''}. Confira os eventos e informações na Fauves.`
+        : undefined,
+      image: artist?.imageUrl,
+      url: artist ? `/artista/${artist.slug || artist.id}` : undefined,
+      type: 'profile',
+      jsonLd: artist ? {
+        '@context': 'https://schema.org',
+        '@type': 'MusicGroup',
+        name: artist.name,
+        image: artist.imageUrl,
+        genre: artist.genres,
+        url: `https://fauves.com.br/artista/${artist.slug || artist.id}`,
+        sameAs: artist.spotifyUrl ? [artist.spotifyUrl] : [],
+      } : undefined,
+    });
+
+
     useEffect(() => {
         if (!slugOrId) return;
 
@@ -82,7 +106,7 @@ const ArtistPage: React.FC = () => {
                     }
                 }
 
-                document.title = `${artistData.name} | Fauves`;
+                // document.title is now managed by useSEO hook
             } catch (e: any) {
                 setError(e?.message || 'Erro ao carregar artista');
             } finally {

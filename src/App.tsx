@@ -5,7 +5,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { OrganizationProvider } from '@/context/OrganizationContext';
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from 'framer-motion';
-import React, { Suspense } from 'react';
+import React, { Suspense, Component } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Index from "./pages/Index";
@@ -89,6 +89,7 @@ const AdminTicketDetail = React.lazy(() => import('./pages/AdminTicketDetail'));
 const AdminLiveChat = React.lazy(() => import('./pages/AdminLiveChat'));
 const AdminHelpdesk = React.lazy(() => import('./pages/AdminHelpdesk'));
 const AdminKnowledgeBase = React.lazy(() => import('./pages/AdminKnowledgeBase'));
+const AdminLeads = React.lazy(() => import('./pages/AdminLeads'));
 
 // Non-admin imports (still eager loaded)
 import ParticipantesPedidos from "./pages/ParticipantesPedidos";
@@ -110,6 +111,8 @@ import ChatWidget from './components/ChatWidget';
 import EventAnalytics from './pages/EventAnalytics';
 import IssuedTickets from './pages/IssuedTickets';
 import ResetPassword from './pages/ResetPassword';
+import HowItWorks from './pages/HowItWorks';
+import LoginModal from './components/LoginModal';
 
 // Lazy load admin analytics
 const AdminAnalytics = React.lazy(() => import('./pages/AdminAnalytics'));
@@ -126,10 +129,10 @@ const queryClient = new QueryClient({
   },
 });
 
-class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
+class AppErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
   constructor(props: any) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
-  componentDidCatch(error: any, info: any) { console.error('[AppErrorBoundary]', error, info); }
+  componentDidCatch(error: any, info: any) { /* no-op in prod */ }
   render() {
     if (this.state.hasError) {
       return <div style={{ padding: 40, fontFamily: 'sans-serif' }}>
@@ -154,6 +157,7 @@ const AppInner = () => {
           <Route path="/" element={<Index />} />
           <Route path="/o-que-fazer-em/:citySlug" element={<WhatToDoCity />} />
           <Route path="/quem-somos" element={<About />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/carreiras" element={<Careers />} />
           <Route path="/eventos/:categorySlug" element={<EventsByCategory />} />
           <Route path="/lei-da-meia-entrada" element={<HalfPriceLaw />} />
@@ -227,6 +231,7 @@ const AppInner = () => {
             <Route path="slides" element={<Suspense fallback={<div>Carregando...</div>}><AdminSlidesLazy /></Suspense>} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="order/:orderId" element={<AdminOrderDetails />} />
+            <Route path="leads" element={<AdminLeads />} />
 
             {/* Helpdesk Section */}
             <Route path="helpdesk" element={<AdminHelpdesk />} />
@@ -298,7 +303,20 @@ const AppInner = () => {
         !location.pathname.startsWith('/participantes') &&
         !location.pathname.startsWith('/gerenciar-equipe') &&
         <ChatWidget />}
+
+      <AuthModalWrapper />
     </>
+  );
+};
+
+const AuthModalWrapper = () => {
+  const { isLoginModalOpen, closeLoginModal, loginModalRedirect } = useAuth();
+  return (
+    <LoginModal 
+      open={isLoginModalOpen} 
+      onClose={closeLoginModal} 
+      redirectPath={loginModalRedirect} 
+    />
   );
 };
 
@@ -342,7 +360,7 @@ function Bootstrap() {
   React.useEffect(() => {
     // when user becomes available, prefetch organizations
     if (!authLoading && user) {
-      try { refresh(); } catch (e) { console.warn('prefetch orgs failed', e); }
+      try { refresh(); } catch (e) { }
     }
   }, [user, authLoading, refresh]);
 

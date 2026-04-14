@@ -44,7 +44,7 @@ const LottieReact: React.FC<Props> = ({ animationData, path, loop = true, autopl
       } catch (e) {}
       try { animRef.current.play(); } catch (e) {}
     } catch (e) {
-      console.error('Lottie load error', e);
+      // no-op
     }
 
     return () => {

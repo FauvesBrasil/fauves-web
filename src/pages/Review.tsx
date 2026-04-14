@@ -87,10 +87,8 @@ function Review() {
       // First, check for a temporary restore payload set by other pages (e.g. CheckoutPix)
       try {
         const restoreRaw = sessionStorage.getItem('checkoutSelectionRestore');
-        console.log('[Review] checkoutSelectionRestore:', restoreRaw);
         if (restoreRaw) {
           const parsed = JSON.parse(restoreRaw);
-          console.log('[Review] Using restored selection, items:', parsed.items);
           setSelection(parsed);
           sessionStorage.removeItem('checkoutSelectionRestore');
           setLoadingData(false);
@@ -99,15 +97,11 @@ function Review() {
       } catch (e) { }
 
       const sessionId = sessionStorage.getItem('checkoutSessionId');
-      console.log('[Review] checkoutSessionId:', sessionId);
       if (sessionId) {
         try {
           const res = await fetchApi(`/api/checkout/session/${sessionId}`);
           if (res.ok) {
             const sessionData = await res.json();
-            console.log('[Review] Loaded session from backend:', sessionData);
-            console.log('[Review] Backend items:', sessionData.items);
-            console.log('[Review] Backend items stringified:', JSON.stringify(sessionData.items, null, 2));
             setSelection({
               eventId: sessionData.eventId,
               eventSlug: sessionData.event?.slug,
@@ -125,7 +119,6 @@ function Review() {
             setSelection(null);
           }
         } catch (error) {
-          console.error('Error loading checkout session:', error);
           setSelection(null);
         }
       } else {
@@ -194,7 +187,6 @@ function Review() {
       // Client-side validation: ensure every item has a ticketTypeId and positive quantity
       const invalidItem = (body.items || []).find((it: any) => !it.ticketTypeId || typeof it.quantity !== 'number' || it.quantity <= 0);
       if (invalidItem) {
-        console.error('Invalid items payload, aborting order request', body.items);
         setError('Seleção inválida: tipo de ingresso ausente ou quantidade inválida. Volte para a página do evento e escolha os ingressos novamente.');
         setSubmitting(false);
         return;
@@ -208,11 +200,9 @@ function Review() {
         }
       }
       // no client-side PIX-specific validation here; server will resolve user profile values
-      console.debug('Creating order payload', body);
       const res = await fetchApi('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const json = await res.json().catch(() => null);
       if (!res.ok || json?.error) {
-        console.error('Order creation failed', { status: res.status, body: json });
         setError(json?.error || `Falha ao criar pedido (HTTP ${res.status})`);
       } else {
         clearCheckoutSelection();

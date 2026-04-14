@@ -1,5 +1,5 @@
 import { ReactNode, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrganization } from '../context/OrganizationContext';
 
@@ -17,6 +17,7 @@ export function ProtectedOrganizerRoute({
   const { selectedOrg, loading: orgLoading } = useOrganization();
   const params = useParams<{ id?: string; eventId?: string }>();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   
   // Check for eventId in URL params or query string
   const eventId = params.id || params.eventId || searchParams.get('eventId');
@@ -27,7 +28,8 @@ export function ProtectedOrganizerRoute({
 
     // Check 1: User must be logged in
     if (!user) {
-      navigate('/', { replace: true });
+      const redirectPath = encodeURIComponent(location.pathname + location.search);
+      navigate(`/?login=true&redirect=${redirectPath}`, { replace: true });
       return;
     }
 

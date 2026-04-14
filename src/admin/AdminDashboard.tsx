@@ -24,7 +24,7 @@ export default function AdminDashboard() {
         setMetrics(m);
         setNextEvents(e);
         setRanking(r);
-      }catch(err){ console.error('dashboard fetch', err); }
+      }catch(err){ }
       finally{ if(mounted) setLoading(false); }
     })();
     return ()=>{ mounted = false; };

@@ -267,14 +267,9 @@ export default function MarketingTools() {
         limitTicketTypes: form.limitTicketTypes || [],
       };
 
-      console.log('[submitCoupon] Sending payload:', payload);
-      console.log('[submitCoupon] Form state:', form);
-
       const isEditing = !!editingCouponId;
       const url = isEditing ? `/api/coupons/${editingCouponId}` : '/api/coupons';
       const method = isEditing ? 'PUT' : 'POST';
-
-      console.log('[submitCoupon] Request:', { isEditing, url, method });
 
       const r = await fetchApi(url, {
         method,
@@ -316,13 +311,6 @@ export default function MarketingTools() {
   };
 
   const handleEdit = (coupon: Coupon) => {
-    console.log('[handleEdit] Loading coupon:', {
-      id: coupon.id,
-      code: coupon.code,
-      limitCategories: coupon.limitCategories,
-      limitTicketTypes: coupon.limitTicketTypes
-    });
-
     const dStart = coupon.startDate ? new Date(coupon.startDate) : null;
     if (dStart) dStart.setMinutes(dStart.getMinutes() - dStart.getTimezoneOffset());
 
@@ -339,11 +327,6 @@ export default function MarketingTools() {
       endDate: dEnd ? dEnd.toISOString().slice(0, 16) : '',
       limitCategories: coupon.limitCategories || [],
       limitTicketTypes: coupon.limitTicketTypes || [],
-    });
-
-    console.log('[handleEdit] Form after setForm:', {
-      limitCategories: coupon.limitCategories || [],
-      limitTicketTypes: coupon.limitTicketTypes || []
     });
 
     setEditingCouponId(coupon.id);

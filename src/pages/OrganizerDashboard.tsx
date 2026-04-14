@@ -21,106 +21,7 @@ import ProducerJourneyCard from '@/components/ProducerJourneyCard';
 import MobileTopBar from '@/components/MobileTopBar';
 import MobileDrawerMenu from '@/components/MobileDrawerMenu';
 import { AnnouncementsSection } from '@/components/AnnouncementsSection';
-interface UserDropdownProps {
-  userName: string;
-  userEmail: string;
-}
 
-function UserDropdown({ userName, userEmail }: UserDropdownProps) {
-  const navigate = useNavigate();
-  const { logout } = useAuth();
-  const handleLogout = async () => {
-    await logout();
-    navigate("/");
-  };
-  const [open, setOpen] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const buttonRef = useRef(null);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node) &&
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
-  return (
-    <div className="relative">
-      <button
-        ref={buttonRef}
-        className="flex items-center gap-2 bg-[#F6F7F9] rounded-full pl-1 pr-3 py-1 cursor-pointer focus:outline-none transition hover:bg-[#e9eaf0]"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-          <Avatar className="w-8 h-8">
-            <AvatarFallback className="bg-gray-300">
-              <div className="w-full h-full rounded-full bg-gray-300"></div>
-            </AvatarFallback>
-          </Avatar>
-        </div>
-        <span className="text-[#091747] font-bold text-[15px]">{userName}</span>
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-[#091747]">
-          <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {open && (
-        <div ref={dropdownRef} className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-blue-200 z-50 flex flex-col text-[#091747] text-[15px] font-bold">
-          <button className="flex items-center gap-3 px-5 py-4 hover:bg-blue-50 rounded-t-xl text-[#091747]" onClick={() => navigate("/")}>
-            <Repeat2 className="w-5 h-5" />
-            Mudar para participante
-          </button>
-          <button className="flex items-center gap-3 px-5 py-4 hover:bg-blue-50 border-t border-blue-100 text-[#091747]">
-            <UserIcon className="w-5 h-5" />
-            Configurações da conta
-          </button>
-          <button className="flex flex-col items-start gap-1 px-5 py-4 hover:bg-blue-50 border-t border-blue-100 rounded-b-xl text-[#EF4118]" onClick={() => setShowLogoutModal(true)}>
-            <span className="flex items-center gap-3">
-              <LogOut className="w-5 h-5" />
-              Sair
-            </span>
-            <span className="text-xs text-[#091747] font-normal mt-1">{userEmail}</span>
-          </button>
-        </div>
-      )}
-      {/* Modal de confirmação de logout */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col items-center max-w-sm w-full">
-            <div className="text-lg font-bold mb-2 text-[#091747]">Deseja realmente sair?</div>
-            <div className="text-sm text-[#091747] mb-6">Você será desconectado da sua conta.</div>
-            <div className="flex gap-4 w-full justify-center">
-              <button
-                className="relative inline-flex items-center font-semibold text-indigo-600 group focus:outline-none transition-transform duration-200 hover:-translate-y-0.5 text-base px-6 py-2 rounded-lg border border-indigo-600 bg-white"
-                onClick={() => setShowLogoutModal(false)}
-              >
-                <span className="relative z-10">Cancelar</span>
-                <span className="absolute left-0 bottom-0 h-0.5 w-full origin-left transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600"></span>
-                <span className="absolute left-0 bottom-0.5 h-2 w-full opacity-0 rounded-full bg-indigo-200 blur-md transition-opacity duration-300 group-hover:opacity-60"></span>
-              </button>
-              <button
-                className="relative inline-flex items-center font-semibold text-white bg-indigo-600 group focus:outline-none transition-transform duration-200 hover:-translate-y-0.5 text-base px-6 py-2 rounded-lg"
-                onClick={async () => { setShowLogoutModal(false); await handleLogout(); }}
-              >
-                <span className="relative z-10">Sair</span>
-                <span className="absolute left-0 bottom-0 h-0.5 w-full origin-left transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600"></span>
-                <span className="absolute left-0 bottom-0.5 h-2 w-full opacity-0 rounded-full bg-indigo-200 blur-md transition-opacity duration-300 group-hover:opacity-60"></span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 const OrganizerDashboard = () => {
   // Estado para Drawer de edição igual ao OrganizerSettingsPage
@@ -156,7 +57,7 @@ const OrganizerDashboard = () => {
         const file = new Blob([u8arr], { type: mime });
         const formData = new FormData();
         formData.append('file', file, 'logo.png');
-        const uploadRes = await fetch('/api/upload', {
+        const uploadRes = await fetchApi('/api/upload', {
           method: 'POST',
           body: formData
         });
@@ -175,7 +76,7 @@ const OrganizerDashboard = () => {
         setSaving(false);
         return;
       }
-      const res = await fetch(`/api/organization/${form.id}`, {
+      const res = await fetchApi(`/api/organization/${form.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -201,7 +102,7 @@ const OrganizerDashboard = () => {
   };
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedOrg, loading: loadingOrgs, orgs, refresh, addOrganization, setSelectedOrgById } = useOrganization();
+  const { selectedOrg, loading: loadingOrgs, orgs, refresh, addOrganization, setSelectedOrgById, hasAttemptedRefresh } = useOrganization();
   const { user, refreshUser } = useAuth();
 
   // Ensure we fetch authoritative user data from the server on mount so
@@ -215,10 +116,7 @@ const OrganizerDashboard = () => {
       try {
         await refreshUser();
       } catch (err) {
-        // Non-fatal: log and continue. We don't want to crash the dashboard if
-        // the call fails (network, 401, etc.).
-        // eslint-disable-next-line no-console
-        console.warn('[OrganizerDashboard] refreshUser failed', err);
+        // Non-fatal
       }
     })();
     return () => { cancelled = true; };
@@ -289,12 +187,10 @@ const OrganizerDashboard = () => {
 
               setNextEventStats({ sold, capacity });
             } catch (e) {
-              console.error('Failed to fetch event stats:', e);
             }
           }
         }
 
-        (window as any).__dbgDashboardOrgData = { orgRes, countRes, nextRes };
       } finally {
         if (!cancelled) { setLoadingOrg(false); setLoadingEvent(false); }
       }
@@ -330,15 +226,13 @@ const OrganizerDashboard = () => {
       if (loadingOrgs) return;
       const hasOrgs = Array.isArray(orgs) && orgs.length > 0;
       if (!hasOrgs && !modalAutoOpenedRef.current) {
-        console.debug('[OrganizerDashboard] No organizations found for user, opening RequireOrganization modal');
         modalAutoOpenedRef.current = true;
         setShowCreateOrgModal(true);
       }
       if (hasOrgs) modalAutoOpenedRef.current = false;
     } catch (e) {
-      console.warn('[OrganizerDashboard] auto-open org modal effect failed', e);
     }
-  }, [user, loadingOrgs, orgs]);
+  }, [user, loadingOrgs, orgs, hasAttemptedRefresh]);
 
   // Fetch help categories for organizer
   const [helpCategories, setHelpCategories] = useState<any[]>([]);
@@ -354,7 +248,6 @@ const OrganizerDashboard = () => {
           setHelpCategories(data.slice(0, 4));
         }
       } catch (e) {
-        console.error('Failed to load help categories', e);
       } finally {
         setLoadingHelp(false);
       }
@@ -495,7 +388,6 @@ const OrganizerDashboard = () => {
               {showCreateOrgModal && (
                 <RequireOrganization
                   onCreated={async (org) => {
-                    console.log('[OrganizerDashboard] Organization created, calling refresh:', org?.id);
                     try {
                       // Add organization directly to context first
                       if (org?.id && org?.name) {
@@ -507,9 +399,7 @@ const OrganizerDashboard = () => {
                       }
                       // Then refresh to sync with backend
                       await refresh();
-                      console.log('[OrganizerDashboard] Refresh completed successfully');
                     } catch (e) {
-                      console.error('[OrganizerDashboard] Refresh failed but organization was created:', e);
                       // Don't throw error - organization was created successfully
                     }
                   }}

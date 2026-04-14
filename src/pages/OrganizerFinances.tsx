@@ -103,7 +103,6 @@ export default function OrganizerFinances() {
                 }
               }
             } catch (err) {
-              console.error(`Failed to fetch financial for event ${ev.id}:`, err);
             }
           })
         );
@@ -115,11 +114,9 @@ export default function OrganizerFinances() {
         setEvents(mapped);
       }
 
-      setTotal(data.total || 0);
       setHasMore(data.hasMore || false);
       setPage(pageNum);
     } catch (error) {
-      console.error('[OrganizerFinances] Error fetching events:', error);
     } finally {
       setLoading(false);
       setLoadingMore(false);

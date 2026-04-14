@@ -172,7 +172,6 @@ function CreateEditEvent() {
 					}
 				}
 			} catch (err) {
-				console.warn('Failed to fetch all organizations for admin', err);
 			}
 		})();
 		return () => { mounted = false; };
@@ -188,7 +187,6 @@ function CreateEditEvent() {
 					if (Array.isArray(data)) setCategories(data);
 				}
 			} catch (err) {
-				console.warn('Failed to fetch categories', err);
 			}
 		})();
 	}, []);
@@ -310,7 +308,6 @@ function CreateEditEvent() {
 
 				setOriginalValues(original);
 			} catch (err) {
-				console.warn('Failed to load event', err);
 			} finally {
 				if (mounted) setLoadingEvent(false);
 			}
@@ -410,7 +407,6 @@ function CreateEditEvent() {
 			if (!user || !user.id) return;
 			const hasOrgs = Array.isArray(ctxOrgs) && ctxOrgs.length > 0;
 			if (!hasOrgs && !modalAutoOpenedRef.current) {
-				console.debug('[CreateEditEvent] No organizations found for user, opening RequireOrganization modal');
 				modalAutoOpenedRef.current = true;
 				setShowCreateOrgModal(true);
 			}
@@ -419,7 +415,6 @@ function CreateEditEvent() {
 				modalAutoOpenedRef.current = false;
 			}
 		} catch (e) {
-			console.warn('[CreateEditEvent] auto-open org modal effect failed', e);
 		}
 	}, [authLoading, loadingOrgs, user, ctxOrgs]);
 
@@ -924,7 +919,6 @@ function CreateEditEvent() {
 					navigate(`/create-tickets?eventId=${createdId}`, { state: { stepFlow: { visible: true, step: 2 } } });
 				}, 700);
 			} catch (e: any) {
-				console.error('Erro ao criar evento', e);
 				toast?.error?.(e?.message || 'Erro ao criar evento');
 			} finally {
 				setUploading(false);

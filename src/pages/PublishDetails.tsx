@@ -280,7 +280,7 @@ const PublishDetails: React.FC = () => {
           }
         }
       } catch (err) {
-        console.error('[PublishDetails(frontend)] failed to load event/categories', { eventId, err });
+        // no-op
       }
 
       // Load collections

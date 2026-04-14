@@ -19,6 +19,7 @@ interface PixIntent {
   code: string;
   status: string;
   expiresAt: string;
+  amount?: number;
 }
 
 interface OrderSummary {
@@ -119,17 +120,13 @@ export default function CheckoutPix() {
   }, [orderId, expParam]);
 
   const fetchIntent = useCallback(async () => {
-    console.log('[CheckoutPix] fetchIntent called, orderId:', orderId);
     if (!orderId) {
-      console.log('[CheckoutPix] No orderId, skipping fetchIntent');
       return;
     }
     try {
-      console.log('[CheckoutPix] Calling POST /api/orders/' + orderId + '/pix-intent');
       const headers: any = { 'Content-Type': 'application/json' };
       if (user && (user as any).id) headers['x-user-id'] = (user as any).id;
       const res = await fetch(`${API_BASE}/api/orders/${orderId}/pix-intent`, { method: 'POST', headers });
-      console.log('[CheckoutPix] Response status:', res.status);
       if (!res.ok) {
         // try to parse error body for more helpful message
         let errBody: any = null;
@@ -148,7 +145,6 @@ export default function CheckoutPix() {
           const url = await QRCode.toDataURL(json.code, { margin: 0, width: 240 });
           setQrDataUrl(url);
         } catch (e) {
-          console.warn('Failed to generate QR image', e);
         }
       } else {
         // No code yet: keep polling enabled so the GET poll can pick up updates.
@@ -156,7 +152,6 @@ export default function CheckoutPix() {
         setPolling(true);
       }
     } catch (e:any) {
-      console.error('[CheckoutPix] Error in fetchIntent:', e);
       setError(e.message);
     } finally {
       setLoading(false);
@@ -165,13 +160,10 @@ export default function CheckoutPix() {
 
   // Initial load
   useEffect(() => {
-    console.log('[CheckoutPix] useEffect initial load, orderId:', orderId);
     if (!orderId) {
-      console.log('[CheckoutPix] No orderId, navigating to /');
       navigate('/');
       return;
     }
-    console.log('[CheckoutPix] Calling fetchOrder and fetchIntent');
     fetchOrder();
     fetchIntent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,14 +182,13 @@ export default function CheckoutPix() {
         const orderRes = await fetch(`${API_BASE}/api/orders/${orderId}`);
         if (orderRes.ok) {
           const orderData = await orderRes.json();
-          if (orderData.paymentStatus === 'PAID') {
-            stopped = true;
-            setPolling(false);
-            setPaymentConfirmed(true);
-            console.log('[CheckoutPix] Payment confirmed! Redirecting to success page...');
-            navigate(`/checkout/success?orderId=${encodeURIComponent(orderId)}`);
-            return;
-          }
+            if (orderData.paymentStatus === 'PAID') {
+              stopped = true;
+              setPolling(false);
+              setPaymentConfirmed(true);
+              navigate(`/checkout/success?orderId=${encodeURIComponent(orderId)}`);
+              return;
+            }
         }
 
         // Also poll pix-intent for status updates
@@ -210,7 +201,6 @@ export default function CheckoutPix() {
               stopped = true;
               setPolling(false);
               setPaymentConfirmed(true);
-              console.log('[CheckoutPix] PIX payment detected! Redirecting to success page...');
               navigate(`/checkout/success?orderId=${encodeURIComponent(orderId)}`);
               return;
             }
@@ -228,7 +218,6 @@ export default function CheckoutPix() {
         }
       } catch (e) {
         // Ignore individual polling errors
-        console.error('[CheckoutPix] Polling error:', e);
       }
     };
     

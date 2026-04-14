@@ -46,7 +46,7 @@ export function useFetchActiveMissions(organizationId?: string) {
                 }
             } catch (e) {
                 if (!cancelled) {
-                    console.error('Failed to load missions:', e);
+                    // no-op
                     setError('Erro ao carregar missões');
                 }
             } finally {
@@ -79,7 +79,7 @@ export function useFetchActiveMissions(organizationId?: string) {
             }
             return false;
         } catch (e) {
-            console.error('Failed to claim reward:', e);
+            // no-op
             return false;
         }
     };

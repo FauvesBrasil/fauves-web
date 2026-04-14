@@ -42,7 +42,7 @@ const TicketSelectionModal: React.FC<TicketSelectionModalProps & { debug?: boole
   const location = useLocation();
   React.useEffect(() => {
     if (isOpen) {
-      console.log('TicketSelectionModal montado (isOpen=true)');
+    // no-op
     }
   }, [isOpen]);
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});

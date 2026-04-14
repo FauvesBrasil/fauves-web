@@ -35,9 +35,7 @@ export function useFetchProducerRanking(currentOrgId?: string, timeframe: string
                         setError('Erro ao carregar ranking');
                     }
                 }
-            } catch (e) {
                 if (!cancelled) {
-                    console.error('Failed to load ranking:', e);
                     setError('Erro ao carregar ranking');
                 }
             } finally {

@@ -47,7 +47,7 @@ const HelpOrganizer = () => {
             setCategories(categoriesData);
             setPopularArticles(articlesData);
         } catch (error) {
-            console.error('Error loading organizer help data:', error);
+            // no-op
         } finally {
             setLoading(false);
         }

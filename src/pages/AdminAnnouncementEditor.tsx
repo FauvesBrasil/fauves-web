@@ -52,7 +52,7 @@ export default function AdminAnnouncementEditor() {
                 });
             }
         } catch (error) {
-            console.error('Error loading announcement:', error);
+            // no-op
             alert('Erro ao carregar anúncio');
         } finally {
             setLoading(false);
@@ -86,7 +86,7 @@ export default function AdminAnnouncementEditor() {
 
             navigate('/admin/announcements');
         } catch (error: any) {
-            console.error('Error saving announcement:', error);
+            // no-op
             alert(error.message || 'Erro ao salvar anúncio');
         } finally {
             setLoading(false);

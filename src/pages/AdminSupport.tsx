@@ -27,7 +27,7 @@ const AdminSupport = () => {
       setTickets(ticketsData);
       setStats(statsData);
     } catch (error) {
-      console.error('Error loading data:', error);
+      // no-op
     } finally {
       setLoading(false);
     }

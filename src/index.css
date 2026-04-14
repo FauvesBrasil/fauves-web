@@ -4,13 +4,13 @@
 
 /* Prevent horizontal scroll and zoom on mobile */
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   position: relative;
 }
 
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   position: relative;
   -webkit-text-size-adjust: 100%;
@@ -20,7 +20,7 @@ body {
 }
 
 #root {
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   position: relative;
 }

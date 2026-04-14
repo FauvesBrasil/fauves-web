@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } from 'recharts';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
-import { ensureApiBase, apiUrl } from '@/lib/apiBase';
+import { ensureApiBase, apiUrl, fetchApi } from '@/lib/apiBase';
 import MobileTopBar from '@/components/MobileTopBar';
 import MobileDrawerMenu from '@/components/MobileDrawerMenu';
 
@@ -258,18 +258,14 @@ function OrganizerReportsPage() {
       if (!selectedOrg?.id) { setEvents([]); setActiveEventId(''); return; }
       setLoadingEvents(true);
       try {
-        await ensureApiBase().catch(() => { });
         const path = `/api/organization/${selectedOrg.id}/events`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let loaded: any[] | null = null;
-        for (const u of attempts) {
-          try {
-            const r = await fetch(u, { headers: { 'Accept': 'application/json' } });
-            if (!r.ok) continue;
-            const j = await r.json();
-            if (Array.isArray(j)) { loaded = j; break; }
-          } catch { }
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
+        if (cancelled) return;
+        if (!r.ok) {
+          setEvents([]);
+          return;
         }
+        const loaded = await r.json().catch(() => []);
         if (cancelled) return;
         const mapped: EventLite[] = (loaded || []).map(e => ({ id: e.id, name: e.name, startDate: e.startDate || e.startDateUtc || null }));
         setEvents(mapped);
@@ -284,7 +280,6 @@ function OrganizerReportsPage() {
   // Buscar dados de vendas quando evento é selecionado
   React.useEffect(() => {
     if (!activeEventId) {
-      console.log('[ReportsPage] Skipping fetch - no activeEventId');
       setSalesData(prev => ({ ...prev, loading: false }));
       return;
     }
@@ -292,35 +287,18 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-        console.log('[ReportsPage] Token present:', !!token, 'eventId:', activeEventId);
-
-        // Usar endpoint financeiro igual ao OrganizerFinances
         const path = `/api/organization/event/${activeEventId}/financial`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let finData: any = null;
-
-        for (const u of attempts) {
-          try {
-            console.log('[ReportsPage] Fetching from:', u);
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-
-            const r = await fetch(u, { headers });
-            console.log('[ReportsPage] Response status:', r.status);
-            if (!r.ok) continue;
-            finData = await r.json();
-            console.log('[ReportsPage] Financial data received:', finData);
-            if (finData && finData.ok) break;
-          } catch (e) {
-            console.error('[ReportsPage] Fetch error:', e);
-          }
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
+        
+        if (!r.ok) {
+          setSalesData(prev => ({ ...prev, loading: false }));
+          return;
         }
+
+        const finData = await r.json().catch(() => null);
 
         if (finData && finData.ok && finData.financial) {
           const fin = finData.financial;
-          console.log('[ReportsPage] Financial object details:', JSON.stringify(fin, null, 2));
 
           // Dados financeiros da API
           const totalGross = fin.grossRevenue || 0;
@@ -346,7 +324,6 @@ function OrganizerReportsPage() {
           const paidOrders = totalOrders;
           const pendingOrders = 0;
 
-          console.log('[ReportsPage] Sales data calculated:', { totalGross, totalOrders, netRevenue, availableBalance });
           setSalesData({
             totalGross,
             totalOrders,
@@ -360,11 +337,9 @@ function OrganizerReportsPage() {
             loading: false,
           });
         } else {
-          console.log('[ReportsPage] No financial data');
           setSalesData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching sales data:', err);
         setSalesData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -379,31 +354,15 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-        console.log('[ReportsPage] Fetching promoters for event:', activeEventId);
-
         const path = `/api/organization/event/${activeEventId}/marketing-links`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let data: any = null;
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
-        for (const u of attempts) {
-          try {
-            console.log('[ReportsPage] Fetching from:', u);
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-
-            const r = await fetch(u, { headers });
-            console.log('[ReportsPage] Response status:', r.status);
-            if (!r.ok) continue;
-            data = await r.json();
-            console.log('[ReportsPage] Promoter data received:', data);
-            if (data && data.ok) break;
-          } catch (e) {
-            console.error('[ReportsPage] Fetch error:', e);
-          }
+        if (!r.ok) {
+          setPromoterData(prev => ({ ...prev, loading: false }));
+          return;
         }
 
+        const data = await r.json().catch(() => null);
         if (data && data.ok) {
           setPromoterData({
             links: data.links || [],
@@ -416,12 +375,8 @@ function OrganizerReportsPage() {
             },
             loading: false,
           });
-        } else {
-          console.log('[ReportsPage] No promoter data');
-          setPromoterData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching promoter data:', err);
         setPromoterData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -436,31 +391,15 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-        console.log('[ReportsPage] Fetching traffic for event:', activeEventId);
-
         const path = `/api/organization/event/${activeEventId}/traffic`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let data: any = null;
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
-        for (const u of attempts) {
-          try {
-            console.log('[ReportsPage] Fetching from:', u);
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-
-            const r = await fetch(u, { headers });
-            console.log('[ReportsPage] Response status:', r.status);
-            if (!r.ok) continue;
-            data = await r.json();
-            console.log('[ReportsPage] Traffic data received:', data);
-            if (data && data.ok) break;
-          } catch (e) {
-            console.error('[ReportsPage] Fetch error:', e);
-          }
+        if (!r.ok) {
+          setTrafficData(prev => ({ ...prev, loading: false }));
+          return;
         }
 
+        const data = await r.json().catch(() => null);
         if (data && data.ok && data.traffic) {
           setTrafficData({
             totalViews: data.traffic.totalViews || 0,
@@ -470,12 +409,8 @@ function OrganizerReportsPage() {
             sources: data.traffic.sources || 0,
             loading: false,
           });
-        } else {
-          console.log('[ReportsPage] No traffic data');
-          setTrafficData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching traffic data:', err);
         setTrafficData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -490,31 +425,15 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-        console.log('[ReportsPage] Fetching org traffic for:', selectedOrg.id);
-
         const path = `/api/organization/${selectedOrg.id}/traffic`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let data: any = null;
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
-        for (const u of attempts) {
-          try {
-            console.log('[ReportsPage] Fetching from:', u);
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-
-            const r = await fetch(u, { headers });
-            console.log('[ReportsPage] Response status:', r.status);
-            if (!r.ok) continue;
-            data = await r.json();
-            console.log('[ReportsPage] Org traffic data received:', data);
-            if (data && data.ok) break;
-          } catch (e) {
-            console.error('[ReportsPage] Fetch error:', e);
-          }
+        if (!r.ok) {
+          setOrgTrafficData(prev => ({ ...prev, loading: false }));
+          return;
         }
 
+        const data = await r.json().catch(() => null);
         if (data && data.ok && data.traffic) {
           setOrgTrafficData({
             totalViews: data.traffic.totalViews || 0,
@@ -533,12 +452,8 @@ function OrganizerReportsPage() {
               total: d.views,
             }))
           );
-        } else {
-          console.log('[ReportsPage] No org traffic data');
-          setOrgTrafficData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching org traffic data:', err);
         setOrgTrafficData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -553,31 +468,15 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-        console.log('[ReportsPage] Fetching community for:', selectedOrg.id);
-
         const path = `/api/organization/${selectedOrg.id}/community`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let data: any = null;
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
-        for (const u of attempts) {
-          try {
-            console.log('[ReportsPage] Fetching from:', u);
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-
-            const r = await fetch(u, { headers });
-            console.log('[ReportsPage] Response status:', r.status);
-            if (!r.ok) continue;
-            data = await r.json();
-            console.log('[ReportsPage] Community data received:', data);
-            if (data && data.ok) break;
-          } catch (e) {
-            console.error('[ReportsPage] Fetch error:', e);
-          }
+        if (!r.ok) {
+          setCommunityData(prev => ({ ...prev, loading: false }));
+          return;
         }
 
+        const data = await r.json().catch(() => null);
         if (data && data.ok && data.community) {
           setCommunityData({
             contacts: data.community.contacts || 0,
@@ -596,12 +495,8 @@ function OrganizerReportsPage() {
               email: d.email,
             }))
           );
-        } else {
-          console.log('[ReportsPage] No community data');
-          setCommunityData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching community data:', err);
         setCommunityData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -616,27 +511,15 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-        console.log('[ReportsPage] Fetching behavior for:', selectedOrg.id);
-
         const path = `/api/organization/${selectedOrg.id}/behavior`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let data: any = null;
-
-        for (const u of attempts) {
-          try {
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-            const r = await fetch(u, { headers });
-            if (!r.ok) continue;
-            data = await r.json();
-            if (data && data.ok) break;
-          } catch (e) {
-            console.error('[ReportsPage] Fetch error:', e);
-          }
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
+        
+        if (!r.ok) {
+          setBehaviorData(prev => ({ ...prev, loading: false }));
+          return;
         }
 
+        const data = await r.json().catch(() => null);
         if (data && data.ok && data.behavior) {
           setBehaviorData({
             avgOrderValue: data.behavior.avgOrderValue || '0.00',
@@ -652,7 +535,6 @@ function OrganizerReportsPage() {
           setBehaviorData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching behavior:', err);
         setBehaviorData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -667,26 +549,15 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-
         const path = `/api/organization/${selectedOrg.id}/demographics`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let data: any = null;
-
-        for (const u of attempts) {
-          try {
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-            const r = await fetch(u, { headers });
-            if (!r.ok) continue;
-            data = await r.json();
-            if (data && data.ok) break;
-          } catch (e) {
-            console.error('[ReportsPage] Fetch error:', e);
-          }
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
+        
+        if (!r.ok) {
+          setDemographicsData(prev => ({ ...prev, loading: false }));
+          return;
         }
 
+        const data = await r.json().catch(() => null);
         if (data && data.ok && data.demographics) {
           setDemographicsData({
             contactsCount: data.demographics.contactsCount || 0,
@@ -700,7 +571,6 @@ function OrganizerReportsPage() {
           setDemographicsData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching demographics:', err);
         setDemographicsData(prev => ({ ...prev, loading: false }));
       }
     })();
@@ -715,26 +585,15 @@ function OrganizerReportsPage() {
 
     (async () => {
       try {
-        await ensureApiBase().catch(() => { });
-        const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
-
         const path = `/api/organization/${selectedOrg.id}/music-tastes`;
-        const attempts = [apiUrl(path), `http://localhost:4000${path}`];
-        let data: any = null;
+        const r = await fetchApi(path, { headers: { 'Accept': 'application/json' } });
 
-        for (const u of attempts) {
-          try {
-            const headers: Record<string, string> = { 'Accept': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-            const r = await fetch(u, { headers });
-            if (!r.ok) continue;
-            data = await r.json();
-            if (data && data.ok) break;
-          } catch (e) {
-            console.error('[ReportsPage] Fetch error:', e);
-          }
+        if (!r.ok) {
+          setMusicTastesData(prev => ({ ...prev, loading: false }));
+          return;
         }
 
+        const data = await r.json().catch(() => null);
         if (data && data.ok && data.musicTastes) {
           setMusicTastesData({
             contactsCount: data.musicTastes.contactsCount || 0,
@@ -746,7 +605,6 @@ function OrganizerReportsPage() {
           setMusicTastesData(prev => ({ ...prev, loading: false }));
         }
       } catch (err) {
-        console.error('[ReportsPage] Error fetching music tastes:', err);
         setMusicTastesData(prev => ({ ...prev, loading: false }));
       }
     })();

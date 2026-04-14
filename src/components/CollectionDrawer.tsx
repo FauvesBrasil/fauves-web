@@ -107,11 +107,11 @@ const CollectionDrawer: React.FC<CollectionDrawerProps> = ({
               const upJson = await up.json();
               uploadedUrl = upJson?.url || upJson?.path || uploadedUrl;
             } else {
-              console.warn('[CollectionDrawer] upload falhou, usando preview local');
+              // no-op
               uploadedUrl = bannerPreview;
             }
         } catch (e) {
-          console.warn('[CollectionDrawer] upload erro, fallback preview', e);
+          // no-op
           uploadedUrl = bannerPreview;
         }
       }
@@ -125,8 +125,7 @@ const CollectionDrawer: React.FC<CollectionDrawerProps> = ({
       let json: any = null;
       try { json = await res.json(); } catch(_) {}
       if (!res.ok) {
-        console.error('[CollectionDrawer] create/update failed', { status: res.status, json });
-        setErrorMsg(`Falha ao salvar (HTTP ${res.status}). ${json?.error || json?.message || ''}`.trim());
+        setErrorMsg(`Falha ao salvar (HTTP ${res.status}).`);
         return;
       }
       if (mode === 'create') {
@@ -134,12 +133,11 @@ const CollectionDrawer: React.FC<CollectionDrawerProps> = ({
         const created = json?.id ? json : (json?.collection?.id ? json.collection : null);
         if (created?.id) {
           // Garantir organizerId no objeto para listagem posterior
-            if (!created.organizerId) created.organizerId = orgId;
+          created.organizerId = orgId;
           onSaved(created);
           setSuccessMsg('Coleção criada.');
         } else {
-          console.error('[CollectionDrawer] Unexpected create payload', json);
-          setErrorMsg(`Resposta inesperada do servidor na criação. Payload: ${JSON.stringify(json)}`);
+          setErrorMsg(`Resposta inesperada do servidor.`);
         }
       } else {
         const updated = json?.updated ? (json.collection || json) : null;
@@ -149,7 +147,7 @@ const CollectionDrawer: React.FC<CollectionDrawerProps> = ({
           onSaved(updated);
           setSuccessMsg('Alterações salvas.');
         } else {
-          console.error('[CollectionDrawer] Unexpected update payload', json);
+          // no-op
           setErrorMsg(`Não foi possível atualizar (payload inesperado). Payload: ${JSON.stringify(json)}`);
         }
       }

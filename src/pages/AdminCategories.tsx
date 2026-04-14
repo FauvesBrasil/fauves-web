@@ -39,7 +39,6 @@ export default function AdminCategories() {
       const data = await getCategories(token);
       setCats(data || []);
     } catch (e) {
-      console.error(e);
       toast({ title: 'Erro', description: 'Falha ao carregar categorias', variant: 'destructive' });
     } finally { setLoading(false); }
   }
@@ -60,7 +59,7 @@ export default function AdminCategories() {
       setEditing(null);
       setModalOpen(false);
       toast({ title: 'Salvo', description: 'Categoria salva com sucesso' });
-    } catch (e: any) { console.error(e); toast({ title: 'Erro', description: 'Falha ao salvar categoria', variant: 'destructive' }); }
+    } catch (e: any) { toast({ title: 'Erro', description: 'Falha ao salvar categoria', variant: 'destructive' }); }
   };
 
   const removeCat = async (c: any) => {
@@ -75,7 +74,6 @@ export default function AdminCategories() {
       await load();
       toast({ title: 'Removido', description: 'Categoria desativada' });
     } catch (e) {
-      console.error(e);
       toast({ title: 'Erro', description: 'Erro ao remover', variant: 'destructive' });
     } finally {
       setShowRemoveConfirm(false);

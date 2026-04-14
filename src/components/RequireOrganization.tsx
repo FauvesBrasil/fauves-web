@@ -6,6 +6,7 @@ import OrgLogoUpload from "./OrgLogoUpload";
 import { useAuth } from "@/context/AuthContext";
 import { getDisplayName } from '@/lib/user';
 import { useNavigate } from 'react-router-dom';
+import { fetchApi } from '@/lib/apiBase';
 
 interface RequireOrganizationProps {
   // onCreated may return a Promise (for example parent awaits a refresh) or void
@@ -37,7 +38,6 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
   // Removido: supabase. Usuário agora vem do AuthContext/JWT.
   const handleCreate = async () => {
     setError("");
-    console.log('[RequireOrganization] Clique no botão Criar organização');
     if (userLoading || user === undefined) {
       setError("Aguardando autenticação do usuário...");
       return;
@@ -80,7 +80,7 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
         if (logoFile) {
           const formData = new FormData();
           formData.append('file', logoFile, logoFile.name || 'logo.png');
-          const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+          const uploadRes = await fetchApi('/api/upload', { method: 'POST', body: formData });
           if (!uploadRes.ok) {
             const errText = await uploadRes.text().catch(() => '');
             throw new Error('Erro ao enviar imagem: ' + errText);
@@ -89,26 +89,18 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
           finalLogoUrl = data?.url || '';
         }
 
-        const attempt = async (url: string) => {
-          const r = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: orgName,
-              userId: user.id,
-              userEmail: user.email,
-              userName: getDisplayName(user) || null,
-              logoUrl: finalLogoUrl,
-            }),
-          });
-          return r;
-        };
+        const res = await fetchApi('/api/organization', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: orgName,
+            userId: user.id,
+            userEmail: user.email,
+            userName: getDisplayName(user) || null,
+            logoUrl: finalLogoUrl,
+          }),
+        });
 
-        let res = await attempt('/api/organization');
-        if (!res.ok) {
-          try { res = await attempt('http://localhost:4000/api/organization'); } catch (e) { /* swallow */ }
-        }
-        if (!res) throw new Error('Falha de rede ao criar organização');
         if (!res.ok) {
           // Special handling for 409 Conflict
           if (res.status === 409) {
@@ -128,31 +120,23 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
     // Wait for network + min animation to finish. When network resolves, call onCreated and await its promise as well.
     try {
       const org = await networkPromise;
-      console.log('[RequireOrganization] Organization created successfully:', org?.id);
 
       // call parent's onCreated (may return a promise)
       let parentPromise: Promise<any> | void = undefined;
       try {
         parentPromise = onCreated(org) as any;
-        console.log('[RequireOrganization] onCreated called, waiting for parent...');
       } catch (e) {
-        console.warn('[RequireOrganization] onCreated threw', e);
-        // Don't fail the whole flow if onCreated fails - organization was created successfully
       }
 
       // Wait for both animation minimum and parent refresh (if present)
       if (parentPromise && typeof parentPromise.then === 'function') {
         try {
           await Promise.all([animPromise, parentPromise]);
-          console.log('[RequireOrganization] Both animation and parent promises resolved');
         } catch (e) {
-          console.warn('[RequireOrganization] Parent promise failed, but continuing:', e);
-          // Just wait for animation if parent fails
           await animPromise;
         }
       } else {
         await animPromise;
-        console.log('[RequireOrganization] Animation completed');
       }
 
       // show a final flourish (confetti / lights) for 700ms
@@ -167,12 +151,11 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
       setPhase(0);
       setLoading(false);
 
-      console.log('[RequireOrganization] Closing modal and calling onClose');
       if (onClose) onClose();
       else { try { navigate(-1); } catch (e) { window.history.back(); } }
     } catch (e: any) {
       // network failed — stop animation and show error inside modal
-      console.error('[RequireOrganization] Organization creation failed', e);
+      // no-op
       // clear timers
       timers.forEach(t => clearTimeout(t));
       // play a short exit animation to avoid abrupt removal
@@ -203,7 +186,7 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
           {!fullScreenAnimating && (
             <>
               <span className="text-[18px] font-bold text-[#091747] text-center mb-7 leading-snug" style={{ lineHeight: 1.25 }}>
-                Crie o perfil da sua organização<br />antes de cadastrar seu evento.
+                Crie o perfil da sua organização (V:D6)<br />antes de cadastrar seu evento.
               </span>
               <div className="flex items-center gap-4 w-full justify-center mb-7">
                 <OrgLogoUpload logoUrl={logoUrl} onSelect={handleLogoSelect} />

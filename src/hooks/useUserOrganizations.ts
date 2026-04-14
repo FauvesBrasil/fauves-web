@@ -10,7 +10,6 @@ export function useUserOrganizations(enabled: boolean = true) {
   const fetchOrgs = async () => {
     setLoading(true);
     const userId = user?.id;
-    console.log('[useUserOrganizations] userId usado para buscar organizações:', userId);
     if (!userId) {
       setOrgs([]);
       setLoading(false);
@@ -18,7 +17,7 @@ export function useUserOrganizations(enabled: boolean = true) {
     }
     await ensureApiBase();
     try {
-      const res = await fetchApi(`/api/organization?userId=${userId}`);
+      const res = await fetchApi(`/api/organization/list?userId=${userId}`);
       if (res && res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -30,11 +29,9 @@ export function useUserOrganizations(enabled: boolean = true) {
         }
       } else {
         setOrgs([]);
-        console.warn('[useUserOrganizations] rota /api/organization falhou status', res?.status);
       }
     } catch (e) {
       setOrgs([]);
-      console.warn('[useUserOrganizations] erro ao chamar /api/organization', e);
     }
     setLoading(false);
   };

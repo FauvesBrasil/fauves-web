@@ -182,16 +182,14 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
 
     const loadNotifications = async () => {
       try {
-        const res = await fetch('/api/notifications?limit=5', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetchApi('/api/notifications?limit=5');
         if (res.ok) {
           const data = await res.json();
           setNotifications(data.notifications || []);
           setUnreadCount(data.unreadCount || 0);
         }
       } catch (e) {
-        console.error('Failed to load notifications:', e);
+        // no-op
       }
     };
 
@@ -205,15 +203,14 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
     try {
       if (!token) return;
 
-      await fetch(`/api/notifications/${notifId}/read`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
+      await fetchApi(`/api/notifications/${notifId}/read`, {
+        method: 'PUT'
       });
 
       setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (e) {
-      console.error('Failed to mark notification as read:', e);
+      // no-op
     }
   };
 
@@ -324,7 +321,11 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
                 </div>
               </div>
 
-              <UserDropdown userName={userName} userEmail={userEmail} />
+              <UserDropdown 
+                userName={userName} 
+                userEmail={userEmail} 
+                isOrganizerContext={true} 
+              />
             </div>
           </div>
         </div>

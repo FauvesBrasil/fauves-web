@@ -45,6 +45,7 @@ interface OrganizationContextValue {
   clear: () => void;
   transitioning: boolean;
   fromOrgName: string | null;
+  hasAttemptedRefresh: boolean;
 }
 
 const OrganizationContext = createContext<OrganizationContextValue | undefined>(undefined);
@@ -61,7 +62,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [error, setError] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [fromOrgName, setFromOrgName] = useState<string | null>(null);
-  const userIdRef = useRef<string | null>(null);
+  const [hasAttemptedRefresh, setHasAttemptedRefresh] = useState(false);
+  const userIdRef = useRef<string | null | undefined>(undefined);
   const orgsRef = useRef<Organization[]>(orgs);
   useEffect(() => { orgsRef.current = orgs; }, [orgs]);
 
@@ -93,8 +95,6 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             // capture a minimal stack to help trace caller sites (may be empty in some browsers)
             const err = new Error('org-refresh-trace');
             const stack = err.stack ? err.stack.split('\n').slice(2, 6).join('\n') : '(no-stack)';
-            // eslint-disable-next-line no-console
-            console.debug('[OrganizationContext] refresh() called (dev); recent count=', (window as any).__ORG_REFRESH_CALLS__, '\n', stack);
           } catch (e) {}
           (window as any).__ORG_REFRESH_LAST_LOG__ = Date.now();
         }
@@ -103,151 +103,117 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Avoid multiple concurrent refreshes and rate-limit to 2s
     const now = Date.now();
     const MIN_INTERVAL = 2000;
+    // BUILD_INFO log para confirmar deploy (DEBUG_20260330_2)
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
-    if (now - lastRefreshTsRef.current < MIN_INTERVAL && orgsRef.current && orgsRef.current.length) {
-      // recently refreshed
-      setLoading(false);
-      return Promise.resolve();
-    }
+    
+    // Disable interval-based throttling temporarily to ensure we pick up DB fixes
+    // if (now - lastRefreshTsRef.current < MIN_INTERVAL && orgsRef.current && orgsRef.current.length) { ... }
+    
     const p = (async () => {
       lastRefreshTsRef.current = Date.now();
       refreshingRef.current = true;
       setLoading(true);
       setError(null);
       const prevOrgs = orgsRef.current || [];
+      const uid = user?.id; // keep local reference
+      
       try {
-      // Busca userId do usuário logado via AuthContext
-      const userId = user?.id;
-      if (!userId) {
-        setOrgs([]); setSelectedOrg(null); setLoading(false); return;
-      }
-  let finalList: Organization[] = [];
-      // First try a same-origin quick fetch (relative path). In many deployments
-      // the frontend is served from the same host as the backend and this avoids
-      // a potentially slow or mis-resolved apiBase probe that could point to
-      // localhost or another host unreachable from the client.
-      try {
-        const relStart = Date.now();
-        // include token if available so same-origin endpoints that require
-        // Bearer auth succeed (matches fetchApi behavior)
-        let relHeaders: Record<string,string> = { Accept: 'application/json' };
-        try { const t = window.localStorage.getItem('AUTH_TOKEN_V1'); if (t) relHeaders['Authorization'] = 'Bearer ' + t; } catch {}
-        const relRes = await fetch(`/api/organization?userId=${userId}`, { headers: relHeaders });
-        if (relRes && relRes.ok) {
-          const relData = await relRes.json().catch(() => null);
-          if (relData) {
-            let relList: Organization[] = [];
-            if (Array.isArray(relData)) relList = relData;
-            else if (relData.organizations && Array.isArray(relData.organizations)) relList = relData.organizations;
-            else if (relData.items && Array.isArray(relData.items)) relList = relData.items;
-            else if (relData.organization && Array.isArray(relData.organization)) relList = relData.organization;
-            else if (relData && typeof relData === 'object' && relData.id && !relData.error) relList = [relData];
-            if (relList.length) {
-              finalList = relList;
-              try { window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: finalList })); } catch {}
-              console.debug('[OrganizationContext] loaded orgs via same-origin', { count: finalList.length });
-              setOrgs(finalList);
-              const savedId = localStorage.getItem(LS_KEY);
-              applySelection(finalList, savedId);
-              setLoading(false);
-              return;
+        const userId = uid;
+        if (!userId) {
+          setOrgs([]); setSelectedOrg(null); setLoading(false); return;
+        }
+
+        let finalList: Organization[] = [];
+        
+        // 1. First try: Primary relative path (same-origin). Most reliable in production.
+        try {
+          const relRes = await fetchApi(`/api/organization/list?userId=${userId}`, { headers: { Accept: 'application/json' } });
+          if (relRes && relRes.ok) {
+            const relData = await relRes.json().catch(() => null);
+            if (relData) {
+              let relList: Organization[] = [];
+              if (Array.isArray(relData)) relList = relData;
+              else if (relData.organizations && Array.isArray(relData.organizations)) relList = relData.organizations;
+              else if (relData.items && Array.isArray(relData.items)) relList = relData.items;
+              else if (relData.organization && Array.isArray(relData.organization)) relList = relData.organization;
+              else if (relData && typeof relData === 'object' && relData.id && !relData.error) relList = [relData];
+              
+              if (relList && relList.length > 0) {
+                finalList = relList;
+                try { window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: finalList })); } catch {}
+                setOrgs(finalList);
+                applySelection(finalList, localStorage.getItem(LS_KEY));
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        } catch (e) {
+        }
+
+        // 2. Parallel attempts for legacy or alternative endpoints
+        const attempts = [
+          `/api/organization?userId=${userId}`, // repeat just in case of transient error
+          `/api/organization/user/${userId}`,
+          `/api/organization/equipe?userId=${userId}`,
+        ];
+
+        const promises = attempts.map(async (path) => {
+          const start = Date.now();
+          let duration = 0;
+          try {
+            const res = await fetchApi(path);
+            duration = Date.now() - start;
+            if (!res) return null;
+            if (res.status === 401) return { unauth: true, path } as any;
+            if (!res.ok) return null;
+            const data = await res.json().catch(() => null);
+            if (!data) return null;
+
+            const list = Array.isArray(data) ? data : (data.organizations || data.items || data.organization || (data.id && !data.error ? [data] : []));
+            
+            // handling for /equipe which might return { organizationId: ... }
+            if (data?.organizationId && (!list || list.length === 0)) {
+              return { path, list: [], organizationId: data.organizationId, duration };
+            }
+
+            return list.length ? { path, list, duration } : null;
+          } catch (e) {
+            duration = Date.now() - start;
+            return { path, error: String(e?.message || e), duration } as any;
+          }
+        });
+
+        const settled = await Promise.allSettled(promises);
+        for (const s of settled) {
+          if (s.status === 'fulfilled' && s.value) {
+            const val = s.value;
+            if (val.unauth) {
+              continue;
+            }
+            if (val.list && val.list.length > 0) {
+              finalList = val.list;
+              break;
             }
           }
         }
-      } catch (e) {
-        // ignore and fall back to the parallel candidate attempts below
-        try { console.debug('[OrganizationContext] same-origin fetch error', e); } catch {}
-      }
 
-      // Try several endpoints / response shapes because different deployments
-      // may expose slightly different organization endpoints. Take the first
-      // successful result that yields an array of organizations.
-      const attempts = [
-        `/api/organization?userId=${userId}`,
-        `/api/organizations/by-user?userId=${userId}`,
-        `/api/organization/user/${userId}`,
-        `/api/organization/equipe?userId=${userId}`,
-      ];
-
-      // Fire all attempts in parallel and pick the first successful result that yields organizations.
-      const promises = attempts.map(async (path) => {
-        const start = Date.now();
-        try {
-          const res = await fetchApi(path);
-          const duration = Date.now() - start;
-          if (!res) return null;
-          if (res.status === 401) return { unauth: true } as any;
-          if (!res.ok) return null;
-          const data = await res.json().catch(() => null);
-          if (!data) return null;
-
-          // normalize common shapes
-          let list: Organization[] = [];
-          if (Array.isArray(data)) list = data;
-          else if (data.organizations && Array.isArray(data.organizations)) list = data.organizations;
-          else if (data.items && Array.isArray(data.items)) list = data.items;
-          else if (data.organization && Array.isArray(data.organization)) list = data.organization;
-          else if (data && typeof data === 'object' && data.id && !data.error) list = [data];
-
-          return list.length ? { path, list, duration } : null;
-        } catch (e) {
-          const duration = Date.now() - start;
-          return { path, error: String(e?.message || e), duration } as any;
-        }
-      });
-
-  const settled = await Promise.allSettled(promises);
-  const diag: Array<any> = [];
-      for (const s of settled) {
-        if (s.status === 'fulfilled' && s.value) {
-          diag.push({ ok: true, ...(s.value) });
-        } else if (s.status === 'rejected') {
-          diag.push({ ok: false, error: String((s as any).reason) });
-        } else if (s.status === 'fulfilled' && !s.value) {
-          // handle null results
-          // we cannot know path here, so leave generic
-          diag.push({ ok: false, note: 'no data' });
-        }
-      }
-
-      for (const d of diag) {
-        if (d?.unauth) {
-          // user unauthorized: clear organizations
-          setOrgs([]); setSelectedOrg(null); setLoading(false); return;
-        }
-        if (d?.list && Array.isArray(d.list) && d.list.length) {
-          finalList = d.list;
+        if (finalList.length > 0) {
           try { window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: finalList })); } catch {}
-          console.debug('[OrganizationContext] loaded orgs via candidate', { path: d.path, count: finalList.length });
           setOrgs(finalList);
-          const savedId = localStorage.getItem(LS_KEY);
-          applySelection(finalList, savedId);
-          // orgs loaded; keep silent in production and development
-          break;
-        }
-      }
-
-      // nothing returned
-      if (!finalList.length) {
-        // If we had previously cached orgs locally, keep showing them instead of blanking the UI.
-        if (prevOrgs && prevOrgs.length) {
-          console.warn('[OrganizationContext] refresh failed but previous orgs exist; keeping local cache');
-          setError('Falha ao atualizar organizações — mantendo dados em cache');
+          applySelection(finalList, localStorage.getItem(LS_KEY));
         } else {
-          setOrgs([]);
-          setSelectedOrg(null);
+          if (prevOrgs && prevOrgs.length) {
+          } else {
+            setOrgs([]);
+            setSelectedOrg(null);
+          }
         }
-      }
       } catch (e: any) {
         setError(e?.message || 'Falha ao carregar organizações');
-        if (!prevOrgs || !prevOrgs.length) {
-          setOrgs([]);
-          setSelectedOrg(null);
-        } else {
-          console.warn('[OrganizationContext] refresh threw but preserving previous orgs', e);
-        }
       } finally {
         setLoading(false);
+        setHasAttemptedRefresh(true);
         refreshingRef.current = false;
         refreshPromiseRef.current = null;
       }
@@ -283,32 +249,24 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const addOrganization = useCallback((org: Organization) => {
-    console.log('[OrganizationContext] addOrganization called with:', org?.id, org?.name);
     setOrgs(prev => {
       if (prev.some(o => o.id === org.id)) {
-        console.log('[OrganizationContext] Organization already exists, not adding');
         return prev;
       }
       const next = [...prev, org];
-      console.log('[OrganizationContext] Adding organization, new count:', next.length);
       try { 
         window.localStorage.setItem(ORG_CACHE_KEY, JSON.stringify({ ts: Date.now(), orgs: next })); 
-        console.log('[OrganizationContext] Updated localStorage cache');
       } catch (e) {
-        console.warn('[OrganizationContext] Failed to update cache:', e);
       }
       return next;
     });
     setSelectedOrg(prev => {
       if (prev?.id === org.id) {
-        console.log('[OrganizationContext] Organization already selected');
         return prev;
       }
       try { 
         localStorage.setItem(LS_KEY, org.id); 
-        console.log('[OrganizationContext] Set selected org in localStorage:', org.id);
       } catch (e) {
-        console.warn('[OrganizationContext] Failed to set selected org:', e);
       }
       return org;
     });
@@ -334,13 +292,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // which would cause a refresh -> setOrgs -> effect loop.
     // Only trigger refresh once the auth state is settled to avoid repeated probes while
     // the AuthContext is still initializing (userLoading=true).
-    if (!userLoading) {
-      const uid = user?.id || null;
-      // avoid re-fetching when the user object identity changes but id is the same
-      if (userIdRef.current !== uid) {
-        userIdRef.current = uid;
-        void refresh();
-      }
+    if (!userLoading && user?.id) {
+      void refresh();
     }
     // Atualiza organizações quando usuário muda
     // Não precisa listener do supabase
@@ -353,8 +306,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const value = useMemo<OrganizationContextValue>(() => ({
     orgs, selectedOrg, loading, error, setSelectedOrgById, refresh, addOrganization, clear,
-    transitioning, fromOrgName
-  }), [orgs, selectedOrg, loading, error, setSelectedOrgById, refresh, addOrganization, clear, transitioning, fromOrgName]);
+    transitioning, fromOrgName, hasAttemptedRefresh
+  }), [orgs, selectedOrg, loading, error, setSelectedOrgById, refresh, addOrganization, clear, transitioning, fromOrgName, hasAttemptedRefresh]);
 
   return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
 };

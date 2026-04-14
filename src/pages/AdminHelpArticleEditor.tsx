@@ -43,7 +43,7 @@ export default function AdminHelpArticleEditor() {
             const data = await response.json();
             setCategories(data);
         } catch (error) {
-            console.error('Error loading categories:', error);
+            // no-op
         }
     };
 
@@ -63,7 +63,7 @@ export default function AdminHelpArticleEditor() {
                 order: data.order,
             });
         } catch (error) {
-            console.error('Error loading article:', error);
+            // no-op
             alert('Erro ao carregar artigo');
             navigate('/admin/ajuda/artigos');
         } finally {
@@ -95,7 +95,7 @@ export default function AdminHelpArticleEditor() {
                 alert(error.message || 'Erro ao salvar artigo');
             }
         } catch (error) {
-            console.error('Error saving article:', error);
+            // no-op
             alert('Erro ao salvar artigo');
         } finally {
             setSaving(false);

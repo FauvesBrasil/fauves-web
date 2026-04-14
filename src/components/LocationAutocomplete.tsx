@@ -83,7 +83,7 @@ export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
         setShowDropdown(false);
       }
     } catch (err: any) {
-      console.error("[LocationAutocomplete] Error:", err);
+      // no-op
       setError('Erro ao buscar');
       setSuggestions([]);
       setShowDropdown(false);
@@ -165,7 +165,6 @@ export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
       cleanAddress = result.display_name.split(',').slice(0, 2).join(', ');
     }
 
-    console.log('[LocationAutocomplete] Selected:', { cleanAddress, city, stateUf, stateRaw });
 
     setInputValue(cleanAddress);
     setSuggestions([]);

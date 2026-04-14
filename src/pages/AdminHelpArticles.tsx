@@ -56,7 +56,7 @@ export default function AdminHelpArticles() {
             setArticles(articlesData);
             setCategories(categoriesData);
         } catch (error) {
-            console.error('Error loading data:', error);
+            // no-op
         } finally {
             setLoading(false);
         }
@@ -96,7 +96,7 @@ export default function AdminHelpArticles() {
                 alert(error.message || 'Erro ao deletar artigo');
             }
         } catch (error) {
-            console.error('Error deleting article:', error);
+            // no-op
             alert('Erro ao deletar artigo');
         }
     };
@@ -113,7 +113,7 @@ export default function AdminHelpArticles() {
                 await loadData();
             }
         } catch (error) {
-            console.error('Error toggling published:', error);
+            // no-op
         }
     };
 

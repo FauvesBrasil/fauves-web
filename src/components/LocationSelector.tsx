@@ -70,7 +70,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ mobile = false }) =
         }
 
         // Auto-detect via IP for first-time visitors or when forced
-        console.log('[LocationSelector] Auto-detecting location via IP...');
         const response = await fetch('https://ipapi.co/json/');
 
         if (!response.ok) {
@@ -78,19 +77,16 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ mobile = false }) =
         }
 
         const data = await response.json();
-        console.log('[LocationSelector] IP geolocation data:', data);
 
         // Check if we got a valid Brazilian state
         const detectedUf = data.region_code; // e.g., "SP", "RJ", "CE"
 
         if (detectedUf && locations.some(l => l.sigla === detectedUf)) {
-          console.log(`[LocationSelector] Detected UF: ${detectedUf}`);
           setSelectedLocationState(detectedUf);
           setSelectedUf(detectedUf);
           localStorage.setItem('fauves:selectedUf', detectedUf);
         } else {
           // Fallback to CE if detection failed or returned invalid state
-          console.log('[LocationSelector] Could not detect valid UF, using default CE');
           setSelectedLocationState('CE');
           setSelectedUf('CE');
           localStorage.setItem('fauves:selectedUf', 'CE');
@@ -104,7 +100,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({ mobile = false }) =
         }
       } catch (e) {
         // If auto-detection fails, fallback to default 'CE'
-        console.warn('[LocationSelector] Auto-detection failed, using default CE:', e);
         setSelectedLocationState('CE');
         setSelectedUf('CE');
         localStorage.setItem('fauves:selectedUf', 'CE');

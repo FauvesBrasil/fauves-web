@@ -19,6 +19,8 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import WeekendHighlights from '@/components/WeekendHighlights';
 import TrendingHighlights from '@/components/TrendingHighlights';
 import LeadCapture from '@/components/LeadCapture';
+import { useSEO, WEBSITE_JSON_LD } from '@/hooks/useSEO';
+
 
 // OBS: removido supabase e spinner não utilizados; carregamento é puramente via backend /events
 
@@ -52,6 +54,16 @@ const Index = () => {
 
   // Keep hooks order stable: read location context here so it's not called conditionally later
   const { selectedUf } = useLocation();
+
+  // SEO da home page
+  const locationLabel = selectedUf ? ` em ${selectedUf}` : ' no Brasil';
+  useSEO({
+    title: `Descubra Eventos${locationLabel}`,
+    description: `Encontre shows, festas, festivais e eventos${locationLabel}. Compre ingressos online com segurança na Fauves.`,
+    keywords: `eventos${locationLabel}, shows, festas, baladas, ingressos online, agenda cultural`,
+    jsonLd: WEBSITE_JSON_LD,
+  });
+
 
   function buildErrorMessage(status?: number, detail?: string) {
     const metaEnv = (import.meta as unknown as { env?: Record<string, string | undefined> });
@@ -128,7 +140,7 @@ const Index = () => {
                 }));
               }
             }
-          } catch (e) { console.error('Error fetching slides:', e); }
+          } catch (e) { }
           return slides;
         };
 
@@ -141,7 +153,7 @@ const Index = () => {
                 setCategories(data.filter((c: any) => c.isActive));
               }
             }
-          } catch (e) { console.error('Error fetching categories:', e); }
+          } catch (e) { }
         };
 
         const fetchInitEvents = async () => {
@@ -157,7 +169,7 @@ const Index = () => {
                 setInitialEvents(items);
               }
             }
-          } catch (e) { console.error('Error fetching initial events:', e); }
+          } catch (e) { }
           setLoadingInitialEvents(false);
           return events;
         };
@@ -196,7 +208,6 @@ const Index = () => {
         setLoadingHero(false);
 
       } catch (e) {
-        console.error('Core loading failed:', e);
         setLoadingHero(false);
         setLoadingInitialEvents(false);
       } finally {
