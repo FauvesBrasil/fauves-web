@@ -37,6 +37,9 @@ function Review() {
   const [cardCountry, setCardCountry] = useState<string>('Brasil');
   const [saveCard, setSaveCard] = useState<boolean>(false);
   const [cardBrand, setCardBrand] = useState<string>('');
+  const [installments, setInstallments] = useState<any[]>([]);
+  const [selectedInstallment, setSelectedInstallment] = useState<number>(1);
+  const [loadingInstallments, setLoadingInstallments] = useState<boolean>(false);
   // buyer contact is taken from logged-in `user` when available
 
   // detect simple card brand from digits
@@ -150,12 +153,11 @@ function Review() {
   useEffect(() => {
     // Injeção do Efi Pay JS
     const scriptId = 'cbf92a887e86211ddff99c8f923cd4aa';
-    (window as any).$gn = {validForm:true,processed:false,done:{},ready:function(fn: any){(window as any).$gn.done=fn;}};
+    // Removemos a inicialização manual do $gn que podia estar quebrando o script em produção
     if (!document.getElementById(scriptId)) {
       const s = document.createElement('script');
       s.type = 'text/javascript';
       const v = parseInt(Math.random() * 1000000 + '');
-      // Usa ambiente de produção da CDN se o host for fauves.com.br, senão sandbox
       const isProd = window.location.hostname === 'fauves.com.br' || window.location.hostname === 'app.fauves.com.br';
       const cdnBase = isProd ? 'https://api.efipay.com.br' : 'https://sandbox.gerencianet.com.br';
       s.src = `${cdnBase}/v1/cdn/${scriptId}/${v}`;
@@ -163,10 +165,41 @@ function Review() {
       s.id = scriptId;
       document.getElementsByTagName('head')[0].appendChild(s);
     }
-    return () => {
-      // Limpar script apenas se necessário, o efipay mantém estado em window
-    };
   }, []);
+
+  // Busca de parcelas ao identificar bandeira e valor
+  useEffect(() => {
+    if (paymentMethod === 'card' && cardBrand && cardBrand !== 'unknown' && total > 0) {
+      const fetchInstallments = async () => {
+        setLoadingInstallments(true);
+        try {
+          const gn = (window as any).$gn;
+          if (gn && gn.ready) {
+            gn.ready((checkout: any) => {
+              checkout.getInstallments({
+                brand: cardBrand,
+                total: Math.round(total * 100) // Efí espera em centavos
+              }, (error: any, response: any) => {
+                setLoadingInstallments(false);
+                if (!error) {
+                  setInstallments(response.data.installments || []);
+                } else {
+                  console.error('Error fetching installments:', error);
+                }
+              });
+            });
+          }
+        } catch (e) {
+          setLoadingInstallments(false);
+          console.error('Failed to trigger getInstallments:', e);
+        }
+      };
+      fetchInstallments();
+    } else {
+      setInstallments([]);
+      setSelectedInstallment(1);
+    }
+  }, [cardBrand, total, paymentMethod]);
 
   if (!selection) {
     return <div className="p-8">Nenhuma seleção encontrada. Volte para a página do evento para escolher ingressos.</div>;
@@ -268,7 +301,7 @@ function Review() {
           body: JSON.stringify({
             orderId: json.id,
             payment_token: paymentToken,
-            parcelas: 1, // Atualmente à vista apenas
+            parcelas: selectedInstallment,
             customer: {
               name: body.purchaserName,
               email: body.purchaserEmail,
@@ -419,6 +452,31 @@ function Review() {
                   <Input placeholder="Código de segurança" value={cardCvc} onChange={e => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, cvcMax))} className="w-48 max-md:w-32 h-12 max-md:h-11 rounded-xl max-md:text-sm" inputMode="numeric" maxLength={cvcMax} />
                 </div>
 
+                {/* Parcelamento */}
+                {installments.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Parcelamento</label>
+                    <div className="relative">
+                      <select
+                        value={selectedInstallment}
+                        onChange={(e) => setSelectedInstallment(Number(e.target.value))}
+                        className="w-full h-12 max-md:h-11 rounded-xl border border-gray-200 dark:border-[#1F1F1F] bg-white dark:bg-[#1a1a1a] px-3 max-md:text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        {installments.map((inst) => (
+                          <option key={inst.installment} value={inst.installment}>
+                            {inst.installment}x de {formatPrice(inst.value / 100)} {inst.interest ? `(Total: ${formatPrice(inst.total / 100)})` : 'sem juros'}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
+                    </div>
+                  </div>
+                )}
+
+                {loadingInstallments && (
+                  <div className="text-xs text-indigo-600 animate-pulse ml-1">Buscando opções de parcelamento...</div>
+                )}
+
                 <div>
                   <div className="border border-gray-200 dark:border-[#1F1F1F] rounded-xl p-3 max-md:p-2.5 flex items-center justify-between text-slate-600 dark:text-slate-300 max-md:text-sm h-12 max-md:h-11">{cardCountry} <span className="text-slate-400">▾</span></div>
                 </div>
@@ -454,10 +512,24 @@ function Review() {
                     <div className="font-medium text-green-600 dark:text-green-400">-{formatPrice(discount)}</div>
                   </div>
                 )}
+                {/* Juros do parcelamento */}
+                {paymentMethod === 'card' && installments.find(i => i.installment === selectedInstallment)?.interest && (
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="text-sm max-md:text-xs text-slate-500">Juros de parcelamento</div>
+                    <div className="font-medium text-slate-600">
+                      +{formatPrice((installments.find(i => i.installment === selectedInstallment).total / 100) - total)}
+                    </div>
+                  </div>
+                )}
                 <div className="h-px bg-indigo-200 dark:bg-indigo-800/50 my-2"></div>
                 <div className="flex justify-between items-center">
                   <div className="text-sm max-md:text-xs text-indigo-800 dark:text-indigo-300 font-bold">Total</div>
-                  <div className="font-bold text-xl max-md:text-lg text-indigo-950 dark:text-white">{formatPrice(total)}</div>
+                  <div className="font-bold text-xl max-md:text-lg text-indigo-950 dark:text-white">
+                    {paymentMethod === 'card' && installments.find(i => i.installment === selectedInstallment) 
+                      ? formatPrice(installments.find(i => i.installment === selectedInstallment).total / 100)
+                      : formatPrice(total)
+                    }
+                  </div>
                 </div>
               </div>
             </div>
@@ -504,7 +576,12 @@ function Review() {
           )}
           <div className="flex items-center justify-between">
             <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">Total</div>
-            <div className="font-bold text-lg text-indigo-600 dark:text-indigo-400">{formatPrice(total)}</div>
+            <div className="font-bold text-lg text-indigo-600 dark:text-indigo-400">
+              {paymentMethod === 'card' && installments.find(i => i.installment === selectedInstallment) 
+                ? formatPrice(installments.find(i => i.installment === selectedInstallment).total / 100)
+                : formatPrice(total)
+              }
+            </div>
           </div>
         </div>
         <button
