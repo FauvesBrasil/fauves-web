@@ -94,6 +94,10 @@ function Review() {
   const [loadingInstallments, setLoadingInstallments] = useState<boolean>(false);
   const [installmentTotal, setInstallmentTotal] = useState<number | null>(null);
 
+  // Titular diferente
+  const [isDifferentHolder, setIsDifferentHolder] = useState<boolean>(false);
+  const [holderCPF, setHolderCPF] = useState<string>('');
+
   // Tokenização
   const [tokenizing, setTokenizing] = useState<boolean>(false);
   const efiSdkRef = useRef<any>(null);
@@ -149,13 +153,16 @@ function Review() {
 
   // ── Busca parcelas na Efí ─────────────────────────────────────────────
   const fetchInstallments = useCallback(async (brand: string, totalCents: number) => {
-    if (!brand || !totalCents || !EFI_PAYEE_CODE) return;
+    if (!brand || !totalCents) return;
     const efiBrands = ['visa', 'mastercard', 'amex', 'elo', 'hipercard'];
     const normalizedBrand = efiBrands.includes(brand) ? brand : null;
-    if (!normalizedBrand) return;
 
     setLoadingInstallments(true);
     try {
+      if (!normalizedBrand || !EFI_PAYEE_CODE) {
+        throw new Error('Configuração ou bandeira ausente');
+      }
+
       const sdk = efiSdkRef.current || await loadEfiSdk();
       if (!sdk?.CreditCard) throw new Error('SDK não disponível');
 
@@ -391,7 +398,7 @@ function Review() {
             expirationMonth: expMonth?.padStart(2, '0'),
             expirationYear: expYear?.length === 2 ? `20${expYear}` : expYear,
             holderName: cardHolderName,
-            holderDocument: buyer?.cpf?.replace(/\D/g, '') || '',
+            holderDocument: (isDifferentHolder ? holderCPF : (buyer?.cpf || (user as any)?.cpf || '')).replace(/\D/g, ''),
             reuse: saveCard,
           })
           .getPaymentToken();
@@ -424,7 +431,10 @@ function Review() {
           orderId,
           payment_token: paymentToken,
           parcelas: selectedInstallment,
-          customer: cardCustomer,
+          customer: {
+            ...cardCustomer,
+            cpf: (buyer?.cpf || (user as any)?.cpf || '').replace(/\D/g, ''),
+          },
         }),
       });
       const chargeJson = await chargeRes.json().catch(() => null);
@@ -579,7 +589,7 @@ function Review() {
                   />
                   <Input
                     id="card-cvc"
-                    placeholder={cardBrand === 'amex' ? 'CVV (4 dígitos)' : 'CVV'}
+                    placeholder={cardBrand === 'amex' ? 'CVV (4)' : 'CVV'}
                     value={cardCvc}
                     onChange={e => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, cvcMax))}
                     className="w-40 max-md:w-28 h-12 max-md:h-11 rounded-xl max-md:text-sm"
@@ -588,6 +598,39 @@ function Review() {
                     autoComplete="cc-csc"
                     type="password"
                   />
+                </div>
+
+                {/* Titular Diferente */}
+                <div className="space-y-3 pt-1">
+                  <AnimatedCheckbox
+                    checked={isDifferentHolder}
+                    onCheckedChange={setIsDifferentHolder}
+                    label="O titular do cartão é diferente do comprador"
+                    className="text-sm max-md:text-xs font-medium text-slate-700 dark:text-slate-300"
+                  />
+                  {isDifferentHolder && (
+                    <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="col-span-2 md:col-span-1">
+                        <Input
+                          placeholder="CPF do titular"
+                          value={holderCPF}
+                          onChange={e => {
+                            const d = e.target.value.replace(/\D/g, '').slice(0, 11);
+                            setHolderCPF(d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"));
+                          }}
+                          className="h-11 max-md:h-10 rounded-xl text-sm"
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div className="col-span-2 md:col-span-1">
+                        <Input
+                          placeholder="Nome do titular"
+                          className="h-11 max-md:h-10 rounded-xl text-sm uppercase"
+                          onChange={e => setCardHolderName(e.target.value.toUpperCase())}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Parcelamento */}
