@@ -87,13 +87,6 @@ function Review() {
   const [cardHolderName, setCardHolderName] = useState<string>('');
   const [saveCard, setSaveCard] = useState<boolean>(false);
   const [cardBrand, setCardBrand] = useState<string>('');
-<<<<<<< HEAD
-  const [installments, setInstallments] = useState<any[]>([]);
-  const [selectedInstallment, setSelectedInstallment] = useState<number>(1);
-  const [loadingInstallments, setLoadingInstallments] = useState<boolean>(false);
-  // buyer contact is taken from logged-in `user` when available
-=======
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
 
   // Parcelamento
   const [installments, setInstallments] = useState<InstallmentOption[]>([]);
@@ -279,58 +272,6 @@ function Review() {
     } catch { }
   }, []);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    // Injeção do Efi Pay JS
-    const scriptId = 'cbf92a887e86211ddff99c8f923cd4aa';
-    // Removemos a inicialização manual do $gn que podia estar quebrando o script em produção
-    if (!document.getElementById(scriptId)) {
-      const s = document.createElement('script');
-      s.type = 'text/javascript';
-      const v = parseInt(Math.random() * 1000000 + '');
-      const isProd = window.location.hostname === 'fauves.com.br' || window.location.hostname === 'app.fauves.com.br';
-      const cdnBase = isProd ? 'https://api.efipay.com.br' : 'https://sandbox.gerencianet.com.br';
-      s.src = `${cdnBase}/v1/cdn/${scriptId}/${v}`;
-      s.async = false;
-      s.id = scriptId;
-      document.getElementsByTagName('head')[0].appendChild(s);
-    }
-  }, []);
-
-  // Busca de parcelas ao identificar bandeira e valor
-  useEffect(() => {
-    if (paymentMethod === 'card' && cardBrand && cardBrand !== 'unknown' && total > 0) {
-      const fetchInstallments = async () => {
-        setLoadingInstallments(true);
-        try {
-          const gn = (window as any).$gn;
-          if (gn && gn.ready) {
-            gn.ready((checkout: any) => {
-              checkout.getInstallments({
-                brand: cardBrand,
-                total: Math.round(total * 100) // Efí espera em centavos
-              }, (error: any, response: any) => {
-                setLoadingInstallments(false);
-                if (!error) {
-                  setInstallments(response.data.installments || []);
-                } else {
-                  console.error('Error fetching installments:', error);
-                }
-              });
-            });
-          }
-        } catch (e) {
-          setLoadingInstallments(false);
-          console.error('Failed to trigger getInstallments:', e);
-        }
-      };
-      fetchInstallments();
-    } else {
-      setInstallments([]);
-      setSelectedInstallment(1);
-    }
-  }, [cardBrand, total, paymentMethod]);
-=======
   // ── Helpers ───────────────────────────────────────────────────────────
   const formatPrice = (n: number) => `R$\u00a0${n.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
@@ -342,7 +283,6 @@ function Review() {
       </div>
     );
   }
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
 
   if (!selection) {
     return (
@@ -376,59 +316,15 @@ function Review() {
         return;
       }
 
-<<<<<<< HEAD
-      // Client-side validation for card when selected
-      let paymentToken = '';
-      if (paymentMethod === 'card') {
-        if (!cardNumber || !cardExpiry || !cardCvc) {
-          setError('Por favor preencha os dados do cartão');
-          setSubmitting(false);
-          return;
-        }
-        
-        const [expMonth, expYearFull] = cardExpiry.split('/');
-        const expYear = expYearFull?.length === 2 ? `20${expYearFull}` : expYearFull;
-
-        const cardData = {
-          brand: cardBrand && cardBrand !== 'unknown' ? cardBrand : 'visa',
-          number: cardNumber.replace(/\D/g, ''),
-          cvv: cardCvc,
-          expiration_month: expMonth,
-          expiration_year: expYear
-        };
-
-        try {
-          paymentToken = await new Promise<string>((resolve, reject) => {
-            if (!(window as any).$gn || !(window as any).$gn.ready) {
-              return reject(new Error('Sistema de pagamento inicializando. Tente novamente em instantes.'));
-            }
-            (window as any).$gn.ready(function (checkout: any) {
-              checkout.getPaymentToken(cardData, function (error: any, response: any) {
-                if (error) {
-                  console.error('Efí Card Token Error:', error);
-                  reject(new Error('Cartão inválido ou não suportado. Verifique os números digitados.'));
-                } else {
-                  resolve(response.data.payment_token);
-                }
-              });
-            });
-          });
-        } catch (err: any) {
-          setError(err.message);
-=======
       if (paymentMethod === 'card') {
         if (!cardNumber || !cardExpiry || !cardCvc || !cardHolderName) {
           setError('Preencha todos os dados do cartão');
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
           setSubmitting(false);
           return;
         }
       }
 
-<<<<<<< HEAD
-=======
       // 1. Cria pedido
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
       const body: any = {
         eventId: selection.eventId && selection.eventId !== 'unknown' ? selection.eventId : undefined,
         eventSlug: selection.eventSlug,
@@ -437,12 +333,7 @@ function Review() {
         paymentMethod: paymentMethod === 'pix' ? 'PIX' : 'CARD',
         couponCode: selection.couponCode,
         items: items.map((it: any) => ({ ticketTypeId: it.ticketTypeId, quantity: it.quantity })),
-<<<<<<< HEAD
-        participants: items.flatMap((it: any) => new Array(it.quantity).fill(buyer?.buyerEmail || '')),
-        // NUNCA enviamos dados do cartão cru pro backend no order create
-=======
         participants: items.flatMap((it: any) => new Array(it.quantity).fill(buyer?.buyerEmail || user?.email || '')),
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
       };
 
       const invalidItem = (body.items || []).find((it: any) => !it.ticketTypeId || typeof it.quantity !== 'number' || it.quantity <= 0);
@@ -452,14 +343,6 @@ function Review() {
         return;
       }
 
-<<<<<<< HEAD
-      // Cria a Ordem base pendente no backend
-      const res = await fetchApi('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const json = await res.json().catch(() => null);
-      
-      if (!res.ok || json?.error) {
-        setError(json?.error || `Falha ao criar pedido (HTTP ${res.status})`);
-=======
       const orderRes = await fetchApi('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -469,53 +352,10 @@ function Review() {
 
       if (!orderRes.ok || orderJson?.error) {
         setError(orderJson?.error || `Falha ao criar pedido (HTTP ${orderRes.status})`);
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
         setSubmitting(false);
         return;
       }
 
-<<<<<<< HEAD
-      // Finaliza o pagamento de acordo com o método
-      if (paymentMethod === 'card') {
-        // Envia o token para a API da EfiBank criar a cobrança real
-        const chargeRes = await fetchApi('/api/payments/efi/card/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: json.id,
-            payment_token: paymentToken,
-            parcelas: selectedInstallment,
-            customer: {
-              name: body.purchaserName,
-              email: body.purchaserEmail,
-              cpf: (user as any)?.cpf || '00000000000', // Mock de fallback para CPF se não houver
-              phone: (user as any)?.phone || '11999999999'
-            }
-          })
-        });
-        
-        const chargeJson = await chargeRes.json().catch(() => null);
-        
-        if (!chargeRes.ok || chargeJson?.status === 'failed') {
-          setError(chargeJson?.message || 'Pagamento recusado pela operadora do cartão.');
-          // Se houver fallback do PIX disponibilizado, podemos manter avisado, mas por hora apenas lançamos o erro
-        } else if (chargeJson?.status === 'paid' || chargeJson?.status === 'already_paid') {
-           clearCheckoutSelection();
-           sessionStorage.removeItem('checkoutBuyer:v1');
-           sessionStorage.removeItem('checkoutSessionId');
-           navigate(`/`); // Aqui deve ser direcionado prum Success ou Meus Ingressos
-        } else {
-           setError('Status de transação desconhecido.');
-        }
-      } else {
-         // Fluxo de PIX
-        clearCheckoutSelection();
-        sessionStorage.removeItem('checkoutBuyer:v1');
-        sessionStorage.removeItem('checkoutSessionId');
-        
-        const exp = json.reservationExpiresAt ? `&exp=${encodeURIComponent(json.reservationExpiresAt)}` : '';
-        navigate(`/checkout/pix?orderId=${encodeURIComponent(json.id)}${exp}`);
-=======
       const orderId = orderJson.id;
 
       // ── PIX ──────────────────────────────────────────────────────────
@@ -526,7 +366,6 @@ function Review() {
         const exp = orderJson.reservationExpiresAt ? `&exp=${encodeURIComponent(orderJson.reservationExpiresAt)}` : '';
         navigate(`/checkout/pix?orderId=${encodeURIComponent(orderId)}${exp}`);
         return;
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
       }
 
       // ── CARTÃO ───────────────────────────────────────────────────────
@@ -752,33 +591,6 @@ function Review() {
                 </div>
 
                 {/* Parcelamento */}
-<<<<<<< HEAD
-                {installments.length > 0 && (
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Parcelamento</label>
-                    <div className="relative">
-                      <select
-                        value={selectedInstallment}
-                        onChange={(e) => setSelectedInstallment(Number(e.target.value))}
-                        className="w-full h-12 max-md:h-11 rounded-xl border border-gray-200 dark:border-[#1F1F1F] bg-white dark:bg-[#1a1a1a] px-3 max-md:text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        {installments.map((inst) => (
-                          <option key={inst.installment} value={inst.installment}>
-                            {inst.installment}x de {formatPrice(inst.value / 100)} {inst.interest ? `(Total: ${formatPrice(inst.total / 100)})` : 'sem juros'}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▾</div>
-                    </div>
-                  </div>
-                )}
-
-                {loadingInstallments && (
-                  <div className="text-xs text-indigo-600 animate-pulse ml-1">Buscando opções de parcelamento...</div>
-                )}
-
-=======
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
                 <div>
                   <label className="block text-sm max-md:text-xs text-slate-600 dark:text-slate-400 mb-1.5 font-medium">
                     Parcelas
@@ -848,26 +660,6 @@ function Review() {
                     <div className="font-medium text-green-600 dark:text-green-400">-{formatPrice(discount)}</div>
                   </div>
                 )}
-<<<<<<< HEAD
-                {/* Juros do parcelamento */}
-                {paymentMethod === 'card' && installments.find(i => i.installment === selectedInstallment)?.interest && (
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="text-sm max-md:text-xs text-slate-500">Juros de parcelamento</div>
-                    <div className="font-medium text-slate-600">
-                      +{formatPrice((installments.find(i => i.installment === selectedInstallment).total / 100) - total)}
-                    </div>
-                  </div>
-                )}
-                <div className="h-px bg-indigo-200 dark:bg-indigo-800/50 my-2"></div>
-                <div className="flex justify-between items-center">
-                  <div className="text-sm max-md:text-xs text-indigo-800 dark:text-indigo-300 font-bold">Total</div>
-                  <div className="font-bold text-xl max-md:text-lg text-indigo-950 dark:text-white">
-                    {paymentMethod === 'card' && installments.find(i => i.installment === selectedInstallment) 
-                      ? formatPrice(installments.find(i => i.installment === selectedInstallment).total / 100)
-                      : formatPrice(total)
-                    }
-                  </div>
-=======
                 {paymentMethod === 'card' && selectedOpt && selectedInstallment > 1 && (
                   <div className="flex justify-between items-center">
                     <div className="text-sm text-slate-600 dark:text-slate-400">
@@ -882,7 +674,6 @@ function Review() {
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-indigo-800 dark:text-indigo-300 font-bold">Total</div>
                   <div className="font-bold text-xl max-md:text-lg text-indigo-950 dark:text-white">{formatPrice(totalDisplay)}</div>
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
                 </div>
                 {paymentMethod === 'card' && hasInterest && installmentTotal !== null && (
                   <div className="text-xs text-slate-500 dark:text-slate-400 text-right">
@@ -955,16 +746,7 @@ function Review() {
           )}
           <div className="flex items-center justify-between">
             <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">Total</div>
-<<<<<<< HEAD
-            <div className="font-bold text-lg text-indigo-600 dark:text-indigo-400">
-              {paymentMethod === 'card' && installments.find(i => i.installment === selectedInstallment) 
-                ? formatPrice(installments.find(i => i.installment === selectedInstallment).total / 100)
-                : formatPrice(total)
-              }
-            </div>
-=======
             <div className="font-bold text-lg text-indigo-600 dark:text-indigo-400">{formatPrice(totalDisplay)}</div>
->>>>>>> 87a2826 (feat: implement credit card tokenization and installments in checkout)
           </div>
         </div>
         <button
