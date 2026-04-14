@@ -147,6 +147,27 @@ function Review() {
     } catch (e) { }
   }, []);
 
+  useEffect(() => {
+    // Injeção do Efi Pay JS
+    const scriptId = 'cbf92a887e86211ddff99c8f923cd4aa';
+    (window as any).$gn = {validForm:true,processed:false,done:{},ready:function(fn: any){(window as any).$gn.done=fn;}};
+    if (!document.getElementById(scriptId)) {
+      const s = document.createElement('script');
+      s.type = 'text/javascript';
+      const v = parseInt(Math.random() * 1000000 + '');
+      // Usa ambiente de produção da CDN se o host for fauves.com.br, senão sandbox
+      const isProd = window.location.hostname === 'fauves.com.br' || window.location.hostname === 'app.fauves.com.br';
+      const cdnBase = isProd ? 'https://api.efipay.com.br' : 'https://sandbox.gerencianet.com.br';
+      s.src = `${cdnBase}/v1/cdn/${scriptId}/${v}`;
+      s.async = false;
+      s.id = scriptId;
+      document.getElementsByTagName('head')[0].appendChild(s);
+    }
+    return () => {
+      // Limpar script apenas se necessário, o efipay mantém estado em window
+    };
+  }, []);
+
   if (!selection) {
     return <div className="p-8">Nenhuma seleção encontrada. Volte para a página do evento para escolher ingressos.</div>;
   }
@@ -165,6 +186,50 @@ function Review() {
         setSubmitting(false);
         return;
       }
+
+      // Client-side validation for card when selected
+      let paymentToken = '';
+      if (paymentMethod === 'card') {
+        if (!cardNumber || !cardExpiry || !cardCvc) {
+          setError('Por favor preencha os dados do cartão');
+          setSubmitting(false);
+          return;
+        }
+        
+        const [expMonth, expYearFull] = cardExpiry.split('/');
+        const expYear = expYearFull?.length === 2 ? `20${expYearFull}` : expYearFull;
+
+        const cardData = {
+          brand: cardBrand && cardBrand !== 'unknown' ? cardBrand : 'visa',
+          number: cardNumber.replace(/\D/g, ''),
+          cvv: cardCvc,
+          expiration_month: expMonth,
+          expiration_year: expYear
+        };
+
+        try {
+          paymentToken = await new Promise<string>((resolve, reject) => {
+            if (!(window as any).$gn || !(window as any).$gn.ready) {
+              return reject(new Error('Sistema de pagamento inicializando. Tente novamente em instantes.'));
+            }
+            (window as any).$gn.ready(function (checkout: any) {
+              checkout.getPaymentToken(cardData, function (error: any, response: any) {
+                if (error) {
+                  console.error('Efí Card Token Error:', error);
+                  reject(new Error('Cartão inválido ou não suportado. Verifique os números digitados.'));
+                } else {
+                  resolve(response.data.payment_token);
+                }
+              });
+            });
+          });
+        } catch (err: any) {
+          setError(err.message);
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const body: any = {
         eventId: selection.eventId && selection.eventId !== 'unknown' ? selection.eventId : undefined,
         eventSlug: selection.eventSlug,
@@ -172,53 +237,68 @@ function Review() {
         purchaserEmail: buyer?.buyerEmail || user?.email,
         paymentMethod: paymentMethod === 'pix' ? 'PIX' : 'CARD',
         couponCode: selection.couponCode,
-        // Garante que o ticketTypeId é o real, conforme retornado pelo backend
         items: items.map((it: any) => ({ ticketTypeId: it.ticketTypeId, quantity: it.quantity })),
         participants: items.flatMap((it: any) => new Array(it.quantity).fill(buyer?.buyerEmail || '')),
-        card: paymentMethod === 'card' ? {
-          number: cardNumber,
-          expiry: cardExpiry,
-          cvc: cardCvc,
-          country: cardCountry,
-          save: saveCard,
-        } : undefined,
+        // NUNCA enviamos dados do cartão cru pro backend no order create
       };
 
-      // Client-side validation: ensure every item has a ticketTypeId and positive quantity
       const invalidItem = (body.items || []).find((it: any) => !it.ticketTypeId || typeof it.quantity !== 'number' || it.quantity <= 0);
       if (invalidItem) {
         setError('Seleção inválida: tipo de ingresso ausente ou quantidade inválida. Volte para a página do evento e escolha os ingressos novamente.');
         setSubmitting(false);
         return;
       }
-      // basic client-side validation for card when selected
-      if (paymentMethod === 'card') {
-        if (!cardNumber || !cardExpiry || !cardCvc) {
-          setError('Por favor preencha os dados do cartão');
-          setSubmitting(false);
-          return;
-        }
-      }
-      // no client-side PIX-specific validation here; server will resolve user profile values
+
+      // Cria a Ordem base pendente no backend
       const res = await fetchApi('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const json = await res.json().catch(() => null);
+      
       if (!res.ok || json?.error) {
         setError(json?.error || `Falha ao criar pedido (HTTP ${res.status})`);
+        setSubmitting(false);
+        return;
+      }
+
+      // Finaliza o pagamento de acordo com o método
+      if (paymentMethod === 'card') {
+        // Envia o token para a API da EfiBank criar a cobrança real
+        const chargeRes = await fetchApi('/api/payments/efi/card/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: json.id,
+            payment_token: paymentToken,
+            parcelas: 1, // Atualmente à vista apenas
+            customer: {
+              name: body.purchaserName,
+              email: body.purchaserEmail,
+              cpf: (user as any)?.cpf || '00000000000', // Mock de fallback para CPF se não houver
+              phone: (user as any)?.phone || '11999999999'
+            }
+          })
+        });
+        
+        const chargeJson = await chargeRes.json().catch(() => null);
+        
+        if (!chargeRes.ok || chargeJson?.status === 'failed') {
+          setError(chargeJson?.message || 'Pagamento recusado pela operadora do cartão.');
+          // Se houver fallback do PIX disponibilizado, podemos manter avisado, mas por hora apenas lançamos o erro
+        } else if (chargeJson?.status === 'paid' || chargeJson?.status === 'already_paid') {
+           clearCheckoutSelection();
+           sessionStorage.removeItem('checkoutBuyer:v1');
+           sessionStorage.removeItem('checkoutSessionId');
+           navigate(`/`); // Aqui deve ser direcionado prum Success ou Meus Ingressos
+        } else {
+           setError('Status de transação desconhecido.');
+        }
       } else {
+         // Fluxo de PIX
         clearCheckoutSelection();
         sessionStorage.removeItem('checkoutBuyer:v1');
         sessionStorage.removeItem('checkoutSessionId');
-        if (paymentMethod === 'pix') {
-          // Navigate to the dedicated PIX payment page which will create/check the intent.
-          const exp = json.reservationExpiresAt ? `&exp=${encodeURIComponent(json.reservationExpiresAt)}` : '';
-          navigate(`/checkout/pix?orderId=${encodeURIComponent(json.id)}${exp}`);
-          clearCheckoutSelection();
-          sessionStorage.removeItem('checkoutBuyer:v1');
-          sessionStorage.removeItem('checkoutSessionId');
-        } else {
-          // for card we navigate to a success/receipt page; reuse success state or go to root
-          navigate(`/`);
-        }
+        
+        const exp = json.reservationExpiresAt ? `&exp=${encodeURIComponent(json.reservationExpiresAt)}` : '';
+        navigate(`/checkout/pix?orderId=${encodeURIComponent(json.id)}${exp}`);
       }
     } catch (e: any) { setError(e?.message || 'Falha inesperada'); }
     finally { setSubmitting(false); }
