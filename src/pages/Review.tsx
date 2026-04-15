@@ -343,8 +343,8 @@ function Review() {
       }
 
       if (paymentMethod === 'card') {
-        if (!cardNumber || !cardExpiry || !cardCvc || !cardHolderName) {
-          setError('Preencha todos os dados do cartão');
+        if (!cardNumber || !cardExpiry || !cardCvc || !cardHolderName || !holderCPF) {
+          setError('Preencha todos os dados do cartão e o CPF do titular');
           setSubmitting(false);
           return;
         }
@@ -361,13 +361,6 @@ function Review() {
         items: items.map((it: any) => ({ ticketTypeId: it.ticketTypeId, quantity: it.quantity })),
         participants: items.flatMap((it: any) => new Array(it.quantity).fill(buyer?.buyerEmail || user?.email || '')),
       };
-
-      const invalidItem = (body.items || []).find((it: any) => !it.ticketTypeId || typeof it.quantity !== 'number' || it.quantity <= 0);
-      if (invalidItem) {
-        setError('Seleção inválida: tipo de ingresso ausente ou quantidade inválida. Volte para a página do evento.');
-        setSubmitting(false);
-        return;
-      }
 
       const orderRes = await fetchApi('/api/orders', {
         method: 'POST',
@@ -398,7 +391,16 @@ function Review() {
       // 2. Tokeniza dados do cartão com SDK Efí
       setTokenizing(true);
       let paymentToken: string;
+      const hCPF = holderCPF.replace(/\D/g, '');
+
       try {
+        if (!hCPF || hCPF.length !== 11) {
+          throw new Error('CPF do titular inválido ou incompleto');
+        }
+        if (!cardHolderName || cardHolderName.trim().length < 3) {
+          throw new Error('Informe o nome impresso no cartão');
+        }
+
         const sdk = efiSdkRef.current || await loadEfiSdk();
         if (!sdk?.CreditCard) throw new Error('SDK Efí não carregado');
 
@@ -406,14 +408,6 @@ function Review() {
         const [expMonth, expYear] = cardExpiry.split('/');
         const efiBrands = ['visa', 'mastercard', 'amex', 'elo', 'hipercard'];
         const brand = efiBrands.includes(cardBrand) ? cardBrand : 'visa';
-
-        const hCPF = holderCPF.replace(/\D/g, '');
-        if (!hCPF || hCPF.length !== 11) {
-          throw new Error('CPF do titular inválido ou incompleto');
-        }
-        if (!cardHolderName || cardHolderName.trim().length < 3) {
-          throw new Error('Informe o nome impresso no cartão');
-        }
 
         const tokenResult = await sdk.CreditCard
           .setAccount(EFI_PAYEE_CODE)
@@ -434,9 +428,8 @@ function Review() {
         if (!paymentToken) throw new Error('Token não gerado pela Efí');
       } catch (tokenErr: any) {
         console.error('[Tokenização] erro:', tokenErr);
-        setError(`Erro ao processar dados do cartão: ${tokenErr?.error_description || tokenErr?.message || 'verifique os dados e tente novamente'}`);
-        setSubmitting(false);
-        setTokenizing(false);
+        const msg = tokenErr?.error_description || tokenErr?.message || 'verifique os dados e tente novamente';
+        setError(`Erro ao processar dados do cartão: ${msg}`);
         return;
       } finally {
         setTokenizing(false);
@@ -444,13 +437,14 @@ function Review() {
 
       // 3. Cobra via endpoint dedicado de cartão
       const cardCustomer = {
-        name: body.purchaserName || user?.name || 'Cliente',
+        name: cardHolderName.trim(), // Na Efí de cartão, o customer deve ser o titular
         email: body.purchaserEmail || user?.email || '',
-        cpf: buyer?.cpf?.replace(/\D/g, '') || '',
+        cpf: hCPF,
         phone: buyer?.phone?.replace(/\D/g, '') || '',
         birth: buyer?.birthDate || '',
       };
 
+      console.log('[Pagamento] Iniciando cobrança via API:', { orderId, parcelas: selectedInstallment });
       const chargeRes = await fetchApi('/api/payments/efi/card/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -458,16 +452,12 @@ function Review() {
           orderId,
           payment_token: paymentToken,
           parcelas: selectedInstallment,
-          customer: {
-            ...cardCustomer,
-            cpf: (buyer?.cpf || (user as any)?.cpf || '').replace(/\D/g, ''),
-          },
+          customer: cardCustomer,
         }),
       });
       const chargeJson = await chargeRes.json().catch(() => null);
 
       if (chargeJson?.status === 'paid' || chargeJson?.status === 'already_paid') {
-        // Sucesso!
         clearCheckoutSelection();
         sessionStorage.removeItem('checkoutBuyer:v1');
         sessionStorage.removeItem('checkoutSessionId');
@@ -476,16 +466,15 @@ function Review() {
       }
 
       if (chargeJson?.status === 'failed') {
-        setError(chargeJson.message || 'Cartão recusado. Tente novamente ou use o PIX.');
-        setSubmitting(false);
+        setError(chargeJson.message || 'Cartão recusado. Verifique o limite ou dados digitados.');
         return;
       }
 
-      // Status desconhecido
-      setError(chargeJson?.error || `Falha no pagamento (HTTP ${chargeRes.status}). Tente o PIX.`);
+      setError(chargeJson?.error || `Falha no pagamento (HTTP ${chargeRes.status}). Tente novamente.`);
 
     } catch (e: any) {
-      setError(e?.message || 'Falha inesperada');
+      console.error('[handlePay] Erro inesperado:', e);
+      setError(e?.message || 'Falha inesperada ao processar pagamento');
     } finally {
       setSubmitting(false);
     }
