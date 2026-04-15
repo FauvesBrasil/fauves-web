@@ -482,7 +482,10 @@ function Review() {
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-screen w-screen overflow-y-auto bg-white dark:bg-[#0b0b0b] flex-col">
+    <form 
+      onSubmit={e => { e.preventDefault(); handlePay(); }}
+      className="flex h-screen w-screen overflow-y-auto bg-white dark:bg-[#0b0b0b] flex-col"
+    >
       <CheckoutHeader />
 
       <main className="flex-1 flex items-start justify-center bg-white dark:bg-[#0b0b0b]">
@@ -528,8 +531,7 @@ function Review() {
             {/* ─── Forma de Pagamento ───────────────────────────────────── */}
             <h3 className="text-lg max-md:text-base font-semibold mb-2 text-indigo-950 dark:text-white">Forma de pagamento</h3>
             
-            <form onSubmit={e => { e.preventDefault(); handlePay(); }}>
-              <div className="flex gap-4 max-md:gap-2 mb-4 max-md:mb-3">
+            <div className="flex gap-4 max-md:gap-2 mb-4 max-md:mb-3">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('pix')}
@@ -833,9 +835,8 @@ function Review() {
             <div className="text-[10px] opacity-60 mt-1 font-mono">Dica: Confira o nome e CPF do titular.</div>
           </div>
         )}
-      </form>
       </div>
-    </div>
+    </form>
   );
 }
 
