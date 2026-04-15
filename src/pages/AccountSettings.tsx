@@ -254,7 +254,7 @@ const AccountSettings: React.FC = () => {
                     setUploadError(null);
                     try {
                       const form = new FormData(); form.append('file', file);
-                      const res = await fetch(apiUrl('/api/upload'), { method: 'POST', body: form });
+                      const res = await fetch(apiUrl('/api/upload?folder=avatars'), { method: 'POST', body: form });
                       const d = await res.json();
                       if (d.url) setEditData(p => ({...p, photoUrl: d.url}));
                     } catch { setUploadError('Falha no upload'); }
