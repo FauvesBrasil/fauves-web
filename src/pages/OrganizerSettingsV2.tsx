@@ -1065,7 +1065,7 @@ export default function OrganizerSettingsV2() {
                           <div className="text-xl font-semibold text-slate-900 dark:text-white">Bilheteria Expressa</div>
                           <div className="text-sm text-slate-600 dark:text-slate-300 mt-1">A Bilheteria Express facilita a venda de ingressos na porta do evento.</div>
                           <TextLink
-                            href="https://help.fauves.app/bilheteria-express"
+                            href="https://fauves.com.br/ajuda"
                             target="_blank"
                             rel="noreferrer"
                             className="mt-2 inline-flex items-center gap-1"

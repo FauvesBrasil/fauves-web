@@ -69,7 +69,7 @@ const ExpressDoor: React.FC = () => {
   const goToTickets = (eventId: string) => navigate(`/select-tickets/${eventId}`);
 
   const handleHelp = () => {
-    window.open('https://help.fauves.app', '_blank');
+    window.open('https://fauves.com.br/ajuda', '_blank');
   };
 
   const handleShare = async () => {
