@@ -94,23 +94,21 @@ const ExpressDoor: React.FC = () => {
 
       <main className="relative mx-auto max-w-2xl px-6 py-8 pb-24">
         {/* Header Section */}
-        <div className="mb-8 space-y-2 text-center sm:text-left">
+        <div className="mb-10 space-y-2 text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-400 ring-1 ring-inset ring-indigo-500/20">
             <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
-            Bilheteria Express
+            Venda Rapida na Porta
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-            {org?.name || 'Carregando...'}
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+            {org?.name || 'Bilheteria'}
           </h1>
-          <p className="text-zinc-400 text-sm sm:text-base max-w-md">
-            Escolha seu evento e finalize sua compra na porta em poucos segundos.
-          </p>
+          <p className="text-zinc-500 text-sm italic">Selecione o evento para continuar</p>
         </div>
 
         {loading && (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="h-12 w-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-            <p className="text-sm font-medium text-zinc-500">Buscando eventos disponiveis...</p>
+            <div className="h-12 w-12 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+            <p className="text-sm font-medium text-zinc-500">Buscando eventos...</p>
           </div>
         )}
 
@@ -122,75 +120,61 @@ const ExpressDoor: React.FC = () => {
           </div>
         )}
 
-        {!loading && !error && primaryEvent && (
-          <div className="group relative overflow-hidden rounded-[2.5rem] bg-zinc-900 shadow-2xl transition-all hover:shadow-indigo-500/10 hover:ring-1 hover:ring-white/10">
-            {/* Event Image with Aspect Ratio */}
-            <div className="relative aspect-video w-full overflow-hidden">
-              <img 
-                src={primaryEvent.image || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1470&auto=format&fit=crop"} 
-                alt={primaryEvent.name}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
-              
-              {/* Event Badge */}
-              <div className="absolute left-6 top-6">
-                <span className="rounded-xl bg-black/40 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-md border border-white/10">
-                  Evento Agora
-                </span>
-              </div>
-            </div>
-
-            {/* Event Info Card Content */}
-            <div className="relative -mt-12 p-6 pt-0 sm:p-8 sm:pt-0">
-              <div className="rounded-3xl border border-white/5 bg-zinc-900/80 p-6 shadow-xl backdrop-blur-2xl">
-                <h2 className="text-2xl font-bold text-white mb-4 line-clamp-2">
-                  {primaryEvent.name}
-                </h2>
-                
-                <div className="space-y-3 mb-8">
-                  <div className="flex items-center gap-3 text-zinc-400">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5">
-                      <Calendar className="h-4 w-4 text-indigo-400" />
-                    </div>
-                    <span className="text-sm font-medium">
-                      {new Date(primaryEvent.startDate || primaryEvent.startDateUtc || '').toLocaleString('pt-BR', { 
-                        day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' 
-                      })}
-                    </span>
+        {!loading && !error && events.length > 0 && (
+          <div className="grid grid-cols-1 gap-6">
+            {events.map((event) => (
+              <div 
+                key={event.id}
+                className="group relative overflow-hidden rounded-3xl bg-zinc-900/50 border border-white/5 shadow-xl transition-all hover:bg-zinc-900 hover:ring-1 hover:ring-indigo-500/50"
+              >
+                <div className="flex flex-col sm:flex-row">
+                  {/* Thumbnail Image */}
+                  <div className="relative h-48 w-full shrink-0 sm:h-auto sm:w-44">
+                    <img 
+                      src={event.image || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1470&auto=format&fit=crop"} 
+                      alt={event.name}
+                      className="h-full w-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent sm:bg-gradient-to-r" />
                   </div>
-                  <div className="flex items-center gap-3 text-zinc-400">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5">
-                      <Navigation className="h-4 w-4 text-indigo-400" />
+
+                  {/* Content */}
+                  <div className="flex flex-1 flex-col justify-between p-6">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-indigo-400">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(event.startDate || event.startDateUtc || '').toLocaleString('pt-BR', { 
+                          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' 
+                        })}
+                      </div>
+                      <h2 className="text-xl font-bold text-white leading-tight group-hover:text-indigo-300 transition-colors">
+                        {event.name}
+                      </h2>
+                      {event.location && (
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                          <Navigation className="h-3 w-3" />
+                          <span className="truncate">{event.location}</span>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-sm font-medium truncate">
-                      {primaryEvent.location || 'Local a definir'}
-                    </span>
+
+                    <div className="mt-6">
+                      <Button 
+                        onClick={() => goToTickets(event.id)} 
+                        className="h-12 w-full rounded-2xl bg-white text-sm font-bold text-black hover:bg-zinc-200 active:scale-[0.98] transition-all"
+                      >
+                        COMPRAR INGRESSOS
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Button 
-                    onClick={() => goToTickets(primaryEvent.id)} 
-                    className="h-14 rounded-2xl bg-white text-lg font-bold text-black hover:bg-zinc-200 active:scale-95 transition-all w-full"
-                  >
-                    Comprar Agora
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate(`/org/${slug}`)} 
-                    className="h-14 rounded-2xl border-zinc-800 bg-transparent text-lg font-bold text-white hover:bg-white/5 active:scale-95 transition-all w-full"
-                  >
-                    Ver Programacao
-                  </Button>
-                </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
 
-        {!loading && !error && !primaryEvent && (
+        {!loading && !error && events.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-900 border border-white/5">
               <Ticket className="h-10 w-10 text-zinc-700" />
@@ -199,22 +183,10 @@ const ExpressDoor: React.FC = () => {
               <p className="text-lg font-bold text-white">Nenhum evento disponivel</p>
               <p className="text-zinc-500 text-sm">Nao encontramos ingressos para venda rapida no momento.</p>
             </div>
-            <Button variant="link" onClick={() => navigate(`/org/${slug}`)} className="text-indigo-400">Ver pagina do produtor</Button>
+            <Button variant="link" onClick={() => navigate(`/org/${slug}`)} className="text-indigo-400 font-bold mt-4">Página do produtor</Button>
           </div>
         )}
       </main>
-
-      {/* Floating Bottom Navigation (Optionally for mobile fixed actions) */}
-      {!loading && !error && primaryEvent && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 sm:hidden">
-          <Button 
-            onClick={() => goToTickets(primaryEvent.id)}
-            className="h-14 w-[calc(100vw-3rem)] rounded-full bg-indigo-600 px-8 text-lg font-extrabold text-white shadow-2xl shadow-indigo-600/40 ring-4 ring-indigo-600/20 active:scale-95 transition-all"
-          >
-            GARANTIR INGRESSO
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
