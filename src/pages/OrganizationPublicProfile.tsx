@@ -37,6 +37,7 @@ const OrganizationPublicProfile: React.FC = () => {
   const [followLoading, setFollowLoading] = React.useState(false);
   const [followersList, setFollowersList] = React.useState<any[]>([]);
   const [showFollowersModal, setShowFollowersModal] = React.useState(false);
+  const [pastArtists, setPastArtists] = React.useState<any[]>([]);
   const { toast } = useToast();
 
   // SEO dinâmico: atualiza title/OG quando org carregar
@@ -109,11 +110,28 @@ const OrganizationPublicProfile: React.FC = () => {
         } catch (e) {
         }
 
+        // Carregar evento em destaque (definido pelo usuario ou fallback para o proximo)
         try {
-          const featRes = await fetch(apiUrl(`/api/organization/${data.id}/events/next`));
-          if (featRes.ok) {
+          let featRes;
+          if (data.featuredEventId) {
+            featRes = await fetch(apiUrl(`/api/event/${data.featuredEventId}`));
+          } else {
+            featRes = await fetch(apiUrl(`/api/organization/${data.id}/events/next`));
+          }
+          
+          if (featRes && featRes.ok) {
             const feat = await featRes.json();
             if (mounted && feat?.id) setFeaturedEvent(feat);
+          }
+        } catch (e) {
+        }
+
+        // Buscar artistas que "já passaram por aqui"
+        try {
+          const artRes = await fetch(apiUrl(`/api/organization/${data.id}/artists`));
+          if (artRes.ok) {
+            const art = await artRes.json();
+            if (mounted) setPastArtists(art || []);
           }
         } catch (e) {
         }
@@ -439,15 +457,13 @@ const OrganizationPublicProfile: React.FC = () => {
                 </TabsTrigger>
               )}
 
-              {org.artistsMode && (
                 <TabsTrigger 
                   value="artists" 
                   className="rounded-full px-7 md:px-10 h-full gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white font-black uppercase text-[9px] md:text-[11px] tracking-widest transition-all"
                 >
                   <Music className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  Lineup
+                  Já passaram aqui
                 </TabsTrigger>
-              )}
             </TabsList>
           </div>
 
@@ -513,9 +529,15 @@ const OrganizationPublicProfile: React.FC = () => {
               <div className="max-w-2xl">
                 <h3 className="text-2xl font-black mb-6 opacity-80">Sobre</h3>
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-base font-medium opacity-90 whitespace-pre-line">
-                  {org.description || "Nenhuma descrição disponível ainda."}
+                  {org.description || org.bio || "Nenhuma descrição disponível ainda."}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 pt-6 border-t border-gray-100 dark:border-white/5">
+                  {org.contactEmail && org.showContactEmail && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 text-orange-500" />
+                      <span className="font-bold text-sm opacity-70">{org.contactEmail}</span>
+                    </div>
+                  )}
                   {org.site && (
                     <a href={org.site} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group/link">
                       <Globe className="w-5 h-5 text-blue-500" />
@@ -531,6 +553,35 @@ const OrganizationPublicProfile: React.FC = () => {
                 </div>
               </div>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="artists" className="outline-none">
+            <div className="space-y-12">
+              <h2 className="text-lg font-bold mb-8 pl-1 uppercase tracking-widest opacity-40">Já passaram por aqui</h2>
+              {pastArtists.length === 0 ? (
+                <Card className="p-16 text-center rounded-[2rem] border-2 border-dashed border-gray-200 dark:border-zinc-800 bg-transparent">
+                  <div className="text-5xl mb-4 opacity-10">🎤</div>
+                  <h3 className="text-xl font-black mb-2 opacity-60">Nenhum artista registrado ainda</h3>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                  {pastArtists.map((artist) => (
+                    <Link key={artist.id} to={`/artista/${artist.slug || artist.id}`} className="group">
+                      <div className="relative aspect-square overflow-hidden rounded-full mb-4 border-2 border-transparent group-hover:border-orange-500 transition-all shadow-lg">
+                        <img 
+                          src={artist.image || 'https://via.placeholder.com/300?text=Artista'} 
+                          alt={artist.name} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                        />
+                      </div>
+                      <h4 className="text-center font-black text-sm uppercase tracking-wider group-hover:text-orange-500 transition-colors">
+                        {artist.name}
+                      </h4>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </main >

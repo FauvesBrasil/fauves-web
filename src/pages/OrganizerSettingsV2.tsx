@@ -426,14 +426,16 @@ export default function OrganizerSettingsV2() {
     if (!selectedOrg?.id || !selectedEventId) return;
     setSavingFeatured(true);
     try {
-      const r = await fetchApi(`/api/organization/${selectedOrg.id}/featured-event`, {
-        method: 'PUT',
+      const r = await fetchApi(`/api/organization/${selectedOrg.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId: selectedEventId }),
+        body: JSON.stringify({ featuredEventId: selectedEventId }),
       });
       if (!r.ok) throw new Error(await r.text());
       toast({ title: 'Sucesso', description: 'Evento destacado na sua pagina.' });
       setOpenFeatured(false);
+      // Refresh local state
+      setTimeout(() => window.location.reload(), 500);
     } catch {
       try { localStorage.setItem(`ORG_FEATURED_EVENT_${selectedOrg.id}`, selectedEventId); } catch { }
       toast({ title: 'Evento destacado', description: 'Salvo localmente. Quando a API estiver disponivel, sincronizaremos.' });
@@ -481,14 +483,19 @@ export default function OrganizerSettingsV2() {
 
   const saveAbout = async () => {
     if (!selectedOrg) return;
-    const payload = { bio: miniBio.slice(0, 140), description: aboutDesc, tags: aboutTags } as any;
+    const payload = { 
+      bio: miniBio.slice(0, 140), 
+      description: aboutDesc, 
+      tags: JSON.stringify(aboutTags) 
+    } as any;
     try {
       const r = await fetchApi(`/api/organization/${selectedOrg.id}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       if (!r.ok) throw new Error(await r.text());
       toast({ title: 'Salvo', description: 'Informacoes atualizadas.' });
       setAboutOpen(false);
+      setTimeout(() => window.location.reload(), 500);
     } catch {
       try { localStorage.setItem(`ORG_ABOUT_${selectedOrg.id}`, JSON.stringify(payload)); } catch { }
       toast({ title: 'Salvo localmente', description: 'Sincronizaremos quando a API estiver disponivel.' });
@@ -529,10 +536,11 @@ export default function OrganizerSettingsV2() {
       let finalCover = (selectedOrg as any).coverUrl || '';
       if (logoFile) finalLogo = await uploadOne(logoFile);
       if (coverFile) finalCover = await uploadOne(coverFile);
-      const r = await fetchApi(`/api/organization/${selectedOrg.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logoUrl: finalLogo || null, coverUrl: finalCover || null }) });
+      const r = await fetchApi(`/api/organization/${selectedOrg.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logoUrl: finalLogo || null, coverUrl: finalCover || null }) });
       if (!r.ok) throw new Error(await r.text());
       toast({ title: 'Salvo', description: 'Logo e capa atualizados.' });
       setVisualsOpen(false);
+      setTimeout(() => window.location.reload(), 500);
     } catch {
       try { localStorage.setItem(`ORG_VISUALS_${selectedOrg.id}`, JSON.stringify({ logoUrl: logoPreview, coverUrl: coverPreview })); } catch { }
       toast({ title: 'Salvo localmente', description: 'Sincronizaremos quando a API estiver disponivel.' });
@@ -578,9 +586,10 @@ export default function OrganizerSettingsV2() {
     if (!selectedOrg) return; setSavingLinks(true);
     try {
       const payload: any = { site, instagram, tiktok, youtube, facebook, x, telegram, whatsapp, messenger, discord, spotify, soundcloud, instagramChannel };
-      const r = await fetchApi(`/api/organization/${selectedOrg.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const r = await fetchApi(`/api/organization/${selectedOrg.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!r.ok) throw new Error(await r.text());
       toast({ title: 'Salvo', description: 'Links atualizados.' }); setLinksOpen(false);
+      setTimeout(() => window.location.reload(), 500);
     } catch {
       try { localStorage.setItem(`ORG_LINKS_${selectedOrg.id}`, JSON.stringify({ site, instagram, tiktok, youtube, facebook, x, telegram, whatsapp, messenger, discord, spotify, soundcloud, instagramChannel })); } catch { }
       toast({ title: 'Salvo localmente', description: 'Sincronizaremos quando a API estiver disponivel.' }); setLinksOpen(false);
@@ -604,9 +613,10 @@ export default function OrganizerSettingsV2() {
     if (!selectedOrg) return; setSavingGeneral(true);
     try {
       const payload: any = { contactEmail, showContactEmail, locationText };
-      const r = await fetchApi(`/api/organization/${selectedOrg.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const r = await fetchApi(`/api/organization/${selectedOrg.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!r.ok) throw new Error(await r.text());
       toast({ title: 'Salvo', description: 'Informacoes atualizadas.' }); setGeneralOpen(false);
+      setTimeout(() => window.location.reload(), 500);
     } catch {
       try { localStorage.setItem(`ORG_GENERAL_${selectedOrg.id}`, JSON.stringify({ contactEmail, showContactEmail, locationText })); } catch { }
       toast({ title: 'Salvo localmente', description: 'Sincronizaremos quando a API estiver disponivel.' }); setGeneralOpen(false);
