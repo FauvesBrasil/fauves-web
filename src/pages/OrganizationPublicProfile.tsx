@@ -58,22 +58,26 @@ const OrganizationPublicProfile: React.FC = () => {
       try {
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
         const endpoint = !isUUID
-          ? apiUrl(`/api/organization/slug/${encodeURIComponent(slug)}`)
+          ? apiUrl(`/api/organization/slug/${encodeURIComponent(slug.toLowerCase())}`)
           : apiUrl(`/api/organization/${encodeURIComponent(slug)}`);
 
+        console.log(`[OrgPublicProfile] Loading from: ${endpoint}`);
         let res = await fetch(endpoint);
 
         if (!res.ok && !isUUID && res.status === 404) {
+          console.log(`[OrgPublicProfile] Slug not found, trying ID fallback...`);
           res = await fetch(apiUrl(`/api/organization/${encodeURIComponent(slug)}`));
         }
 
         if (!mounted) return;
         if (!res.ok) {
+          console.error(`[OrgPublicProfile] Fetch failed: ${res.status}`);
           setError(`Erro HTTP ${res.status}`);
           setLoading(false);
           return;
         }
         const data = await res.json();
+        console.log(`[OrgPublicProfile] Loaded data for: ${data.name}`);
         if (!data || !data.id) {
           setError('Organização não encontrada');
           setOrg(null);
