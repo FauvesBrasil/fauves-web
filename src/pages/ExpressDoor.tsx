@@ -68,6 +68,30 @@ const ExpressDoor: React.FC = () => {
 
   const goToTickets = (eventId: string) => navigate(`/select-tickets/${eventId}`);
 
+  const handleHelp = () => {
+    window.open('https://help.fauves.app', '_blank');
+  };
+
+  const handleShare = async () => {
+    const url = window.location.origin + `/venues/${slug}/door`;
+    const shareData = {
+      title: `Bilheteria Express - ${org?.name || 'Fauves'}`,
+      text: `Compre ingressos rapidamente para os eventos de ${org?.name || 'Fauves'}`,
+      url: url,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        alert('Link copiado para a area de transferencia!');
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
   return (
     <div className="relative min-h-screen w-full bg-[#0a0a0c] text-white selection:bg-indigo-500/30">
       {/* Background Orbs */}
@@ -82,10 +106,18 @@ const ExpressDoor: React.FC = () => {
             <LogoFauves width={100} variant="white" />
           </button>
           <div className="flex items-center gap-3">
-            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 hover:bg-white/10" title="Ajuda">
+            <button 
+              onClick={handleHelp}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 active:scale-90 transition-all" 
+              title="Ajuda"
+            >
               <HelpCircle className="h-5 w-5 text-zinc-400" />
             </button>
-            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 hover:bg-white/10" title="Compartilhar">
+            <button 
+              onClick={handleShare}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 hover:bg-white/10 active:scale-90 transition-all" 
+              title="Compartilhar"
+            >
               <Share2 className="h-5 w-5 text-zinc-400" />
             </button>
           </div>

@@ -5,7 +5,7 @@ import { fetchApi, resolveImageUrl } from '../lib/apiBase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { MapPin, ExternalLink, Share2, Tag, Plus, Minus, Ticket, Map, X } from 'lucide-react';
+import { MapPin, ExternalLink, Share2, Tag, Plus, Minus, Ticket, Map, X, ChevronLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CheckoutHeader from '@/components/CheckoutHeader';
 import LoadingOverlay from '@/components/LoadingOverlay';
@@ -496,7 +496,18 @@ const SelectTickets: React.FC = () => {
 
       {/* Main content */}
       <div className="w-full max-w-5xl mt-10 max-md:mt-4 px-8 max-md:px-4 mx-auto">
-        <h1 className={`text-3xl max-md:text-2xl font-bold text-[#091747] dark:text-white mb-6 max-md:mb-4 max-md:hidden ${!event.map ? 'max-w-2xl mx-auto' : ''}`}>Selecione seu ingresso</h1>
+        <div className="flex flex-col gap-2 mb-6 max-md:mb-4">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 transition-colors w-fit group"
+          >
+            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+            Voltar
+          </button>
+          <h1 className={`text-3xl max-md:text-2xl font-bold text-[#091747] dark:text-white max-md:hidden ${!event.map ? 'max-w-2xl mx-auto' : ''}`}>
+            Selecione seu ingresso
+          </h1>
+        </div>
 
         {/* Event info bar - Desktop only */}
         <div className={`bg-white dark:bg-[#242424] rounded-xl border border-gray-200 dark:border-[#1F1F1F] p-4 max-md:p-3 mb-6 max-md:mb-4 flex items-center gap-4 max-md:gap-3 max-md:hidden ${!event.map ? 'max-w-2xl mx-auto' : ''}`}>
