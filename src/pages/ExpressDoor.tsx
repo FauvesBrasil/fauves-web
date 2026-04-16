@@ -79,7 +79,7 @@ const ExpressDoor: React.FC = () => {
       <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <button onClick={() => navigate('/')} className="transition-transform active:scale-95">
-            <LogoFauves width={100} />
+            <LogoFauves width={100} variant="white" />
           </button>
           <div className="flex items-center gap-3">
             <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 hover:bg-white/10" title="Ajuda">
