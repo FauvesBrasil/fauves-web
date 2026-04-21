@@ -217,11 +217,12 @@ export default function OrganizerFinances() {
     return e.published === true;
   };
 
-  const activeCount = events.filter(isActive).length;
-  const inactiveCount = events.length - activeCount;
+  const activeCount = (events || []).filter(isActive).length;
+  const inactiveCount = (events || []).length - activeCount;
 
-  const filtered = events.filter(e => (filter === 'active' ? isActive(e) : !isActive(e)))
-    .filter(e => !search.trim() || e.name.toLowerCase().includes(search.trim().toLowerCase()));
+  const filtered = (events || [])
+    .filter(e => (filter === 'active' ? isActive(e) : !isActive(e)))
+    .filter(e => !search.trim() || (e.name || '').toLowerCase().includes(search.trim().toLowerCase()));
 
   return (
     <OrganizerLayout>
@@ -276,7 +277,7 @@ export default function OrganizerFinances() {
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-500 max-sm:text-2xl">
-                  {events.reduce((sum, ev) => sum + (ev.availableBalance || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  {(events || []).reduce((sum, ev) => sum + (ev.availableBalance || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </div>
                 <div className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-2 flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -299,7 +300,7 @@ export default function OrganizerFinances() {
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-slate-900 dark:text-white max-sm:text-2xl">
-                  {events.reduce((sum, ev) => sum + (ev.grossRevenue || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  {(events || []).reduce((sum, ev) => sum + (ev.grossRevenue || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </div>
                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">Vendas brutas</div>
               </div>
@@ -317,7 +318,7 @@ export default function OrganizerFinances() {
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-blue-600 dark:text-blue-500 max-sm:text-2xl">
-                  {events.reduce((sum, ev) => sum + (ev.totalWithdrawn || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  {(events || []).reduce((sum, ev) => sum + (ev.totalWithdrawn || 0), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </div>
                 <div className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-2 flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

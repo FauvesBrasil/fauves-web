@@ -49,6 +49,124 @@ function formatDateTime(value?: string | null): string {
 }
 
 
+
+// ---------------- Widget Builder ----------------
+const WidgetBuilder: React.FC<{ org: any; events: Array<{ id: string; name: string; startDate?: string }>; eventsLoading: boolean; onEnsureEvents: () => void }>
+  = ({ org, events, eventsLoading, onEnsureEvents }) => {
+    const [view, setView] = React.useState<'page' | 'event' | 'list'>('page');
+    const [theme, setTheme] = React.useState<'dark' | 'light'>('dark');
+    const [transparent, setTransparent] = React.useState(false);
+    const [showDetails, setShowDetails] = React.useState(false);
+    const [selectedEventId, setSelectedEventId] = React.useState('');
+    const [copyMsg, setCopyMsg] = React.useState<string>('');
+
+    React.useEffect(() => { if (view === 'event' && events.length === 0 && !eventsLoading) onEnsureEvents(); }, [view, events.length, eventsLoading, onEnsureEvents]);
+
+    const origin = (typeof window !== 'undefined' ? window.location.origin : '');
+    const orgPath = org?.slug || org?.id || '';
+
+    const codePage = `\n<iframe src="${origin}/org/${orgPath}?embedded=1&ui=${theme}${transparent ? '&transparent=1' : ''}${showDetails ? '&details=1' : ''}" allow="payment" style="width:100%; height:800px; max-height:calc(100vh - 200px); border:0;"></iframe>\n<script src="${origin}/widget.js"></script>`;
+
+    const codeEvent = `\n<iframe src="${origin}/event/${selectedEventId || 'EVENT_ID'}?embedded=1&ui=${theme}${transparent ? '&transparent=1' : ''}" allow="payment" style="width:100%; height:800px; max-height:calc(100vh - 200px); border:0;"></iframe>\n<script src="${origin}/widget.js"></script>`;
+
+    const codeList = `\n<script>window.__fauves={"events-listing":{"organizerId":"${org?.id || ''}", "layout":"shotgun", "showEventTags":true}};</script>\n<style> body #fauves-events-listing {--shotgun - muted:#f4f4f5; --shotgun-accent:#f4f4f5; --shotgun-accent-foreground:#ff765f; --shotgun-border:#e4e4e7; --shotgun-foreground:#09090b; } </style>\n<section id="fauves-events-listing" />\n<script src="${origin}/events-listing.js"></script>`;
+
+    const code = view === 'page' ? codePage : view === 'event' ? codeEvent : codeList;
+
+    const copy = async () => {
+      try { await navigator.clipboard.writeText(code); setCopyMsg('Copiado!'); setTimeout(() => setCopyMsg(''), 1500); } catch { setCopyMsg('Falhou'); setTimeout(() => setCopyMsg(''), 1500); }
+    };
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          {/* inner tabs */}
+          <div className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-1 mb-4">
+            <button className={`px-3 py-1.5 rounded-md text-sm ${view === 'page' ? 'bg-indigo-600 text-white' : 'text-slate-700 dark:text-slate-200'}`} onClick={() => setView('page')}>Minha pagina</button>
+            <button className={`px-3 py-1.5 rounded-md text-sm ${view === 'event' ? 'bg-indigo-600 text-white' : 'text-slate-700 dark:text-slate-200'}`} onClick={() => setView('event')}>Evento</button>
+            <button className={`px-3 py-1.5 rounded-md text-sm ${view === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-700 dark:text-slate-200'}`} onClick={() => setView('list')}>Lista de Eventos</button>
+          </div>
+
+          {/* controls */}
+          {view !== 'event' ? (
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Tema</div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <label className="flex items-center gap-1"><input type="radio" name="wtheme" checked={theme === 'dark'} onChange={() => setTheme('dark')} /> Escuro</label>
+                  <label className="flex items-center gap-1"><input type="radio" name="wtheme" checked={theme === 'light'} onChange={() => setTheme('light')} /> Claro</label>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Fundo transparente</div>
+                </div>
+                <AnimatedCheckbox
+                  checked={transparent}
+                  onCheckedChange={setTransparent}
+                  label=""
+                />
+              </div>
+              {view === 'page' && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Mostrar detalhes da pagina</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Botao de seguir, capa, logo, descricoes, redes sociais, etc.</div>
+                  </div>
+                  <input type="checkbox" checked={showDetails} onChange={e => setShowDetails(e.target.checked)} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-5 space-y-4">
+              <div>
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Selecionar evento</div>
+                <div className="flex items-center gap-3">
+                  <select value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)} className="w-full h-10 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#1a1a1a] px-3 text-sm">
+                    <option value="" disabled>{eventsLoading ? 'Carregando...' : 'Selecione'}</option>
+                    {events.map(ev => (<option value={ev.id} key={ev.id}>{ev.name}</option>))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Tema</div>
+                <div className="flex items-center gap-4 text-sm">
+                  <label className="flex items-center gap-1"><input type="radio" name="wtheme2" checked={theme === 'dark'} onChange={() => setTheme('dark')} /> Escuro</label>
+                  <label className="flex items-center gap-1"><input type="radio" name="wtheme2" checked={theme === 'light'} onChange={() => setTheme('light')} /> Claro</label>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Fundo transparente</div>
+                <AnimatedCheckbox
+                  checked={transparent}
+                  onCheckedChange={setTransparent}
+                  label=""
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Codigo do widget */}
+          <div className="mt-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-5">
+            <div className="flex items-center justify-between mb-2"><div className="font-semibold text-slate-700 dark:text-slate-200">Codigo do Widget</div><button className="text-sm px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700" onClick={copy}>{copyMsg || 'Copiar Codigo'}</button></div>
+            <textarea readOnly value={code} className="w-full h-40 bg-zinc-900/10 dark:bg-[#0f0f0f] text-xs p-3 rounded-md border border-zinc-300 dark:border-zinc-700 text-slate-800 dark:text-slate-200" />
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">Copie e cole esse Codigo onde voce quer que o widget apareca no seu website</div>
+          </div>
+        </div>
+        {/* Preview placeholder */}
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[#0f0f0f] min-h-[380px] p-6 text-white">
+          <div className="text-xl font-extrabold tracking-wide mb-4">PROXIMOS EVENTOS</div>
+          <div className="rounded-lg border border-white/10 p-6 text-sm text-white/70">Nao ha eventos futuros.<br />Siga este produtor para receber atualizacoes.</div>
+          <div className="mt-8 text-xl font-extrabold tracking-wide">SOBRE</div>
+          <div className="text-sm text-white/70 mt-2">Entrou na Fauves em {(new Date()).getFullYear()}</div>
+        </div>
+      </div>
+    );
+  };
+
+
 type OrganizerTabKey = 'pagina' | 'express' | 'banking';
 
 export default function OrganizerSettingsV2() {
@@ -1446,121 +1564,7 @@ export default function OrganizerSettingsV2() {
     </div>
   );
 }
-// ---------------- Widget Builder ----------------
-const WidgetBuilder: React.FC<{ org: any; events: Array<{ id: string; name: string; startDate?: string }>; eventsLoading: boolean; onEnsureEvents: () => void }>
-  = ({ org, events, eventsLoading, onEnsureEvents }) => {
-    const [view, setView] = React.useState<'page' | 'event' | 'list'>('page');
-    const [theme, setTheme] = React.useState<'dark' | 'light'>('dark');
-    const [transparent, setTransparent] = React.useState(false);
-    const [showDetails, setShowDetails] = React.useState(false);
-    const [selectedEventId, setSelectedEventId] = React.useState('');
-    const [copyMsg, setCopyMsg] = React.useState<string>('');
 
-    React.useEffect(() => { if (view === 'event' && events.length === 0 && !eventsLoading) onEnsureEvents(); }, [view, events.length, eventsLoading, onEnsureEvents]);
-
-    const origin = (typeof window !== 'undefined' ? window.location.origin : '');
-    const orgPath = org?.slug || org?.id || '';
-
-    const codePage = `\n<iframe src="${origin}/org/${orgPath}?embedded=1&ui=${theme}${transparent ? '&transparent=1' : ''}${showDetails ? '&details=1' : ''}" allow="payment" style="width:100%; height:800px; max-height:calc(100vh - 200px); border:0;"></iframe>\n<script src="${origin}/widget.js"></script>`;
-
-    const codeEvent = `\n<iframe src="${origin}/event/${selectedEventId || 'EVENT_ID'}?embedded=1&ui=${theme}${transparent ? '&transparent=1' : ''}" allow="payment" style="width:100%; height:800px; max-height:calc(100vh - 200px); border:0;"></iframe>\n<script src="${origin}/widget.js"></script>`;
-
-    const codeList = `\n<script>window.__fauves={"events-listing":{"organizerId":"${org?.id || ''}", "layout":"shotgun", "showEventTags":true}};</script>\n<style> body #fauves-events-listing {--shotgun - muted:#f4f4f5; --shotgun-accent:#f4f4f5; --shotgun-accent-foreground:#ff765f; --shotgun-border:#e4e4e7; --shotgun-foreground:#09090b; } </style>\n<section id="fauves-events-listing" />\n<script src="${origin}/events-listing.js"></script>`;
-
-    const code = view === 'page' ? codePage : view === 'event' ? codeEvent : codeList;
-
-    const copy = async () => {
-      try { await navigator.clipboard.writeText(code); setCopyMsg('Copiado!'); setTimeout(() => setCopyMsg(''), 1500); } catch { setCopyMsg('Falhou'); setTimeout(() => setCopyMsg(''), 1500); }
-    };
-
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          {/* inner tabs */}
-          <div className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-1 mb-4">
-            <button className={`px-3 py-1.5 rounded-md text-sm ${view === 'page' ? 'bg-indigo-600 text-white' : 'text-slate-700 dark:text-slate-200'}`} onClick={() => setView('page')}>Minha pagina</button>
-            <button className={`px-3 py-1.5 rounded-md text-sm ${view === 'event' ? 'bg-indigo-600 text-white' : 'text-slate-700 dark:text-slate-200'}`} onClick={() => setView('event')}>Evento</button>
-            <button className={`px-3 py-1.5 rounded-md text-sm ${view === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-700 dark:text-slate-200'}`} onClick={() => setView('list')}>Lista de Eventos</button>
-          </div>
-
-          {/* controls */}
-          {view !== 'event' ? (
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Tema</div>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <label className="flex items-center gap-1"><input type="radio" name="wtheme" checked={theme === 'dark'} onChange={() => setTheme('dark')} /> Escuro</label>
-                  <label className="flex items-center gap-1"><input type="radio" name="wtheme" checked={theme === 'light'} onChange={() => setTheme('light')} /> Claro</label>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Fundo transparente</div>
-                </div>
-                <AnimatedCheckbox
-                  checked={transparent}
-                  onCheckedChange={setTransparent}
-                  label=""
-                />
-              </div>
-              {view === 'page' && (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Mostrar detalhes da pagina</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">Botao de seguir, capa, logo, descricoes, redes sociais, etc.</div>
-                  </div>
-                  <input type="checkbox" checked={showDetails} onChange={e => setShowDetails(e.target.checked)} />
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-5 space-y-4">
-              <div>
-                <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">Selecionar evento</div>
-                <div className="flex items-center gap-3">
-                  <select value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)} className="w-full h-10 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-[#1a1a1a] px-3 text-sm">
-                    <option value="" disabled>{eventsLoading ? 'Carregando...' : 'Selecione'}</option>
-                    {events.map(ev => (<option value={ev.id} key={ev.id}>{ev.name}</option>))}
-                  </select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Tema</div>
-                <div className="flex items-center gap-4 text-sm">
-                  <label className="flex items-center gap-1"><input type="radio" name="wtheme2" checked={theme === 'dark'} onChange={() => setTheme('dark')} /> Escuro</label>
-                  <label className="flex items-center gap-1"><input type="radio" name="wtheme2" checked={theme === 'light'} onChange={() => setTheme('light')} /> Claro</label>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-slate-700 dark:text-slate-200">Fundo transparente</div>
-                <AnimatedCheckbox
-                  checked={transparent}
-                  onCheckedChange={setTransparent}
-                  label=""
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Codigo do widget */}
-          <div className="mt-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-5">
-            <div className="flex items-center justify-between mb-2"><div className="font-semibold text-slate-700 dark:text-slate-200">Codigo do Widget</div><button className="text-sm px-3 py-1.5 rounded-md border border-zinc-300 dark:border-zinc-700" onClick={copy}>{copyMsg || 'Copiar Codigo'}</button></div>
-            <textarea readOnly value={code} className="w-full h-40 bg-zinc-900/10 dark:bg-[#0f0f0f] text-xs p-3 rounded-md border border-zinc-300 dark:border-zinc-700 text-slate-800 dark:text-slate-200" />
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">Copie e cole esse Codigo onde voce quer que o widget apareca no seu website</div>
-          </div>
-        </div>
-        {/* Preview placeholder */}
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-[#0f0f0f] min-h-[380px] p-6 text-white">
-          <div className="text-xl font-extrabold tracking-wide mb-4">PROXIMOS EVENTOS</div>
-          <div className="rounded-lg border border-white/10 p-6 text-sm text-white/70">Nao ha eventos futuros.<br />Siga este produtor para receber atualizacoes.</div>
-          <div className="mt-8 text-xl font-extrabold tracking-wide">SOBRE</div>
-          <div className="text-sm text-white/70 mt-2">Entrou na Fauves em {(new Date()).getFullYear()}</div>
-        </div>
-      </div>
-    );
-  };
 
 
 
