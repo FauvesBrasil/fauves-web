@@ -90,6 +90,13 @@ export default function OrganizerSettingsV2() {
   // Estados Temporários de Edição (para preencher os modais)
   const [tempData, setTempData] = React.useState<any>({});
 
+  // Estados Efí Bank (Onboarding)
+  const [efiAccountStatus, setEfiAccountStatus] = React.useState<string>('NONE');
+  const [onboardingType, setOnboardingType] = React.useState<'individual' | 'legal'>('individual');
+  const [onboardingTaxId, setOnboardingTaxId] = React.useState('');
+  const [onboardingPhone, setOnboardingPhone] = React.useState('');
+  const [submittingOnboarding, setSubmittingOnboarding] = React.useState(false);
+
   // Busca dados frescos da organizacao
   const fetchFresh = React.useCallback(async () => {
     if (!selectedOrg?.id) return;
@@ -98,6 +105,7 @@ export default function OrganizerSettingsV2() {
       const res = await fetchApi(`/api/organization/${selectedOrg.id}`);
       const data = await res.json();
       setExtendedOrg(data);
+      if (data.efiAccountStatus) setEfiAccountStatus(data.efiAccountStatus);
     } catch { toast({ variant: 'destructive', title: 'Falha ao carregar dados' }); }
     finally { setLoadingFresh(false); }
   }, [selectedOrg?.id, toast]);
@@ -106,6 +114,28 @@ export default function OrganizerSettingsV2() {
 
   const org = extendedOrg || selectedOrg;
   const orgUrl = org ? `${window.location.origin}${getOrganizationPath(org)}` : '';
+
+  const handleOnboarding = async () => {
+    if (!selectedOrg?.id) return;
+    setSubmittingOnboarding(true);
+    try {
+      const res = await fetchApi(`/api/organization/${selectedOrg.id}/onboarding`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: onboardingType, taxId: onboardingTaxId, phone: onboardingPhone })
+      });
+      if (res.ok) {
+        setEfiAccountStatus('PENDING');
+        toast({ title: 'Enviado para análise', description: 'Seus dados estão sendo processados pela Efí Bank.' });
+      } else {
+        throw new Error();
+      }
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao enviar dados', description: 'Verifique as informações e tente novamente.' });
+    } finally {
+      setSubmittingOnboarding(false);
+    }
+  };
 
   const saveGeneric = async (data: any) => {
     if (!selectedOrg?.id) return;
@@ -201,12 +231,51 @@ export default function OrganizerSettingsV2() {
               </TabsContent>
 
               <TabsContent value="banking">
-                 <div className="bg-white dark:bg-[#121212] p-8 rounded-2xl border text-center">
-                    <Lock size={32} className="mx-auto mb-4 text-slate-400" />
-                    <h2 className="text-xl font-bold">Digital Banking</h2>
-                    <p className="text-slate-500 text-sm mt-2">As funcionalidades de saldo e saques estão integradas à aba <strong>Finanças</strong> para sua segurança.</p>
-                    <Button className="mt-6" onClick={() => navigate('/dashboard/financas')}>Acessar Financeiro</Button>
-                 </div>
+                 {efiAccountStatus === 'NONE' || efiAccountStatus === 'REJECTED' ? (
+                   <div className="max-w-xl mx-auto rounded-2xl border bg-white dark:bg-[#121212] overflow-hidden shadow-lg animate-in fade-in slide-in-from-bottom-4">
+                      <div className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 p-8 text-white">
+                         <h2 className="text-2xl font-bold">Ative sua Conta Digital Efí</h2>
+                         <p className="opacity-90">Receba via Pix e Cartão com split automático.</p>
+                      </div>
+                      <div className="p-8 space-y-6">
+                         <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+                            <button onClick={() => setOnboardingType('individual')} className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${onboardingType === 'individual' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>CPF</button>
+                            <button onClick={() => setOnboardingType('legal')} className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${onboardingType === 'legal' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>CNPJ</button>
+                         </div>
+                         <div className="space-y-4">
+                            <div>
+                               <Label className="text-xs text-slate-500 mb-1 block">{onboardingType === 'individual' ? 'CPF' : 'CNPJ'}</Label>
+                               <Input value={onboardingTaxId} onChange={e => setOnboardingTaxId(e.target.value)} placeholder={onboardingType === 'individual' ? '000.000.000-00' : '00.000.000/0000-00'} className="h-12" />
+                            </div>
+                            <div>
+                               <Label className="text-xs text-slate-500 mb-1 block">WhatsApp de Contato</Label>
+                               <Input value={onboardingPhone} onChange={e => setOnboardingPhone(e.target.value)} placeholder="(00) 00000-0000" className="h-12" />
+                            </div>
+                         </div>
+                         <Button className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold" onClick={handleOnboarding} disabled={submittingOnboarding}>
+                            {submittingOnboarding ? 'Enviando Dados...' : 'Criar Conta Digital'}
+                         </Button>
+                         <p className="text-[10px] text-center text-slate-400">Ao criar a conta, você concorda com os termos da Efí Bank e autoriza o split de recebíveis da Fauves.</p>
+                      </div>
+                   </div>
+                 ) : efiAccountStatus === 'PENDING' ? (
+                   <div className="max-w-xl mx-auto p-12 text-center bg-white dark:bg-[#121212] rounded-2xl border shadow-sm">
+                      <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Info size={32} className="text-amber-500 animate-pulse" />
+                      </div>
+                      <h2 className="text-xl font-bold">Conta em Análise</h2>
+                      <p className="text-slate-500 mt-2">A Efí Bank está processando seus documentos. Isso geralmente leva de 1 a 3 dias úteis.</p>
+                   </div>
+                 ) : (
+                   <div className="max-w-xl mx-auto bg-white dark:bg-[#121212] p-8 rounded-2xl border text-center shadow-sm">
+                      <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CheckCircle2 size={32} className="text-emerald-500" />
+                      </div>
+                      <h2 className="text-xl font-bold">Conta Digital Ativa</h2>
+                      <p className="text-slate-500 text-sm mt-2">Sua conta está integrada e pronta para receber pagamentos e realizar saques.</p>
+                      <Button className="mt-8 w-full h-12" onClick={() => navigate('/organizer-finances')}>Acessar Painel Financeiro</Button>
+                   </div>
+                 )}
               </TabsContent>
             </Tabs>
 
