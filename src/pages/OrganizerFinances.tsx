@@ -8,6 +8,12 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
 import MobileTopBar from '@/components/MobileTopBar';
 import MobileDrawerMenu from '@/components/MobileDrawerMenu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { CheckCircle2, Lock, ArrowRight, Info } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface EventRow {
   id: string;
@@ -32,6 +38,7 @@ const formatDateTimePt = (iso?: string | null) => {
 export default function OrganizerFinances() {
   const { selectedOrg, orgs, setSelectedOrgById } = useOrganization();
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [events, setEvents] = React.useState<EventRow[]>([]);
@@ -43,6 +50,15 @@ export default function OrganizerFinances() {
   const [filter, setFilter] = React.useState<'active' | 'inactive'>('active');
   const [search, setSearch] = React.useState('');
   const LIMIT = 4;
+  
+  // Efí Banking States
+  const [realBalance, setRealBalance] = React.useState<any>(null);
+  const [fetchingBalance, setFetchingBalance] = React.useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = React.useState(false);
+  const [withdrawAmount, setWithdrawAmount] = React.useState('');
+  const [withdrawPixKey, setWithdrawPixKey] = React.useState('');
+  const [withdrawPin, setWithdrawPin] = React.useState(['', '', '', '']);
+  const [withdrawing, setWithdrawing] = React.useState(false);
 
   // Estados para menu mobile
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -123,9 +139,63 @@ export default function OrganizerFinances() {
     }
   }, [selectedOrg?.id, LIMIT]);
 
+  const fetchRealBalance = React.useCallback(async () => {
+    if (!selectedOrg?.id) return;
+    setFetchingBalance(true);
+    try {
+      const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
+      const res = await fetch(apiUrl(`/api/organization/${selectedOrg.id}/banking/balance`), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRealBalance(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch real balance', e);
+    } finally {
+      setFetchingBalance(false);
+    }
+  }, [selectedOrg?.id]);
+
   React.useEffect(() => {
     fetchEvents(1, false);
-  }, [selectedOrg?.id, fetchEvents]);
+    fetchRealBalance();
+  }, [selectedOrg?.id, fetchEvents, fetchRealBalance]);
+
+  const handleConfirmWithdraw = async (amount: number, pixKey: string, pin: string) => {
+    const savedPin = localStorage.getItem('BANKING_PIN');
+    if (pin !== savedPin) {
+      toast({ variant: 'destructive', title: 'PIN incorreto', description: 'O código informado não confere.' });
+      return;
+    }
+
+    setWithdrawing(true);
+    try {
+      const token = localStorage.getItem('AUTH_TOKEN_V1') || localStorage.getItem('token');
+      const res = await fetch(apiUrl(`/api/organization/${selectedOrg.id}/banking/pix-out`), {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ amount, pixKey })
+      });
+
+      if (res.ok) {
+        toast({ title: 'Transferência realizada!', description: `R$ ${amount.toFixed(2)} enviados para ${pixKey}` });
+        setShowWithdrawModal(false);
+        fetchRealBalance(); // Atualiza saldo
+      } else {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro no processamento');
+      }
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Erro na transferência', description: e.message });
+    } finally {
+      setWithdrawing(false);
+    }
+  };
 
   const isActive = (e: EventRow) => {
     // Check status first (priority)
@@ -172,7 +242,25 @@ export default function OrganizerFinances() {
         <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-12 sm:px-6 lg:px-8">
           <AppHeader />
           <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto mt-16 px-2 max-md:mt-10 max-sm:mt-6">
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-white max-sm:text-2xl">Finanças</h1>
+            <div className="flex items-center justify-between gap-4 max-sm:flex-col max-sm:items-start">
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-white max-sm:text-2xl">Finanças</h1>
+              {realBalance && (
+                <div className="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl px-6 py-3 shadow-sm">
+                  <div className="text-right">
+                    <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">Saldo na Efí Bank</div>
+                    <div className="text-2xl font-black text-indigo-700 dark:text-indigo-300">
+                      {Number(realBalance.saldo || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowWithdrawModal(true)}
+                    className="ml-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
+                  >
+                    Transferir
+                  </button>
+                </div>
+              )}
+            </div>
             {/* Cards de resumo */}
             <div className="grid grid-cols-3 gap-4 max-sm:grid-cols-1">
               {/* Saldo Disponível */}
@@ -406,7 +494,132 @@ export default function OrganizerFinances() {
             )}
           </div>
         </div>
+
+        <WithdrawModal 
+          open={showWithdrawModal}
+          onOpenChange={setShowWithdrawModal}
+          onConfirm={handleConfirmWithdraw}
+          maxAmount={Number(realBalance?.saldo || 0)}
+          loading={withdrawing}
+        />
       </div>
     </OrganizerLayout>
+  );
+}
+
+// Sub-componente para o Modal de Saque
+function WithdrawModal({ 
+  open, 
+  onOpenChange, 
+  onConfirm, 
+  maxAmount,
+  loading
+}: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (amount: number, pixKey: string, pin: string) => Promise<void>;
+  maxAmount: number;
+  loading: boolean;
+}) {
+  const [step, setStep] = React.useState<'amount' | 'pin'>('amount');
+  const [amount, setAmount] = React.useState('');
+  const [pixKey, setPixKey] = React.useState('');
+  const [pin, setPin] = React.useState(['', '', '', '']);
+
+  const handleNext = () => {
+    if (Number(amount) <= 0 || Number(amount) > maxAmount || !pixKey) return;
+    setStep('pin');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-none bg-white dark:bg-[#121212]">
+        <div className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 p-6 text-white">
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <ArrowRight size={20} /> Transferência via Pix
+          </DialogTitle>
+          <p className="text-white/80 text-sm mt-1">O valor cai na conta destino instantaneamente.</p>
+        </div>
+
+        <div className="p-6">
+          {step === 'amount' ? (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Valor da Transferência</Label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">R$</span>
+                  <Input 
+                    type="number"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder="0,00"
+                    className="h-14 pl-12 text-xl font-bold rounded-xl border-2 focus:border-indigo-500"
+                  />
+                </div>
+                <div className="flex justify-between text-xs mt-1">
+                  <span className="text-slate-500">Saldo disponível: <span className="font-bold text-indigo-600">{maxAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></span>
+                  <button onClick={() => setAmount(maxAmount.toString())} className="text-indigo-600 font-bold hover:underline">Usar tudo</button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chave Pix de Destino</Label>
+                <Input 
+                  value={pixKey}
+                  onChange={e => setPixKey(e.target.value)}
+                  placeholder="CPF, CNPJ, Email, Telefone ou Chave Aleatória"
+                  className="h-12 rounded-xl"
+                />
+              </div>
+
+              <Button 
+                onClick={handleNext}
+                disabled={!amount || Number(amount) <= 0 || Number(amount) > maxAmount || !pixKey}
+                className="w-full h-12 rounded-xl bg-indigo-600 font-bold"
+              >
+                Continuar
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-6 text-center">
+              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                <Lock size={32} />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Confirmação de Segurança</h3>
+                <p className="text-sm text-slate-500">Digite seu PIN de 4 dígitos para autorizar a transferência de <span className="font-bold text-slate-900 dark:text-white">R$ {Number(amount).toFixed(2)}</span></p>
+              </div>
+
+              <div className="flex items-center gap-3 justify-center py-4">
+                {pin.map((d, idx) => (
+                  <input 
+                    key={idx} 
+                    id={`withdraw-pin-${idx}`}
+                    value={d} 
+                    onChange={(e) => { 
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 1); 
+                      const next = [...pin]; 
+                      next[idx] = v; 
+                      setPin(next);
+                      if (v && idx < 3) document.getElementById(`withdraw-pin-${idx + 1}`)?.focus(); 
+                      if (next.every(x => x)) {
+                        onConfirm(Number(amount), pixKey, next.join(''));
+                      }
+                    }} 
+                    inputMode="numeric" 
+                    maxLength={1} 
+                    className="w-12 h-14 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-transparent text-center text-xl font-bold focus:border-indigo-500 focus:outline-none transition-colors" 
+                  />
+                ))}
+              </div>
+              
+              <Button variant="ghost" onClick={() => setStep('amount')} className="text-slate-500">
+                Voltar e editar valor
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

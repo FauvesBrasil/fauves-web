@@ -145,20 +145,25 @@ export default function OrganizerSettingsV2() {
     }
   }, [selectedOrg, extendedOrg]);
 
-  // Sync Banking state from updated Org
   React.useEffect(() => {
-    if (extendedOrg && extendedOrg.bankingInfo) {
-      try {
-        const info = typeof extendedOrg.bankingInfo === 'string' ? JSON.parse(extendedOrg.bankingInfo) : extendedOrg.bankingInfo;
-        if (info.pix && info.pix.key) {
-          setSavedPixKey(info.pix.key);
-          setPixKey(info.pix.key);
-          setPixType(info.pix.type || 'email');
-          setBankingConfirmed(true);
-          setConfirmOwner(true);
+    if (extendedOrg) {
+      setEfiAccountStatus(extendedOrg.efiAccountStatus || 'NONE');
+      setEfiOnboardingStep(extendedOrg.efiOnboardingStep || 'START');
+      setEfiOnboardingData(extendedOrg.efiOnboardingData || null);
+
+      if (extendedOrg.bankingInfo) {
+        try {
+          const info = typeof extendedOrg.bankingInfo === 'string' ? JSON.parse(extendedOrg.bankingInfo) : extendedOrg.bankingInfo;
+          if (info.pix && info.pix.key) {
+            setSavedPixKey(info.pix.key);
+            setPixKey(info.pix.key);
+            setPixType(info.pix.type || 'email');
+            setBankingConfirmed(true);
+            setConfirmOwner(true);
+          }
+        } catch (e) {
+          // Silently fail
         }
-      } catch (e) {
-        // Silently fail or handle error appropriately if needed
       }
     }
   }, [extendedOrg]);
@@ -199,6 +204,16 @@ export default function OrganizerSettingsV2() {
   const [bankingConfirmed, setBankingConfirmed] = React.useState(false);
   const [pinAuth, setPinAuth] = React.useState(['', '', '', '']);
   const [pinAuthError, setPinAuthError] = React.useState('');
+
+  // Efí Onboarding States
+  const [efiAccountStatus, setEfiAccountStatus] = React.useState<string>('NONE');
+  const [efiOnboardingStep, setEfiOnboardingStep] = React.useState<string>('START');
+  const [efiOnboardingData, setEfiOnboardingData] = React.useState<any>(null);
+  
+  const [onboardingType, setOnboardingType] = React.useState<'individual' | 'legal'>('individual');
+  const [onboardingTaxId, setOnboardingTaxId] = React.useState('');
+  const [onboardingPhone, setOnboardingPhone] = React.useState('');
+  const [submittingOnboarding, setSubmittingOnboarding] = React.useState(false);
 
   const firstName = React.useMemo(() => (user?.name || '').split(' ')[0] || '', [user?.name]);
   const lastName = React.useMemo(() => {
@@ -1173,156 +1188,226 @@ export default function OrganizerSettingsV2() {
                   </div>
                 </TabsContent>
                 <TabsContent value="banking" className="pt-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Card: Banco */}
-                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="text-lg font-semibold text-slate-900 dark:text-white">Banco</div>
-                        {bankingConfirmed ? (
-                          <span title="Confirmado" className="inline-block">
-                            <CheckCircle2 className="text-emerald-600" size={20} />
-                          </span>
-                        ) : (
-                          <div className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800">A preencher</div>
-                        )}
-                      </div>
-                      <div className="mt-3 text-slate-600 dark:text-slate-300">
-                        <div className="font-medium">{(selectedOrg as any)?.name || '-'}</div>
-                        <div className="mt-3 inline-flex items-center gap-2 rounded-md bg-zinc-800/5 dark:bg-black/40 border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 text-sm">
-                          <Mail size={14} />
-                          <span>Email:</span>
-                          <span className="font-semibold text-slate-900 dark:text-white">{user?.email || '-'}</span>
-                        </div>
-                        {bankingConfirmed && savedPixKey && (
-                          <div className="mt-2 inline-flex items-center gap-2 rounded-md bg-zinc-800/5 dark:bg-black/40 border border-zinc-200 dark:border-zinc-700 px-3 py-1.5 text-sm">
-                            <span className="inline-flex items-center gap-1"><span className="font-medium">PIX:</span></span>
-                            <span className="font-semibold text-slate-900 dark:text-white">{savedPixKey}</span>
+                  <div className="space-y-6">
+                    {efiAccountStatus === 'NONE' || efiAccountStatus === 'REJECTED' ? (
+                      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] overflow-hidden">
+                        <div className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 p-8 text-white">
+                          <h2 className="text-2xl font-bold">Ative sua Conta Digital Efí</h2>
+                          <p className="mt-2 text-indigo-100 max-w-lg">
+                            Transforme sua organização em um negócio profissional. Receba pagamentos via Pix e Cartão com split automático e gerencie seu saldo sem sair da Fauves.
+                          </p>
+                          <div className="mt-6 flex flex-wrap gap-4">
+                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 text-sm font-medium">
+                              <CheckCircle2 size={16} /> Split Automático
+                            </div>
+                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 text-sm font-medium">
+                              <CheckCircle2 size={16} /> Saques Instantâneos
+                            </div>
+                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 text-sm font-medium">
+                              <CheckCircle2 size={16} /> White Label
+                            </div>
                           </div>
-                        )}
-                        {!bankingConfirmed && <div className="mt-2 text-sm text-slate-500">É necessário para fazer transferências</div>}
-                        {!bankingConfirmed ? (
-                          <div className="mt-5">
-                            <Button
-                              onClick={() => {
-                                setBankPhase('form');
-                                setPinAuth(['', '', '', '']);
-                                setPinAuthError('');
-                                setPixKey('');
-                                setConfirmOwner(false);
-                                setBankOpen(true);
+                        </div>
+
+                        <div className="p-8">
+                          <div className="max-w-2xl mx-auto space-y-6">
+                            <div className="flex items-center gap-4 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 w-fit">
+                              <button 
+                                onClick={() => setOnboardingType('individual')}
+                                className={`px-6 py-2 rounded-lg text-sm font-semibold transition ${onboardingType === 'individual' ? 'bg-white dark:bg-zinc-700 text-indigo-600 shadow-sm' : 'text-zinc-500'}`}
+                              >
+                                Pessoa Física
+                              </button>
+                              <button 
+                                onClick={() => setOnboardingType('legal')}
+                                className={`px-6 py-2 rounded-lg text-sm font-semibold transition ${onboardingType === 'legal' ? 'bg-white dark:bg-zinc-700 text-indigo-600 shadow-sm' : 'text-zinc-500'}`}
+                              >
+                                Empresa (CNPJ)
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-semibold">{onboardingType === 'individual' ? 'CPF' : 'CNPJ'}</Label>
+                                <Input 
+                                  value={onboardingTaxId} 
+                                  onChange={e => setOnboardingTaxId(e.target.value)}
+                                  placeholder={onboardingType === 'individual' ? '000.000.000-00' : '00.000.000/0000-00'}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-sm font-semibold">Telefone de Contato</Label>
+                                <Input 
+                                  value={onboardingPhone} 
+                                  onChange={e => setOnboardingPhone(e.target.value)}
+                                  placeholder="(00) 00000-0000"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 p-6 bg-zinc-50 dark:bg-[#1a1a1a]">
+                              <h3 className="font-semibold mb-4">Dados da Organização</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+                                <div>
+                                  <div className="font-medium text-zinc-900 dark:text-white">Razão Social / Nome</div>
+                                  <div>{selectedOrg?.name}</div>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-zinc-900 dark:text-white">Email Vinculado</div>
+                                  <div>{user?.email}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <Button 
+                              size="lg" 
+                              className="w-full h-14 text-lg font-bold bg-gradient-to-r from-indigo-600 to-fuchsia-600 hover:scale-[1.02] transition-transform shadow-lg"
+                              disabled={submittingOnboarding || !onboardingTaxId || !onboardingPhone}
+                              onClick={async () => {
+                                setSubmittingOnboarding(true);
+                                try {
+                                  const res = await fetchApi(`/api/organization/${selectedOrg.id}/onboarding`, {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                      type: onboardingType,
+                                      taxId: onboardingTaxId,
+                                      phone: onboardingPhone,
+                                      name: selectedOrg.name,
+                                      email: user?.email
+                                    })
+                                  });
+                                  if (res.ok) {
+                                    setEfiAccountStatus('PENDING');
+                                    toast({ title: 'Solicitação Enviada!', description: 'Seus dados estão sendo processados pela Efí Bank.' });
+                                  } else {
+                                    throw new Error('Falha ao enviar onboarding');
+                                  }
+                                } catch (e) {
+                                  toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível iniciar o onboarding.' });
+                                } finally {
+                                  setSubmittingOnboarding(false);
+                                }
                               }}
-                              disabled={pinPhase !== 'done'}
-                              className="bg-indigo-600 hover:bg-indigo-700"
                             >
-                              Adicionar minhas informações bancárias
+                              {submittingOnboarding ? 'Processando...' : 'Criar minha Conta Digital'}
                             </Button>
-                            {pinPhase !== 'done' && (
-                              <div className="mt-2 text-xs text-amber-600">Defina e confirme um PIN na aba Segurança para habilitar o Banking.</div>
-                            )}
+                            
+                            <p className="text-center text-xs text-zinc-500 max-w-md mx-auto">
+                              Ao clicar em "Criar minha Conta Digital", você declara estar de acordo com os termos de uso e política de privacidade da Efí Bank.
+                            </p>
                           </div>
-                        ) : (
-                          <div className="mt-4 text-sm text-slate-600 dark:text-slate-300">
-                            Para atualizar sua Conta Bancária, por favor, <a className="text-indigo-600 hover:underline" href="/suporte" target="_blank" rel="noreferrer">contate o time de Suporte</a>.
-                          </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
+                    ) : efiAccountStatus === 'PENDING' ? (
+                      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-12 text-center">
+                        <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                          <Info size={40} />
+                        </div>
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Sua conta está em análise</h2>
+                        <p className="mt-3 text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                          A Efí Bank está verificando seus dados. Esse processo costuma levar de 1 a 3 dias úteis. Você receberá uma notificação assim que for aprovado.
+                        </p>
+                        <Button variant="outline" className="mt-8" onClick={() => window.location.reload()}>
+                          Atualizar Status
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Status da Conta Digital */}
+                        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-6 shadow-sm overflow-hidden relative group">
+                          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                            <CheckCircle2 size={80} />
+                          </div>
+                          <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                              <CheckCircle2 size={24} />
+                            </div>
+                            <h3 className="text-lg font-bold">Conta Digital Ativa</h3>
+                          </div>
+                          <div className="space-y-4">
+                            <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#1a1a1a] border border-zinc-100 dark:border-zinc-800">
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider mb-1">ID da Conta</div>
+                              <div className="font-mono text-sm break-all">{displayOrg?.efiAccountId || '---'}</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#1a1a1a] border border-zinc-100 dark:border-zinc-800">
+                                <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider mb-1">Status</div>
+                                <div className="text-emerald-600 font-bold">Aprovada</div>
+                              </div>
+                              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-[#1a1a1a] border border-zinc-100 dark:border-zinc-800">
+                                <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider mb-1">Taxa Fauves</div>
+                                <div className="font-bold">{displayOrg?.platformFeePercent || 15}%</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-8">
+                            <Button className="w-full bg-indigo-600 hover:bg-indigo-700" onClick={() => navigate('/dashboard/financas')}>
+                              Ir para meu Financeiro
+                            </Button>
+                          </div>
+                        </div>
 
-
-                    {/* Card: Segurança */}
-                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-6">
-                      <div className="text-lg font-semibold text-slate-900 dark:text-white">Segurança</div>
-                      <div className="text-sm text-slate-600 dark:text-slate-300 mt-1">Garanta a segurança da sessão Banking definindo um código PIN</div>
-                      {pinPhase === 'done' ? (
-                        <div className="mt-4 text-sm text-slate-600 dark:text-slate-300">Você definiu um código PIN. Para alterar, por favor contate o suporte.</div>
-                      ) : (
-                        <>
-                          <div className="mt-5 text-sm text-slate-700 dark:text-slate-200">{pinPhase === 'set' ? 'Defina o seu PIN:' : 'Confirme o PIN digitando novamente:'}</div>
-                          {pinPhase === 'set' && (
-                            <div className="mt-3 flex items-center gap-3">
-                              {pin.map((d, idx) => (
-                                <input key={idx} value={d} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 1); const next = [...pin]; next[idx] = v; setPin(next); if (v && idx < 3) { const el = document.getElementById(`pin-set-${idx + 1}`) as HTMLInputElement | null; el?.focus(); } if (next.every(x => x && x.length === 1)) { setTimeout(() => { setPinPhase('confirm'); try { const el = document.getElementById('pin-confirm-0') as HTMLInputElement | null; el?.focus(); } catch { } }, 50); } }} id={`pin-set-${idx}`} inputMode="numeric" maxLength={1} className="w-10 h-12 rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent text-center text-lg text-slate-900 dark:text-white" />
-                              ))}
+                        {/* Card: Segurança */}
+                        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-6 shadow-sm">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                              <Lock size={24} />
+                            </div>
+                            <h3 className="text-lg font-bold">Segurança (PIN)</h3>
+                          </div>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">O código PIN protege suas operações de saque e transferência.</p>
+                          
+                          {pinPhase === 'done' ? (
+                            <div className="p-8 text-center bg-zinc-50 dark:bg-[#1a1a1a] rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800">
+                              <CheckCircle2 size={32} className="mx-auto mb-3 text-emerald-500" />
+                              <div className="text-sm font-semibold">PIN Configurado</div>
+                              <p className="text-xs text-zinc-500 mt-1">Para sua segurança, PINs só podem ser alterados via suporte.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                                {pinPhase === 'set' ? 'Defina seu código de 4 dígitos:' : 'Confirme seu código:'}
+                              </div>
+                              <div className="flex items-center gap-3 justify-center py-4">
+                                {(pinPhase === 'set' ? pin : pinConfirm).map((d, idx) => (
+                                  <input 
+                                    key={idx} 
+                                    id={`${pinPhase === 'set' ? 'pin-set' : 'pin-confirm'}-${idx}`}
+                                    value={d} 
+                                    onChange={(e) => { 
+                                      const v = e.target.value.replace(/\D/g, '').slice(0, 1); 
+                                      const next = pinPhase === 'set' ? [...pin] : [...pinConfirm]; 
+                                      next[idx] = v; 
+                                      if (pinPhase === 'set') setPin(next); else setPinConfirm(next);
+                                      if (v && idx < 3) document.getElementById(`${pinPhase === 'set' ? 'pin-set' : 'pin-confirm'}-${idx + 1}`)?.focus(); 
+                                      if (next.every(x => x)) {
+                                        if (pinPhase === 'set') {
+                                          setTimeout(() => { setPinPhase('confirm'); }, 200);
+                                        } else {
+                                          if (pin.join('') === next.join('')) {
+                                            localStorage.setItem('BANKING_PIN', pin.join(''));
+                                            setPinPhase('done');
+                                            toast({ title: 'PIN Configurado!', description: 'Sua conta está agora mais segura.' });
+                                          } else {
+                                            setPinConfirm(['', '', '', '']);
+                                            toast({ variant: 'destructive', title: 'PIN não confere', description: 'Tente novamente.' });
+                                          }
+                                        }
+                                      }
+                                    }} 
+                                    inputMode="numeric" 
+                                    maxLength={1} 
+                                    className="w-12 h-14 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-transparent text-center text-xl font-bold focus:border-indigo-500 focus:outline-none transition-colors" 
+                                  />
+                                ))}
+                              </div>
                             </div>
                           )}
-                          {pinPhase === 'confirm' && (
-                            <div className="mt-3 flex items-center gap-3">
-                              {pinConfirm.map((d, idx) => (
-                                <input key={idx} value={d} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 1); const next = [...pinConfirm]; next[idx] = v; setPinConfirm(next); if (v && idx < 3) { const el = document.getElementById(`pin-confirm-${idx + 1}`) as HTMLInputElement | null; el?.focus(); } if (next.every(x => x && x.length === 1)) { const a = pin.join(''); const b = next.join(''); if (a === b) { try { localStorage.setItem('BANKING_PIN', a); } catch { } setPinPhase('done'); } else { try { localStorage.removeItem('BANKING_PIN'); } catch { } setPin(['', '', '', '']); setPinConfirm(['', '', '', '']); setPinPhase('set'); } } }} id={`pin-confirm-${idx}`} inputMode="numeric" maxLength={1} className="w-10 h-12 rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent text-center text-lg text-slate-900 dark:text-white" />
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
-                  {/* verificacao com PIN dentro do modal */}
-
-                  {/* Modal: adicionar informacoes bancarias */}
-                  <Dialog open={bankOpen} onOpenChange={setBankOpen}>
-                    <DialogContent className="sm:max-w-[640px]">
-                      <DialogHeader>
-                        <DialogTitle>Adicionar minhas informações bancárias</DialogTitle>
-                      </DialogHeader>
-                      <div className={`space-y-5 ${bankPhase === 'verify' ? 'hidden' : ''}`}>
-                        <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-[#1a1a1a] p-4">
-                          <div className="font-medium text-slate-900 dark:text-white mb-3">Dados dos beneficiários</div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-700 dark:text-slate-300">
-                            <div className="col-span-2"><div className="text-slate-500">Razao Social</div><div className="font-medium">{(selectedOrg as any)?.name || '-'}</div></div>
-                            <div><div className="text-slate-500">Nome</div><div className="font-medium">{firstName || '-'}</div></div>
-                            <div><div className="text-slate-500">Sobrenome</div><div className="font-medium">{lastName || '-'}</div></div>
-                            <div className="col-span-2"><div className="text-slate-500">E-mail</div><div className="font-medium">{user?.email || '-'}</div></div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-[#1a1a1a] p-4">
-                          <div className="font-medium text-slate-900 dark:text-white mb-3">Chave PIX (para transferência do balanço dos eventos)</div>
-                          <div className="inline-flex rounded-md overflow-hidden border border-zinc-200 dark:border-zinc-700">
-                            <button className={`px-3 py-1.5 text-sm ${pixType === 'email' ? 'bg-indigo-600 text-white' : 'bg-transparent text-slate-700 dark:text-slate-300'}`} onClick={() => setPixType('email')}>E-mail</button>
-                            <button className={`px-3 py-1.5 text-sm ${pixType === 'phone' ? 'bg-indigo-600 text-white' : 'bg-transparent text-slate-700 dark:text-slate-300'}`} onClick={() => setPixType('phone')}>Telefone</button>
-                            <button className={`px-3 py-1.5 text-sm ${pixType === 'cpfcnpj' ? 'bg-indigo-600 text-white' : 'bg-transparent text-slate-700 dark:text-slate-300'}`} onClick={() => setPixType('cpfcnpj')}>CPF / CNPJ</button>
-                          </div>
-                          <div className="mt-3">
-                            <Input placeholder={pixType === 'email' ? 'john@gmail.com' : pixType === 'phone' ? '(11) 90000-0000' : '000.000.000-00'} value={pixKey} onChange={(e) => setPixKey(e.target.value)} />
-                          </div>
-                          <label className="mt-3 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
-                            <input type="checkbox" checked={confirmOwner} onChange={(e) => setConfirmOwner(e.target.checked)} className="mt-0.5" />
-                            <span>Eu confirmo que esta conta bancária pertence a minha organização e que eu tenho autorização para usa-la.</span>
-                          </label>
-                        </div>
-                      </div>
-                      <DialogFooter className={bankPhase === 'verify' ? 'hidden' : ''}>
-                        <Button variant="secondary" onClick={() => setBankOpen(false)}>Cancelar</Button>
-                        <Button onClick={saveBanking} disabled={!pixKey.trim() || !confirmOwner}>Confirmar adição de conta</Button>
-                      </DialogFooter>
-                      {bankPhase === 'verify' && (
-                        <>
-                          <div className="text-sm text-slate-600 dark:text-slate-300 mt-2">Digite seu PIN de 4 dígitos para confirmar esta alteração.</div>
-                          {pinAuthError && <div className="text-xs text-red-600 mt-2">{pinAuthError}</div>}
-                          <div className="mt-4 flex items-center gap-3">
-                            {pinAuth.map((d, idx) => (
-                              <input
-                                key={idx}
-                                value={d}
-                                onChange={(e) => {
-                                  const v = e.target.value.replace(/\D/g, '').slice(0, 1);
-                                  const next = [...pinAuth];
-                                  next[idx] = v;
-                                  setPinAuth(next);
-                                  if (v && idx < 3) {
-                                    const el = document.getElementById(`pin-auth-${idx + 1}`) as HTMLInputElement | null;
-                                    el?.focus();
-                                  }
-                                  if (next.every(x => x && x.length === 1)) {
-                                    handlePinVerification(next);
-                                  }
-                                }}
-                                id={`pin-auth-${idx}`}
-                                inputMode="numeric"
-                                maxLength={1}
-                                className="w-10 h-12 rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent text-center text-lg text-slate-900 dark:text-white"
-                              />
+                </TabsContent>
                             ))}
                           </div>
                           <DialogFooter>
