@@ -1408,16 +1408,6 @@ export default function OrganizerSettingsV2() {
                     )}
                   </div>
                 </TabsContent>
-                            ))}
-                          </div>
-                          <DialogFooter>
-                            <Button variant="secondary" onClick={() => { setBankOpen(false); setBankPhase('form'); setPinAuth(['', '', '', '']); setPinAuthError(''); }}>Cancelar</Button>
-                          </DialogFooter>
-                        </>
-                      )}
-                    </DialogContent>
-                  </Dialog>
-                </TabsContent>
               </Tabs>
             )}
 
