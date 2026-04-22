@@ -126,7 +126,7 @@ export default function OrganizerSettingsV2() {
       });
       if (res.ok) {
         setEfiAccountStatus('PENDING');
-        toast({ title: 'Enviado para análise', description: 'Seus dados estão sendo processados pela Efí Bank.' });
+        toast({ title: 'FauvesPay em análise', description: 'Seus dados foram enviados para validação segura.' });
       } else {
         throw new Error();
       }
@@ -230,13 +230,13 @@ export default function OrganizerSettingsV2() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="banking">
-                 {efiAccountStatus === 'NONE' || efiAccountStatus === 'REJECTED' ? (
-                   <div className="max-w-xl mx-auto rounded-2xl border bg-white dark:bg-[#121212] overflow-hidden shadow-lg animate-in fade-in slide-in-from-bottom-4">
-                      <div className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 p-8 text-white">
-                         <h2 className="text-2xl font-bold">Ative sua Conta Digital Efí</h2>
-                         <p className="opacity-90">Receba via Pix e Cartão com split automático.</p>
-                      </div>
+                  <TabsContent value="banking">
+                     {efiAccountStatus === 'NONE' || efiAccountStatus === 'REJECTED' ? (
+                       <div className="max-w-xl mx-auto rounded-2xl border bg-white dark:bg-[#121212] overflow-hidden shadow-lg animate-in fade-in slide-in-from-bottom-4">
+                          <div className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 p-8 text-white">
+                             <h2 className="text-2xl font-bold italic tracking-tight">FauvesPay</h2>
+                             <p className="opacity-90">Sua conta digital para recebimentos e saques instantâneos.</p>
+                          </div>
                       <div className="p-8 space-y-6">
                          <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
                             <button onClick={() => setOnboardingType('individual')} className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${onboardingType === 'individual' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>CPF</button>
@@ -253,9 +253,14 @@ export default function OrganizerSettingsV2() {
                             </div>
                          </div>
                          <Button className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold" onClick={handleOnboarding} disabled={submittingOnboarding}>
-                            {submittingOnboarding ? 'Enviando Dados...' : 'Criar Conta Digital'}
+                            {submittingOnboarding ? 'Ativando FauvesPay...' : 'Ativar Minha Conta FauvesPay'}
                          </Button>
-                         <p className="text-[10px] text-center text-slate-400">Ao criar a conta, você concorda com os termos da Efí Bank e autoriza o split de recebíveis da Fauves.</p>
+                         <div className="space-y-4">
+                            <p className="text-[10px] text-center text-slate-400">Ao clicar em ativar, você concorda com os termos de uso e autoriza o processamento de recebíveis.</p>
+                            <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4 text-[9px] text-zinc-400 text-center leading-relaxed">
+                               A conta digital <b>FauvesPay</b> e os serviços de arranjo de pagamento são operados sob responsabilidade técnica e custódia da <b>Efí Bank S.A.</b>, instituição de pagamento autorizada pelo Banco Central do Brasil.
+                            </div>
+                         </div>
                       </div>
                    </div>
                  ) : efiAccountStatus === 'PENDING' ? (
@@ -263,20 +268,44 @@ export default function OrganizerSettingsV2() {
                       <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
                         <Info size={32} className="text-amber-500 animate-pulse" />
                       </div>
-                      <h2 className="text-xl font-bold">Conta em Análise</h2>
-                      <p className="text-slate-500 mt-2">A Efí Bank está processando seus documentos. Isso geralmente leva de 1 a 3 dias úteis.</p>
+                      <h2 className="text-xl font-bold">Análise em Andamento</h2>
+                      <p className="text-slate-500 mt-2">O <b>FauvesPay</b> está validando seus dados. Esse processo geralmente leva de 1 a 3 dias úteis para sua segurança.</p>
                    </div>
                  ) : (
                    <div className="max-w-xl mx-auto bg-white dark:bg-[#121212] p-8 rounded-2xl border text-center shadow-sm">
                       <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
                         <CheckCircle2 size={32} className="text-emerald-500" />
                       </div>
-                      <h2 className="text-xl font-bold">Conta Digital Ativa</h2>
-                      <p className="text-slate-500 text-sm mt-2">Sua conta está integrada e pronta para receber pagamentos e realizar saques.</p>
+                      <h2 className="text-xl font-bold">FauvesPay Ativado</h2>
+                      <p className="text-slate-500 text-sm mt-2">Sua conta digital está conectada e pronta para operar.</p>
                       <Button className="mt-8 w-full h-12" onClick={() => navigate('/organizer-finances')}>Acessar Painel Financeiro</Button>
                    </div>
                  )}
-              </TabsContent>
+
+                  {/* ADMIN ONLY: AUDIT LOGS */}
+                  {user?.isAdmin && org?.efiOnboardingLogs && (
+                    <div className="mt-12 p-6 bg-zinc-50 dark:bg-black/40 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl">
+                       <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">
+                          <Lock size={12} /> Auditoria FauvesPay (Admin Only)
+                       </div>
+                       <div className="space-y-3">
+                          {Array.isArray(org.efiOnboardingLogs) && org.efiOnboardingLogs.length > 0 ? (
+                            org.efiOnboardingLogs.map((log: any, idx: number) => (
+                              <div key={idx} className="p-3 bg-white dark:bg-zinc-900 border rounded-lg text-[10px] font-mono overflow-auto">
+                                 <div className="flex justify-between border-b pb-1 mb-2 opacity-50">
+                                    <span>#{idx + 1} - {log.action}</span>
+                                    <span>{new Date(log.date).toLocaleString()}</span>
+                                 </div>
+                                 <pre>{JSON.stringify(log.response || log.payload, null, 2)}</pre>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-[10px] text-zinc-400 italic">Nenhuma interação registrada ainda.</div>
+                          )}
+                       </div>
+                    </div>
+                  )}
+               </TabsContent>
             </Tabs>
 
             {/* MODAIS DE EDIÇÃO (RESTORED) */}

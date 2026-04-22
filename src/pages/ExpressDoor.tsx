@@ -100,7 +100,7 @@ const ExpressDoor: React.FC = () => {
         <div className="absolute bottom-[10%] left-[-10%] h-[400px] w-[400px] rounded-full bg-fuchsia-600/15 blur-[100px]" />
       </div>
 
-      <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-xl hidden sm:block">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <button onClick={() => navigate('/')} className="transition-transform active:scale-95">
             <LogoFauves width={100} variant="white" />
@@ -124,7 +124,7 @@ const ExpressDoor: React.FC = () => {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-2xl px-6 py-8 pb-24">
+      <main className="relative mx-auto max-w-2xl px-6 py-8 pb-32">
         {/* Header Section */}
         <div className="mb-10 space-y-2 text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-400 ring-1 ring-inset ring-indigo-500/20">
@@ -219,6 +219,13 @@ const ExpressDoor: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Mobile Footer Bar */}
+      <div className="fixed bottom-0 left-0 z-50 flex w-full items-center justify-center border-t border-white/5 bg-black/80 py-4 backdrop-blur-lg sm:hidden">
+        <p className="flex items-center gap-2 text-[10px] font-medium tracking-widest text-zinc-500 uppercase">
+          Bilheteria powered by <LogoFauves width={60} variant="white" className="opacity-40" />
+        </p>
+      </div>
     </div>
   );
 };
