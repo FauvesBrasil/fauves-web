@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 180 180">
+  <rect width="180" height="180" fill="#131517" rx="16"/>
+  <!-- Dark Calendar Page -->
+  <rect x="36" y="38" width="108" height="88" rx="12" fill="#222" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <!-- Page Header -->
+  <rect x="48" y="50" width="16" height="16" rx="4" fill="#FF66B1" opacity="0.8"/>
+  <rect x="72" y="54" width="48" height="8" rx="4" fill="rgba(255,255,255,0.15)"/>
+  <!-- Page Rows -->
+  <rect x="48" y="74" width="84" height="12" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.04)"/>
+  <rect x="48" y="92" width="84" height="12" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.04)"/>
+  <!-- Blue URL Badge -->
+  <rect x="44" y="116" width="92" height="18" rx="9" fill="#2563EB"/>
+  <!-- URL icon & text -->
+  <circle cx="53" cy="125" r="4" fill="none" stroke="#fff" stroke-width="1"/>
+  <text x="62" y="129" fill="#fff" font-size="9" font-weight="bold" font-family="system-ui, sans-serif">fauves/calendar</text>
+</svg>

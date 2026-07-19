@@ -10,7 +10,7 @@ Disallow: /organizer-finances
 Disallow: /organizer-settings
 Disallow: /organizer-reports
 Disallow: /painel-evento/
-Disallow: /create-event
+Disallow: /create
 Disallow: /create-tickets
 Disallow: /publish-details
 Disallow: /marketing/

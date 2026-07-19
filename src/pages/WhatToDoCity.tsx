@@ -1,364 +1,242 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import EventCard from '../components/EventCard';
-import { fetchApi } from '@/lib/apiBase';
-import { Loader2, Search, Calendar, PartyPopper, Music, LayoutGrid } from 'lucide-react';
-import LeadCapture from '../components/LeadCapture';
-import AppShell from '../components/AppShell';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Clock3, Landmark, MapPin, Plus, Rss, Search } from 'lucide-react';
+import HeaderV2 from '@/components/v2/HeaderV2';
+import FooterV2 from '@/components/v2/FooterV2';
+import SubscribeControl from '@/components/v2/SubscribeControl';
+import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { useSEO } from '@/hooks/useSEO';
 
-interface Event {
-    id: string;
-    name: string;
-    startDate: string;
-    endDate?: string | null;
-    location?: string | null;
-    bannerUrl?: string | null;
-    banner?: string | null;
-    image?: string | null;
-    slug?: string | null;
-    locationCity?: string;
-    locationUf?: string;
-    categories?: any[];
-}
-
-const WhatToDoCity = () => {
-    const { citySlug } = useParams<{ citySlug: string }>();
-    const [events, setEvents] = useState<Event[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'today' | 'weekend' | 'festas' | 'shows'>('all');
-
-    // Função para converter slug em nome legível
-    const slugToCityName = (slug: string) => {
-        const specialCases: Record<string, string> = {
-            'sao-paulo': 'São Paulo',
-            'vitoria': 'Vitória',
-            'maceio': 'Maceió',
-            'belem': 'Belém',
-            'florianopolis': 'Florianópolis',
-            'goiania': 'Goiânia',
-            'cuiaba': 'Cuiabá',
-            'sao-luis': 'São Luís',
-            'ribeirao-preto': 'Ribeirão Preto',
-            'sao-jose-dos-campos': 'São José dos Campos'
-        };
-
-        if (specialCases[slug.toLowerCase()]) return specialCases[slug.toLowerCase()];
-
-        return slug
-            .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-    };
-
-    const cityName = slugToCityName(citySlug || '');
-
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            try {
-                // Busca eventos e filtra pela cidade
-                const res = await fetchApi('/events?limit=200');
-                if (res.ok) {
-                    const data = await res.json();
-                    const list = data.events || [];
-                    
-                    const filtered = list.filter((ev: any) => 
-                        ev.locationCity?.toLowerCase() === cityName.toLowerCase() ||
-                        ev.locationCity?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === 
-                        cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-                    );
-                    setEvents(filtered);
-                }
-            } catch (err) {
-                // Silently handle or show error UI if needed
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
-        
-        // SEO: Meta Tags
-        document.title = `O que fazer em ${cityName} hoje | Eventos, festas e shows | Fauves`;
-        
-        // Adiciona/Atualiza Meta Description
-        let metaDesc = document.querySelector('meta[name="description"]');
-        if (!metaDesc) {
-            metaDesc = document.createElement('meta');
-            metaDesc.setAttribute('name', 'description');
-            document.head.appendChild(metaDesc);
-        }
-        metaDesc.setAttribute('content', `Descubra os melhores eventos em ${cityName}. Festas, shows e experiências atualizadas diariamente na Fauves.`);
-
-    }, [citySlug, cityName]);
-
-    const now = new Date();
-    const todayStr = now.toDateString();
-
-    const todayEventsRaw = events.filter(ev => {
-        if (!ev.startDate) return false;
-        return new Date(ev.startDate).toDateString() === todayStr;
-    });
-
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const dayOfWeek = today.getDay();
-    const daysUntilSunday = (7 - dayOfWeek) % 7;
-    const endOfSunday = new Date(today);
-    endOfSunday.setDate(today.getDate() + daysUntilSunday);
-    endOfSunday.setHours(23, 59, 59, 999);
-
-    const weekendEventsRaw = events.filter(ev => {
-        if (!ev.startDate) return false;
-        const evDate = new Date(ev.startDate);
-        return evDate >= now && evDate <= endOfSunday;
-    });
-
-    const upcomingEventsRaw = events.filter(ev => {
-        if (!ev.startDate) return false;
-        return new Date(ev.startDate) > endOfSunday;
-    }).sort((a, b) => 
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-    );
-
-    // Logic for filtering based on activeFilter
-    const getFilteredEvents = (baseEvents: Event[]) => {
-        if (activeFilter === 'all') return baseEvents;
-        if (activeFilter === 'today') return baseEvents.filter(ev => new Date(ev.startDate).toDateString() === todayStr);
-        if (activeFilter === 'weekend') return baseEvents.filter(ev => {
-            const d = new Date(ev.startDate);
-            return d >= now && d <= endOfSunday;
-        });
-        if (activeFilter === 'festas') return baseEvents.filter(ev => 
-            ev.name.toLowerCase().includes('festa') || 
-            ev.categories?.some((c: any) => c.name?.toLowerCase().includes('festa'))
-        );
-        if (activeFilter === 'shows') return baseEvents.filter(ev => 
-            ev.name.toLowerCase().includes('show') || 
-            ev.categories?.some((c: any) => c.name?.toLowerCase().includes('show'))
-        );
-        return baseEvents;
-    };
-
-    const renderEventsSection = (title: string, evList: Event[], emptyMsg?: React.ReactNode) => {
-        const filtered = getFilteredEvents(evList);
-        
-        // Don't render empty upcoming sections if we are not at "All" or if it would be redundant
-        if (filtered.length === 0 && !emptyMsg) return null;
-
-        return (
-            <section className="mb-16">
-                <h2 className="text-2xl font-bold text-[#091747] dark:text-white mb-6 flex items-center gap-2">
-                    {title}
-                </h2>
-                {filtered.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {filtered.map(ev => (
-                            <EventCard 
-                                key={ev.id}
-                                id={ev.id}
-                                title={ev.name}
-                                image={ev.bannerUrl || ev.banner || (ev.image && typeof ev.image === 'string' && ev.image.length > 5 ? ev.image : '/no-image.svg')}
-                                date={new Date(ev.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                                location={ev.locationCity && ev.locationUf ? `${ev.locationCity} - ${ev.locationUf}` : (ev.location || `${cityName} - CE`)}
-                                slug={ev.slug}
-                                size="large"
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="bg-[#f8f9fc] dark:bg-white/5 border border-dashed border-[#cbd5e1] dark:border-white/10 rounded-2xl py-12 px-6 text-center">
-                        <div className="text-[#64748b] dark:text-gray-400 text-base leading-relaxed max-w-2xl mx-auto">
-                            {emptyMsg || (
-                                <>
-                                    Atualmente não há eventos cadastrados para este período, mas novos eventos são adicionados diariamente. 
-                                    Explore outras datas ou categorias.
-                                </>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </section>
-        );
-    };
-
-    const getCityImage = (slug: string, name: string) => {
-        const cityImages: Record<string, string> = {
-            'fortaleza': 'https://images.trvl-media.com/place/6142832/917c6b31-1da4-4e62-9869-79b2c991dec8.jpg',
-            'sao-paulo': 'https://visitesaopaulo.com/wp-content/uploads/2023/05/banner-i.jpg',
-            'rio-de-janeiro': '1483729558449-99ef05a13d9f',
-            'salvador': '1591461537233-0443fe0364d0',
-            'belo-horizonte': '1593995863951-b79bc19599ba',
-            'curitiba': '1596464716127-f2a829d4de30',
-            'brasilia': '1595111090623-11f845d47053',
-            'recife': '1594911776510-7e18987d6056',
-            'florianopolis': '1593021151203-01e4f62629b3'
-        };
-
-        const val = cityImages[slug.toLowerCase()];
-        
-        // Se houver mapeamento específico
-        if (val) {
-            if (val.startsWith('http')) return val;
-            return `https://images.unsplash.com/photo-${val}?q=80&w=2000&auto=format&fit=crop`;
-        }
-        
-        // Fallback dinâmico: busca automática por nome da cidade (+ pontos turísticos para ser mais preciso)
-        return `https://images.unsplash.com/featured/?${encodeURIComponent(name)},brazil,sightseeing,landmark,tourism`;
-    };
-
-    const heroImage = getCityImage(citySlug || '', cityName);
-
-    return (
-        <AppShell>
-            {/* Hero Section */}
-            <div className="relative w-full h-[460px] max-md:h-[400px] overflow-hidden">
-                <img 
-                    src={heroImage} 
-                    alt={cityName}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = 'https://images.unsplash.com/photo-1463620910506-d0458143143e?q=80&w=2000';
-                    }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                
-                <div className="absolute inset-0 flex flex-col items-start justify-center text-left px-6 pointer-events-none">
-                    <div className="max-w-[1352px] w-full mx-auto px-6 md:px-[156px] pointer-events-auto">
-                        <h1 className="text-6xl md:text-8xl font-black text-white mb-4 tracking-tighter animate-in fade-in slide-in-from-bottom-8 duration-700">
-                            {cityName}
-                        </h1>
-                        <p className="text-xl md:text-2xl text-white/90 font-medium max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
-                            Eventos, festas e experiências acontecendo agora
-                        </p>
-                        
-                        <div className="mt-8 relative max-w-md animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                            <input 
-                                type="text"
-                                placeholder={`Buscar eventos em ${cityName}...`}
-                                className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-full py-4 pl-12 pr-6 text-white placeholder:text-white/60 focus:outline-none focus:ring-4 focus:ring-white/10 transition-all pointer-events-auto"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <main className="max-w-[1352px] mx-auto pt-12 pb-20">
-                {/* Intro SEO Text */}
-                <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mb-12">
-                    <div className="p-8 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-3xl">
-                        <p className="text-lg text-[#4b5563] dark:text-gray-300 leading-relaxed italic">
-                            "Se você está procurando o que fazer em {cityName} hoje, aqui você encontra os melhores eventos, 
-                            festas, shows e experiências acontecendo na cidade. A Fauves reúne opções atualizadas diariamente 
-                            para você aproveitar ao máximo {cityName}."
-                        </p>
-                    </div>
-                </div>
-
-                {/* Quick Filters */}
-                <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mb-12 flex flex-wrap gap-3 items-center">
-                    <FilterButton 
-                        active={activeFilter === 'all'} 
-                        onClick={() => setActiveFilter('all')}
-                        icon={<LayoutGrid size={18} />}
-                        label="Todos"
-                    />
-                    <FilterButton 
-                        active={activeFilter === 'today'} 
-                        onClick={() => setActiveFilter('today')}
-                        icon={<Calendar size={18} />}
-                        label="Hoje"
-                    />
-                    <FilterButton 
-                        active={activeFilter === 'weekend'} 
-                        onClick={() => setActiveFilter('weekend')}
-                        icon={<Calendar size={18} />}
-                        label="Fim de semana"
-                    />
-                    <FilterButton 
-                        active={activeFilter === 'festas'} 
-                        onClick={() => setActiveFilter('festas')}
-                        icon={<PartyPopper size={18} />}
-                        label="Festas"
-                    />
-                    <FilterButton 
-                        active={activeFilter === 'shows'} 
-                        onClick={() => setActiveFilter('shows')}
-                        icon={<Music size={18} />}
-                        label="Shows"
-                    />
-                </div>
-
-                <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20">
-                            <Loader2 className="w-10 h-10 animate-spin text-[#2A2AD7] mb-4" />
-                            <p className="text-gray-500 font-medium">Buscando os melhores eventos em {cityName}...</p>
-                        </div>
-                    ) : (
-                        <>
-                            {renderEventsSection(`Eventos hoje em ${cityName}`, todayEventsRaw)}
-                            {renderEventsSection(`Neste fim de semana em ${cityName}`, weekendEventsRaw)}
-                            {renderEventsSection(`Próximos eventos em ${cityName}`, upcomingEventsRaw)}
-                        </>
-                    )}
-                </div>
-
-                <LeadCapture source="city-page" />
-
-                {/* SEO Footer Content */}
-                <div className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 mt-16">
-                    <div className="border-t border-gray-100 dark:border-white/5 pt-16">
-                        <h2 className="text-2xl font-bold text-[#091747] dark:text-white mb-8">Programação Cultural em {cityName}</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-[#4b5563] dark:text-gray-400 leading-relaxed text-sm">
-                            <div className="space-y-4">
-                                <p>
-                                    {cityName} se destaca como um dos principais pólos de entretenimento e cultura do Brasil. 
-                                    A cidade oferece uma agenda vibrante que atende a todos os gostos, desde shows de grandes 
-                                    artistas nacionais a festas conceituais e eventos alternativos.
-                                </p>
-                                <p>
-                                    Para quem busca <strong>o que fazer em {cityName} hoje</strong>, a diversidade é a palavra-chave. 
-                                    Seja explorando a orla, os centros culturais ou as casas de show mais badaladas, sempre 
-                                    há uma experiência esperando por você.
-                                </p>
-                            </div>
-                            <div className="space-y-4">
-                                <p>
-                                    A Fauves é sua aliada na hora de planejar sua diversão. Reunimos as melhores opções de 
-                                    lazer de forma organizada para que você não perca nada do que acontece em {cityName}.
-                                </p>
-                                <p>
-                                    Acompanhe nossa plataforma regularmente para descobrir novos eventos e aproveitar o 
-                                    melhor de {cityName} com praticidade e segurança.
-                                </p>
-                                <div className="pt-4 flex flex-wrap gap-4">
-                                    <a href="/events" className="text-[#2A2AD7] dark:text-indigo-400 font-bold hover:underline">Ver tudo</a>
-                                    <a href={`/o-que-fazer-em/${citySlug}`} className="text-[#2A2AD7] dark:text-indigo-400 font-bold hover:underline">Recarregar página</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </AppShell>
-    );
+type CityEvent = {
+  id: string;
+  name: string;
+  slug?: string | null;
+  startDate: string;
+  location?: string | null;
+  locationName?: string | null;
+  venue?: string | null;
+  locationCity?: string | null;
+  locationUf?: string | null;
+  bannerUrl?: string | null;
+  banner?: string | null;
+  image?: string | null;
+  organization?: { name?: string | null } | null;
+  price?: number | null;
 };
 
-const FilterButton = ({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) => (
-    <button
-        onClick={onClick}
-        className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold transition-all ${
-            active 
-            ? 'bg-[#091747] text-white dark:bg-white dark:text-[#091747] shadow-lg shadow-indigo-500/20' 
-            : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 dark:bg-white/5 dark:text-gray-300 dark:border-white/10 hover:dark:border-white/20'
-        }`}
-    >
-        {icon}
-        {label}
-    </button>
-);
+const cityNames: Record<string, string> = {
+  'sao-paulo': 'São Paulo', 'rio-de-janeiro': 'Rio de Janeiro', vitoria: 'Vitória',
+  maceio: 'Maceió', belem: 'Belém', florianopolis: 'Florianópolis', goiania: 'Goiânia',
+  cuiaba: 'Cuiabá', 'sao-luis': 'São Luís', bogota: 'Bogotá', medellin: 'Medellín',
+  'buenos-aires': 'Buenos Aires',
+};
+
+const cityImages: Record<string, string> = {
+  fortaleza: 'https://pub-5d5ce29d165a4389942365032d7efda5.r2.dev/cidades/fortaleza.png',
+  bogota: 'https://images.unsplash.com/photo-1568632234157-ce7aecd03d0d?q=85&w=2000&auto=format&fit=crop',
+  'sao-paulo': 'https://visitesaopaulo.com/wp-content/uploads/2023/05/banner-i.jpg',
+  'rio-de-janeiro': 'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?q=85&w=2000&auto=format&fit=crop',
+  salvador: 'https://images.unsplash.com/photo-1591461537233-0443fe0364d0?q=85&w=2000&auto=format&fit=crop',
+  curitiba: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?q=85&w=2000&auto=format&fit=crop',
+};
+
+const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const displayCity = (slug: string) => cityNames[slug] || slug.split('-').map((word) => word[0]?.toUpperCase() + word.slice(1)).join(' ');
+
+const formatCompactLocation = (event: CityEvent) => {
+  const venue = (event.locationName || event.venue || event.location?.split(',')[0] || '').trim();
+  const city = event.locationCity?.trim() || '';
+  const uf = event.locationUf?.trim() || '';
+  return [venue && normalize(venue) !== normalize(city) ? venue : '', [city, uf].filter(Boolean).join(' - ')].filter(Boolean).join(', ');
+};
+
+const formatDay = (date: Date) => {
+  const today = new Date();
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  if (date.toDateString() === today.toDateString()) return 'Hoje';
+  if (date.toDateString() === tomorrow.toDateString()) return 'Amanhã';
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(date).replace('.', '');
+};
+
+const StickyEventDay: React.FC<{ date: Date }> = ({ date }) => {
+  const markerRef = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setStuck((markerRef.current?.getBoundingClientRect().top || Infinity) <= 65));
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', update); window.removeEventListener('resize', update); };
+  }, []);
+  return <div ref={markerRef} className={`city-event-day${stuck ? ' is-stuck' : ''}`}><i /><span className="city-event-day-pill"><strong>{formatDay(date)}</strong><span>{new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(date)}</span></span></div>;
+};
+
+const WhatToDoCity: React.FC = () => {
+  const { citySlug: legacyCitySlug, slugOrId } = useParams<{ citySlug?: string; slugOrId?: string }>();
+  const citySlug = legacyCitySlug || slugOrId || '';
+  const cityName = displayCity(citySlug);
+  const [events, setEvents] = useState<CityEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useSEO({
+    title: `Eventos em ${cityName} · Fauves`,
+    description: `Descubra os próximos eventos em ${cityName}.`,
+    url: `/${citySlug}`,
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const response = await fetchApi('/api/events?limit=200');
+        const data = await response.json();
+        const list = Array.isArray(data) ? data : Array.isArray(data?.events) ? data.events : [];
+        setEvents(list.filter((event: CityEvent) => normalize(event.locationCity || '') === normalize(cityName))
+          .filter((event: CityEvent) => new Date(event.startDate).getTime() >= Date.now())
+          .sort((a: CityEvent, b: CityEvent) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()));
+      } catch (error) {
+        console.error('Error loading city events:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [cityName]);
+
+  const groups = useMemo(() => {
+    const result = new Map<string, CityEvent[]>();
+    events.forEach((event) => {
+      const key = new Date(event.startDate).toDateString();
+      result.set(key, [...(result.get(key) || []), event]);
+    });
+    return Array.from(result.entries());
+  }, [events]);
+
+  const heroImage = cityImages[citySlug] || `https://images.unsplash.com/featured/?${encodeURIComponent(cityName)},city,skyline`;
+
+  return (
+    <div className="city-events-page dark dark-mode">
+      <HeaderV2 transparent fixed theme="dark" blueGlow={false} contentMaxWidth="928px" />
+
+      <section className="city-events-hero" style={{ '--city-image': `url("${heroImage}")` } as React.CSSProperties}>
+        <div className="city-events-photo" />
+        <div className="city-events-hero-shade" />
+        <div className="city-events-hero-content" data-header-align>
+          <span className="city-events-icon"><Landmark size={25} strokeWidth={1.6} /></span>
+          <p>O que está acontecendo em</p>
+          <h1>{cityName}</h1>
+          <span className="city-events-time"><Clock3 size={15} /> Horário local</span>
+          <div className="city-events-rule" />
+          <p className="city-events-description">Descubra eventos, encontros e experiências acontecendo em {cityName}.</p>
+          <SubscribeControl scope={`city:${citySlug}`} />
+        </div>
+      </section>
+
+      <main className="city-events-main">
+        <section className="city-events-list-column">
+          <header className="city-events-list-header">
+            <h2>Eventos</h2>
+            <div>
+              <Link className="v2-secondary-action" to="/create"><Plus size={14} />Enviar Evento</Link>
+              <button className="city-square-button" type="button" aria-label="Feed"><Rss size={15} /></button>
+              <button className="city-square-button" type="button" aria-label="Buscar"><Search size={15} /></button>
+            </div>
+          </header>
+
+          {loading ? <span className="city-events-loader" /> : groups.length ? groups.map(([key, group]) => {
+            const date = new Date(group[0].startDate);
+            return <section className="city-event-group" key={key}>
+              <StickyEventDay date={date} />
+              <div className="city-event-cards">{group.map((event) => {
+                const image = resolveImageUrl(event.bannerUrl || event.banner || event.image);
+                const location = formatCompactLocation(event);
+                return <Link className="city-event-card" to={`/${event.slug || event.id}`} key={event.id}>
+                  <div className="city-event-copy">
+                    <time>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(event.startDate))}</time>
+                    <h3>{event.name}</h3>
+                    {event.organization?.name && <p>{event.organization.name}</p>}
+                    {location && <p className="city-event-location" title={location}><MapPin size={15} /><span>{location}</span></p>}
+                    {event.price != null && event.price > 0 && <small>R$ {event.price.toLocaleString('pt-BR')}</small>}
+                  </div>
+                  <span className="city-event-image">{image ? <img src={image} alt="" /> : <Landmark size={28} />}</span>
+                </Link>;
+              })}</div>
+            </section>;
+          }) : <p className="city-events-empty">Nenhum evento próximo em {cityName}.</p>}
+        </section>
+
+        <aside className="city-events-aside">
+          <span className="city-events-aside-icon"><Landmark size={24} /></span>
+          <h3>{cityName}</h3>
+          <p>Receba novidades sobre os próximos eventos em {cityName}.</p>
+          <SubscribeControl scope={`city:${citySlug}`} compact />
+          <div className="city-events-map"><MapPin size={27} /><strong>{cityName}</strong></div>
+        </aside>
+      </main>
+
+      <FooterV2 maxWidth="928px" />
+      <style>{cityStyles}</style>
+    </div>
+  );
+};
+
+const cityStyles = `
+  .city-events-page { min-height: 100vh; overflow-x: hidden; color: #f5f5f5; background: #121416; font-family: Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  .city-events-hero { position: relative; height: 770px; overflow: hidden; }
+  .city-events-photo { position: absolute; inset: 0; background-image: var(--city-image); background-position: center; background-size: cover; }
+  .city-events-hero-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(70,50,28,.82) 0%, rgba(70,50,28,.64) 42%, rgba(20,20,20,.08) 72%); }
+  .city-events-hero-content { position: relative; display: flex; width: min(100% - 32px, 928px); height: 100%; margin: 0 auto; flex-direction: column; align-items: flex-start; justify-content: center; }
+  .city-events-icon,.city-events-aside-icon { display:grid; width:48px; height:48px; place-items:center; border:1px solid rgba(255,255,255,.18); border-radius:50%; background:rgba(255,255,255,.12); }
+  .city-events-hero-content > p:first-of-type { margin:28px 0 3px; color:rgba(255,255,255,.62); font-size:1.65rem; font-weight:500; }
+  .city-events-hero h1 { margin:0; color:#fff; font-size:3.25rem; font-weight:600; letter-spacing:-.035em; }
+  .city-events-time { display:flex; align-items:center; gap:7px; margin-top:17px; color:rgba(255,255,255,.62); font-size:.875rem; font-weight:500; }
+  .city-events-rule { width:465px; height:1px; margin:28px 0 25px; background:rgba(255,255,255,.18); }
+  .city-events-description { width:min(465px,100%); margin:0 0 29px; color:rgba(255,255,255,.88); font-size:.9375rem; font-weight:500; line-height:1.55; }
+  .city-events-hero .subscribe-control { max-width:160px; }
+  .city-events-hero .subscribe-control-action { width:160px; }
+  .city-events-main { display:grid; width:min(100% - 32px,928px); margin:0 auto; padding:42px 0 80px; grid-template-columns:minmax(0,620px) 260px; gap:48px; }
+  .city-events-list-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:27px; }
+  .city-events-list-header h2 { margin:0; font-size:1.25rem; font-weight:600; }
+  .city-events-list-header > div { display:flex; gap:5px; }
+  .city-square-button { display:grid; width:31px; height:31px; padding:0; place-items:center; border:0; border-radius:8px; color:rgba(255,255,255,.58); background:rgba(255,255,255,.08); cursor:pointer; }
+  .city-square-button:hover { color:#fff; background:rgba(255,255,255,.12); }
+  .city-event-group { position:relative; padding-left:25px; margin-bottom:20px; }
+  .city-event-group::before { content:''; position:absolute; top:8px; bottom:-21px; left:5px; border-left:2px dashed rgba(255,255,255,.10); }
+  .city-event-day { position:sticky; top:64px; z-index:4; display:flex; width:max-content; max-width:100%; align-items:center; margin:0 0 16px -8px; padding:4px 8px; border-radius:999px; transition:background-color .16s ease,box-shadow .16s ease,backdrop-filter .16s ease; }
+  .city-event-day.is-stuck { background:rgba(35,37,39,.78); box-shadow:0 1px 0 rgba(255,255,255,.08); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  .city-event-day-pill { display:flex; align-items:baseline; gap:5px; min-width:0; }
+  .city-event-day i { position:absolute; left:-20px; top:11px; width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.4); }
+  .city-event-day.is-stuck i { opacity:0; }
+  .city-event-day strong { color:#f5f5f5; font-size:.875rem; font-weight:600; }
+  .city-event-day-pill > span { color:rgba(255,255,255,.45); font-size:.8125rem; }
+  .city-event-cards { display:grid; gap:15px; }
+  .city-event-card { display:flex; min-height:150px; padding:13px; justify-content:space-between; gap:18px; border:1px solid rgba(255,255,255,.075); border-radius:12px; color:inherit; background:#202224; text-decoration:none; transition:border-color .16s ease; }
+  .city-event-card:hover { border-color:rgba(255,255,255,.24); }
+  .city-event-copy { min-width:0; flex:1 1 auto; overflow:hidden; }
+  .city-event-copy time { color:rgba(255,255,255,.48); font-size:.875rem; font-weight:600; }
+  .city-event-copy h3 { margin:8px 0 9px; color:#fff; font-size:1.05rem; font-weight:600; line-height:1.3; }
+  .city-event-copy p { display:flex; align-items:center; gap:6px; margin:5px 0; overflow:hidden; color:rgba(255,255,255,.48); font-size:.8125rem; font-weight:500; text-overflow:ellipsis; white-space:nowrap; }
+  .city-event-location svg { flex:0 0 auto; }
+  .city-event-location span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .city-event-copy small { display:inline-block; margin-top:8px; padding:3px 7px; border-radius:4px; color:#84da91; background:rgba(39,153,61,.18); font-size:.7rem; font-weight:600; }
+  .city-event-image { display:grid; width:120px; height:120px; flex:0 0 120px; overflow:hidden; place-items:center; border-radius:8px; color:rgba(255,255,255,.28); background:#181a1c; }
+  .city-event-image img { width:100%; height:100%; object-fit:cover; }
+  .city-events-aside { padding-top:0; }
+  .city-events-aside-icon { color:#fff; background:#d98445; border:0; }
+  .city-events-aside h3 { margin:18px 0 8px; font-size:1rem; font-weight:600; }
+  .city-events-aside > p { margin:0 0 17px; color:rgba(255,255,255,.7); font-size:.8125rem; font-weight:500; line-height:1.5; }
+  .city-events-map { display:flex; height:260px; margin-top:32px; align-items:center; justify-content:center; gap:6px; border-radius:10px; color:rgba(255,255,255,.45); background:radial-gradient(circle at 60% 35%,rgba(255,255,255,.09),transparent 28%),repeating-linear-gradient(35deg,#292b2d 0 2px,#222426 2px 14px); }
+  .city-events-empty { padding:25px; border:1px solid rgba(255,255,255,.07); border-radius:12px; color:rgba(255,255,255,.48); background:#202224; font-size:.875rem; }
+  .city-events-loader { display:block; width:30px; height:30px; margin:80px auto; border:2px solid rgba(255,255,255,.12); border-top-color:#fff; border-radius:50%; animation:city-spin .8s linear infinite; }
+  @keyframes city-spin { to { transform:rotate(360deg); } }
+  @media(max-width:760px){
+    .city-events-hero{height:620px}.city-events-hero-content>p:first-of-type{font-size:1.25rem}.city-events-hero h1{font-size:2.5rem}.city-events-rule{width:100%}
+    .city-events-main{grid-template-columns:1fr}.city-events-aside{display:none}.city-events-list-header{align-items:flex-start}.city-event-image{width:88px;height:88px;flex-basis:88px}
+  }
+`;
 
 export default WhatToDoCity;

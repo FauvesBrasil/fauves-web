@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronRight, ThumbsUp, ThumbsDown, ArrowLeft, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import HelpHeader from '@/components/HelpHeader';
+import { fetchApi } from '@/lib/apiBase';
+import { getArticleBySlug, helpCategories } from '@/data/helpArticles';
 
 interface Article {
     id: string;
@@ -37,18 +39,37 @@ const HelpArticle = () => {
 
     const loadArticle = async () => {
         try {
-            const response = await fetch(`http://localhost:4000/api/help/articles/${slug}`);
+            const response = await fetchApi(`/api/help/articles/${encodeURIComponent(slug || '')}`);
 
             if (!response.ok) {
-                setError(true);
-                return;
+                throw new Error('Artigo não encontrado na API');
             }
 
             const data = await response.json();
             setArticle(data);
-        } catch (error) {
-            // no-op
-            setError(true);
+        } catch {
+            const localArticle = slug ? getArticleBySlug(slug) : undefined;
+            const localCategory = localArticle
+                ? helpCategories.find((category) => category.id === localArticle.categoryId)
+                : undefined;
+
+            if (localArticle && localCategory) {
+                setArticle({
+                    ...localArticle,
+                    popular: Boolean(localArticle.popular),
+                    views: 0,
+                    helpful: 0,
+                    notHelpful: 0,
+                    category: {
+                        id: localCategory.id,
+                        name: localCategory.name,
+                        slug: localCategory.slug,
+                    },
+                });
+                setError(false);
+            } else {
+                setError(true);
+            }
         } finally {
             setLoading(false);
         }
@@ -60,7 +81,7 @@ const HelpArticle = () => {
         setFeedback(type);
 
         try {
-            await fetch(`http://localhost:4000/api/help/articles/${article.id}/vote/${type}`, {
+            await fetchApi(`/api/help/articles/${article.id}/vote/${type}`, {
                 method: 'GET',
             });
         } catch (error) {

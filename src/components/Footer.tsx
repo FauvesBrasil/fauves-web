@@ -87,7 +87,7 @@ const Footer: React.FC = () => {
                     {/* Links Columns with Accordion (Mobile) */}
                     <FooterSection title="Institucional" id="inst">
                         <li><Link to="/quem-somos" className="hover:text-orange-600 transition-colors">Quem Somos</Link></li>
-                        <li><Link to="/create-event" className="text-[#2A2AD7] font-black hover:underline">Venda seus Ingressos</Link></li>
+                        <li><Link to="/create" className="text-[#2A2AD7] font-black hover:underline">Venda seus Ingressos</Link></li>
                         <li><Link to="/" className="hover:text-orange-600 transition-colors">Blog Fauves</Link></li>
                         <li><Link to="/carreiras" className="hover:text-orange-600 transition-colors">Carreiras</Link></li>
                     </FooterSection>
@@ -129,7 +129,7 @@ const Footer: React.FC = () => {
                         {cities.map((city) => (
                             <Link 
                                 key={city.slug} 
-                                to={`/o-que-fazer-em/${city.slug}`}
+                                to={`/${city.slug}`}
                                 className="group flex items-center gap-4 text-sm hover:text-orange-600 transition-all"
                             >
                                 <span className={`flex items-center justify-center w-11 h-11 rounded-2xl ${isDark ? 'bg-slate-900' : 'bg-gray-50'} group-hover:bg-orange-500 group-hover:text-white transition-all duration-500 shadow-sm`}>

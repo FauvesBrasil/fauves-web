@@ -8,36 +8,48 @@ import { AnimatePresence } from 'framer-motion';
 import React, { Suspense, Component } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import Index from "./pages/Index";
-import WhatToDoCity from "./pages/WhatToDoCity";
+import IndexV2 from "./pages/IndexV2";
+import FauvesHome from "./pages/FauvesHome";
+import SignInPage from "./pages/SignInPage";
+import FullMapPage from "./pages/FullMapPage";
 import About from "./pages/About";
 import Careers from "./pages/Careers";
 import EventsByCategory from "./pages/EventsByCategory";
 import HalfPriceLaw from './pages/HalfPriceLaw';
 import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import SecurityPolicy from './pages/SecurityPolicy';
+import CopyrightPolicy from './pages/CopyrightPolicy';
 import ScrollToTop from './components/ScrollToTop';
 import OrganizerReportsPage from "./pages/ReportsPage";
 import OrganizerReportsOrders from "./pages/OrganizerReportsOrders";
 import OrganizerReportsSales from "./pages/OrganizerReportsSales";
 import OrganizerFinances from "./pages/OrganizerFinances";
 import OrganizerFinanceEvent from "./pages/OrganizerFinanceEvent";
-import Event from "./pages/Event";
+import EventPageV2 from "./pages/EventPageV2";
+
 import Profile from "./pages/Profile";
+import PublicUserProfile from "./pages/PublicUserProfile";
+import DiscoverV2 from "./pages/DiscoverV2";
+import OrganizationsV2 from "./pages/OrganizationsV2";
+import CreateOrganizationV2 from "./pages/CreateOrganizationV2";
 import NotFound from "./pages/NotFound";
 import TestSupabase from "./pages/TestSupabase"; // <-- importe o componente de teste
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import ProducerJourneyDemo from './pages/ProducerJourneyDemo';
 import ProducerJourneyPage from './pages/ProducerJourneyPage';
 import SearchResults from './pages/SearchResults';
-import AccountSettings from "./pages/AccountSettings";
-import CreateEditEvent from "./pages/CreateEditEvent";
+import AccountSettingsV2 from "./pages/AccountSettingsV2";
+import CreateEventV2 from "./pages/CreateEventV2";
 import CreateTickets from "./pages/CreateTickets";
 import PublishDetails from "./pages/PublishDetails";
-import EventPanel from "./pages/EventPanel";
+import EventPanelV2 from "./pages/EventPanelV2";
 import OrganizerEvents from "./pages/OrganizerEvents";
+import DesignSystem from "./pages/DesignSystem";
+import Events from "./pages/Events";
 import PublicCollection from "./pages/PublicCollection";
 import OrganizationPublicProfile from "./pages/OrganizationPublicProfile";
+import PublicSlugDispatcher from "./pages/PublicSlugDispatcher";
 import ExpressDoor from "./pages/ExpressDoor";
 import { Navigate, useParams } from "react-router-dom";
 import OrdersManager from "./pages/OrdersManager";
@@ -60,6 +72,8 @@ import { LocationProvider } from '@/context/LocationContext';
 import OrganizationTransitionOverlay from '@/components/OrganizationTransitionOverlay';
 import OrganizerSettingsV2 from './pages/OrganizerSettingsV2';
 import Notifications from './pages/Notifications';
+import PricingPage from './pages/PricingPage';
+import CalendarEmbed from './pages/CalendarEmbed';
 
 // Lazy-loaded admin pages (only load when accessed)
 const AdminLayout = React.lazy(() => import('./pages/Admin'));
@@ -113,6 +127,7 @@ import IssuedTickets from './pages/IssuedTickets';
 import ResetPassword from './pages/ResetPassword';
 import HowItWorks from './pages/HowItWorks';
 import LoginModal from './components/LoginModal';
+import LoginWelcomeOverlay from './components/v2/LoginWelcomeOverlay';
 
 // Lazy load admin analytics
 const AdminAnalytics = React.lazy(() => import('./pages/AdminAnalytics'));
@@ -146,6 +161,32 @@ class AppErrorBoundary extends Component<{ children: React.ReactNode }, { hasErr
   }
 }
 
+
+// Redireciona /user/:userId → /u/:userId (compatibilidade com links antigos)
+const UserProfileRedirect = () => {
+  const { userId } = useParams<{ userId: string }>();
+  return <Navigate to={`/u/${userId}`} replace />;
+};
+
+// Mantém os links antigos funcionando, mas usa a cidade na raiz como URL canônica.
+const LegacyCityRedirect = () => {
+  const { citySlug = '' } = useParams<{ citySlug: string }>();
+  return <Navigate to={`/${citySlug}`} replace />;
+};
+
+const getRoutesKey = (pathname: string) => {
+  if (pathname.startsWith('/event/manage/')) {
+    const parts = pathname.split('/');
+    if (parts.length >= 4) {
+      if (parts[4] === 'analytics') {
+        return pathname;
+      }
+      return `/event/manage/${parts[3]}`;
+    }
+  }
+  return pathname;
+};
+
 const AppInner = () => {
   const { selectedOrg, transitioning, fromOrgName } = useOrganization();
   const location = useLocation();
@@ -153,31 +194,50 @@ const AppInner = () => {
   return (
     <>
       <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<Index />} />
-          <Route path="/o-que-fazer-em/:citySlug" element={<WhatToDoCity />} />
+        <Routes location={location} key={getRoutesKey(location.pathname)}>
+          <Route path="/" element={<FauvesHome />} />
+          <Route path="/v2" element={<IndexV2 />} />
+          <Route path="/signin" element={<SignInPage />} />
+          <Route path="/map" element={<FullMapPage />} />
+          <Route path="/v2/map" element={<Navigate to="/map" replace />} />
+          <Route path="/:calendarSlug/map" element={<FullMapPage />} />
+          <Route path="/o-que-fazer-em/:citySlug" element={<LegacyCityRedirect />} />
           <Route path="/quem-somos" element={<About />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/carreiras" element={<Careers />} />
           <Route path="/eventos/:categorySlug" element={<EventsByCategory />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/lei-da-meia-entrada" element={<HalfPriceLaw />} />
           <Route path="/termos-de-uso" element={<TermsOfUse />} />
           <Route path="/politica-de-privacidade" element={<PrivacyPolicy />} />
+          <Route path="/seguranca" element={<SecurityPolicy />} />
+          <Route path="/dmca" element={<CopyrightPolicy />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
+          <Route path="/u/:userId" element={<PublicUserProfile />} />
+          <Route path="/user/:userId" element={<UserProfileRedirect />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/embed/calendar/:calendarId/events" element={<CalendarEmbed />} />
+          <Route path="/organizer-dashboard" element={<Navigate to="/organizer-events" replace />} />
           <Route path="/jornada-produtor" element={<ProtectedOrganizerRoute><ProducerJourneyPage /></ProtectedOrganizerRoute>} />
           <Route path="/producer-journey-demo" element={<ProducerJourneyDemo />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/create-event" element={<ProtectedOrganizerRoute><CreateEditEvent /></ProtectedOrganizerRoute>} />
-          <Route path="/account-settings" element={<AccountSettings />} />
+          <Route path="/create" element={<ProtectedOrganizerRoute><CreateEventV2 /></ProtectedOrganizerRoute>} />
+          <Route path="/events/create" element={<ProtectedOrganizerRoute><CreateEventV2 /></ProtectedOrganizerRoute>} />
+          <Route path="/account-settings" element={<AccountSettingsV2 />} />
+          <Route path="/account-settings/:tab" element={<AccountSettingsV2 />} />
+          <Route path="/v2/account-settings" element={<AccountSettingsV2 />} />
+          <Route path="/v2/account-settings/:tab" element={<AccountSettingsV2 />} />
+          <Route path="/calendar/manage/:calendarId" element={<ProtectedOrganizerRoute><OrganizerSettingsV2 /></ProtectedOrganizerRoute>} />
           <Route path="/create-tickets" element={<ProtectedOrganizerRoute requireEventId><CreateTickets /></ProtectedOrganizerRoute>} />
           <Route path="/publish-details" element={<ProtectedOrganizerRoute requireEventId><PublishDetails /></ProtectedOrganizerRoute>} />
           <Route path="/ingressos-emitidos/:eventId" element={<ProtectedOrganizerRoute requireEventId><IssuedTickets /></ProtectedOrganizerRoute>} />
-          <Route path="/painel-evento/:id/analytics" element={<ProtectedOrganizerRoute><EventAnalytics /></ProtectedOrganizerRoute>} />
-          <Route path="/painel-evento/:id" element={<ProtectedOrganizerRoute><EventPanel /></ProtectedOrganizerRoute>} />
+          <Route path="/event/manage/:id" element={<ProtectedOrganizerRoute><EventPanelV2 /></ProtectedOrganizerRoute>} />
+          <Route path="/event/manage/:id/:tab" element={<ProtectedOrganizerRoute><EventPanelV2 /></ProtectedOrganizerRoute>} />
+          <Route path="/event/manage/:id/analytics" element={<ProtectedOrganizerRoute><EventAnalytics /></ProtectedOrganizerRoute>} />
           <Route path="/test-supabase" element={<TestSupabase />} />
+          <Route path="/design-system" element={<DesignSystem />} />
           <Route path="/organizer-events" element={<ProtectedOrganizerRoute><OrganizerEvents /></ProtectedOrganizerRoute>} />
           <Route path="/organizer-orders" element={<ProtectedOrganizerRoute><OrdersManager /></ProtectedOrganizerRoute>} />
           {/* /organizer-marketing route removed */}
@@ -196,7 +256,7 @@ const AppInner = () => {
           {/* Backward-compat alias (can remove later) */}
           <Route path="/responder-pesquisa/:id" element={<PublicSatisfactionForm />} />
           <Route path="/colecoes/:slug" element={<PublicCollection />} />
-          <Route path="/org/:slugOrId" element={<OrganizationPublicProfile />} />
+          <Route path="/org/:slugOrId" element={<OrganizationRedirect />} />
           <Route path="/organization/:slugOrId" element={<OrganizationRedirect />} />
           <Route path="/venues/:slug/door" element={<ExpressDoor />} />
           <Route path="/select-tickets/:eventId" element={<SelectTickets />} />
@@ -205,6 +265,12 @@ const AppInner = () => {
           <Route path="/checkout/pix" element={<CheckoutPix />} />
           <Route path="/checkout/canceled" element={<CheckoutCanceled />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/discover" element={<DiscoverV2 />} />
+          <Route path="/organizations" element={<OrganizationsV2 />} />
+          <Route path="/organizations/create-calendar" element={<CreateOrganizationV2 />} />
+          <Route path="/organizations/create-organization" element={<Navigate to="/organizations/create-calendar" replace />} />
+          <Route path="/v2/discover" element={<DiscoverV2 />} />
+          <Route path="/v2/event/:slugOrId" element={<EventPageV2 />} />
           <Route path="/organizer-settings" element={<ProtectedOrganizerRoute><OrganizerSettingsV2 /></ProtectedOrganizerRoute>} />
           <Route path="/organizer-reports" element={<ProtectedOrganizerRoute><OrganizerReportsPage /></ProtectedOrganizerRoute>} />
           <Route path="/organizer-reports/orders" element={<ProtectedOrganizerRoute><OrganizerReportsOrders /></ProtectedOrganizerRoute>} />
@@ -249,8 +315,6 @@ const AppInner = () => {
             <Route path="team" element={<AdminTeam />} />
             <Route path="settings" element={<AdminSettings />} />
 
-            import AdminEmails from './pages/AdminEmails';
-            import AdminEmailEditor from './pages/AdminEmailEditor';
 
             // ... (in AdminLayout route)
             <Route path="emails" element={<AdminEmails />} />
@@ -280,9 +344,9 @@ const AppInner = () => {
           <Route path="/ajuda/tickets/novo" element={<CreateTicket />} />
           <Route path="/ajuda/tickets/:id" element={<TicketDetail />} />
           {/* Fallback for old /event/ URLs */}
-          <Route path="/event/:slugOrId" element={<Event />} />
-          {/* Event slugs at root - MUST be last to not conflict with other routes */}
-          <Route path="/:slugOrId" element={<Event />} />
+          <Route path="/event/:slugOrId" element={<EventPageV2 />} />
+          {/* Root path wildcard (Event/Organization) - MUST be last to not conflict with other routes */}
+          <Route path="/:slugOrId" element={<PublicSlugDispatcher />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AnimatePresence>
@@ -291,17 +355,21 @@ const AppInner = () => {
         fromName={fromOrgName || selectedOrg?.name || ''}
         toName={selectedOrg?.name || ''}
       />
+      <LoginWelcomeOverlay />
       {/* Hide ChatWidget on admin and organizer pages */}
-      {!location.pathname.startsWith('/admin') &&
+      {location.pathname !== '/' &&
+        !['/termos-de-uso', '/politica-de-privacidade', '/seguranca', '/dmca'].includes(location.pathname) &&
+        !location.pathname.startsWith('/admin') &&
         !location.pathname.startsWith('/organizer') &&
-        !location.pathname.startsWith('/create-event') &&
+        !location.pathname.startsWith('/create') &&
         !location.pathname.startsWith('/create-tickets') &&
         !location.pathname.startsWith('/publish-details') &&
-        !location.pathname.startsWith('/painel-evento') &&
+        !location.pathname.startsWith('/event/manage') &&
         !location.pathname.startsWith('/marketing') &&
         !location.pathname.startsWith('/pesquisa-satisfacao') &&
         !location.pathname.startsWith('/participantes') &&
         !location.pathname.startsWith('/gerenciar-equipe') &&
+        !location.pathname.startsWith('/v2/create') &&
         <ChatWidget />}
 
       <AuthModalWrapper />
@@ -345,7 +413,7 @@ const App = () => (
 const OrganizationRedirect: React.FC = () => {
   const params = useParams<{ slugOrId: string }>();
   const slugOrId = params.slugOrId || '';
-  return <Navigate to={`/org/${slugOrId}`} replace />;
+  return <Navigate to={`/${slugOrId}`} replace />;
 };
 
 function Bootstrap() {

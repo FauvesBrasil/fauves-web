@@ -1,7 +1,8 @@
 import { ReactNode, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrganization } from '../context/OrganizationContext';
+import SignInModalV2 from '@/components/v2/SignInModalV2';
 
 interface ProtectedOrganizerRouteProps {
   children: ReactNode;
@@ -14,7 +15,7 @@ export function ProtectedOrganizerRoute({
 }: ProtectedOrganizerRouteProps) {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { selectedOrg, loading: orgLoading } = useOrganization();
+  const { selectedOrg, loading: orgLoading, refresh } = useOrganization();
   const params = useParams<{ id?: string; eventId?: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -28,27 +29,19 @@ export function ProtectedOrganizerRoute({
 
     // Check 1: User must be logged in
     if (!user) {
-      const redirectPath = encodeURIComponent(location.pathname + location.search);
-      navigate(`/?login=true&redirect=${redirectPath}`, { replace: true });
-      return;
-    }
-
-    // Check 2: User must have an organization
-    if (!selectedOrg) {
-      navigate('/organizer-dashboard', { replace: true });
       return;
     }
 
     // Check 3: If route requires eventId, it must be present
     if (requireEventId && !eventId) {
-      navigate('/organizer-dashboard', { replace: true });
+      navigate('/organizer-events', { replace: true });
       return;
     }
-  }, [user, selectedOrg, authLoading, orgLoading, requireEventId, eventId, navigate]);
+  }, [user, authLoading, orgLoading, requireEventId, eventId, navigate]);
 
   // Show loading only on the FIRST load when we don't have user data yet
   // If we already have user/org, render immediately to avoid flash
-  const isFirstLoad = authLoading && !user;
+  const isFirstLoad = (authLoading && !user) || (orgLoading && user);
   
   if (isFirstLoad) {
     return (
@@ -62,9 +55,38 @@ export function ProtectedOrganizerRoute({
   }
 
   // Don't render until all checks pass
-  if (!user || !selectedOrg || (requireEventId && !eventId)) {
+  if (!user) {
+    return (
+      <div className="relative min-h-screen">
+        {/* Renderiza o conteúdo real da página desabilitado no fundo */}
+        <div className="pointer-events-none select-none filter blur-[4px]">
+          {children}
+        </div>
+        
+        {/* Modal de login moderno V2 forçado (backdrop blur integrado) */}
+        <SignInModalV2 
+          open={true} 
+          onClose={() => {}} 
+          preventClose={true} 
+          onSuccess={async () => {
+            if (refresh) await refresh();
+          }} 
+        />
+      </div>
+    );
+  }
+
+  // Se o usuário não possui organização/calendário, redireciona para a página V2 de criação
+  if (!selectedOrg) {
+    return (
+      <Navigate to="/organizations/create-calendar" replace state={{ from: location.pathname }} />
+    );
+  }
+
+  if (requireEventId && !eventId) {
     return null;
   }
 
   return <>{children}</>;
 }
+

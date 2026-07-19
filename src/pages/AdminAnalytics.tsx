@@ -271,7 +271,7 @@ export default function AdminAnalytics() {
                                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{index + 1}</td>
                                         <td className="py-3 px-4">
                                             <a
-                                                href={`/painel-evento/${event.eventSlug}`}
+                                                href={`/event/manage/${event.eventSlug}`}
                                                 className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                                                 target="_blank"
                                                 rel="noopener noreferrer"

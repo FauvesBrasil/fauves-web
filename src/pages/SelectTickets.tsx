@@ -22,6 +22,7 @@ interface TicketType {
   categoryId?: string | null;
   absorbFee?: boolean;
   isOnSale?: boolean;
+  isPrivate?: boolean;
 }
 
 interface Event {
@@ -51,6 +52,7 @@ const SelectTickets: React.FC = () => {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
+  const [allTicketTypes, setAllTicketTypes] = useState<TicketType[]>([]);
   const [selectedTickets, setSelectedTickets] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [showCouponInput, setShowCouponInput] = useState(false);
@@ -110,12 +112,14 @@ const SelectTickets: React.FC = () => {
               categoryId: t.categoryId || null,
               isHalf: t.isHalf || false,
               absorbFee: t.absorbFee || false,
+              isPrivate: !!t.isPrivate,
               available: available,
               isOnSale: t.isOnSale !== false // default true se não vier
             };
           });
 
-          setTicketTypes(normalizedTickets);
+          setAllTicketTypes(normalizedTickets);
+          setTicketTypes(normalizedTickets.filter((ticket: TicketType) => !ticket.isPrivate));
         }
       } catch (error) {
         toast({
@@ -180,30 +184,39 @@ const SelectTickets: React.FC = () => {
     setAppliedCoupon(null);
     setEligibleTicketIds(null);
     setCouponCode('');
+    setTicketTypes(allTicketTypes.filter((ticket) => !ticket.isPrivate));
+    setSelectedTickets((current) => Object.fromEntries(Object.entries(current).filter(([ticketId]) => !allTicketTypes.find((ticket) => ticket.id === ticketId)?.isPrivate)));
     toast({
       title: 'Cupom removido',
       description: 'Os preços originais foram restaurados',
     });
   };
 
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
+  const applyCouponCode = async (rawCode: string) => {
+    const normalizedCode = rawCode.trim().toUpperCase();
+    if (!normalizedCode) return;
 
     try {
       const res = await fetchApi(`/api/coupon/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode, eventId })
+        body: JSON.stringify({ code: normalizedCode, eventId })
       });
 
       if (res.ok) {
         const coupon = await res.json();
         setAppliedCoupon(coupon);
         setEligibleTicketIds(coupon.eligibleTicketIds || null);
+        setCouponCode(coupon.code || normalizedCode);
 
-        const desc = coupon.type === 'PERCENT'
-          ? `Desconto de ${coupon.value}% aplicado`
-          : `Desconto de R$ ${coupon.value} aplicado`;
+        const eligibleIds = Array.isArray(coupon.eligibleTicketIds) ? coupon.eligibleTicketIds : [];
+        setTicketTypes(allTicketTypes.filter((ticket) => !ticket.isPrivate || eligibleIds.includes(ticket.id)));
+
+        const desc = coupon.type === 'UNLOCK'
+          ? 'O ingresso oculto foi liberado'
+          : coupon.type === 'PERCENT'
+            ? `Desconto de ${coupon.value}% aplicado`
+            : `Desconto de R$ ${coupon.value} aplicado`;
 
         toast({
           title: 'Cupom aplicado!',
@@ -224,6 +237,18 @@ const SelectTickets: React.FC = () => {
       });
     }
   };
+
+  const applyCoupon = async () => applyCouponCode(couponCode);
+
+  const autoAppliedCouponRef = React.useRef('');
+  useEffect(() => {
+    const code = (searchParams.get('coupon') || searchParams.get('accessCode') || '').trim().toUpperCase();
+    if (!code || !allTicketTypes.length || autoAppliedCouponRef.current === code) return;
+    autoAppliedCouponRef.current = code;
+    setCouponCode(code);
+    void applyCouponCode(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allTicketTypes.length, eventId]);
 
   const calculateTotal = () => {
     let subtotal = 0;
@@ -688,7 +713,7 @@ const SelectTickets: React.FC = () => {
                               let displayPrice = startPrice;
 
                               // Apply discount only if coupon is applied AND ticket is eligible
-                              if (appliedCoupon && eligibleTicketIds && eligibleTicketIds.includes(ticket.id)) {
+                              if (appliedCoupon && appliedCoupon.type !== 'UNLOCK' && eligibleTicketIds && eligibleTicketIds.includes(ticket.id)) {
                                 if (appliedCoupon.type === 'FIXED') {
                                   displayPrice = Math.max(0, displayPrice - (appliedCoupon.amountOff || 0));
                                 } else {
@@ -724,7 +749,7 @@ const SelectTickets: React.FC = () => {
                                         {appliedCoupon && eligibleTicketIds && (
                                           eligibleTicketIds.includes(ticket.id) ? (
                                             <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full shadow-sm flex items-center gap-1">
-                                              <Tag className="w-2.5 h-2.5" /> CUPOM APLICADO
+                                              <Tag className="w-2.5 h-2.5" /> {appliedCoupon.type === 'UNLOCK' ? 'ACESSO LIBERADO' : 'CUPOM APLICADO'}
                                             </span>
                                           ) : (
                                             <span className="px-2 py-0.5 text-[10px] font-bold bg-slate-300 text-slate-700 dark:bg-slate-600 dark:text-slate-300 rounded-full">
@@ -743,7 +768,7 @@ const SelectTickets: React.FC = () => {
                                           <span className="text-2xl max-md:text-xl font-black text-indigo-600 dark:text-indigo-400">
                                             {formatBRL(displayPrice)}
                                           </span>
-                                          {appliedCoupon && eligibleTicketIds && eligibleTicketIds.includes(ticket.id) && (
+                                          {appliedCoupon && appliedCoupon.type !== 'UNLOCK' && eligibleTicketIds && eligibleTicketIds.includes(ticket.id) && (
                                             <span className="text-sm max-md:text-xs text-slate-400 line-through font-medium">
                                               {formatBRL(ticket.price)}
                                             </span>
@@ -825,7 +850,7 @@ const SelectTickets: React.FC = () => {
                       let displayPrice = startPrice;
 
                       // Apply discount only if coupon is applied AND ticket is eligible
-                      if (appliedCoupon && eligibleTicketIds && eligibleTicketIds.includes(ticket.id)) {
+                      if (appliedCoupon && appliedCoupon.type !== 'UNLOCK' && eligibleTicketIds && eligibleTicketIds.includes(ticket.id)) {
                         if (appliedCoupon.type === 'FIXED') {
                           displayPrice = Math.max(0, displayPrice - (appliedCoupon.amountOff || 0));
                         } else {
@@ -861,7 +886,7 @@ const SelectTickets: React.FC = () => {
                                 {appliedCoupon && eligibleTicketIds && (
                                   eligibleTicketIds.includes(ticket.id) ? (
                                     <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full shadow-sm flex items-center gap-1">
-                                      <Tag className="w-2.5 h-2.5" /> CUPOM APLICADO
+                                      <Tag className="w-2.5 h-2.5" /> {appliedCoupon.type === 'UNLOCK' ? 'ACESSO LIBERADO' : 'CUPOM APLICADO'}
                                     </span>
                                   ) : (
                                     <span className="px-2 py-0.5 text-[10px] font-bold bg-slate-300 text-slate-700 dark:bg-slate-600 dark:text-slate-300 rounded-full">
@@ -880,7 +905,7 @@ const SelectTickets: React.FC = () => {
                                   <span className="text-2xl max-md:text-xl font-black text-indigo-600 dark:text-indigo-400">
                                     {formatBRL(displayPrice)}
                                   </span>
-                                  {appliedCoupon && eligibleTicketIds && eligibleTicketIds.includes(ticket.id) && (
+                                  {appliedCoupon && appliedCoupon.type !== 'UNLOCK' && eligibleTicketIds && eligibleTicketIds.includes(ticket.id) && (
                                     <span className="text-sm max-md:text-xs text-slate-400 line-through font-medium">
                                       {formatBRL(ticket.price)}
                                     </span>

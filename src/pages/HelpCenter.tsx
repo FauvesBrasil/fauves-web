@@ -1,183 +1,305 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, BookOpen } from 'lucide-react';
 import HelpHeader from '@/components/HelpHeader';
-import HelpCategoryCard from '@/components/HelpCategoryCard';
 import HelpSearchBar from '@/components/HelpSearchBar';
-
-interface Category {
-    id: string;
-    name: string;
-    slug: string;
-    description: string;
-    icon: string;
-    articleCount: number;
-}
+import { fetchApi } from '@/lib/apiBase';
+import {
+    helpArticles as fallbackArticles,
+    helpCategories as fallbackCategories,
+} from '@/data/helpArticles';
 
 interface Article {
     id: string;
     title: string;
     slug: string;
     summary: string;
-    category: {
-        name: string;
-    };
 }
+
+interface CategorySection {
+    id: string;
+    name: string;
+    slug: string;
+    articles: Article[];
+}
+
+const localSections = (): CategorySection[] => fallbackCategories
+    .map((category) => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        articles: fallbackArticles
+            .filter((article) => article.categoryId === category.id)
+            .map(({ id, title, slug, summary }) => ({ id, title, slug, summary })),
+    }))
+    .filter((category) => category.articles.length > 0);
 
 const HelpCenter = () => {
     const navigate = useNavigate();
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [popularArticles, setPopularArticles] = useState<Article[]>([]);
+    const [sections, setSections] = useState<CategorySection[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadData();
+        let active = true;
+
+        const loadData = async () => {
+            try {
+                const categoriesResponse = await fetchApi('/api/help/categories?audience=customer');
+                if (!categoriesResponse.ok) throw new Error('Não foi possível carregar as categorias');
+
+                const categories = await categoriesResponse.json();
+                if (!Array.isArray(categories) || categories.length === 0) {
+                    throw new Error('Nenhuma categoria disponível');
+                }
+
+                const loadedSections = await Promise.all(categories.map(async (category: any) => {
+                    try {
+                        const response = await fetchApi(`/api/help/categories/${encodeURIComponent(category.slug)}`);
+                        if (!response.ok) return null;
+                        const detail = await response.json();
+                        return {
+                            id: category.id,
+                            name: category.name,
+                            slug: category.slug,
+                            articles: Array.isArray(detail.articles) ? detail.articles : [],
+                        } as CategorySection;
+                    } catch {
+                        return null;
+                    }
+                }));
+
+                const populatedSections = loadedSections
+                    .filter((section): section is CategorySection => Boolean(section?.articles.length));
+
+                if (active) setSections(populatedSections.length ? populatedSections : localSections());
+            } catch {
+                if (active) setSections(localSections());
+            } finally {
+                if (active) setLoading(false);
+            }
+        };
+
+        void loadData();
+        return () => { active = false; };
     }, []);
 
-    const loadData = async () => {
-        try {
-            const [categoriesRes, articlesRes] = await Promise.all([
-                fetch('http://localhost:4000/api/help/categories?audience=customer'), // Filter customer only
-                fetch('http://localhost:4000/api/help/popular?limit=6&audience=customer'), // Filter customer only
-            ]);
-
-            const categoriesData = await categoriesRes.json();
-            const articlesData = await articlesRes.json();
-
-            setCategories(categoriesData);
-            setPopularArticles(articlesData);
-        } catch (error) {
-            // no-op
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 dark:from-[#0b0b0b] dark:via-indigo-950/10 dark:to-purple-950/10">
-                <HelpHeader />
-                <div className="flex items-center justify-center h-96">
-                    <div className="text-zinc-600 dark:text-zinc-400">Carregando...</div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 dark:from-[#0b0b0b] dark:via-indigo-950/10 dark:to-purple-950/10">
+        <div className="help-center-page">
+            <div className="help-center-glow" aria-hidden="true" />
             <HelpHeader />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12 sm:pb-16">
-                {/* Hero Section */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl sm:text-5xl font-bold text-zinc-900 dark:text-white mb-4">
+            <main className="help-center-content">
+                <section className="help-center-hero" aria-labelledby="help-center-title">
+                    <h1 id="help-center-title">
+                        <span>Boas-vindas!</span>
                         Como podemos ajudar?
                     </h1>
-                    <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-8 max-w-2xl mx-auto">
-                        Encontre respostas, tutoriais e guias para aproveitar ao máximo a plataforma
-                    </p>
-
-                    {/* Search Bar */}
                     <HelpSearchBar />
+                </section>
 
-                    {/* Quick link */}
-                    <button
-                        onClick={() => navigate('/ajuda')}
-                        className="mt-4 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium inline-flex items-center gap-1"
-                    >
-                        Ir para Central de Ajuda
-                        <ArrowRight className="w-4 h-4" />
-                    </button>
-                </div>
-
-                {/* Categories Grid */}
-                <div className="mb-16">
-                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">
-                        Categorias
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {categories.map((category) => (
-                            <HelpCategoryCard
-                                key={category.id}
-                                {...category}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Popular Articles */}
-                {popularArticles.length > 0 && (
-                    <div>
-                        <div className="flex items-center gap-2 mb-6">
-                            <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                            <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
-                                Artigos populares
-                            </h2>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {popularArticles.map((article) => (
-                                <div
-                                    key={article.id}
-                                    onClick={() => navigate(`/ajuda/artigo/${article.slug}`)}
-                                    className="group bg-white dark:bg-[#1a1a1a] rounded-xl p-5 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all duration-200 cursor-pointer"
-                                >
-                                    {/* Category badge */}
-                                    <div className="mb-3">
-                                        <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400">
-                                            {article.category.name}
-                                        </span>
-                                    </div>
-
-                                    {/* Title */}
-                                    <h3 className="text-base font-semibold text-zinc-900 dark:text-white mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                        {article.title}
-                                    </h3>
-
-                                    {/* Summary */}
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
-                                        {article.summary}
-                                    </p>
-
-                                    {/* Read more */}
-                                    <div className="mt-3 flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Ler artigo
-                                        <ArrowRight className="w-4 h-4" />
-                                    </div>
+                <div className="help-center-sections" aria-live="polite">
+                    {loading ? (
+                        <HelpCenterSkeleton />
+                    ) : sections.length ? (
+                        sections.map((section) => (
+                            <section className="help-center-section" key={section.id}>
+                                <h2>{section.name}</h2>
+                                <div className="help-article-grid">
+                                    {section.articles.map((article) => (
+                                        <button
+                                            type="button"
+                                            className="help-article-card"
+                                            key={article.id}
+                                            onClick={() => navigate(`/ajuda/artigo/${article.slug}`)}
+                                        >
+                                            <strong>{article.title}</strong>
+                                            <span>{article.summary}</span>
+                                        </button>
+                                    ))}
                                 </div>
-                            ))}
+                            </section>
+                        ))
+                    ) : (
+                        <div className="help-center-empty">
+                            Nenhum artigo de ajuda está disponível no momento.
                         </div>
-                    </div>
-                )}
-
-                {/* Contact Support CTA */}
-                <div className="mt-16 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-2xl p-8 text-center border border-indigo-100 dark:border-indigo-900/50 shadow-sm">
-                    <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">
-                        Não encontrou o que procurava?
-                    </h3>
-                    <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                        Nossa equipe de suporte está pronta para ajudar você
-                    </p>
-                    <div className="flex gap-3 justify-center">
-                        <button
-                            onClick={() => navigate('/ajuda/tickets/novo')}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
-                        >
-                            Criar Ticket de Suporte
-                            <ArrowRight className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={() => navigate('/ajuda/tickets')}
-                            className="inline-flex items-center gap-2 px-6 py-3 border border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 font-medium rounded-lg transition-colors"
-                        >
-                            Ver Meus Tickets
-                        </button>
-                    </div>
+                    )}
                 </div>
-            </div>
+            </main>
+
+            <style>{`
+                .help-center-page {
+                    min-height: 100vh;
+                    overflow-x: hidden;
+                    position: relative;
+                    color: rgba(255, 255, 255, .96);
+                    background: #111315;
+                    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                }
+
+                .help-center-glow {
+                    position: absolute;
+                    z-index: 0;
+                    inset: 0 0 auto;
+                    height: 330px;
+                    pointer-events: none;
+                    opacity: .66;
+                    background:
+                        radial-gradient(620px 280px at 21% -30px, rgba(137, 46, 82, .52), transparent 72%),
+                        radial-gradient(610px 270px at 53% -55px, rgba(134, 99, 48, .54), transparent 72%),
+                        radial-gradient(700px 300px at 83% -55px, rgba(30, 91, 43, .48), transparent 73%);
+                    filter: blur(3px);
+                }
+
+                .help-center-content {
+                    position: relative;
+                    z-index: 1;
+                    width: min(100% - 40px, 790px);
+                    margin: 0 auto;
+                    padding: 94px 0 80px;
+                }
+
+                .help-center-hero h1 {
+                    margin: 0;
+                    color: rgba(255, 255, 255, .97);
+                    font-size: 36px;
+                    font-weight: 700;
+                    line-height: 1.08;
+                    letter-spacing: -.035em;
+                }
+
+                .help-center-hero h1 span {
+                    display: block;
+                    color: rgba(255, 255, 255, .48);
+                }
+
+                .help-center-hero .help-search-root {
+                    margin-top: 28px;
+                }
+
+                .help-center-sections {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 44px;
+                    margin-top: 48px;
+                }
+
+                .help-center-section h2 {
+                    margin: 0 0 21px;
+                    color: rgba(255, 255, 255, .96);
+                    font-size: 21px;
+                    font-weight: 700;
+                    line-height: 1.2;
+                    letter-spacing: -.025em;
+                }
+
+                .help-article-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 14px;
+                }
+
+                .help-article-card {
+                    width: 100%;
+                    min-height: 120px;
+                    padding: 20px 23px;
+                    border: 1px solid rgba(255, 255, 255, .065);
+                    border-radius: 14px;
+                    background: rgba(255, 255, 255, .045);
+                    color: inherit;
+                    cursor: pointer;
+                    text-align: left;
+                    transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+                }
+
+                .help-article-card:hover {
+                    background: rgba(255, 255, 255, .072);
+                    border-color: rgba(255, 255, 255, .12);
+                    transform: translateY(-1px);
+                }
+
+                .help-article-card:focus-visible {
+                    outline: 2px solid #EF4118;
+                    outline-offset: 2px;
+                }
+
+                .help-article-card strong,
+                .help-article-card span {
+                    display: block;
+                }
+
+                .help-article-card strong {
+                    color: rgba(255, 255, 255, .96);
+                    font-size: 17px;
+                    font-weight: 700;
+                    line-height: 1.18;
+                    letter-spacing: -.018em;
+                }
+
+                .help-article-card span {
+                    margin-top: 10px;
+                    color: rgba(255, 255, 255, .68);
+                    font-size: 14px;
+                    font-weight: 500;
+                    line-height: 1.46;
+                }
+
+                .help-center-empty {
+                    padding: 32px;
+                    border: 1px solid rgba(255, 255, 255, .07);
+                    border-radius: 14px;
+                    color: rgba(255, 255, 255, .52);
+                    background: rgba(255, 255, 255, .035);
+                    text-align: center;
+                    font-size: 14px;
+                }
+
+                .help-skeleton-title,
+                .help-skeleton-card {
+                    background: rgba(255, 255, 255, .055);
+                    animation: help-skeleton-pulse 1.3s ease-in-out infinite alternate;
+                }
+
+                .help-skeleton-title {
+                    width: 110px;
+                    height: 21px;
+                    margin-bottom: 21px;
+                    border-radius: 6px;
+                }
+
+                .help-skeleton-card {
+                    min-height: 120px;
+                    border-radius: 14px;
+                }
+
+                @keyframes help-skeleton-pulse {
+                    to { opacity: .45; }
+                }
+
+                @media (max-width: 640px) {
+                    .help-center-content {
+                        width: min(100% - 32px, 790px);
+                        padding-top: 88px;
+                    }
+
+                    .help-center-hero h1 { font-size: 31px; }
+                    .help-center-sections { margin-top: 38px; gap: 38px; }
+                    .help-article-grid { grid-template-columns: 1fr; }
+                    .help-article-card { min-height: 0; padding: 18px; }
+                }
+            `}</style>
         </div>
     );
 };
+
+const HelpCenterSkeleton = () => (
+    <section aria-label="Carregando artigos">
+        <div className="help-skeleton-title" />
+        <div className="help-article-grid">
+            {Array.from({ length: 6 }).map((_, index) => (
+                <div className="help-skeleton-card" key={index} />
+            ))}
+        </div>
+    </section>
+);
 
 export default HelpCenter;

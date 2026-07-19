@@ -199,7 +199,7 @@ export default function GerenciarEquipe() {
         <div className="max-md:hidden">
           <EventDetailsSidebar
             eventIdOverride={eventId || null}
-            panelRoute={eventId ? `/painel-evento/${eventId}` : undefined}
+            panelRoute={eventId ? `/event/manage/${eventId}` : undefined}
             fixed
             fixedLeft={70}
             fixedWidth={300}

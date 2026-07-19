@@ -360,7 +360,7 @@ export default function OrganizerFinances() {
               <div className="mt-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#121212] p-16 flex flex-col items-center justify-center text-center max-sm:p-8">
                 <div className="text-lg font-semibold text-slate-900 dark:text-white max-sm:text-base">Sem eventos {filter === 'active' ? 'ativos' : 'inativos'}</div>
                 <div className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-sm:text-xs">Eventos {filter === 'active' ? 'ativos' : 'inativos'} aparecerão aqui</div>
-                {filter === 'active' && <a href="/create-event" className="mt-4 text-sm font-semibold text-indigo-700 hover:text-indigo-800 max-sm:text-xs">Criar um evento</a>}
+                {filter === 'active' && <a href="/create" className="mt-4 text-sm font-semibold text-indigo-700 hover:text-indigo-800 max-sm:text-xs">Criar um evento</a>}
               </div>
             ) : (
               <>

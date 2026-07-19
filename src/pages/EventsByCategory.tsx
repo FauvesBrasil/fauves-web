@@ -1,191 +1,729 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import AppShell from '@/components/AppShell';
-import EventsGrid from '@/components/EventsGrid';
-import CategoryFilter from '@/components/CategoryFilter';
-import EmptyStateOrganizerCTA from '@/components/EmptyStateOrganizerCTA';
-import { fetchApi, apiUrl } from '@/lib/apiBase';
-import { Loader2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
+import {
+  ArrowRight,
+  Baby,
+  CalendarDays,
+  Church,
+  Dumbbell,
+  Map as MapIcon,
+  MicVocal,
+  PartyPopper,
+  Search,
+  Trophy,
+  Users,
+} from 'lucide-react';
+import HeaderV2 from '@/components/v2/HeaderV2';
+import FooterV2 from '@/components/v2/FooterV2';
+import SubscribeControl from '@/components/v2/SubscribeControl';
 import { useSEO } from '@/hooks/useSEO';
+import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 
-
-interface Category {
+type Category = {
   id: string;
   name: string;
   slug: string;
-}
+  imageUrl?: string | null;
+  color?: string | null;
+  description?: string | null;
+  subscriberCount?: number;
+};
 
-interface Event {
+type CategoryEvent = {
   id: string;
   name: string;
+  slug?: string | null;
   startDate: string;
-  image: string;
-  locationCity?: string;
-  locationUf?: string;
-  slug?: string;
-}
+  endDate?: string | null;
+  image?: string | null;
+  location?: string | null;
+  locationCity?: string | null;
+  locationUf?: string | null;
+};
 
-const EventsByCategory = () => {
+type Organization = {
+  id: string;
+  name: string;
+  slug?: string | null;
+  logoUrl?: string | null;
+  bio?: string | null;
+  description?: string | null;
+};
+
+type MonthGroup = {
+  key: string;
+  label: string;
+  events: CategoryEvent[];
+};
+
+const monthColors = ['#f7c928', '#f27b4b', '#61a5e5', '#9a79e8', '#5bb78d'];
+
+const normalize = (value: unknown) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+const categoryIcon = (category?: Category | null): LucideIcon => {
+  const value = normalize(`${category?.name || ''} ${category?.slug || ''}`);
+  if (value.includes('esporte')) return Trophy;
+  if (value.includes('festa') || value.includes('show')) return PartyPopper;
+  if (value.includes('infantil') || value.includes('crianca')) return Baby;
+  if (value.includes('religiao') || value.includes('espiritualidade')) return Church;
+  if (value.includes('stand up') || value.includes('comedia')) return MicVocal;
+  if (value.includes('fitness') || value.includes('academia')) return Dumbbell;
+  return CalendarDays;
+};
+
+const categoryColor = (category?: Category | null) => {
+  if (category?.color?.startsWith('#')) return category.color;
+  const value = normalize(`${category?.name || ''} ${category?.slug || ''}`);
+  if (value.includes('esporte')) return '#f26a2b';
+  if (value.includes('festa') || value.includes('show')) return '#f5a000';
+  if (value.includes('infantil')) return '#ed6aa6';
+  if (value.includes('religiao')) return '#a994e8';
+  if (value.includes('stand up')) return '#70b91b';
+  return '#f1b800';
+};
+
+const formatNumber = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
+
+const formatDate = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
+};
+
+const formatEventRange = (event: CategoryEvent) => {
+  const start = formatDate(event.startDate);
+  const end = formatDate(event.endDate);
+  return end && end !== start ? `${start} – ${end}` : start;
+};
+
+const eventLocation = (event: CategoryEvent) => {
+  if (event.locationCity && event.locationUf) return `${event.locationCity}, ${event.locationUf}`;
+  return event.locationCity || event.locationUf || event.location || '';
+};
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+
+const WorldMap: React.FC = () => (
+  <svg className="category-world-map" viewBox="0 0 620 285" role="img" aria-label="Mapa-múndi">
+    <defs>
+      <pattern id="category-map-dots" width="9" height="9" patternUnits="userSpaceOnUse">
+        <circle cx="3" cy="3" r="2.4" fill="rgba(255,255,255,.18)" />
+      </pattern>
+    </defs>
+    <path fill="url(#category-map-dots)" d="M31 58 76 36l64 5 47 25 34 43-16 29-29 5-18 38-24 18-11-33-27-13-19-32-40-16-18-26Z" />
+    <path fill="url(#category-map-dots)" d="m191 171 34 12 27 31-5 35-22 31-14-42-20-34-17-19Z" />
+    <path fill="url(#category-map-dots)" d="m287 60 38-26 75 4 39 23 55 1 62 26 41 4 18 29-37 21-58-3-35 21-35-10-21-28-29 2-14 26-18 42-23 43-31-15-18-47 10-36-21-19 7-25Z" />
+    <path fill="url(#category-map-dots)" d="m515 206 37-12 39 18 11 28-28 18-45-8-20-24Z" />
+    {[
+      [108, 127], [146, 105], [185, 150], [221, 193], [327, 97], [352, 126], [390, 112], [426, 173], [483, 194], [543, 221],
+    ].map(([x, y], index) => (
+      <g transform={`translate(${x} ${y})`} key={index}>
+        <path d="M0-12c-7 0-12 5-12 12 0 9 12 19 12 19S12 9 12 0C12-7 7-12 0-12Z" fill="rgba(255,255,255,.42)" />
+        <circle r="4" fill="#151719" />
+      </g>
+    ))}
+  </svg>
+);
+
+const EventsByCategory: React.FC = () => {
   const { categorySlug } = useParams<{ categorySlug: string }>();
   const [category, setCategory] = useState<Category | null>(null);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<CategoryEvent[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
-  // SEO dinâmico por categoria
   useSEO({
-    title: category ? `Eventos de ${category.name} no Brasil` : undefined,
-    description: category
-      ? `Confira os melhores eventos de ${category.name} no Brasil. Compre ingressos online com segurança na Fauves.`
-      : undefined,
+    title: category ? `${category.name} · Fauves` : 'Eventos por categoria · Fauves',
+    description: category?.description || undefined,
     url: categorySlug ? `/eventos/${categorySlug}` : undefined,
   });
 
+  useEffect(() => {
+    document.documentElement.style.setProperty('--page-max-width', '960px');
+    return () => document.documentElement.style.removeProperty('--page-max-width');
+  }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!categorySlug) return;
+    if (!categorySlug) return;
+
+    const load = async () => {
       setLoading(true);
-      setError(null);
+      setNotFound(false);
+
       try {
-        // 1. Fetch category details
-        const catRes = await fetchApi(`/event-category/slug/${categorySlug}`);
-        if (!catRes.ok) throw new Error('Categoria não encontrada');
-        const catData = await catRes.json();
-        if (!catData) throw new Error('Categoria não encontrada');
-        setCategory(catData);
+        const [categoriesResponse, eventsResponse, organizationsResponse] = await Promise.all([
+          fetchApi('/api/categories'),
+          fetchApi('/api/events'),
+          fetchApi('/api/organization/featured'),
+        ]);
 
-        // 2. Fetch events for this category
-        const eventsRes = await fetchApi(`/events?category=${categorySlug}&limit=100`);
-        if (!eventsRes.ok) throw new Error('Falha ao carregar eventos');
-        const eventsData = await eventsRes.json();
-        
-        // The /events endpoint returns { events: [], total: 0, ... } or just [] 
-        const items = Array.isArray(eventsData) ? eventsData : (eventsData.events || []);
-        
-        // Map to format expected by EventsGrid
-        const mapped = items.map((r: any) => ({
-          id: r.id,
-          title: r.name,
-          date: r.startDate
-            ? new Date(r.startDate).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-              })
-            : 'Data a definir',
-          location: (() => {
-            const city = r.locationCity || '';
-            const uf = r.locationUf || '';
-            if (city && uf) return `${city} - ${uf}`;
-            return r.location || 'Local a definir';
-          })(),
-          image: (() => {
-            const candidate = r.image || r.bannerUrl || r.banner || '/no-image.svg';
-            if (candidate.startsWith('/uploads/')) return apiUrl(candidate);
-            return candidate;
-          })(),
-        }));
+        const categoriesData = await categoriesResponse.json();
+        const eventsData = await eventsResponse.json();
+        const organizationsData = await organizationsResponse.json();
 
-        setEvents(mapped);
+        const matchedCategory = Array.isArray(categoriesData)
+          ? categoriesData.find((item: Category) => item.slug === categorySlug)
+          : null;
 
-        // SEO is managed by useSEO hook above
+        if (!matchedCategory) {
+          setNotFound(true);
+          return;
+        }
 
-      } catch (err: any) {
-        setError(err.message);
+        setCategory(matchedCategory);
+        setOrganizations(Array.isArray(organizationsData) ? organizationsData.slice(0, 2) : []);
+
+        const publicEvents: CategoryEvent[] = Array.isArray(eventsData)
+          ? eventsData
+          : Array.isArray(eventsData?.events) ? eventsData.events : [];
+
+        if (publicEvents.length === 0) {
+          setEvents([]);
+          return;
+        }
+
+        const eventIds = publicEvents.map((event) => event.id).join(',');
+        const relationsResponse = await fetchApi(`/api/event-category/relations?eventIds=${encodeURIComponent(eventIds)}`);
+        const relations = relationsResponse.ok ? await relationsResponse.json() : [];
+        const categoryEventIds = new Set(
+          Array.isArray(relations)
+            ? relations.filter((relation: any) => relation.slug === categorySlug).map((relation: any) => relation.eventId)
+            : [],
+        );
+
+        setEvents(
+          publicEvents
+            .filter((event) => categoryEventIds.has(event.id))
+            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
+        );
+      } catch (error) {
+        console.error('Error loading category page:', error);
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
+    void load();
   }, [categorySlug]);
+
+  const monthGroups = useMemo<MonthGroup[]>(() => {
+    const groups = new Map<string, MonthGroup>();
+
+    events.forEach((event) => {
+      const date = new Date(event.startDate);
+      if (Number.isNaN(date.getTime())) return;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(date);
+      const current = groups.get(key) || { key, label, events: [] };
+      current.events.push(event);
+      groups.set(key, current);
+    });
+
+    return Array.from(groups.values());
+  }, [events]);
+
+  const Icon = categoryIcon(category);
+  const accent = categoryColor(category);
+  const categoryImage = resolveImageUrl(category?.imageUrl);
 
   if (loading) {
     return (
-      <AppShell>
-        <div className="flex flex-col items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
-          <p className="mt-4 text-gray-500 animate-pulse">Carregando eventos...</p>
-        </div>
-      </AppShell>
+      <div className="category-page category-loading-page">
+        <HeaderV2 transparent fixed theme="dark" contentMaxWidth="960px" explorarText="Descobrir Eventos" />
+        <span className="category-loader" aria-label="Carregando" />
+        <style>{categoryStyles}</style>
+      </div>
     );
   }
 
-  if (error || !category) {
+  if (notFound || !category) {
     return (
-      <AppShell>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
-          <h1 className="text-2xl font-bold text-[#091747] mb-4">Ops! Página não encontrada</h1>
-          <p className="text-gray-600 mb-8">Não conseguimos encontrar a categoria de eventos que você procurou.</p>
-          <Link to="/" className="px-8 py-3 bg-[#091747] text-white font-bold rounded-xl hover:bg-orange-600 transition-all">
-            Voltar para o início
-          </Link>
-        </div>
-      </AppShell>
+      <div className="category-page category-loading-page">
+        <HeaderV2 transparent fixed theme="dark" contentMaxWidth="960px" explorarText="Descobrir Eventos" />
+        <span className="category-not-found">Categoria não encontrada.</span>
+        <style>{categoryStyles}</style>
+      </div>
     );
   }
 
   return (
-    <AppShell>
-      <div className="bg-white dark:bg-slate-950 min-h-screen">
-        {/* Banner / Header SEO Section */}
-        <section className="bg-slate-50 dark:bg-slate-900/50 py-16 px-6 border-b border-slate-100 dark:border-slate-800">
-          <div className="max-w-[1352px] mx-auto text-left">
-            <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6 font-medium">
-              <Link to="/" className="hover:text-orange-600 transition-colors">Início</Link>
-              <span>/</span>
-              <span className="text-orange-600">Eventos de {category.name}</span>
-            </nav>
-            <h1 className="text-4xl md:text-5xl font-black text-[#091747] dark:text-white mb-4 leading-tight">
-              Eventos de {category.name} em Fortaleza
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-              Descubra os melhores eventos de {category.name} em Fortaleza. 
-              Veja festas, shows e experiências atualizadas para você curtir o melhor da cidade.
-            </p>
+    <div className="category-page" style={{ '--category-accent': accent } as React.CSSProperties}>
+      <HeaderV2 transparent fixed theme="dark" contentMaxWidth="960px" explorarText="Descobrir Eventos" />
+
+      <main className="category-container" data-header-align>
+        <section className="category-hero">
+          <div className="category-hero-copy">
+            <h1>{category.name}</h1>
+            <div className="category-stats">
+              <span><CalendarDays size={16} />{formatNumber(events.length)} {events.length === 1 ? 'Evento' : 'Eventos'}</span>
+              <span><Users size={16} />{formatNumber(category.subscriberCount || 0)} {(category.subscriberCount || 0) === 1 ? 'Assinante' : 'Assinantes'}</span>
+            </div>
+            {category.description && <p className="category-description">{category.description}</p>}
+            <SubscribeControl scope={`category:${category.id}`} />
+          </div>
+
+          <div className="category-artwork" aria-hidden="true">
+            <span className="category-artwork-icon"><Icon size={27} strokeWidth={1.8} /></span>
+            <span className="category-artwork-circle">
+              {categoryImage ? <img src={categoryImage} alt="" /> : <Icon size={116} strokeWidth={1.15} />}
+            </span>
           </div>
         </section>
 
-        <section className="px-6 md:px-[156px] max-md:px-5 max-sm:px-4 py-8 bg-white dark:bg-slate-950">
-          <CategoryFilter 
-            selectedSlug={category.slug} 
-            onSelect={() => {}} 
-            navigateOnClick={true}
-          />
-        </section>
+        <section className="category-section category-main-events" aria-labelledby="main-events-heading">
+          <h2 id="main-events-heading">Próximos Eventos Principais</h2>
 
-        <main className="py-4">
-          {events.length > 0 ? (
-            <EventsGrid 
-              title={`Disponíveis em ${category.name}`} 
-              events={events} 
-              size="large" 
-            />
-          ) : (
-            <div className="max-w-[1352px] mx-auto px-6 md:px-[156px] text-center py-20 bg-white dark:bg-slate-950">
-              <div className="text-6xl mb-6">🗓️</div>
-              <h2 className="text-2xl font-bold text-[#091747] dark:text-white mb-2">
-                Nenhum evento de {category.name} encontrado no momento
-              </h2>
-              <p className="text-gray-500 mb-10 max-w-md mx-auto">
-                No momento não temos eventos ativos nesta categoria em Fortaleza. 
-                Fique de olho ou explore outras categorias!
-              </p>
-              
-              <div className="mb-16">
-                 <EmptyStateOrganizerCTA selectedUf="CE" />
-              </div>
-
-              <Link to="/" className="text-orange-600 font-bold hover:underline">
-                Ver todos os eventos do site
-              </Link>
+          {monthGroups.length > 0 && (
+            <div className="category-events-list">
+              {monthGroups.map((group, groupIndex) => (
+                <section className="category-month-group" key={group.key}>
+                  <div className="category-month-heading">
+                    <span style={{ background: monthColors[groupIndex % monthColors.length] }} />
+                    {group.label}
+                  </div>
+                  {group.events.map((event) => {
+                    const image = resolveImageUrl(event.image);
+                    return (
+                      <Link className="category-event-row" to={`/${event.slug || event.id}`} key={event.id}>
+                        <span className="category-event-image">
+                          {image ? <img src={image} alt="" /> : <CalendarDays size={21} />}
+                        </span>
+                        <span className="category-event-copy">
+                          <strong>{event.name}</strong>
+                        </span>
+                        <span className="category-event-meta">
+                          <span>{eventLocation(event)}</span>
+                          <time>{formatEventRange(event)}</time>
+                          <ArrowRight size={15} />
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </section>
+              ))}
             </div>
           )}
-        </main>
-      </div>
-    </AppShell>
+        </section>
+
+        <section className="category-section" aria-labelledby="popular-calendars-heading">
+          <h2 id="popular-calendars-heading">Calendários Populares</h2>
+          <div className="category-calendar-grid">
+            {organizations.map((organization) => {
+              const logo = resolveImageUrl(organization.logoUrl);
+              return (
+                <Link className="category-calendar-card" to={`/${organization.slug || organization.id}`} key={organization.id}>
+                  <div className="category-calendar-top">
+                    <span className="category-calendar-logo">
+                      {logo ? <img src={logo} alt="" /> : initials(organization.name)}
+                    </span>
+                    <span className="category-follow-button">Seguir</span>
+                  </div>
+                  <h3>{organization.name}</h3>
+                  {(organization.bio || organization.description) && <p>{organization.bio || organization.description}</p>}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="category-section category-nearby" aria-labelledby="nearby-heading">
+          <div className="category-nearby-main">
+            <div className="category-nearby-heading">
+              <h2 id="nearby-heading">Eventos Próximos</h2>
+              <button type="button" aria-label="Buscar"><Search size={16} /></button>
+            </div>
+            <div className="category-map-empty">
+              <WorldMap />
+              <div className="category-map-empty-copy">
+                <h3>Nenhum Evento por Perto</h3>
+                <p>No momento, não há eventos relevantes perto de você. Você pode explorar todos os eventos no mapa.</p>
+                <Link to="/discover"><MapIcon size={15} />Explorar Eventos</Link>
+              </div>
+            </div>
+          </div>
+
+          <aside className="category-subscribe-aside">
+            <span className="category-aside-icon"><Icon size={25} strokeWidth={1.8} /></span>
+            <h3>{category.name}</h3>
+            <p>Assine para ficar por dentro dos últimos eventos, calendários e outras atualizações.</p>
+            <SubscribeControl scope={`category:${category.id}`} compact />
+          </aside>
+        </section>
+      </main>
+
+      <FooterV2 maxWidth="960px" />
+      <style>{categoryStyles}</style>
+    </div>
   );
 };
+
+const categoryStyles = `
+  .category-page {
+    --footer-text-color: rgba(255, 255, 255, 0.48);
+    --footer-hover-color: #fff;
+    --footer-border-color: rgba(255, 255, 255, 0.09);
+    --footer-social-color: rgba(255, 255, 255, 0.42);
+    --footer-social-hover: #fff;
+    --footer-logo-color: #fff;
+    min-height: 100vh;
+    color: #f5f5f5;
+    background: #121416;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .category-container {
+    width: min(100%, 960px);
+    margin: 0 auto;
+    padding: 126px 16px 0;
+  }
+
+  .category-hero {
+    display: grid;
+    min-height: 500px;
+    grid-template-columns: 1fr 395px;
+    align-items: center;
+    gap: 80px;
+    padding-bottom: 72px;
+  }
+
+  .category-hero-copy h1 {
+    margin: 0 0 18px;
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+  }
+
+  .category-stats {
+    display: flex;
+    align-items: center;
+    gap: 17px;
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .category-stats span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .category-stats svg {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .category-description {
+    max-width: 450px;
+    margin: 22px 0 0;
+    padding-top: 20px;
+    color: rgba(255, 255, 255, 0.72);
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.55;
+  }
+
+  .category-subscribe-form {
+    display: flex;
+    max-width: 320px;
+    gap: 8px;
+    margin-top: 32px;
+  }
+
+  .category-subscribe-form input {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 16px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+    border: 0;
+    border-radius: 999px;
+    outline: none;
+    font: inherit;
+    font-size: 0.875rem;
+  }
+
+  .category-subscribe-form input::placeholder { color: rgba(255, 255, 255, 0.35); }
+  .category-subscribe-form input:focus { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22); }
+
+  .category-subscribe-form button {
+    height: 40px;
+    padding: 0 18px;
+    color: #17191b;
+    background: #f7f7f7;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .category-artwork {
+    position: relative;
+    width: 395px;
+    height: 395px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+  }
+
+  .category-artwork-icon {
+    position: absolute;
+    z-index: 2;
+    top: 18px;
+    left: 18px;
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    color: var(--category-accent);
+    background: color-mix(in srgb, var(--category-accent) 17%, transparent);
+    border-radius: 50%;
+  }
+
+  .category-artwork-circle {
+    position: absolute;
+    top: 58px;
+    left: 58px;
+    display: grid;
+    width: 278px;
+    height: 278px;
+    overflow: hidden;
+    place-items: center;
+    color: var(--category-accent);
+    background: radial-gradient(circle at 48% 45%, color-mix(in srgb, var(--category-accent) 34%, #17191b), #17191b 72%);
+    border-radius: 50%;
+  }
+
+  .category-artwork-circle img { width: 100%; height: 100%; object-fit: cover; }
+
+  .category-section {
+    padding: 34px 0 32px;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .category-section > h2,
+  .category-nearby-heading h2 {
+    margin: 0 0 20px;
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .category-events-list {
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 13px;
+  }
+
+  .category-month-group { position: relative; }
+
+  .category-month-heading {
+    position: sticky;
+    z-index: 8;
+    top: 50px;
+    display: flex;
+    height: 40px;
+    align-items: center;
+    gap: 9px;
+    padding: 0 18px;
+    color: rgba(255, 255, 255, 0.48);
+    background: #202224;
+    border-radius: 12px 12px 0 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: lowercase;
+  }
+
+  .category-month-group:not(:first-child) .category-month-heading { border-radius: 0; }
+  .category-month-heading > span { width: 16px; height: 5px; border-radius: 999px; }
+
+  .category-event-row {
+    display: grid;
+    min-height: 76px;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 13px;
+    padding: 10px 18px;
+    color: inherit;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.015);
+    transition: background 150ms ease;
+  }
+
+  .category-event-row:hover { background: rgba(255, 255, 255, 0.04); }
+
+  .category-event-image {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+  }
+
+  .category-event-image img { width: 100%; height: 100%; object-fit: cover; }
+  .category-event-copy { min-width: 0; }
+
+  .category-event-copy strong {
+    display: block;
+    overflow: hidden;
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .category-event-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .category-event-meta > span { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .category-event-meta time { white-space: nowrap; }
+
+  .category-calendar-grid {
+    display: grid;
+    max-width: 640px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .category-calendar-card {
+    min-height: 160px;
+    padding: 14px;
+    color: inherit;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    transition: border-color 150ms ease;
+  }
+
+  .category-calendar-card:hover { border-color: rgba(255, 255, 255, 0.27); }
+  .category-calendar-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 13px; }
+
+  .category-calendar-logo {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    place-items: center;
+    color: rgba(255,255,255,.7);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 8px;
+    font-size: .75rem;
+    font-weight: 700;
+  }
+
+  .category-calendar-logo img { width: 100%; height: 100%; object-fit: cover; }
+
+  .category-follow-button {
+    padding: 7px 12px;
+    color: rgba(255, 255, 255, 0.64);
+    background: rgba(255, 255, 255, 0.09);
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .category-calendar-card h3 { margin: 0 0 5px; color: #fff; font-size: 1rem; font-weight: 600; }
+  .category-calendar-card p { display: -webkit-box; margin: 0; overflow: hidden; color: rgba(255,255,255,.48); font-size: .8125rem; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+
+  .category-nearby {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 48px;
+    padding-bottom: 80px;
+  }
+
+  .category-nearby-heading { display: flex; align-items: center; justify-content: space-between; }
+  .category-nearby-heading h2 { margin-bottom: 0; }
+  .category-nearby-heading button { display: grid; width: 32px; height: 32px; place-items: center; color: rgba(255,255,255,.55); background: rgba(255,255,255,.08); border: 0; border-radius: 8px; }
+
+  .category-map-empty { position: relative; min-height: 300px; margin-top: 18px; overflow: hidden; }
+  .category-world-map { width: 100%; height: auto; opacity: .8; }
+  .category-map-empty-copy { position: absolute; right: 16%; bottom: 5px; width: 330px; text-align: center; }
+  .category-map-empty-copy h3 { margin: 0 0 8px; color: #fff; font-size: 1rem; font-weight: 600; }
+  .category-map-empty-copy p { margin: 0 auto 18px; color: rgba(255,255,255,.48); font-size: .875rem; line-height: 1.5; }
+  .category-map-empty-copy a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; color: rgba(255,255,255,.9); background: rgba(255,255,255,.35); border-radius: 999px; font-size: .8125rem; font-weight: 600; text-decoration: none; }
+
+  .category-subscribe-aside { padding-top: 2px; }
+  .category-aside-icon { display: grid; width: 48px; height: 48px; place-items: center; color: #fff; background: var(--category-accent); border-radius: 50%; }
+  .category-subscribe-aside h3 { margin: 18px 0 8px; color: #fff; font-size: 1rem; font-weight: 600; }
+  .category-subscribe-aside p { margin: 0; color: rgba(255,255,255,.72); font-size: .8125rem; font-weight: 500; line-height: 1.55; }
+  .category-subscribe-form.is-compact { display: grid; max-width: none; grid-template-columns: 1fr; gap: 8px; margin-top: 16px; }
+
+  .category-loading-page { display: grid; min-height: 100vh; place-items: center; }
+  .category-loader { width: 34px; height: 34px; border: 2px solid rgba(255,255,255,.12); border-top-color: #fff; border-radius: 50%; animation: category-spin .8s linear infinite; }
+  .category-not-found { color: rgba(255,255,255,.58); font-size: .875rem; }
+  @keyframes category-spin { to { transform: rotate(360deg); } }
+
+  .category-page footer { margin-top: 0 !important; }
+
+  @media (max-width: 860px) {
+    .category-hero { grid-template-columns: 1fr 320px; gap: 40px; }
+    .category-artwork { width: 320px; height: 320px; }
+    .category-artwork-circle { top: 50px; left: 50px; width: 220px; height: 220px; }
+    .category-event-meta > span { max-width: 150px; }
+  }
+
+  @media (max-width: 700px) {
+    .category-container { padding: 92px 16px 0; }
+    .category-hero { min-height: auto; grid-template-columns: 1fr; gap: 38px; padding-bottom: 56px; }
+    .category-hero-copy h1 { font-size: 2rem; }
+    .category-artwork { width: min(100%, 395px); height: auto; aspect-ratio: 1; }
+    .category-artwork-circle { top: 15%; left: 15%; width: 70%; height: 70%; }
+    .category-events-list { border-radius: 11px; }
+    .category-event-row { grid-template-columns: 48px minmax(0, 1fr); }
+    .category-event-meta { grid-column: 2; justify-content: flex-start; flex-wrap: wrap; gap: 7px 12px; padding-bottom: 4px; }
+    .category-event-meta > span { max-width: 100%; }
+    .category-calendar-grid { grid-template-columns: 1fr; }
+    .category-nearby { grid-template-columns: 1fr; }
+    .category-map-empty-copy { right: 50%; width: min(90%, 330px); transform: translateX(50%); }
+    .category-subscribe-aside { max-width: 360px; }
+  }
+
+  @media (max-width: 430px) {
+    .category-stats { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .category-subscribe-form { display: grid; grid-template-columns: 1fr; }
+    .category-subscribe-form button { width: 100%; }
+    .category-month-heading { top: 48px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .category-page * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+`;
 
 export default EventsByCategory;

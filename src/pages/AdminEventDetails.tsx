@@ -177,7 +177,7 @@ export default function AdminEventDetails() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(`/create-event?eventId=${eventId}`)}
+            onClick={() => navigate(`/create?eventId=${eventId}`)}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium"
           >
             <Edit2 className="w-4 h-4" />

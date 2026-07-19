@@ -129,13 +129,23 @@ const CreateTickets: React.FC = () => {
     setSuccess("");
     setLoading(true);
     // Validação básica
-    if (!ticketName || !price || !maxTickets || !eventId) {
+    if (!ticketName || price === "" || !maxTickets || !eventId) {
       setError("Preencha todos os campos obrigatórios.");
       setLoading(false);
       return;
     }
+
+    let salesStartVal = null;
+    if (salesStartDate && salesStartTime) {
+      salesStartVal = `${salesStartDate}T${salesStartTime}:00`;
+    }
+    let salesEndVal = null;
+    if (salesEndDate && salesEndTime) {
+      salesEndVal = `${salesEndDate}T${salesEndTime}:00`;
+    }
+
     try {
-      const payload = {
+      const payload: any = {
         name: ticketName,
         price: parseFloat(price.replace(',', '.')),
         maxQuantity: parseInt(maxTickets),
@@ -143,35 +153,66 @@ const CreateTickets: React.FC = () => {
         eventId,
         isFree,
         isAbsorbFee,
+        absorbFee: isAbsorbFee,
         isPrivate,
-        // Adicione outros campos necessários aqui
+        isFacePass,
+        perUserLimit: perUserLimit ? parseInt(perUserLimit) : null,
+        salesStart: salesStartVal,
+        salesEnd: salesEndVal,
+        categoryId: selectedCategoryId || null,
       };
-      const res = await fetchApi(`/api/ticket-type`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+
+      if (!editingId) {
+        payload.createHalf = createHalf;
+      }
+
+      const method = editingId ? "PUT" : "POST";
+      const url = editingId ? `/api/ticket-type/${editingId}` : `/api/ticket-type`;
+      
+      const token = localStorage.getItem('token');
+      const res = await fetchApi(url, {
+        method,
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        setError(data?.error || "Erro ao criar ingresso.");
+        setError(data?.message || data?.error || `Erro ao ${editingId ? 'atualizar' : 'criar'} ingresso.`);
         setLoading(false);
         return;
       }
-      setSuccess("Ingresso criado com sucesso!");
+
+      setSuccess(`Ingresso ${editingId ? 'atualizado' : 'criado'} com sucesso!`);
+      toast?.({ title: 'Sucesso', description: `Ingresso ${editingId ? 'atualizado' : 'criado'} com sucesso!` });
       setLoading(false);
       setDrawerOpen(false);
+
       // Limpa campos
       setTicketName("");
       setPrice("");
+      setPriceRaw("");
       setMaxTickets("");
       setDescription("");
       setIsFree(false);
       setIsAbsorbFee(false);
       setIsPrivate(false);
+      setIsFacePass(false);
+      setPerUserLimit("");
+      setSalesStartDate("");
+      setSalesStartTime("");
+      setSalesEndDate("");
+      setSalesEndTime("");
+      setCreateHalf(false);
+      setEditingId(null);
+
       // Atualiza lista de ingressos
       if (typeof fetchTickets === 'function') fetchTickets();
     } catch (e) {
-      setError("Erro inesperado ao criar ingresso.");
+      setError(`Erro inesperado ao ${editingId ? 'atualizar' : 'criar'} ingresso.`);
       setLoading(false);
     }
   };
@@ -855,7 +896,7 @@ const CreateTickets: React.FC = () => {
           eventName={eventName}
           eventDate={eventStart}
           eventStatus={eventStatus}
-          onBack={() => navigate("/organizer-dashboard")}
+          onBack={() => navigate("/organizer-events")}
           onStatusChange={() => { }}
           onViewEvent={() => { }}
           fixed
@@ -1252,8 +1293,8 @@ const CreateTickets: React.FC = () => {
                                               <div
                                                 className={`bg-white dark:bg-[#242424] rounded-2xl border p-6 max-sm:p-4 relative transition-all ${isParentWithHalf ? 'mb-0' : 'mb-4'} shadow-sm ${deleteId === t.id ? 'border-red-300 animate-delete-ticket' : 'border-[#E5E7EB] dark:border-[#1F1F1F]'}`}
                                               >
-                                                <div className="flex items-center justify-between max-sm:flex-col max-sm:items-start max-sm:gap-4">
-                                                  <div className="flex items-center gap-4 max-sm:gap-2 max-sm:w-full">
+                                                <div className="flex items-center justify-between gap-4 w-full">
+                                                  <div className="flex items-center gap-4 max-sm:gap-2 max-sm:w-full min-width-0">
                                                     <div className="flex items-center gap-1">
                                                       {/* Grip for reordering within category */}
                                                       <div className="mt-0.5 text-gray-400 cursor-grab select-none max-sm:hidden" title="Arraste para reordenar">
@@ -1277,22 +1318,25 @@ const CreateTickets: React.FC = () => {
                                                         <FolderInput className="w-4 h-4" />
                                                       </div>
                                                     </div>
-                                                    <div className="flex flex-col max-sm:flex-1">
-                                                      <div className="flex items-center gap-3 max-sm:flex-wrap max-sm:gap-2">
-                                                        <div className="text-lg max-sm:text-base font-bold text-[#091747] dark:text-white">{displayName}</div>
-                                                        {!t.isOnSale ? (
-                                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-slate-500 text-white text-xs max-sm:text-[10px] font-medium uppercase flex-shrink-0">VENDAS ENCERRADAS</span>
-                                                        ) : t.maxQuantity === 0 || (t.sold || 0) >= t.maxQuantity ? (
-                                                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#2A2AD7] text-white border border-[#2A2AD7] text-[12px] max-sm:text-[10px]">ESGOTADO</span>
-                                                        ) : (
-                                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-emerald-500 text-white text-xs max-sm:text-[10px] font-medium uppercase flex-shrink-0">À VENDA</span>
-                                                        )}
-                                                      </div>
+                                                    <div className="flex items-center left min-width-0 flex-wrap gap-2 text-[16px] font-normal leading-normal">
+                                                      <span className="text-[#091747] dark:text-zinc-100 font-normal">{displayName}</span>
+                                                      <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                                      <span className="text-zinc-500 dark:text-zinc-400 font-normal">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</span>
+                                                      <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                                      <span className="text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 font-normal">
+                                                        {t.sold || 0} / {t.maxQuantity}
+                                                      </span>
+                                                      <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                                      {!t.isOnSale ? (
+                                                        <span className="text-xs text-slate-500 font-medium">VENDAS ENCERRADAS</span>
+                                                      ) : t.maxQuantity === 0 || (t.sold || 0) >= t.maxQuantity ? (
+                                                        <span className="text-xs text-[#2A2AD7] font-medium">ESGOTADO</span>
+                                                      ) : (
+                                                        <span className="text-xs text-emerald-500 font-medium">À VENDA</span>
+                                                      )}
                                                     </div>
                                                   </div>
-                                                  <div className="flex items-center gap-4 max-sm:gap-3 max-sm:w-full max-sm:justify-between max-sm:flex-wrap">
-                                                    <div className="text-[#091747] dark:text-white text-lg max-sm:text-base font-bold">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</div>
-                                                    <div className="text-sm max-sm:text-xs text-slate-500">{t.sold || 0} / {t.maxQuantity}</div>
+                                                  <div className="flex items-center gap-4 max-sm:gap-3 flex-shrink-0">
                                                     <DropdownMenu>
                                                       <DropdownMenuTrigger asChild>
                                                         <button className="w-9 h-9 max-sm:w-8 max-sm:h-8 rounded-full bg-slate-100 dark:bg-[#1F1F1F] flex items-center justify-center text-slate-600 dark:text-slate-300" aria-label="Ações do ingresso">
@@ -1511,8 +1555,8 @@ const CreateTickets: React.FC = () => {
                                 <div
                                   className={`bg-white dark:bg-[#242424] rounded-2xl border p-6 max-sm:p-4 relative transition-all ${isParentWithHalf ? 'mb-0' : 'mb-4'} shadow-sm ${deleteId === t.id ? 'border-red-300 animate-delete-ticket' : 'border-[#E5E7EB] dark:border-[#1F1F1F]'}`}
                                 >
-                                  <div className="flex items-center justify-between max-sm:flex-col max-sm:items-start max-sm:gap-4">
-                                    <div className="flex items-center gap-4 max-sm:gap-2 max-sm:w-full">
+                                  <div className="flex items-center justify-between gap-4 w-full">
+                                    <div className="flex items-center gap-4 max-sm:gap-2 max-sm:w-full min-width-0">
                                       <div className="flex items-center gap-1">
                                         {/* Grip for reordering */}
                                         <div className="mt-0.5 text-gray-400 cursor-grab select-none max-sm:hidden" title="Arraste para reordenar">
@@ -1538,22 +1582,25 @@ const CreateTickets: React.FC = () => {
                                           </div>
                                         )}
                                       </div>
-                                      <div className="flex flex-col max-sm:flex-1">
-                                        <div className="flex items-center gap-3 max-sm:flex-wrap max-sm:gap-2">
-                                          <div className="text-lg max-sm:text-base font-bold text-[#091747] dark:text-white">{displayName}</div>
-                                          {!t.isOnSale ? (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-slate-500 text-white text-xs max-sm:text-[10px] font-medium uppercase flex-shrink-0">VENDAS ENCERRADAS</span>
-                                          ) : t.maxQuantity === 0 || (t.sold || 0) >= t.maxQuantity ? (
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#2A2AD7] text-white border border-[#2A2AD7] text-[12px] max-sm:text-[10px]">ESGOTADO</span>
-                                          ) : (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-emerald-500 text-white text-xs max-sm:text-[10px] font-medium uppercase flex-shrink-0">À VENDA</span>
-                                          )}
-                                        </div>
+                                      <div className="flex items-center left min-width-0 flex-wrap gap-2 text-[16px] font-normal leading-normal">
+                                        <span className="text-[#091747] dark:text-zinc-100 font-normal">{displayName}</span>
+                                        <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                        <span className="text-zinc-500 dark:text-zinc-400 font-normal">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</span>
+                                        <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                        <span className="text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 font-normal">
+                                          {t.sold || 0} / {t.maxQuantity}
+                                        </span>
+                                        <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                        {!t.isOnSale ? (
+                                          <span className="text-xs text-slate-500 font-medium">VENDAS ENCERRADAS</span>
+                                        ) : t.maxQuantity === 0 || (t.sold || 0) >= t.maxQuantity ? (
+                                          <span className="text-xs text-[#2A2AD7] font-medium">ESGOTADO</span>
+                                        ) : (
+                                          <span className="text-xs text-emerald-500 font-medium">À VENDA</span>
+                                        )}
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-4 max-sm:gap-3 max-sm:w-full max-sm:justify-between max-sm:flex-wrap">
-                                      <div className="text-[#091747] dark:text-white text-lg max-sm:text-base font-bold">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</div>
-                                      <div className="text-sm max-sm:text-xs text-slate-500">{t.sold || 0} / {t.maxQuantity}</div>
+                                    <div className="flex items-center gap-4 max-sm:gap-3 flex-shrink-0">
                                       {categories.length > 0 && (
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
@@ -1716,27 +1763,30 @@ const CreateTickets: React.FC = () => {
                                 <div
                                   className={`bg-white dark:bg-[#242424] rounded-2xl border p-6 max-sm:p-4 relative transition-all ${isParentWithHalf ? 'mb-0' : 'mb-4'} shadow-sm ${deleteId === t.id ? 'border-red-300 animate-delete-ticket' : 'border-[#E5E7EB] dark:border-[#1F1F1F]'}`}
                                 >
-                                  <div className="flex items-center justify-between max-sm:flex-col max-sm:items-start max-sm:gap-4">
-                                    <div className="flex items-center gap-4 max-sm:gap-2 max-sm:w-full">
+                                  <div className="flex items-center justify-between gap-4 w-full">
+                                    <div className="flex items-center gap-4 max-sm:gap-2 max-sm:w-full min-width-0">
                                       <div className="mt-0.5 text-gray-400 cursor-grab select-none max-sm:hidden" title="Arraste para reordenar">
                                         <GripVertical className="w-4 h-4" />
                                       </div>
-                                      <div className="flex flex-col max-sm:flex-1">
-                                        <div className="flex items-center gap-3 max-sm:flex-wrap max-sm:gap-2">
-                                          <div className="text-lg max-sm:text-base font-bold text-[#091747] dark:text-white">{displayName}</div>
-                                          {!t.isOnSale ? (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-slate-500 text-white text-xs max-sm:text-[10px] font-medium uppercase flex-shrink-0">VENDAS ENCERRADAS</span>
-                                          ) : t.maxQuantity === 0 || (t.sold || 0) >= t.maxQuantity ? (
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#2A2AD7] text-white border border-[#2A2AD7] text-[12px] max-sm:text-[10px]">ESGOTADO</span>
-                                          ) : (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-emerald-500 text-white text-xs max-sm:text-[10px] font-medium uppercase flex-shrink-0">À VENDA</span>
-                                          )}
-                                        </div>
+                                      <div className="flex items-center left min-width-0 flex-wrap gap-2 text-[16px] font-normal leading-normal">
+                                        <span className="text-[#091747] dark:text-zinc-100 font-normal">{displayName}</span>
+                                        <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                        <span className="text-zinc-500 dark:text-zinc-400 font-normal">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</span>
+                                        <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                        <span className="text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5 font-normal">
+                                          {t.sold || 0} / {t.maxQuantity}
+                                        </span>
+                                        <span className="text-zinc-300 dark:text-zinc-700">·</span>
+                                        {!t.isOnSale ? (
+                                          <span className="text-xs text-slate-500 font-medium">VENDAS ENCERRADAS</span>
+                                        ) : t.maxQuantity === 0 || (t.sold || 0) >= t.maxQuantity ? (
+                                          <span className="text-xs text-[#2A2AD7] font-medium">ESGOTADO</span>
+                                        ) : (
+                                          <span className="text-xs text-emerald-500 font-medium">À VENDA</span>
+                                        )}
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-4 max-sm:gap-3 max-sm:w-full max-sm:justify-between max-sm:flex-wrap">
-                                      <div className="text-[#091747] dark:text-white text-lg max-sm:text-base font-bold">{Number(t.price || 0) === 0 ? 'Gratuito' : formatBRL(Number(t.price || 0))}</div>
-                                      <div className="text-sm max-sm:text-xs text-slate-500">{t.sold || 0} / {t.maxQuantity}</div>
+                                    <div className="flex items-center gap-4 max-sm:gap-3 flex-shrink-0">
                                       {categories.length > 0 && (
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>

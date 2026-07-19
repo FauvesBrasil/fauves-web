@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import CheckoutHeader from '@/components/CheckoutHeader';
 import { Button } from '@/components/ui/button';
 import { useTrackingPixels } from '@/hooks/useTrackingPixels';
+import { fetchApi } from '@/lib/apiBase';
 
 interface OrderSummary {
   id: string;
@@ -28,7 +29,7 @@ export default function CheckoutSuccess() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`);
+      const res = await fetchApi(`/api/orders/${encodeURIComponent(orderId)}`);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(json?.error || `HTTP ${res.status}`);

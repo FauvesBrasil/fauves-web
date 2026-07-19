@@ -6,7 +6,7 @@ import macbookImg from '@/assets/macbook-pro-16-mockup-v4-isometric.png';
 
 const Banner: React.FC = () => {
   const navigate = useNavigate();
-  const handlePrimary = () => { navigate('/create-event'); };
+  const handlePrimary = () => { navigate('/create'); };
   const handleSecondary = () => { navigate('/how-it-works'); };
 
   return (

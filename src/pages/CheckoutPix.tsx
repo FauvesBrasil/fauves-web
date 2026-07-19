@@ -11,6 +11,7 @@ import { WarpDialog } from '@/components/WarpDialog';
 import SmartphoneIcon from '../assets/smartphone.svg';
 import QrCodeIcon from '../assets/qr-code.svg';
 import DoubleCheckIcon from '../assets/double-check.svg';
+import { fetchApi } from '@/lib/apiBase';
 
 interface PixIntent {
   id: string;
@@ -57,7 +58,6 @@ function Countdown({ expiresAt, onExpire, disabled }: { expiresAt: string; onExp
 }
 
 export default function CheckoutPix() {
-  const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://127.0.0.1:4000';
   const [params] = useSearchParams();
   const orderId = params.get('orderId') || '';
   const expParam = params.get('exp');
@@ -81,7 +81,7 @@ export default function CheckoutPix() {
     if (!orderId) return;
     if (!opts?.suppressLoading) setOrderLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
+      const res = await fetchApi(`/api/orders/${orderId}`);
       const json = await res.json();
       if (json.error) {
         setError(json.error);
@@ -126,7 +126,7 @@ export default function CheckoutPix() {
     try {
       const headers: any = { 'Content-Type': 'application/json' };
       if (user && (user as any).id) headers['x-user-id'] = (user as any).id;
-      const res = await fetch(`${API_BASE}/api/orders/${orderId}/pix-intent`, { method: 'POST', headers });
+      const res = await fetchApi(`/api/orders/${orderId}/pix-intent`, { method: 'POST', headers });
       if (!res.ok) {
         // try to parse error body for more helpful message
         let errBody: any = null;
@@ -179,7 +179,7 @@ export default function CheckoutPix() {
       if (stopped) return;
       try {
         // Poll order status to check if payment was confirmed by webhook
-        const orderRes = await fetch(`${API_BASE}/api/orders/${orderId}`);
+        const orderRes = await fetchApi(`/api/orders/${orderId}`);
         if (orderRes.ok) {
           const orderData = await orderRes.json();
             if (orderData.paymentStatus === 'PAID') {
@@ -192,7 +192,7 @@ export default function CheckoutPix() {
         }
 
         // Also poll pix-intent for status updates
-        const intentRes = await fetch(`${API_BASE}/api/orders/${orderId}/pix-intent`);
+        const intentRes = await fetchApi(`/api/orders/${orderId}/pix-intent`);
         if (intentRes.ok) {
           const intentData = await intentRes.json().catch(() => null);
           if (intentData?.intent) {
@@ -242,12 +242,12 @@ export default function CheckoutPix() {
       try {
         const ue = user?.email || (order?.purchaserEmail as string | undefined) || '';
         const qpix = ue ? `?userEmail=${encodeURIComponent(ue)}` : '';
-        await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}/pix-intent/cancel${qpix}`, { method: 'POST' }).catch(()=>{});
+        await fetchApi(`/api/orders/${encodeURIComponent(orderId)}/pix-intent/cancel${qpix}`, { method: 'POST' }).catch(()=>{});
       } catch {}
 
       const userEmail = user?.email || (order?.purchaserEmail as string | undefined) || '';
       const q = userEmail ? `?userEmail=${encodeURIComponent(userEmail)}` : '';
-      const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}/cancel${q}`, { method: 'POST' });
+      const res = await fetchApi(`/api/orders/${encodeURIComponent(orderId)}/cancel${q}`, { method: 'POST' });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         setError(j?.error || `Falha ao cancelar pedido (HTTP ${res.status})`);

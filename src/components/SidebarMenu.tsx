@@ -4,6 +4,7 @@ import { useRegisterSidebar } from '@/context/LayoutOffsetsContext';
 import { useNavigate, useLocation } from "react-router-dom";
 import { HelpCircle, Home, Calendar, ClipboardList, Megaphone, BarChart2, Banknote, Settings } from "lucide-react";
 import logoSquare from "@/assets/logo-square-fauves-blue.svg";
+import { useOrganization } from '@/context/OrganizationContext';
 
 type SidebarMenuProps = {
   activeKeyOverride?: string;
@@ -13,21 +14,27 @@ type SidebarMenuProps = {
 const SidebarMenu: React.FC<SidebarMenuProps> = ({ activeKeyOverride, className }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { selectedOrg } = useOrganization();
+
+  const settingsRoute = selectedOrg?.id 
+    ? `/calendar/manage/cal-${selectedOrg.id}` 
+    : '/organizer-settings';
 
   // Map routes to menu keys
   const menuItems = [
-    { key: 'painel', label: 'Painel', icon: Home, route: '/organizer-dashboard' },
     { key: 'eventos', label: 'Eventos', icon: Calendar, route: '/organizer-events' },
     { key: 'pedidos', label: 'Pedidos', icon: ClipboardList, route: '/organizer-orders' },
     // marketing page removed
     { key: 'relatorios', label: 'Relatórios', icon: BarChart2, route: '/organizer-reports' },
     { key: 'financas', label: 'Finanças', icon: Banknote, route: '/organizer-finances' },
-    { key: 'ajustes', label: 'Ajustes', icon: Settings, route: '/organizer-settings' },
+    { key: 'ajustes', label: 'Ajustes', icon: Settings, route: settingsRoute },
   ];
 
   // Find which menu is active
-  const computedKey = menuItems.find(item => location.pathname.startsWith(item.route))?.key ||
-    (location.pathname === '/organizer-dashboard' ? 'painel' : '');
+  const computedKey = (location.pathname.startsWith('/calendar/manage') || location.pathname.startsWith('/organizer-settings'))
+    ? 'ajustes'
+    : (menuItems.find(item => location.pathname.startsWith(item.route))?.key ||
+       (location.pathname === '/organizer-events' ? 'eventos' : ''));
   const activeKey = activeKeyOverride || computedKey;
   const ref = React.useRef<HTMLDivElement | null>(null);
   useRegisterSidebar('main', ref, true);
@@ -57,7 +64,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ activeKeyOverride, className 
       {/* Top section: Logo + Menu icons */}
       <div className="flex flex-col gap-8 items-center w-full">
         {/* Logo quadrado no topo, clicável - aligned with 60px AppHeader center */}
-        <button className="w-[60px] h-[60px] rounded-lg flex items-center justify-center overflow-hidden focus:outline-none" onClick={() => navigate("/organizer-dashboard")} title="Painel">
+        <button className="w-[60px] h-[60px] rounded-lg flex items-center justify-center overflow-hidden focus:outline-none" onClick={() => navigate("/organizer-events")} title="Eventos">
           <img src={logoSquare} alt="Logo Fauves" className="w-full h-full object-contain" />
         </button>
         {/* Menu icons com texto flutuante */}

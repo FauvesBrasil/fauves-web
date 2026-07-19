@@ -116,7 +116,7 @@ export default function EventAnalytics() {
                 <EventMobileTopBar title="Analytics" onMenuOpen={() => setEventMenuOpen(true)} />
                 <EventMobileDrawer isOpen={eventMenuOpen} onClose={() => setEventMenuOpen(false)} currentPath={location.pathname} eventId={id || ''} eventName={event?.name} eventDate={event?.startDate ? new Date(event.startDate).toLocaleDateString('pt-BR') : undefined} eventStatus={getStatusLabel(event?.status)} />
                 <div className="hidden lg:block"><SidebarMenu /></div>
-                <div className="hidden lg:block"><EventDetailsSidebar eventName={event?.name} eventDate={event?.startDate ? new Date(event.startDate).toLocaleString('pt-BR') : undefined} eventStatus={getStatusLabel(event?.status)} onBack={() => navigate('/organizer-events')} onViewEvent={() => event && navigate(getEventPath({ id: event.id || id!, slug: event.slug }))} eventIdOverride={id || null} panelRoute={`/painel-evento/${id}`} fixed fixedLeft={70} fixedWidth={300} fixedTop={0} /></div>
+                <div className="hidden lg:block"><EventDetailsSidebar eventName={event?.name} eventDate={event?.startDate ? new Date(event.startDate).toLocaleString('pt-BR') : undefined} eventStatus={getStatusLabel(event?.status)} onBack={() => navigate('/organizer-events')} onViewEvent={() => event && navigate(getEventPath({ id: event.id || id!, slug: event.slug }))} eventIdOverride={id || null} panelRoute={`/event/manage/${id}`} fixed fixedLeft={70} fixedWidth={300} fixedTop={0} /></div>
                 <AppHeader />
                 <OrganizerLayout>
                     <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col px-4 sm:px-6 lg:px-8 min-h-screen relative pb-24 pt-24 max-md:pt-4">
@@ -147,7 +147,7 @@ export default function EventAnalytics() {
             <EventMobileTopBar title="Analytics" onMenuOpen={() => setEventMenuOpen(true)} />
             <EventMobileDrawer isOpen={eventMenuOpen} onClose={() => setEventMenuOpen(false)} currentPath={location.pathname} eventId={id || ''} eventName={event?.name} eventDate={event?.startDate ? new Date(event.startDate).toLocaleDateString('pt-BR') : undefined} eventStatus={getStatusLabel(event?.status)} />
             <div className="hidden lg:block"><SidebarMenu /></div>
-            <div className="hidden lg:block"><EventDetailsSidebar eventName={event?.name} eventDate={event?.startDate ? new Date(event.startDate).toLocaleString('pt-BR') : undefined} eventStatus={getStatusLabel(event?.status)} onBack={() => navigate('/organizer-events')} onViewEvent={() => event && navigate(getEventPath({ id: event.id || id!, slug: event.slug }))} eventIdOverride={id || null} panelRoute={`/painel-evento/${id}`} fixed fixedLeft={70} fixedWidth={300} fixedTop={0} /></div>
+            <div className="hidden lg:block"><EventDetailsSidebar eventName={event?.name} eventDate={event?.startDate ? new Date(event.startDate).toLocaleString('pt-BR') : undefined} eventStatus={getStatusLabel(event?.status)} onBack={() => navigate('/organizer-events')} onViewEvent={() => event && navigate(getEventPath({ id: event.id || id!, slug: event.slug }))} eventIdOverride={id || null} panelRoute={`/event/manage/${id}`} fixed fixedLeft={70} fixedWidth={300} fixedTop={0} /></div>
             <AppHeader />
             <OrganizerLayout>
                 <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col px-4 sm:px-6 lg:px-8 min-h-screen relative pb-24 pt-24 max-md:pt-4">

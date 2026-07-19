@@ -183,7 +183,7 @@ export default function AdminEvents(){
                   </span>
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={(evt) => { evt.stopPropagation(); navigate(`/create-event?eventId=${e.id}`); }}
+                      onClick={(evt) => { evt.stopPropagation(); navigate(`/create?eventId=${e.id}`); }}
                       className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-teal-600 transition"
                       title="Editar"
                     >

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 180 180">
+  <rect width="180" height="180" fill="#131517" rx="16"/>
+  <!-- Envelope Icon -->
+  <g transform="translate(45, 55)">
+    <!-- Envelope Body -->
+    <rect x="0" y="10" width="90" height="60" rx="8" fill="#27272a" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <!-- Envelope Flap -->
+    <path d="M 5,10 L 45,45 L 85,10" stroke="rgba(255,255,255,0.12)" stroke-width="2" fill="none"/>
+    <!-- Red Notification Dot -->
+    <circle cx="82" cy="8" r="9" fill="#ef4444" stroke="#131517" stroke-width="2"/>
+  </g>
+</svg>

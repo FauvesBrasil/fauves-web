@@ -41,8 +41,7 @@ const ChatWidget = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Detect if we're on organizer/admin pages
-    const isOrganizerContext = location.pathname.startsWith('/painel-evento') ||
+    const isOrganizerContext = location.pathname.startsWith('/event/manage') ||
         location.pathname.startsWith('/admin') ||
         location.pathname.startsWith('/criar-evento') ||
         location.pathname.startsWith('/create-tickets') ||
@@ -398,6 +397,8 @@ const ChatWidget = () => {
         }
     }, [activeTab, audience]);
 
+    // Keep authentication focused and visually consistent with the dedicated page.
+    if (location.pathname === '/signin') return null;
 
 
     if (!isOpen) {

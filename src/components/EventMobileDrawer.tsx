@@ -53,7 +53,7 @@ const EventMobileDrawer: React.FC<EventMobileDrawerProps> = ({
           key: 'editar',
           label: 'Editar página do evento',
           icon: FileText,
-          route: `/create-event?eventId=${eventId}`,
+          route: `/create?eventId=${eventId}`,
           completed: true // sempre marcado como completo se o evento existe
         },
         {
@@ -79,13 +79,13 @@ const EventMobileDrawer: React.FC<EventMobileDrawerProps> = ({
           key: 'painel',
           label: 'Painel',
           icon: BarChart2,
-          route: `/painel-evento/${eventId}`
+          route: `/event/manage/${eventId}`
         },
         {
           key: 'analytics',
           label: 'Analytics',
           icon: TrendingUp,
-          route: `/painel-evento/${eventId}/analytics`
+          route: `/event/manage/${eventId}/analytics`
         },
       ]
     },

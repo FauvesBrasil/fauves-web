@@ -139,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
             <button className={`${headerTextClass} text-sm font-bold max-md:text-xs hover:text-[#EF4118] focus:text-[#EF4118] transition-colors`}>Explorar</button>
           </Link>
 
-          <Link to="/create-event" className="max-sm:hidden">
+          <Link to="/create" className="max-sm:hidden">
             <button className={`${headerTextClass} text-sm font-bold max-md:text-xs hover:text-[#EF4118] focus:text-[#EF4118] transition-colors`}>Criar evento</button>
           </Link>
 

@@ -26,7 +26,7 @@ export interface TrackingEventData {
     eventId?: string;
     eventName?: string;
     category?: string;
-    currency?: string;
+    currency?: 'BRL';
     value?: number;
     items?: Array<{
         id: string;
@@ -267,7 +267,7 @@ function fireMetaEvent(eventType: TrackingEventType, data?: TrackingEventData) {
     };
 
     const fbData: any = {};
-    if (data?.currency) fbData.currency = data.currency;
+    if (data?.currency || data?.value) fbData.currency = 'BRL';
     if (data?.value) fbData.value = data.value;
     if (data?.items) {
         fbData.contents = data.items.map(i => ({
@@ -291,7 +291,7 @@ function fireGAEvent(eventType: TrackingEventType, data?: TrackingEventData) {
     };
 
     const gaData: any = {};
-    if (data?.currency) gaData.currency = data.currency;
+    if (data?.currency || data?.value) gaData.currency = 'BRL';
     if (data?.value) gaData.value = data.value;
     if (data?.transactionId) gaData.transaction_id = data.transactionId;
     if (data?.items) {
@@ -322,7 +322,7 @@ function fireGoogleAdsEvent(
     window.gtag('event', 'conversion', {
         send_to: `AW-${pixel.pixelId}/${actionConfig.conversionId}`,
         value: data?.value || 0,
-        currency: data?.currency || 'BRL',
+        currency: 'BRL',
         transaction_id: data?.transactionId,
     });
 }
@@ -341,7 +341,7 @@ function fireXEvent(
 
     window.twq('event', posConfig.conversionId, {
         value: data?.value?.toString() || '0',
-        currency: data?.currency || 'BRL',
+        currency: 'BRL',
         conversion_id: data?.transactionId,
     });
 }

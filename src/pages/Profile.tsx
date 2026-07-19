@@ -581,7 +581,7 @@ const Profile = () => {
                         }
                       `}
                     >
-                      {tab === 'tickets' ? 'Ingressos' : tab === 'orders' ? 'Pedidos' : 'Seguindo'}
+                      {tab === 'tickets' ? 'Ingressos' : tab === 'orders' ? 'Pedidos' : 'Calendários'}
                     </button>
                   ))}
                </div>
@@ -638,7 +638,7 @@ const Profile = () => {
 
                   {activeTab === 'following' && (
                     <div className="space-y-4">
-                      <SectionTitle icon={Users} count={following.length}>Organizações Seguidas</SectionTitle>
+                      <SectionTitle icon={Users} count={following.length}>Calendários Assinados</SectionTitle>
                       {followingLoading ? <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-[#2A2AD7]" /></div> : (
                         following.length > 0 ? (
                           following.map(org => (
@@ -649,17 +649,17 @@ const Profile = () => {
                                  </div>
                                  <div className="min-w-0">
                                     <h4 className="font-bold text-[#091747] dark:text-white truncate">{org.name}</h4>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ">Organização verificada</p>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ">Calendário verificado</p>
                                  </div>
                               </div>
-                              <button className="px-5 py-2.5 rounded-full border border-gray-100 dark:border-[#222] text-xs font-black hover:bg-gray-50 transition-colors shrink-0 ml-4">Seguindo</button>
+                              <button className="px-5 py-2.5 rounded-full border border-gray-100 dark:border-[#222] text-xs font-black hover:bg-gray-50 transition-colors shrink-0 ml-4">Assinado</button>
                             </div>
                           ))
                         ) : (
                            <EmptyState 
                             icon={Users} 
-                            title="Nenhuma organização" 
-                            description="As organizações que você seguir aparecerão aqui para acesso rápido."
+                            title="Nenhum calendário" 
+                            description="Os calendários que você assinar aparecerão aqui para acesso rápido."
                             actionLabel="Explorar Fauves"
                             onAction={() => navigate('/')}
                           />

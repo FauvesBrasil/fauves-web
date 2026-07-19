@@ -553,7 +553,7 @@ const OrganizerEvents: React.FC = () => {
                             <td colSpan={6} className="py-10 px-6 text-center text-sm text-slate-500">
                               Nenhum evento encontrado para esta organização.
                               <div className="mt-4">
-                                <Link to="/create-event" className="inline-flex items-center px-5 h-[42px] rounded-full bg-orange-600 text-white font-semibold hover:bg-orange-700 text-sm">+ Criar primeiro evento</Link>
+                                <Link to="/create" className="inline-flex items-center px-5 h-[42px] rounded-full bg-orange-600 text-white font-semibold hover:bg-orange-700 text-sm">+ Criar primeiro evento</Link>
                               </div>
                             </td>
                           </tr>
@@ -594,17 +594,28 @@ const OrganizerEvents: React.FC = () => {
                               }
                             }
                             return (
-                              <tr key={ev.id} className="hover:bg-[#F8F9FC] cursor-pointer transition" onClick={() => navigate(`/painel-evento/${ev.id}`)}>
+                              <tr key={ev.id} className="hover:bg-[#F8F9FC] cursor-pointer transition" onClick={() => navigate(`/event/manage/${ev.id}`)}>
                                 <td className="py-4 px-6">
                                   <div className="flex items-center gap-4">
                                     {ev.image ? (
-                                      <img src={ev.image} alt={ev.name || 'Banner do evento'} className="w-11 h-11 rounded-[5px] object-cover flex-shrink-0 border border-zinc-200" />
+                                      <img 
+                                        src={ev.image.startsWith('http') || ev.image.startsWith('/') ? ev.image : `/${ev.image}`} 
+                                        alt={ev.name || 'Banner do evento'} 
+                                        className="w-11 h-11 rounded-[5px] object-cover flex-shrink-0 border border-zinc-200" 
+                                      />
                                     ) : (
                                       <div className="w-11 h-11 rounded-[5px] bg-zinc-200 flex-shrink-0" />
                                     )}
                                     <div>
                                       <div className="text-[15px] text-slate-900 font-semibold leading-tight mb-0.5">{ev.name || 'Sem nome'}</div>
-                                      <div className="text-slate-500 text-[11px]">{formatDate(ev.startDate)}</div>
+                                      <div className="text-slate-500 text-[11px] flex flex-col gap-0.5">
+                                        <span>{formatDate(ev.startDate)}</span>
+                                        {ev.locationAddress || ev.location ? (
+                                          <span className="text-[10px] text-slate-400 font-medium truncate max-w-[200px]">
+                                            📍 {ev.locationAddress || ev.location}
+                                          </span>
+                                        ) : null}
+                                      </div>
                                       <div className="text-red-500 text-[11px] font-medium mt-0.5">{ev.privacy === 'public' ? 'Público' : 'Privado'}</div>
                                     </div>
                                   </div>
@@ -617,7 +628,7 @@ const OrganizerEvents: React.FC = () => {
                                 </td>
                                 <td className="py-4 px-6">
                                   <div className="flex items-center gap-4 justify-end">
-                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/create-event?eventId=${ev.id}`); }} className="text-indigo-600 hover:text-indigo-800" title="Editar"><Pencil size={18} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/create?eventId=${ev.id}`); }} className="text-indigo-600 hover:text-indigo-800" title="Editar"><Pencil size={18} /></button>
                                     <button className="text-slate-400 hover:text-red-600" title="Excluir" onClick={(e) => { e.stopPropagation(); setDeleteTarget(ev.id); }}><Trash2 size={18} /></button>
                                     {ev.slug && ev.status === 'published' && (
                                       <button
@@ -663,7 +674,7 @@ const OrganizerEvents: React.FC = () => {
                     ) : filtered.length === 0 ? (
                       <div className="bg-white dark:bg-[#242424] rounded-xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-8 text-center">
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Nenhum evento encontrado para esta organização.</p>
-                        <Link to="/create-event" className="inline-flex items-center px-5 h-[42px] rounded-full bg-orange-600 text-white font-semibold hover:bg-orange-700 text-sm">+ Criar primeiro evento</Link>
+                        <Link to="/create" className="inline-flex items-center px-5 h-[42px] rounded-full bg-orange-600 text-white font-semibold hover:bg-orange-700 text-sm">+ Criar primeiro evento</Link>
                       </div>
                     ) : (
                       filtered.map((ev: any) => {
@@ -701,10 +712,14 @@ const OrganizerEvents: React.FC = () => {
                           }
                         }
                         return (
-                          <div key={ev.id} className="bg-white dark:bg-[#242424] rounded-xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-4 cursor-pointer hover:shadow-md transition" onClick={() => navigate(`/painel-evento/${ev.id}`)}>
+                          <div key={ev.id} className="bg-white dark:bg-[#242424] rounded-xl border border-[#E5E7EB] dark:border-[#1F1F1F] p-4 cursor-pointer hover:shadow-md transition" onClick={() => navigate(`/event/manage/${ev.id}`)}>
                             <div className="flex gap-3">
                               {ev.image ? (
-                                <img src={ev.image} alt={ev.name || 'Banner do evento'} className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-zinc-200 dark:border-[#1F1F1F]" />
+                                <img 
+                                  src={ev.image.startsWith('http') || ev.image.startsWith('/') ? ev.image : `/${ev.image}`} 
+                                  alt={ev.name || 'Banner do evento'} 
+                                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-zinc-200 dark:border-[#1F1F1F]" 
+                                />
                               ) : (
                                 <div className="w-16 h-16 rounded-lg bg-zinc-200 dark:bg-[#1F1F1F] flex items-center justify-center flex-shrink-0">
                                   <span className="text-zinc-400 dark:text-zinc-600 text-xs">Sem foto</span>
@@ -713,6 +728,11 @@ const OrganizerEvents: React.FC = () => {
                               <div className="flex-1 min-w-0">
                                 <div className="text-sm font-semibold text-slate-900 dark:text-white mb-1 truncate">{ev.name || 'Sem nome'}</div>
                                 <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{formatDate(ev.startDate)}</div>
+                                {ev.locationAddress || ev.location ? (
+                                  <div className="text-[11px] text-slate-400 truncate mb-1">
+                                    📍 {ev.locationAddress || ev.location}
+                                  </div>
+                                ) : null}
                                 <div className="text-xs text-red-500 font-medium">{ev.privacy === 'public' ? 'Público' : 'Privado'}</div>
                               </div>
                             </div>
@@ -724,7 +744,7 @@ const OrganizerEvents: React.FC = () => {
                               <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-semibold ${getStatusBadgeColor(ev.status)}`}>{getStatusLabel(ev.status)}</span>
                             </div>
                             <div className="mt-3 flex gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); navigate(`/create-event?eventId=${ev.id}`); }} className="flex-1 text-xs py-2 px-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition">Editar</button>
+                              <button onClick={(e) => { e.stopPropagation(); navigate(`/create?eventId=${ev.id}`); }} className="flex-1 text-xs py-2 px-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition">Editar</button>
                               {ev.slug && ev.status === 'published' && (
                                 <button
                                   className="flex-1 text-xs py-2 px-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-semibold hover:bg-green-100 dark:hover:bg-green-900/30 transition"
@@ -799,7 +819,7 @@ const OrganizerEvents: React.FC = () => {
             <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3">
               <div className="relative group">
                 <button
-                  onClick={() => navigate('/create-event')}
+                  onClick={() => navigate('/create')}
                   className="w-16 h-16 rounded-full bg-[#EF4118] shadow-lg flex items-center justify-center hover:bg-[#d12c0f] transition-all"
                   aria-label="Criar evento"
                   style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}

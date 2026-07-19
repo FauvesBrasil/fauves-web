@@ -15,10 +15,9 @@
             // If opened as a popup by the main app, postMessage the token and close
             try {
               if (window.opener && !window.opener.closed) {
-                // Some browsers prevent reading opener.location when cross-origin.
-                // Use '*' as targetOrigin to ensure the message is delivered; the
-                // opener should verify origin if needed.
-                try { window.opener.postMessage({ type: 'fauves_oauth', token }, '*'); } catch(e) { /* ignore */ }
+                // The callback and the Fauves app must share the same frontend origin.
+                // Never send an authentication token to an arbitrary opener.
+                try { window.opener.postMessage({ type: 'fauves_oauth', token }, window.location.origin); } catch(e) { /* ignore */ }
                 // Also persist to localStorage as a fallback
                 try { localStorage.setItem('AUTH_TOKEN_V1', token); } catch(e) {}
                 window.close();

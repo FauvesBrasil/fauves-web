@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { fetchApi } from '@/lib/apiBase';
 
 interface SearchResult {
     id: string;
@@ -42,7 +43,8 @@ const HelpSearchBar = () => {
 
             setLoading(true);
             try {
-                const response = await fetch(`http://localhost:4000/api/help/search?q=${encodeURIComponent(query)}`);
+                const response = await fetchApi(`/api/help/search?q=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error('Falha na busca');
                 const data = await response.json();
                 setResults(data);
                 setIsOpen(true);
@@ -72,51 +74,49 @@ const HelpSearchBar = () => {
     };
 
     return (
-        <div ref={searchRef} className="relative max-w-2xl mx-auto">
-            <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+        <div ref={searchRef} className="help-search-root">
+            <div className="help-search-field">
                 <input
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Buscar artigos de ajuda..."
-                    className="w-full pl-12 pr-12 py-4 bg-white dark:bg-[#1a1a1a] border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent shadow-sm"
+                    placeholder="Busque artigos, tutoriais e muito mais..."
                 />
                 {query && (
                     <button
                         onClick={clearSearch}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                        className="help-search-clear"
+                        aria-label="Limpar busca"
                     >
-                        <X className="w-5 h-5" />
+                        <X size={16} />
                     </button>
                 )}
             </div>
 
             {/* Search Results Dropdown */}
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1a1a] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg max-h-96 overflow-y-auto z-50">
+                <div className="help-search-results">
                     {loading ? (
-                        <div className="p-4 text-center text-zinc-500 dark:text-zinc-400">
+                        <div className="help-search-message">
                             Buscando...
                         </div>
                     ) : results.length > 0 ? (
-                        <div className="py-2">
+                        <div className="help-search-list">
                             {results.map((result) => (
                                 <button
                                     key={result.id}
                                     onClick={() => handleSelectArticle(result.slug)}
-                                    className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-0"
+                                    className="help-search-result"
                                 >
-                                    <div className="flex items-start gap-3">
-                                        <Search className="w-4 h-4 text-zinc-400 mt-1 flex-shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-zinc-900 dark:text-white mb-1">
+                                    <div>
+                                        <div>
+                                            <div className="help-search-result-title">
                                                 {result.title}
                                             </div>
-                                            <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                                            <div className="help-search-result-category">
                                                 {result.category.name}
                                             </div>
-                                            <div className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                                            <div className="help-search-result-summary">
                                                 {result.summary}
                                             </div>
                                         </div>
@@ -125,12 +125,84 @@ const HelpSearchBar = () => {
                             ))}
                         </div>
                     ) : query.length >= 2 ? (
-                        <div className="p-4 text-center text-zinc-500 dark:text-zinc-400">
+                        <div className="help-search-message">
                             Nenhum resultado encontrado para "{query}"
                         </div>
                     ) : null}
                 </div>
             )}
+
+            <style>{`
+                .help-search-root { position: relative; width: 100%; }
+                .help-search-field { position: relative; }
+                .help-search-field input {
+                    width: 100%;
+                    height: 51px;
+                    padding: 0 44px 0 21px;
+                    border: 1px solid rgba(255, 255, 255, .13);
+                    border-radius: 8px;
+                    outline: none;
+                    background: rgba(8, 10, 11, .72);
+                    color: rgba(255, 255, 255, .95);
+                    font-family: inherit;
+                    font-size: 15px;
+                    font-weight: 500;
+                    backdrop-filter: blur(14px);
+                    transition: border-color .16s ease, background-color .16s ease;
+                }
+                .help-search-field input::placeholder { color: rgba(255, 255, 255, .38); }
+                .help-search-field input:focus {
+                    border-color: rgba(255, 255, 255, .28);
+                    background: rgba(8, 10, 11, .84);
+                }
+                .help-search-clear {
+                    position: absolute;
+                    top: 50%;
+                    right: 14px;
+                    display: grid;
+                    place-items: center;
+                    width: 26px;
+                    height: 26px;
+                    padding: 0;
+                    border: 0;
+                    border-radius: 6px;
+                    background: transparent;
+                    color: rgba(255, 255, 255, .4);
+                    cursor: pointer;
+                    transform: translateY(-50%);
+                }
+                .help-search-clear:hover { color: rgba(255, 255, 255, .88); }
+                .help-search-results {
+                    position: absolute;
+                    z-index: 50;
+                    top: calc(100% + 8px);
+                    right: 0;
+                    left: 0;
+                    max-height: 390px;
+                    overflow-y: auto;
+                    border: 1px solid rgba(255, 255, 255, .1);
+                    border-radius: 12px;
+                    background: rgba(27, 29, 31, .92);
+                    box-shadow: 0 18px 50px rgba(0, 0, 0, .28);
+                    backdrop-filter: blur(22px);
+                }
+                .help-search-list { padding: 7px; }
+                .help-search-result {
+                    width: 100%;
+                    padding: 12px 13px;
+                    border: 0;
+                    border-radius: 8px;
+                    background: transparent;
+                    color: inherit;
+                    cursor: pointer;
+                    text-align: left;
+                }
+                .help-search-result:hover { background: rgba(255, 255, 255, .06); }
+                .help-search-result-title { color: rgba(255,255,255,.94); font-size: 14px; font-weight: 650; }
+                .help-search-result-category { margin-top: 3px; color: #EF4118; font-size: 11px; font-weight: 650; }
+                .help-search-result-summary { margin-top: 5px; overflow: hidden; color: rgba(255,255,255,.55); font-size: 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+                .help-search-message { padding: 18px; color: rgba(255,255,255,.48); text-align: center; font-size: 13px; }
+            `}</style>
         </div>
     );
 };

@@ -22,6 +22,7 @@ interface LoginModalProps {
   onSuccess?: () => void;
   initialEmail?: string;
   redirectPath?: string;
+  preventClose?: boolean;
 }
 
 const WIDTH = 360;
@@ -33,7 +34,7 @@ const Spinner: React.FC<{ className?: string }> = ({ className = '' }) => (
   </svg>
 );
 
-const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initialEmail, redirectPath }) => {
+const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initialEmail, redirectPath, preventClose = false }) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
@@ -81,11 +82,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
+      if (e.key === 'Escape' && !preventClose) handleClose();
     };
     if (open) window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
+  }, [open, preventClose]);
 
   const handleClose = () => {
     // trigger close state and remove quickly; keep small timeout for any CSS exit animation
@@ -117,9 +118,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
       // Listen for postMessage from popup (oauth-callback.html)
       const handler = (ev: MessageEvent) => {
         try {
+          if (ev.origin !== window.location.origin || ev.source !== popup) return;
           if (!ev.data || ev.data.type !== 'fauves_oauth' || !ev.data.token) return;
           // Persist token and reload app so AuthProvider picks it up
-          try { window.localStorage.setItem('AUTH_TOKEN_V1', ev.data.token); } catch (e) { }
+          try {
+            window.localStorage.setItem('AUTH_TOKEN_V1', ev.data.token);
+            window.sessionStorage.setItem('FAUVES_LOGIN_WELCOME_PENDING', 'true');
+          } catch (e) { }
           window.removeEventListener('message', handler);
           try { popup.close(); } catch (e) { }
           // reload or redirect to refresh auth state
@@ -158,12 +163,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
       throw new Error('Credenciais inválidas');
     }
     onSuccess?.();
-    setTimeout(() => {
-      handleClose();
-      if (redirectPath) {
-        navigate(redirectPath);
-      }
-    }, 1500);
+    handleClose();
+    if (redirectPath) navigate(redirectPath);
   };
 
   const submitSignup = async (e?: React.FormEvent) => {
@@ -206,7 +207,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
       aria-modal
       role="dialog"
       className={`fixed inset-0 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm ${isClosing ? 'pointer-events-none' : 'pointer-events-auto'} max-md:bg-black/70`}
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget && !preventClose) handleClose(); }}
       style={{ zIndex: 9999 }}
     >
       <div className="relative w-[320px] sm:w-[520px] max-w-[95vw] max-md:w-full max-md:h-full max-md:max-w-full">
@@ -240,9 +241,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
               )}
               {/* title removed from top of modal as requested */}
             </div>
-            <button aria-label="Fechar" onClick={handleClose} className="w-10 h-10 max-md:w-12 max-md:h-12 flex items-center justify-center rounded-full text-muted-foreground dark:text-slate-400 hover:bg-card dark:hover:bg-[#1a1a1a] max-md:hover:bg-gray-100 dark:max-md:hover:bg-[#242424]">
-              <span className="text-2xl max-md:text-3xl leading-none">×</span>
-            </button>
+            {!preventClose && (
+              <button aria-label="Fechar" onClick={handleClose} className="w-10 h-10 max-md:w-12 max-md:h-12 flex items-center justify-center rounded-full text-muted-foreground dark:text-slate-400 hover:bg-card dark:hover:bg-[#1a1a1a] max-md:hover:bg-gray-100 dark:max-md:hover:bg-[#242424]">
+                <span className="text-2xl max-md:text-3xl leading-none">×</span>
+              </button>
+            )}
           </div>
 
           <div className="relative">

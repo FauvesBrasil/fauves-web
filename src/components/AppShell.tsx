@@ -32,7 +32,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const isCheckout = variant === 'checkout';
   // Base classes para o wrapper principal
-  const base = 'min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden';
+  const base = 'min-h-screen flex flex-col bg-background text-foreground';
   const variantClass = isCheckout ? 'bg-background' : '';
   return (
     <div className={`${base} ${variantClass} ${className}`}>

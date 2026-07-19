@@ -5,6 +5,7 @@ import { fetchApi } from '@/lib/apiBase';
 export interface Organization {
   id: string;
   name: string;
+  isPersonal?: boolean;
   slug?: string;
   logoUrl?: string;
   coverUrl?: string;
@@ -195,6 +196,30 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               finalList = val.list;
               break;
             }
+          }
+        }
+
+        if (finalList.length === 0 && uid && !userLoading) {
+          // 3. Auto-create organization if none exists
+          try {
+            const createRes = await fetchApi(`/api/organization`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                name: `Organização de ${user?.name || 'Novo Usuário'}`,
+                bio: `Página oficial de eventos de ${user?.name || 'Novo Usuário'}`,
+                locationType: 'global',
+                locationText: 'Global'
+              })
+            });
+            if (createRes.ok) {
+              const newOrgData = await createRes.json();
+              if (newOrgData?.data) {
+                finalList = [newOrgData.data];
+              }
+            }
+          } catch (e) {
+            console.error('Auto-create org failed:', e);
           }
         }
 

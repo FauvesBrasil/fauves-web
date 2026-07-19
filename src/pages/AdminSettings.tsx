@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Settings, Save, Bell, Shield, Database, Mail, Palette, Globe, Key, Server } from 'lucide-react';
+import { FauvesSwitch } from '@/components/v2/FauvesSwitch';
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState({
@@ -12,7 +13,6 @@ export default function AdminSettings() {
     maintenanceMode: false,
     maxUploadSize: '10',
     sessionTimeout: '24',
-    defaultCurrency: 'BRL',
     defaultLanguage: 'pt-BR',
     enableAnalytics: true,
     pixKey: '',
@@ -126,30 +126,14 @@ export default function AdminSettings() {
               <div className="font-medium text-slate-900">Permitir Novos Cadastros</div>
               <div className="text-sm text-slate-600">Usuários podem criar novas contas</div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={settings.enableRegistrations}
-                onChange={e => handleChange('enableRegistrations', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
-            </label>
+            <FauvesSwitch checked={settings.enableRegistrations} onCheckedChange={(checked) => handleChange('enableRegistrations', checked)} label="Permitir novos cadastros" />
           </div>
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
             <div>
               <div className="font-medium text-slate-900">Verificação de Email Obrigatória</div>
               <div className="text-sm text-slate-600">Novos usuários devem verificar o email</div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={settings.requireEmailVerification}
-                onChange={e => handleChange('requireEmailVerification', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
-            </label>
+            <FauvesSwitch checked={settings.requireEmailVerification} onCheckedChange={(checked) => handleChange('requireEmailVerification', checked)} label="Verificação de email obrigatória" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -179,30 +163,14 @@ export default function AdminSettings() {
               <div className="font-medium text-slate-900">Modo Manutenção</div>
               <div className="text-sm text-slate-600">Site ficará inacessível temporariamente</div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={settings.maintenanceMode}
-                onChange={e => handleChange('maintenanceMode', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-            </label>
+            <FauvesSwitch checked={settings.maintenanceMode} onCheckedChange={(checked) => handleChange('maintenanceMode', checked)} label="Modo manutenção" />
           </div>
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
             <div>
               <div className="font-medium text-slate-900">Google Analytics</div>
               <div className="text-sm text-slate-600">Rastreamento de visitantes</div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={settings.enableAnalytics}
-                onChange={e => handleChange('enableAnalytics', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
-            </label>
+            <FauvesSwitch checked={settings.enableAnalytics} onCheckedChange={(checked) => handleChange('enableAnalytics', checked)} label="Google Analytics" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Tamanho Máximo de Upload (MB)</label>
@@ -227,15 +195,10 @@ export default function AdminSettings() {
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Moeda Padrão</label>
-            <select 
-              value={settings.defaultCurrency}
-              onChange={e => handleChange('defaultCurrency', e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition bg-white"
-            >
-              <option value="BRL">Real Brasileiro (BRL)</option>
-              <option value="USD">US Dollar (USD)</option>
-              <option value="EUR">Euro (EUR)</option>
-            </select>
+            <div aria-label="Moeda padrão fixa" className="flex h-[46px] w-full items-center rounded-xl border border-slate-300 bg-slate-50 px-4 font-medium text-slate-700">
+              Real Brasileiro (BRL)
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">A Fauves utiliza exclusivamente o Real brasileiro neste momento.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Chave PIX</label>
@@ -274,15 +237,7 @@ export default function AdminSettings() {
               <div className="font-medium text-slate-900">Notificações Push</div>
               <div className="text-sm text-slate-600">Enviar notificações para usuários</div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={settings.enableNotifications}
-                onChange={e => handleChange('enableNotifications', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
-            </label>
+            <FauvesSwitch checked={settings.enableNotifications} onCheckedChange={(checked) => handleChange('enableNotifications', checked)} label="Notificações push" />
           </div>
         </div>
       </div>

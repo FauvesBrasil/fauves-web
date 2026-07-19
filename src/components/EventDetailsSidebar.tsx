@@ -301,7 +301,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
 
   // Paths base de cada etapa (sem query string) para detectar etapa ativa
   const stepPaths: Record<string, string> = {
-    "create-page": "/create-event",
+    "create-page": "/create",
     "configure-ticket": "/create-tickets",
     "publish": "/publish-details",
   };
@@ -309,7 +309,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   const stepRoutes: Record<string, string> = {
     // when we already have an eventId, take the user to the edit page instead of public event page
     // (we don't want 'Criar página do evento' to navigate to the public event page and allow accidental edits)
-    "create-page": eventId ? `/create-event?eventId=${eventId}` : "/create-event",
+    "create-page": eventId ? `/create?eventId=${eventId}` : "/create",
     "configure-ticket": eventId ? `/create-tickets?eventId=${eventId}` : "/create-tickets",
     "publish": eventId ? `/publish-details?eventId=${eventId}` : "/publish-details",
   };
@@ -331,7 +331,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
   // Memoize route checks to prevent recalculation on every render
   const routeState = React.useMemo(() => {
     const pathname = location.pathname;
-    const isOnCreate = pathname.startsWith('/create-event');
+    const isOnCreate = pathname.startsWith('/create');
     const isOnTickets = pathname.startsWith('/create-tickets');
     const isOnPublish = pathname.startsWith('/publish-details');
     const isOnMarketing = pathname.startsWith('/marketing');
@@ -382,10 +382,10 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
     ];
   }, [eventId, ticketCount, isOnCreate, isOnTickets, isOnPublish, statusLocal]);
 
-  // Always route 'Painel' to painel-evento when we have an eventId
+  // Always route 'Painel' to event manage when we have an eventId
   // Optimized: only recalculate when eventId or panelRouteProp changes (not on every pathname change)
   const panelRoute = React.useMemo(() => {
-    if (eventId) return `/painel-evento/${eventId}`;
+    if (eventId) return `/event/manage/${eventId}`;
     return panelRouteProp || location.pathname;
   }, [panelRouteProp, eventId, location.pathname]);
 
@@ -857,7 +857,7 @@ export const EventDetailsSidebar: React.FC<EventDetailsSidebarProps> = ({
                           className={`flex gap-2.5 items-center p-6 w-full min-h-[65px] transition-colors ${active ? 'bg-indigo-50 text-indigo-700 dark:bg-[#1F1F1F] dark:text-white' : 'bg-gray-50 dark:bg-[#0b0b0b]'} ${isPanelItem ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isAnalytics ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isEquipe ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''} ${isSatisfaction ? (eventId ? 'cursor-pointer hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]' : 'opacity-60 cursor-not-allowed') : ''}`}
                           onClick={() => {
                             if (isPanelItem && eventId) navigate(panelRoute);
-                            else if (isAnalytics && eventId) navigate(`/painel-evento/${eventId}/analytics`);
+                            else if (isAnalytics && eventId) navigate(`/event/manage/${eventId}/analytics`);
                             else if (isEquipe && eventId) navigate(`/gerenciar-equipe/${eventId}`);
                             else if (isSatisfaction && eventId) navigate(`/pesquisa-satisfacao/${eventId}`);
                           }}

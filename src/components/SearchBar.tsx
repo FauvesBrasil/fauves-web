@@ -235,7 +235,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ mobile = false, onMobileFocus, on
                         )}
                         {results.organizations.length > 0 && (
                           <div className="mt-2">
-                            <span className="text-[#2A2AD7] dark:text-white text-xs font-bold">Organizações</span>
+                            <span className="text-[#2A2AD7] dark:text-white text-xs font-bold">Calendários</span>
                             <div className="grid grid-cols-2 gap-2 mt-2">
                               {results.organizations.slice(0, 4).map((org, idx) => (
                                 <button
@@ -343,7 +343,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ mobile = false, onMobileFocus, on
                         )}
                         {results.organizations.length > 0 && (
                           <div className="mt-6">
-                            <span className="text-[#2A2AD7] dark:text-indigo-400 text-sm font-bold">Organizações</span>
+                            <span className="text-[#2A2AD7] dark:text-indigo-400 text-sm font-bold">Calendários</span>
                             <div className="flex flex-col gap-2 mt-3">
                               {results.organizations.slice(0, 6).map((org, idx) => (
                                 <button

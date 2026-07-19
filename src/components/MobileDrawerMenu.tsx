@@ -116,7 +116,7 @@ const MobileDrawerMenu: React.FC<MobileDrawerMenuProps> = ({
           {organizations && organizations.length > 0 && selectOrganization && (
             <div className="relative">
               <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 block">
-                Organização
+                Calendário
               </label>
               <button
                 onClick={() => setOrgSelectorOpen(!orgSelectorOpen)}
@@ -137,7 +137,7 @@ const MobileDrawerMenu: React.FC<MobileDrawerMenuProps> = ({
 
                 {/* Organization Name */}
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 truncate flex-1 text-left">
-                  {selectedOrg?.name || 'Selecione organização'}
+                  {selectedOrg?.name || 'Selecione o calendário'}
                 </span>
 
                 {/* Dropdown indicator */}
@@ -191,17 +191,6 @@ const MobileDrawerMenu: React.FC<MobileDrawerMenuProps> = ({
         {/* Navigation menu */}
         <nav className="p-4">
           <div className="space-y-1">
-            <button
-              onClick={() => handleNavigation('/organizer-dashboard')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${currentPath === '/organizer-dashboard'
-                ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                : 'text-[#091747] dark:text-white hover:bg-gray-100 dark:hover:bg-[#1F1F1F]'
-                }`}
-            >
-              <Home className="w-5 h-5" />
-              <span className="font-medium">Dashboard</span>
-            </button>
-
             <button
               onClick={() => handleNavigation('/organizer-events')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${currentPath === '/organizer-events'

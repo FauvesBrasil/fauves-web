@@ -38,7 +38,7 @@ const OrganizationDropdown: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const label = selectedOrg?.name || (loading ? 'Carregando...' : 'Organização');
+  const label = selectedOrg?.name || (loading ? 'Carregando...' : 'Calendário');
 
   // Small avatar helper that shows the org logo if available, otherwise initials.
   const OrganizationAvatar: React.FC<{ org?: { id: string; name: string; logoUrl?: string } | null; sizeClass?: string }> = ({ org, sizeClass = 'w-8 h-8' }) => {
@@ -76,18 +76,18 @@ const OrganizationDropdown: React.FC = () => {
       </button>
       {open && (
         <div ref={panelRef} className="absolute left-0 mt-2 w-64 bg-white dark:bg-[#242424] rounded-xl shadow-lg border border-blue-200 dark:border-[#1F1F1F] z-50 flex flex-col max-h-[320px] overflow-auto">
-          <div className="px-5 pt-4 pb-2 text-[13px] font-semibold text-slate-500">Selecione a organização</div>
+          <div className="px-5 pt-4 pb-2 text-[13px] font-semibold text-slate-500">Selecione o calendário</div>
           {loading && (
             <div className="px-5 py-4 text-[14px] text-slate-500">Carregando...</div>
           )}
           {!loading && orgs.length === 0 && !error && (
-            <div className="px-5 py-4 text-[14px] text-slate-500">Nenhuma organização</div>
+            <div className="px-5 py-4 text-[14px] text-slate-500">Nenhum calendário</div>
           )}
           {error && (
             <div className="px-5 py-4 text-[13px] text-red-600">Erro: {error}</div>
           )}
           {/* fire a non-blocking toast on error once */}
-          {error && (() => { try { toast.error('Erro ao carregar organizações'); } catch (e) { }; return null; })()}
+          {error && (() => { try { toast.error('Erro ao carregar calendários'); } catch (e) { }; return null; })()}
           {Array.from(new Map(orgs.map(o => [o.id, o])).values()).map(o => {
             const active = selectedOrg?.id === o.id;
             return (
@@ -114,7 +114,7 @@ const OrganizationDropdown: React.FC = () => {
               setTimeout(() => setShowCreateOrg(true), 0);
             }}
           >
-            + Criar organização
+            + Criar calendário
           </button>
         </div>
       )}
@@ -218,10 +218,10 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
   const location = useLocation();
   const pathname = location.pathname || '';
   const isEventFlow = [
-    '/create-event',
+    '/create',
     '/create-tickets',
     '/publish-details',
-    '/painel-evento',
+    '/event/manage',
   ].some(p => pathname.startsWith(p));
 
   const userName = getFirstName(user) || 'Visitante';
@@ -253,7 +253,7 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
   return (
     <>
       <div style={{ ...dynamicStyle, zIndex: headerZ, pointerEvents: 'auto' }} className={`flex absolute top-0 left-0 w-full items-center pr-5 py-4 bg-white dark:bg-[#0b0b0b] border-b border-solid border-zinc-100 dark:border-[#161616] h-[60px] max-md:relative max-md:flex-wrap max-md:gap-4 max-md:px-5 max-md:py-4 max-md:w-full max-sm:hidden transition-all duration-200 ${className || ''}`}>
-        {/* Left: apenas seletor de organização (oculto quando existe sidebar de detalhe) */}
+        {/* Left: apenas seletor de calendário (oculto quando existe sidebar de detalhe) */}
         <div className="flex items-center gap-4 flex-1 min-w-[240px]">
           {/* mobile hamburger - visible only on small screens */}
           <button
@@ -274,7 +274,7 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
         {/* Right: Criar evento + UserDropdown */}
         <div className="flex items-center gap-6 justify-end flex-1 min-w-[300px]">
           {/* 'Criar evento' placed to the left of the icon group so icons sit next to the user dropdown */}
-          <div className={`text-sm font-bold ${headerTextClass} cursor-pointer hover:text-indigo-700 transition-colors max-sm:hidden`} onClick={() => navigate('/create-event')}>Criar evento</div>
+          <div className={`text-sm font-bold ${headerTextClass} cursor-pointer hover:text-indigo-700 transition-colors max-sm:hidden`} onClick={() => navigate('/create')}>Criar evento</div>
 
           {/* Group icons to match spacing in Header.tsx */}
           <div className="flex items-center gap-3">
@@ -345,7 +345,6 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
           <nav className="p-4">
             {/* replicate core menu items from SidebarMenu */}
             <ul className="flex flex-col gap-2">
-              <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-dashboard'); }}>Painel</button></li>
               <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-events'); }}>Eventos</button></li>
               <li><button className="w-full text-left px-3 py-2 rounded hover:bg-indigo-50 dark:hover:bg-[#1F1F1F]" onClick={() => { setMobileMenuOpen(false); navigate('/organizer-orders'); }}>Pedidos</button></li>
               {/* Marketing page removed */}

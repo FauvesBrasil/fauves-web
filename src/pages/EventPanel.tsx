@@ -362,7 +362,7 @@ const EventPanel: React.FC = () => {
                   {copyOk ? <ClipboardCheck className="w-4 h-4 text-green-500" /> : <Clipboard className="w-4 h-4" />}
                   {copyOk ? 'Copiado!' : 'Copiar link'}
                 </Button>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => navigate(`/painel-evento/${id}/analytics`)}>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2" onClick={() => navigate(`/event/manage/${id}/analytics`)}>
                   <Users className="w-4 h-4" /> Relatório completo
                 </Button>
               </div>

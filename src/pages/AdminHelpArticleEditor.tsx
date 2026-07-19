@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Save, X, Eye } from 'lucide-react';
+import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 
 
 interface Category {
@@ -245,7 +246,7 @@ export default function AdminHelpArticleEditor() {
                         />
                     ) : (
                         <div className="prose dark:prose-invert max-w-none p-4 border border-gray-300 dark:border-gray-600 rounded-lg min-h-[500px]">
-                            <div dangerouslySetInnerHTML={{ __html: formData.content.replace(/\n/g, '<br/>') }} />
+                            <div dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(formData.content.replace(/\n/g, '<br/>')) }} />
                         </div>
                     )}
 

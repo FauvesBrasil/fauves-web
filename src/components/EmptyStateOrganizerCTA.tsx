@@ -110,7 +110,7 @@ const EmptyStateOrganizerCTA: React.FC<EmptyStateOrganizerCTAProps> = ({ selecte
                 <Button
                     size="lg"
                     className="bg-[#ef4118] hover:bg-[#d63614] text-white px-6 font-semibold group"
-                    onClick={() => navigate('/create-event')}
+                    onClick={() => navigate('/create')}
                 >
                     <span>Criar meu evento</span>
                     <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -120,7 +120,7 @@ const EmptyStateOrganizerCTA: React.FC<EmptyStateOrganizerCTAProps> = ({ selecte
                 <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
                     Já tem conta?{' '}
                     <button
-                        onClick={() => navigate('/organizer-dashboard')}
+                        onClick={() => navigate('/organizer-events')}
                         className="text-[#2a2ad8] hover:underline font-medium"
                     >
                         Acesse seu painel

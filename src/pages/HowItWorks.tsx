@@ -52,7 +52,7 @@ const HowItWorks = () => {
               A Fauves é a plataforma definitiva para transformar as tuas ideias em eventos memoráveis. Simples, potente e focada no que importa: a experiência.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/create-event">
+              <Link to="/create">
                 <Button size="lg" className="bg-[#EF4118] hover:bg-[#d13511] text-white px-8 rounded-full h-14 text-lg">
                   Criar meu Evento
                 </Button>
@@ -96,7 +96,7 @@ const HowItWorks = () => {
                   </li>
                 ))}
               </ul>
-              <Link to="/create-event">
+              <Link to="/create">
                 <Button variant="link" className="text-[#EF4118] p-0 h-auto text-lg font-bold group">
                   Começar agora <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
@@ -201,7 +201,7 @@ const HowItWorks = () => {
                 Junta-te a centenas de organizadores que já confiam na Fauves para elevar os seus eventos ao próximo nível.
               </p>
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center font-bold">
-                <Link to="/create-event">
+                <Link to="/create">
                   <Button size="lg" className="bg-white text-[#EF4118] hover:bg-orange-50 px-10 rounded-full h-16 text-xl shadow-xl hover:scale-105 transition-transform">
                     Criar meu Evento Gratis
                   </Button>

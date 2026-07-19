@@ -1,16 +1,20 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { fetchApi } from '@/lib/apiBase';
 
-interface AuthUser { id: string; email: string; name?: string | null; isAdmin?: boolean; photoUrl?: string | null }
+interface AuthUser { id: string; email: string; name?: string | null; isAdmin?: boolean; photoUrl?: string | null; cpf?: string | null; phone?: string | null }
 interface AuthState { user: AuthUser | null; token: string | null; loading: boolean }
 interface AuthContextValue extends AuthState { 
   login(email: string, password: string): Promise<boolean>; 
+  requestOtp(email: string): Promise<{ success: boolean; message?: string }>;
+  loginWithOtp(email: string, otp: string): Promise<{ success: boolean; message?: string }>;
   logout(): void; 
   refreshUser(): Promise<void>;
   isLoginModalOpen: boolean;
   loginModalRedirect: string | undefined;
   openLoginModal(redirect?: string): void;
   closeLoginModal(): void;
+  loginWelcomeUser: AuthUser | null;
+  dismissLoginWelcome(): void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -23,6 +27,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginModalRedirect, setLoginModalRedirect] = useState<string | undefined>(undefined);
+  const [loginWelcomeUser, setLoginWelcomeUser] = useState<AuthUser | null>(null);
+  const oauthWelcomePendingRef = React.useRef(false);
+
+  const getAvatarFallback = (idOrEmail: string | undefined | null) => {
+    if (!idOrEmail) return '/avatars/avatar_1.avif';
+    let sum = 0;
+    for (let i = 0; i < idOrEmail.length; i++) sum += idOrEmail.charCodeAt(i);
+    return `/avatars/avatar_${(sum % 47) + 1}.avif`;
+  };
 
   // Carrega token inicial
   useEffect(() => {
@@ -31,7 +44,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const params = new URLSearchParams(window.location.search);
       const authToken = params.get('auth_token') || params.get('token') || null;
       if (authToken) {
-        try { window.localStorage.setItem(LS_TOKEN_KEY, authToken); } catch {}
+        oauthWelcomePendingRef.current = true;
+        try { 
+          window.localStorage.setItem(LS_TOKEN_KEY, authToken); 
+          window.localStorage.removeItem('EXPLICIT_LOGOUT');
+        } catch {}
         setToken(authToken);
         // remove token from URL without reloading
         params.delete('auth_token'); params.delete('token');
@@ -39,10 +56,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         window.history.replaceState({}, '', newUrl);
       } else {
         const stored = window.localStorage.getItem(LS_TOKEN_KEY);
-        if (stored) setToken(stored);
+        if (stored) {
+          try {
+            if (window.sessionStorage.getItem('FAUVES_LOGIN_WELCOME_PENDING') === 'true') {
+              oauthWelcomePendingRef.current = true;
+            }
+          } catch {}
+          setToken(stored);
+        } else {
+          setLoading(false);
+        }
       }
-    } catch {}
-    setLoading(false);
+    } catch {
+      setLoading(false);
+    }
   }, []);
 
   // Sempre que o token mudar, (re)constrói o user a partir do payload do JWT
@@ -63,13 +90,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .join(''),
       );
       const payload = JSON.parse(jsonPayload);
-      setUser({ 
+      const decodedUser: AuthUser = { 
         id: payload.sub, 
         email: payload.email, 
         name: payload.name || null, 
         isAdmin: !!payload.isAdmin,
-        photoUrl: payload.photoUrl || payload.picture || null 
-      });
+        photoUrl: payload.photoUrl || payload.picture || getAvatarFallback(payload.email || payload.sub) 
+      };
+      setUser(decodedUser);
+      if (oauthWelcomePendingRef.current) {
+        oauthWelcomePendingRef.current = false;
+        setLoginWelcomeUser(decodedUser);
+        try { window.sessionStorage.removeItem('FAUVES_LOGIN_WELCOME_PENDING'); } catch {}
+      }
+      setLoading(false); // Set loading false immediately after decoding JWT locally
 
       // Also try to fetch authoritative user from server (in case name/email changed on backend)
       (async () => {
@@ -84,7 +118,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 email: u.email || payload.email, 
                 name: u.name ?? u.nome ?? u.full_name ?? payload.name ?? null, 
                 isAdmin: !!u.isAdmin || !!payload.isAdmin,
-                photoUrl: u.photoUrl ?? u.photo ?? u.avatarUrl ?? payload.photoUrl ?? payload.picture ?? null
+                photoUrl: u.photoUrl ?? u.photo ?? u.avatarUrl ?? payload.photoUrl ?? payload.picture ?? getAvatarFallback(u.email || payload.email || u.id),
+                cpf: u.cpf || null,
+                phone: u.phone || null
               });
             }
           } else if (res.status === 401 || res.status === 403) {
@@ -99,8 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })();
     } catch (e) {
       // token inválido -> limpar
-      // no-op
       setUser(null);
+      setLoading(false);
     }
   }, [token]);
 
@@ -136,7 +172,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: u.email || user?.email || '', 
             name: u.name ?? u.nome ?? u.full_name ?? user?.name ?? null, 
             isAdmin: !!u.isAdmin || !!user?.isAdmin,
-            photoUrl: u.photoUrl ?? u.photo ?? u.avatarUrl ?? user?.photoUrl ?? null
+            photoUrl: u.photoUrl ?? u.photo ?? u.avatarUrl ?? user?.photoUrl ?? getAvatarFallback(u.email || u.id),
+            cpf: u.cpf || null,
+            phone: u.phone || null
           });
         }
       } catch (e) {
@@ -155,9 +193,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res.ok) return false;
       const data = await res.json();
       if (data?.token) {
+        const signedInUser: AuthUser = {
+          id: data.user?.id || data.user?.sub || email,
+          email: data.user?.email || email,
+          name: data.user?.name ?? data.user?.nome ?? null,
+          isAdmin: Boolean(data.user?.isAdmin),
+          photoUrl: data.user?.photoUrl ?? data.user?.photo ?? data.user?.avatarUrl ?? getAvatarFallback(data.user?.email || email),
+          cpf: data.user?.cpf || null,
+          phone: data.user?.phone || null,
+        };
         setToken(data.token);
-        setUser(data.user || null);
-        try { window.localStorage.setItem(LS_TOKEN_KEY, data.token); } catch {}
+        setUser(signedInUser);
+        setLoginWelcomeUser(signedInUser);
+        try { 
+          window.localStorage.setItem(LS_TOKEN_KEY, data.token); 
+          window.localStorage.removeItem('EXPLICIT_LOGOUT');
+        } catch {}
         return true;
       }
       return false;
@@ -167,9 +218,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const requestOtp = useCallback(async (email: string) => {
+    try {
+      const res = await fetchApi('/api/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) return { success: true };
+      return { success: false, message: data?.message || 'Falha ao solicitar código' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Erro de conexão' };
+    }
+  }, []);
+
+  const loginWithOtp = useCallback(async (email: string, otp: string) => {
+    try {
+      const res = await fetchApi('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+      const data = await res.json();
+      if (res.ok && data?.token) {
+        const signedInUser: AuthUser = {
+          id: data.user?.id || data.user?.sub || email,
+          email: data.user?.email || email,
+          name: data.user?.name ?? data.user?.nome ?? null,
+          isAdmin: Boolean(data.user?.isAdmin),
+          photoUrl: data.user?.photoUrl ?? data.user?.photo ?? data.user?.avatarUrl ?? getAvatarFallback(data.user?.email || email),
+          cpf: data.user?.cpf || null,
+          phone: data.user?.phone || null,
+        };
+        setToken(data.token);
+        setUser(signedInUser);
+        setLoginWelcomeUser(signedInUser);
+        try { 
+          window.localStorage.setItem(LS_TOKEN_KEY, data.token); 
+          window.localStorage.removeItem('EXPLICIT_LOGOUT');
+        } catch {}
+        return { success: true };
+      }
+      return { success: false, message: data?.message || 'Código inválido ou expirado' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Erro de conexão' };
+    }
+  }, []);
+
   const logout = useCallback(() => {
     setToken(null); setUser(null);
-    try { window.localStorage.removeItem(LS_TOKEN_KEY); } catch {}
+    try { 
+      window.localStorage.removeItem(LS_TOKEN_KEY); 
+      window.localStorage.setItem('EXPLICIT_LOGOUT', 'true');
+    } catch {}
     // Force reload to ensure all components reset their state
     setTimeout(() => window.location.reload(), 100);
   }, []);
@@ -185,6 +287,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTimeout(() => setLoginModalRedirect(undefined), 300);
   }, []);
 
+  const dismissLoginWelcome = useCallback(() => {
+    setLoginWelcomeUser(null);
+  }, []);
+
   useEffect(() => {
     const handleUpdate = () => {
       refreshUser();
@@ -198,12 +304,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     token, 
     loading, 
     login, 
+    requestOtp,
+    loginWithOtp,
     logout, 
     refreshUser,
     isLoginModalOpen,
     loginModalRedirect,
     openLoginModal,
-    closeLoginModal
+    closeLoginModal,
+    loginWelcomeUser,
+    dismissLoginWelcome,
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

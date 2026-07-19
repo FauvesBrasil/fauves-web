@@ -72,7 +72,7 @@ export default function ProducerJourneyPage() {
                 <div className="text-center">
                     <p className="text-gray-600 mb-4">Selecione uma organização para ver a jornada</p>
                     <button
-                        onClick={() => navigate('/organizer-dashboard')}
+                        onClick={() => navigate('/organizer-events')}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                         Voltar ao Dashboard
@@ -90,7 +90,7 @@ export default function ProducerJourneyPage() {
             <div className="bg-white dark:bg-[#1F1F1F] border-b dark:border-[#2A2A2A] shadow-sm">
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <button
-                        onClick={() => navigate('/organizer-dashboard')}
+                        onClick={() => navigate('/organizer-events')}
                         className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors mb-4"
                     >
                         <ArrowLeft className="w-5 h-5" />

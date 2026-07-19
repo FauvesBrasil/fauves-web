@@ -1,0 +1,35 @@
+﻿<USER_REQUEST>
+Vamos ajustar a pÃ¡gina do criar evento por favor.. veja o cÃ³digo gerado no Figma, precisa fazer o cÃ³digo IDENTICO ao do Figma, para sermos muito acertivos nisso:
+
+<div data-layer="1920w light" className="WLight w-[1905px] h-[1200px] bg-color-grey-96 inline-flex flex-col justify-center items-start">
+  <div data-layer="Body" className="Body self-stretch flex-1 bg-white flex flex-col justify-start items-start">
+    <div data-layer="Background" className="Background self-stretch min-h-[1200px] pb-[537px] bg-color-grey-96 flex flex-col justify-start items-start">
+      <div data-layer="Nav" className="Nav self-stretch pl-3 pr-4 py-3 inline-flex justify-start items-center gap-96">
+        <div data-layer="Link - Luma Home" className="LinkLumaHome size- rounded-lg flex justify-start items-start">
+          <div data-layer="Component 2" data-:hover="false" data-variant="1" className="Component2 self-stretch p-1 flex justify-start items-center">
+            <div data-svg-wrapper data-layer="Component 1" data-variant="2" className="Component1 relative">
+              <svg width="56" height="24" viewBox="0 0 56 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g clip-path="url(#clip0_7427_554)">
+              <path d="M51.8112 0L25.0723 4.80573L1.06904 2.59641L0 19.1231L8.62556 23.6367L35.6767 18.3538L53.5715 18.1225L56 13.5894L51.8112 0Z" fill="var(--color-grey-8-36-, #131517)" fill-opacity="0.36"/>
+              </g>
+              <defs>
+              <clipPath id="clip0_7427_554">
+              <rect width="56" height="24" fill="white"/>
+              </clipPath>
+              </defs>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div data-layer="Container" className="Container flex-1 max-w-[1432.50px] flex justify-between items-center">
+          <div data-layer="Container" className="Container size- inline-flex flex-col justify-start items-center">
+            <div data-layer="Container" className="Container size- max-w-[960px] p
+<truncated 45215 bytes>
+KLG3BxJNbrb4Hn8gMgsO7VIRTxomjbyn9SaCfwrLk67kWk3QVnTVzZJ0ZrYCaTtohRSlSDdh0BRhB4JIV10j2OpKQDPriJbXljlNeewrnfuhdHPOKY3nj+99GR5LnSU6et6hFrLaM/Qt9FheXVAuwINKjjmOUi0nW4QMXnsUrTzyUj17wKl572kYQsVA48AfApwTwuFLBVYquVpXG47a2oOoOrH3eOl5z3uu55Buf4tSzz2QympBkioKE1ooVpFnCipmO+l0GLqF7yCx9xVm5TIEZZ5x6Ald/7nzOP/flHL5+NTqtFVxCIpygVeBjMSp4N9FSmiSmI8NRWzK1kfI9GQe6K1dhacJ/H9vG1vv/Rm9hH3VdUQyGKAcMBhMGWueWG3uWJhQ+kyoFf7373zyxc56A5J/psn/kWBqbVpQDUTDhWFBKQ6b3gSSlFEhhUCoHdcyxrCoaipivwvPNSz7B58+7lK+893KG/YFWbILXsardBS/ylaWgZTtcavjIhdfxwfd8nSsu/x69ApYVWm9cUoVU/h21QE0kkviKZ6lSkGlQEhY+EaBJfrBWSw4zEuf4x18f5LGHt3LQukPY+eg25h/bMVWhNdOi1croZi2yKDs5/9r6NP98ZBfr16/nTw9s4c8PbSGIWKN9Jgbc6FJpPwhqibstDleZY1wESu8lmGkVOIIYYomWacLzTziWDcdv5OldCxx5/CbmjjicmTWrue/39/CxN3+IS8+5nAfvfYSk1WFu47PZcOLRbNmxlxNO3MSRm54NzuTXEcxoUAEaxCOZ2iEApaDyFHrpKDXaEBAPvPpek9FNe81KLvv2VVxyzWe44vqvMnvYnApyxO9+dCNP/P1f7Hp0Oz+9/hbGg4qZg2f59DWX8tlvX8bHv/B+Zg9ZRaynRqefzkC0AAAvIo1SEVSs4NC5rNEpK+HpB6++EbROvQ+aYaSzK3nxmacTVrSU6pyq1sFz3DHajgPVZMyLX/YiVbgjUzr8Cjj5dS9l3VHP0u7boakD7SRoi9d7QJBJj0giWq17l4pWEgwzE7eAF3ATe2qDxkWeVOkoJxOc7uObcIzo7Pe9m3dceRHnfvYiTn7D6WSrZ6itUQoDg9GYwZLeAyuUzIxUNZYqmDxUOmBr9BYE5lFiogVdNDFoTCY+go/8mH7ES2o0WBKna4JG0zyj0+1y1rvezFlvP4dDlZaxlqYXcFrWZHpdTyVnFufKeyanua9paeUo8xgJTkGFJMNNlJFKkA0B7UGKEhTo/w19QtCYLqZHdauvUev4bbfbzMhMacybQIdAS05S+cv0xyTX209b+0au3yMJyPCuJcvBRM91cKVkq2SeAx89PyVx4O7A1cwgmgBMq2baBfqLPXr7FwkCMEVnet9LYqQCbil3bY1lGsu0TZv2lphCkxqJ1HHNBFPwrk06jbxG+ReORuMIZkZwhubjFa1+RoMw7egqJ7FQTeqYwJwK0wkoSt12SIkGp+j1MjD1HzC1Xr4LTH9iqMeEJMFt6q5nbbYah6eREkJQ31S1egB9gkwbEkrBM9jTJg5HM12cyDjf6BlPpoFcvqwuCNVEj2lVGTROfjQepIqXv7J7EOHwE3AbOnMcmq/WgzFzikzznNg6tYmcq0vabmF6yOQoDmmp6BswkYoWlYiOg+Suy4JiohWgfmIBm6bMRDoVCbVaEU13FtY9H9t4Gv8DAAD//9bmry4AAAAGSURBVAMACkoUrrsS2qYAAAAASUVORK5CYII="/>
+                    </defs>
+                    </svg>
+                  </div>
+                  <div data-layer="Margin" className
+<truncated 46868 bytes>
+
+NOTE: The output was truncated because it was too long. Use a more targeted query or a smaller range to get the information you need.

@@ -109,7 +109,7 @@ const HelpUserDropdown: React.FC<HelpUserDropdownProps> = ({ userName, userEmail
                 </svg>
             </button>
             {open && (
-                <div ref={dropdownRef} className="absolute right-0 mt-2 w-64 bg-white dark:bg-zinc-800 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700 z-50 flex flex-col text-zinc-900 dark:text-white text-sm font-medium">
+                <div ref={dropdownRef} className="fauves-floating-surface absolute right-0 mt-2 w-64 rounded-xl border z-50 flex flex-col text-zinc-900 dark:text-white text-sm font-medium">
                     <button
                         className="flex items-center gap-3 px-5 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 rounded-t-xl transition-colors"
                         onClick={() => { setOpen(false); navigate("/"); }}

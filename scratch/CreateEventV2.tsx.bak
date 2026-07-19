@@ -1,0 +1,2029 @@
+"use client";
+
+import * as React from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+    ChevronLeft,
+    ChevronDown,
+    Calendar as CalendarIcon,
+    MapPin,
+    CheckIcon,
+    Loader2,
+    Plus,
+    X,
+    Image as ImageIcon,
+    Clock,
+    Globe,
+    Info,
+    ChevronRight,
+    Search,
+    Shuffle,
+    Sparkles
+} from "lucide-react";
+import HeaderV2 from "@/components/v2/HeaderV2";
+import ImagePickerModalV2 from "@/components/v2/ImagePickerModalV2";
+import MinimalThemeImg from "@/assets/minimal.jpg";
+import DescriptionModalV2 from "@/components/v2/DescriptionModalV2";
+import AISuggestionModal from "@/components/v2/AISuggestionModal";
+import { LuxLocationPicker } from "@/components/v2/LuxLocationPicker";
+import { LuxDatePicker } from '../components/v2/LuxDatePicker';
+import { LuxTimePicker } from '../components/v2/LuxTimePicker';
+import TicketPriceModal from "@/components/v2/TicketPriceModal";
+import EventCapacityModal from "@/components/v2/EventCapacityModal";
+import { useAuth } from '@/context/AuthContext';
+import { useOrganization } from '@/context/OrganizationContext';
+import { fetchApi, resolveImageUrl } from '../lib/apiBase';
+import { toast } from '@/components/ui/sonner';
+
+const QUANTUM_PRESETS: Record<string, { name: string, colors: string[] }> = {
+    sonhador: { name: 'Sonhador', colors: ['#6366f1', '#a855f7', '#06b6d4'] },
+    verao: { name: 'Verão', colors: ['#3b82f6', '#0ea5e9', '#fbbf24'] },
+    melao: { name: 'Melão', colors: ['#ef4444', '#fbbf24', '#22c55e'] },
+    barbie: { name: 'Barbie', colors: ['#f472b6', '#ec4899', '#fb923c'] },
+    por_do_sol: { name: 'Pôr do Sol', colors: ['#fbbf24', '#f97316', '#ef4444'] },
+    oceano: { name: 'Oceano', colors: ['#22d3ee', '#0ea5e9', '#3b82f6'] },
+    floresta: { name: 'Floresta', colors: ['#4ade80', '#22c55e', '#2dd4bf'] },
+    lavanda: { name: 'Lavanda', colors: ['#c084fc', '#a855f7', '#f472b6'] },
+};
+
+export default function CreateEventV2() {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const { orgs, loading: loadingOrgs } = useOrganization();
+
+    // Form State
+    const [eventName, setEventName] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [startTime, setStartTime] = useState("19:00");
+    const [endDate, setEndDate] = useState("");
+    const [endTime, setEndTime] = useState("22:00");
+    const [locationData, setLocationData] = useState<{ type: string; address?: string; url?: string }>({ type: "" });
+    const [description, setDescription] = useState("");
+    const [coverImage, setCoverImage] = useState<string | null>(null);
+    const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+
+    // Advanced Options State
+    const [isFree, setIsFree] = useState(true);
+    const [price, setPrice] = useState<number | null>(null);
+    const [requireApproval, setRequireApproval] = useState(false);
+    const [isLimited, setIsLimited] = useState(false);
+    const [capacity, setCapacity] = useState<number | null>(null);
+    const [waitlist, setWaitlist] = useState(false);
+
+    // UI State
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [activeFocus, setActiveFocus] = useState<string | null>(null);
+    const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+    const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+    const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+    const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+    const [isCapacityModalOpen, setIsCapacityModalOpen] = useState(false);
+    const [isOrgDropdownOpen, setIsOrgDropdownOpen] = useState(false);
+    const [isPrivacyDropdownOpen, setIsPrivacyDropdownOpen] = useState(false);
+    const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+    const [selectedThemeId, setSelectedThemeId] = useState('minimal');
+    const [quantumPreset, setQuantumPreset] = useState('sonhador');
+    const [customColor, setCustomColor] = useState<string | null>(null);
+    const [customFont, setCustomFont] = useState<string | null>(null);
+    const [customStyle, setCustomStyle] = useState<string>('Padrão');
+    const [customDisplay, setCustomDisplay] = useState<string>('Automático');
+    const [isPublic, setIsPublic] = useState(true);
+
+    interface ThemeConfig {
+        id: string;
+        name: string;
+        img: string;
+        fontFamily: string;
+        bgColor: string;
+        baseRgb: string;
+        textColor: string;
+        mutedColor: string;
+        accentColor: string;
+    }
+
+    const themes: ThemeConfig[] = [
+        {
+            id: 'minimal',
+            name: 'Minimalista',
+            img: 'https://images.lumacdn.com/themes/thumb/minimal.jpg',
+            fontFamily: 'Inter, sans-serif',
+            bgColor: '#f7f8f9',
+            baseRgb: '19, 21, 23',
+            textColor: '#131517',
+            mutedColor: '#737577',
+            accentColor: '#000000',
+        },
+        {
+            id: 'quantum',
+            name: 'Quantum',
+            img: 'https://images.lumacdn.com/themes/thumb/quantum.jpg',
+            fontFamily: '"Space Mono", monospace',
+            bgColor: '#000000',
+            baseRgb: '255, 255, 255',
+            textColor: '#ffffff',
+            mutedColor: 'rgba(255, 255, 255, 0.6)',
+            accentColor: '#ffffff',
+        },
+        {
+            id: 'warp',
+            name: 'Warp',
+            img: 'https://images.lumacdn.com/themes/thumb/warp.jpg',
+            fontFamily: '"Syne", sans-serif',
+            bgColor: '#1a0b2e',
+            baseRgb: '255, 255, 255',
+            textColor: '#ffffff',
+            mutedColor: 'rgba(255, 255, 255, 0.6)',
+            accentColor: '#f43f5e',
+        },
+        {
+            id: 'emoji',
+            name: 'Emoji',
+            img: 'https://images.lumacdn.com/themes/thumb/emoji.jpg',
+            fontFamily: '"Comic Neue", cursive, sans-serif',
+            bgColor: '#fffbea',
+            baseRgb: '19, 21, 23',
+            textColor: '#333333',
+            mutedColor: '#666666',
+            accentColor: '#f59e0b',
+        },
+        {
+            id: 'confetti',
+            name: 'Confete',
+            img: 'https://images.lumacdn.com/themes/thumb/confetti.jpg',
+            fontFamily: '"Playfair Display", serif',
+            bgColor: '#fdf4ff',
+            baseRgb: '19, 21, 23',
+            textColor: '#4a044e',
+            mutedColor: '#86198f',
+            accentColor: '#d946ef',
+        },
+        {
+            id: 'pattern',
+            name: 'Padrão',
+            img: 'https://images.lumacdn.com/themes/thumb/pattern.jpg',
+            fontFamily: 'Inter, sans-serif',
+            bgColor: '#e0f2fe',
+            baseRgb: '255, 255, 255',
+            textColor: '#0c4a6e',
+            mutedColor: '#0369a1',
+            accentColor: '#0284c7',
+        },
+        {
+            id: 'seasonal',
+            name: 'Sazonal',
+            img: 'https://images.lumacdn.com/themes/thumb/seasonal-floral.jpg',
+            fontFamily: '"Lora", serif',
+            bgColor: '#ecfdf5',
+            baseRgb: '19, 21, 23',
+            textColor: '#064e3b',
+            mutedColor: '#047857',
+            accentColor: '#10b981',
+        },
+    ];
+ 
+    const selectedTheme = themes.find(t => t.id === selectedThemeId) || themes[0];
+
+    const nameInputRef = useRef<HTMLTextAreaElement>(null);
+
+    // Helpers
+    const getPastelColor = (hex: string) => {
+        if (!hex || hex.length < 6) return hex;
+        try {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+            const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+            let h = 0, s, l = (max + min) / 2;
+            if (max !== min) {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
+                    case gNorm: h = (bNorm - rNorm) / d + 2; break;
+                    case bNorm: h = (rNorm - gNorm) / d + 4; break;
+                }
+                h /= 6;
+            }
+            // Return soft pastel: 92% lightness for better contrast with animations
+            return `hsl(${h * 360}, ${s * 100}%, 92%)`;
+        } catch (e) {
+            return hex + '0D';
+        }
+    };
+
+    const getDeepColor = (hex: string) => {
+        if (!hex || hex.length < 6) return '#000000';
+        try {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+            const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+            let h = 0, s, l = (max + min) / 2;
+            if (max !== min) {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
+                    case gNorm: h = (bNorm - rNorm) / d + 2; break;
+                    case bNorm: h = (rNorm - gNorm) / d + 4; break;
+                }
+                h /= 6;
+            }
+            // Rich dark version: 15% lightness (visible color)
+            return `hsl(${h * 360}, ${s * 100}%, 15%)`;
+        } catch (e) {
+            return '#000000';
+        }
+    };
+
+    const getThemeTextColor = (hex: string, isDark: boolean) => {
+        if (isDark) return '#ffffff';
+        if (!hex || hex.length < 6) return '#000000';
+        try {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+            const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+            let h = 0, s, l = (max + min) / 2;
+            if (max !== min) {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
+                    case gNorm: h = (bNorm - rNorm) / d + 2; break;
+                    case bNorm: h = (rNorm - gNorm) / d + 4; break;
+                }
+                h /= 6;
+            }
+            // Deep saturated color for text contrast: 25% lightness, higher saturation
+            return `hsl(${h * 360}, ${Math.min(s * 100 + 10, 100)}%, 20%)`;
+        } catch (e) {
+            return '#000000';
+        }
+    };
+
+    // Determine if the current background is dark
+    const isBackgroundDark = useMemo(() => {
+        const bg = customColor ? getPastelColor(customColor) : selectedTheme.bgColor;
+        if (bg.startsWith('hsl')) {
+            const parts = bg.split(',');
+            const l = parseInt(parts[parts.length - 1]);
+            return l < 50;
+        }
+        const hex = bg.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness < 128;
+    }, [customColor, selectedTheme]);
+
+    const effectiveIsDark = useMemo(() => {
+        if (customDisplay === 'Escuro') return true;
+        if (customDisplay === 'Claro') return false;
+        // Automatic: Quantum and Warp are always dark by default, others depend on background
+        if (selectedThemeId === 'quantum' || selectedThemeId === 'warp') return true;
+        return isBackgroundDark;
+    }, [customDisplay, selectedThemeId, isBackgroundDark]);
+
+    const formatDate = (dateStr: string) => {
+        if (!dateStr) return "Selecione a data";
+        try {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
+    useEffect(() => {
+        const today = new Date().toISOString().split('T')[0];
+        setStartDate(today);
+        setEndDate(today);
+    }, []);
+
+    // Auto-expand textarea
+    useEffect(() => {
+        if (nameInputRef.current) {
+            nameInputRef.current.style.height = 'auto';
+            nameInputRef.current.style.height = `${nameInputRef.current.scrollHeight}px`;
+        }
+    }, [eventName]);
+
+    useEffect(() => {
+        if (orgs && orgs.length > 0 && !selectedOrgId) {
+            setSelectedOrgId(orgs[0].id);
+        }
+    }, [orgs, selectedOrgId]);
+
+    const selectedOrg = React.useMemo(() => orgs?.find(o => o.id === selectedOrgId), [orgs, selectedOrgId]);
+    const { loading: authLoading } = useAuth();
+
+    if (authLoading || (user && loadingOrgs)) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-[#f7f8f9]">
+                <Loader2 className="animate-spin text-gray-400" size={32} />
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#f7f8f9] p-4 text-center">
+                <p className="text-gray-600 mb-4">Você precisa estar logado para criar eventos.</p>
+                <button
+                    onClick={() => navigate('/signin')}
+                    className="px-4 py-2 bg-black text-white rounded-lg font-medium"
+                >
+                    Entrar
+                </button>
+            </div>
+        );
+    }
+
+    if (!orgs || orgs.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#f7f8f9] p-4 text-center">
+                <p className="text-gray-600 mb-4">Você precisa criar um calendário antes de criar eventos.</p>
+                <button
+                    onClick={() => navigate('/create-organization')}
+                    className="px-4 py-2 bg-black text-white rounded-lg font-medium"
+                >
+                    Criar Calendário
+                </button>
+            </div>
+        );
+    }
+
+    const handleCreateEvent = async () => {
+        if (!eventName || !startDate || !selectedOrgId) {
+            toast.error("Por favor, preencha os campos obrigatórios.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const startISO = `${startDate}T${startTime}:00`;
+            const endISO = `${endDate}T${endTime}:00`;
+
+            const payload = {
+                title: eventName,
+                name: eventName,
+                description: description,
+                startDate: startISO,
+                endDate: endISO,
+                organizationId: selectedOrgId,
+                image: coverImage,
+                location: locationData.type === 'Virtual' ? locationData.url : locationData.address,
+                isFree: isFree,
+                requireApproval: requireApproval,
+                capacity: capacity,
+                status: "Rascunho",
+                themeId: selectedThemeId,
+                customColor: customColor,
+                customFont: customFont,
+                customStyle: customStyle,
+                customDisplay: customDisplay
+            };
+
+            const response = await fetchApi('/api/event', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                toast.success("Evento criado com sucesso!");
+                navigate(`/create-tickets?eventId=${data.id}`);
+            } else {
+                toast.error("Erro ao criar evento.");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("Erro de conexão.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="theme-root light" style={{
+            '--theme-bg': selectedTheme.bgColor,
+            '--theme-font': customFont || selectedTheme.fontFamily,
+            '--theme-base-rgb': selectedTheme.baseRgb,
+            '--theme-text': selectedTheme.textColor,
+            '--theme-muted': selectedTheme.mutedColor,
+            '--theme-accent': customColor || selectedTheme.accentColor,
+            background: 'var(--theme-bg)',
+            minHeight: '100vh',
+            transition: 'background-color 0.3s ease'
+        } as React.CSSProperties}>
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                :root {
+                    --max-width: 820px;
+                    --gray-10: #f7f8f9;
+                    --gray-20: #ebeced;
+                    --gray-30: #dee0e2;
+                    --gray-40: #d2d4d7;
+                    --gray-50: #b3b5b7;
+                    --gray-60: #939597;
+                    --gray-70: #737577;
+                    --gray-80: #535557;
+                    --gray-90: #333537;
+                    --gray-100: #212325;
+                    --black-base-rgb: var(--theme-base-rgb, 19, 21, 23);
+                    --black: var(--theme-text, rgb(var(--black-base-rgb)));
+                    --white: #fff;
+                    
+                    --black-opacity-2: rgba(var(--black-base-rgb), .02);
+                    --black-base-rgb: var(--theme-base-rgb, 19, 21, 23);
+                    --black-opacity-4: rgba(var(--black-base-rgb), .04);
+                    --black-opacity-8: rgba(var(--black-base-rgb), .08);
+                    --black-opacity-16: rgba(var(--black-base-rgb), .16);
+                    --black-opacity-32: rgba(var(--black-base-rgb), .32);
+                    --black-opacity-48: rgba(var(--black-base-rgb), .48);
+                    --black-opacity-64: rgba(var(--black-base-rgb), .64);
+                    
+                    --brand-color: var(--theme-accent, #a93fa1);
+                    --brand-active-color: var(--theme-accent, #94378d);
+                    --brand-pale-bg-color: rgba(var(--theme-base-rgb), 0.133);
+                    
+                    --squircle-border-radius: 1rem;
+                    --card-border-radius: .75rem;
+                    --input-border-color: var(--gray-20);
+                    --input-focus-border-color: var(--theme-accent, var(--black));
+                    --backdrop-blur: blur(16px);
+                    --transition: all 0.3s cubic-bezier(.4,0,.2,1);
+                    --shadow-sm: 0 1px 3px rgba(0, 0, 0, .02), 0 2px 7px rgba(0, 0, 0, .03), 0 3px 14px rgba(0, 0, 0, .04), 0 7px 29px rgba(0, 0, 0, .05), 0 20px 80px rgba(0, 0, 0, .06);
+                }
+
+                .page-wrapper {
+                    min-height: 100vh;
+                    background-color: var(--theme-bg, var(--gray-10));
+                    color: var(--theme-text, inherit);
+                    padding-bottom: 4rem;
+                    transition: background-color 0.4s ease, color 0.4s ease;
+                    position: relative;
+                    overflow-x: hidden;
+                }
+
+                /* Quantum Animation - Organic Liquid Blobs */
+                .quantum-background {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 0;
+                    overflow: hidden;
+                    pointer-events: none;
+                    background: var(--q-bg-base, #000);
+                    filter: blur(80px); /* Base blur for fusion */
+                    transition: background 0.8s ease;
+                }
+
+                .quantum-glow {
+                    position: absolute;
+                    border-radius: 50%;
+                    mix-blend-mode: var(--q-blend, screen);
+                    opacity: var(--q-opacity, 0.6);
+                    animation: quantum-organic 20s infinite alternate ease-in-out;
+                    will-change: transform, border-radius, opacity;
+                    transition: opacity 0.8s ease, mix-blend-mode 0.8s ease;
+                }
+
+                .glow-1 {
+                    width: 80vw;
+                    height: 80vw;
+                    background: radial-gradient(circle, var(--q-color-1) 0%, transparent 80%);
+                    top: -10%;
+                    left: -10%;
+                    animation-duration: 20s;
+                }
+
+                .glow-2 {
+                    width: 70vw;
+                    height: 70vw;
+                    background: radial-gradient(circle, var(--q-color-2) 0%, transparent 80%);
+                    bottom: -10%;
+                    right: -10%;
+                    animation-duration: 25s;
+                    animation-delay: -5s;
+                }
+
+                .glow-3 {
+                    width: 60vw;
+                    height: 60vw;
+                    background: radial-gradient(circle, var(--q-color-3) 0%, transparent 80%);
+                    top: 20%;
+                    right: 10%;
+                    animation-duration: 30s;
+                    animation-delay: -10s;
+                }
+
+                .glow-4 {
+                    width: 50vw;
+                    height: 50vw;
+                    background: radial-gradient(circle, var(--q-color-1) 0%, transparent 80%);
+                    bottom: 10%;
+                    left: 20%;
+                    opacity: 0.4;
+                    animation-duration: 35s;
+                    animation-delay: -15s;
+                }
+
+                @keyframes quantum-organic {
+                    0% { 
+                        transform: translate(0, 0) scale(1) rotate(0deg); 
+                        border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+                    }
+                    33% { 
+                        transform: translate(40vw, 20vh) scale(1.2) rotate(120deg); 
+                        border-radius: 60% 40% 30% 70% / 50% 60% 40% 60%;
+                    }
+                    66% { 
+                        transform: translate(-20vw, 40vh) scale(0.8) rotate(240deg); 
+                        border-radius: 30% 70% 60% 40% / 60% 40% 70% 30%;
+                    }
+                    100% { 
+                        transform: translate(0, 0) scale(1) rotate(360deg); 
+                        border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+                    }
+                }
+
+                /* Enhanced Contrast for Dark Themes - Full Force */
+                [data-theme-dark="true"] .lux-naked-input,
+                [data-theme-dark="true"] .lux-naked-textarea,
+                [data-theme-dark="true"] input,
+                [data-theme-dark="true"] textarea,
+                [data-theme-dark="true"] .text-gray-900,
+                [data-theme-dark="true"] .text-gray-800,
+                [data-theme-dark="true"] .text-gray-700,
+                [data-theme-dark="true"] .text-gray-600,
+                [data-theme-dark="true"] .text-gray-500,
+                [data-theme-dark="true"] .text-black,
+                [data-theme-dark="true"] .text-slate-900,
+                [data-theme-dark="true"] .text-slate-800,
+                [data-theme-dark="true"] h1,
+                [data-theme-dark="true"] h2,
+                [data-theme-dark="true"] h3,
+                [data-theme-dark="true"] h4,
+                [data-theme-dark="true"] label,
+                [data-theme-dark="true"] .label,
+                [data-theme-dark="true"] .value,
+                [data-theme-dark="true"] .placeholder,
+                [data-theme-dark="true"] .lucide,
+                [data-theme-dark="true"] .photo-placeholder span,
+                [data-theme-dark="true"] .photo-placeholder .font-medium,
+                [data-theme-dark="true"] aside span,
+                [data-theme-dark="true"] aside div {
+                    color: #ffffff !important;
+                }
+
+                /* Small labels should stay slightly translucent for hierarchy */
+                [data-theme-dark="true"] .text-[12px].text-gray-400,
+                [data-theme-dark="true"] .text-gray-400,
+                [data-theme-dark="true"] .opacity-40,
+                [data-theme-dark="true"] .text-sm.text-gray-400 {
+                    color: rgba(255, 255, 255, 0.5) !important;
+                }
+
+                [data-theme-dark="true"] .section-card,
+                [data-theme-dark="true"] .option-item,
+                [data-theme-dark="true"] .lux-location-picker,
+                [data-theme-dark="true"] .dropdown-trigger,
+                [data-theme-dark="true"] .bg-black\/5,
+                [data-theme-dark="true"] .bg-gray-50,
+                [data-theme-dark="true"] .bg-gray-100 {
+                    background: rgba(255, 255, 255, 0.08) !important;
+                    border-color: rgba(255, 255, 255, 0.12) !important;
+                }
+
+                .page-wrapper[data-theme-dark="true"] .option-row {
+                    border-color: rgba(255, 255, 255, 0.1) !important;
+                }
+                .page-wrapper[data-theme-dark="true"] .option-row .label {
+                    color: rgba(255, 255, 255, 0.9);
+                }
+                .page-wrapper[data-theme-dark="true"] .meta-row {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                .page-wrapper[data-theme-dark="true"] .meta-row .title {
+                    color: #fff;
+                }
+                .page-wrapper[data-theme-dark="true"] .meta-row .label,
+                .page-wrapper[data-theme-dark="true"] .meta-row .subtitle {
+                    color: rgba(255, 255, 255, 0.6);
+                }
+                .page-wrapper[data-theme-dark="true"] .lux-input-label {
+                    color: rgba(255, 255, 255, 0.7);
+                }
+                .page-wrapper[data-theme-dark="true"] .time-picker .time-wrapper {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                .page-wrapper[data-theme-dark="true"] .dt-input {
+                    color: #fff;
+                }
+                .page-wrapper[data-theme-dark="true"] .time-picker .label {
+                    color: rgba(255, 255, 255, 0.6);
+                }
+
+
+                .create-container {
+                    max-width: 1000px;
+                    margin: 0 auto;
+                    padding: 2rem 1rem;
+                    display: flex;
+                    gap: 2.5rem;
+                    align-items: flex-start;
+                }
+
+                @media (max-width: 820px) {
+                    .create-container {
+                        flex-direction: column;
+                        gap: 1.5rem;
+                        padding: 1rem;
+                    }
+                }
+
+                /* Left Column: Image Picker */
+                .event-page-left {
+                    width: 340px;
+                    flex-shrink: 0;
+                    position: sticky;
+                    top: 6rem;
+                    margin-top: -116px;
+                }
+
+                @media (max-width: 820px) {
+                    .event-page-left {
+                        width: 100%;
+                        position: static;
+                        margin-top: 0;
+                    }
+                }
+
+                .photo-container {
+                    aspect-ratio: 1;
+                    background-color: var(--black-opacity-4);
+                    border-radius: 0.5rem;
+                    overflow: hidden;
+                    position: relative;
+                    cursor: pointer;
+                    border: none;
+                    transition: var(--transition);
+                }
+
+                .photo-container:hover {
+                    background-color: var(--black-opacity-8);
+                }
+
+                .photo-placeholder {
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.75rem;
+                    color: var(--gray-60);
+                }
+
+                .photo-placeholder svg {
+                    width: 32px;
+                    height: 32px;
+                }
+
+                /* Right Column: Form */
+                .event-page-right {
+                    flex: 1;
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.5rem;
+                }
+
+                .name-input-wrapper {
+                    width: 100%;
+                }
+
+                .lux-naked-input {
+                    font-family: var(--theme-font, 'Inter', sans-serif);
+                    width: 100%;
+                    font-size: 3.5rem;
+                    font-weight: 600;
+                    background-image: -webkit-linear-gradient(top, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0));
+                    background-color: transparent;
+                    border: none;
+                    outline: none;
+                    padding: 0;
+                    margin: 0;
+                    line-height: 1.15;
+                    color: var(--black);
+                    transition: height 0s;
+                    overflow: hidden;
+                    resize: none;
+                }
+
+                .lux-naked-input::placeholder {
+                    color: var(--black-opacity-32);
+                }
+
+                @media (max-width: 650px) {
+                    .lux-naked-input {
+                        font-size: 2.5rem;
+                    }
+                }
+
+                /* Form Sections */
+                .meta-section {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+
+                .meta-row {
+                    background: var(--black-opacity-4);
+                    border-radius: 0.75rem;
+                    padding: 14px 16px;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                    cursor: pointer;
+                    transition: background 0.2s ease;
+                    border: none;
+                    position: relative;
+                    color: var(--theme-accent, var(--gray-80));
+                }
+
+                .meta-row:hover {
+                    background: var(--black-opacity-8);
+                }
+
+                .meta-icon {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-top: 2px;
+                    color: inherit;
+                }
+
+                .meta-content {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .meta-title {
+                    font-family: 'Inter', sans-serif;
+                    font-weight: 500;
+                    color: inherit;
+                    font-size: 1rem;
+                    line-height: 1.3;
+                }
+
+                .meta-subtitle {
+                    color: inherit;
+                    opacity: 0.7;
+                    font-size: 0.875rem;
+                    line-height: 1.3;
+                    margin-top: 2px;
+                }
+
+                /* Date Time Picker Section */
+                .time-wrapper {
+                    background: var(--black-opacity-4);
+                    border-radius: 0.75rem;
+                    padding: 0.3rem;
+                    position: relative;
+                }
+                .tz-input {
+                    background: var(--black-opacity-4);
+                    border-radius: 0.75rem;
+                    padding: 0.75rem 1rem;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                }
+                .time-row-new {
+                    display: flex;
+                    align-items: center;
+                    padding: 0.1rem 0rem 0.1rem 0.6rem;
+                    position: relative;
+                    gap: 0.75rem;
+                }
+                .timeline-new {
+                    position: absolute;
+                    left: calc(0.3rem + 0.6rem + 4px);
+                    top: 1.5rem;
+                    bottom: 1.5rem;
+                    width: 1px;
+                    border-left: 1px dashed var(--gray-30);
+                }
+                .dot-new {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: var(--gray-30);
+                    flex-shrink: 0;
+                    z-index: 1;
+                }
+                .label-new {
+                    flex: 1;
+                    font-size: 1rem;
+                    color: var(--gray-60);
+                    font-weight: 400;
+                }
+                .lux-datetime-input {
+                    display: flex;
+                    align-items: center;
+                    background: var(--black-opacity-4);
+                    border-radius: 0.5rem;
+                    height: 36px;
+                    transition: background 0.2s ease;
+                }
+                .lux-datetime-input:hover {
+                    background: var(--black-opacity-8);
+                }
+                .lux-date-input, .lux-time-input {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    padding: 0 12px;
+                    font-size: 1rem;
+                    color: var(--black);
+                    border: none;
+                    background: transparent;
+                    outline: none;
+                    font-family: inherit;
+                    cursor: pointer;
+                }
+                .lux-time-input {
+                    font-family: 'Space Mono', monospace;
+                    font-size: 1rem;
+                }
+                .lux-divider {
+                    width: 1px;
+                    height: 20px;
+                    background: var(--black-opacity-8);
+                }
+
+                /* Advanced Options */
+                .section-label {
+                    font-size: 1rem;
+                    font-weight: 500;
+                    color: var(--gray-50);
+                    margin-bottom: 0.5rem;
+                    margin-top: 1rem;
+                    padding-left: 0.5rem;
+                }
+
+                .options-card {
+                    background: var(--black-opacity-4);
+                    border-radius: 0.5rem;
+                    overflow: hidden;
+                }
+
+                .option-row {
+                    display: flex;
+                    align-items: center;
+                    padding: 1rem 1.25rem;
+                    gap: 1rem;
+                }
+
+                .option-row:not(:last-child) {
+                    border: none;
+                }
+
+                .option-icon {
+                    color: var(--gray-50);
+                }
+
+                .option-label {
+                    flex: 1;
+                    font-weight: 500;
+                    color: var(--black);
+                }
+
+                .option-value {
+                    color: var(--theme-muted, var(--gray-60));
+                    font-size: 0.9375rem;
+                }
+
+                /* Create Button */
+                .create-button {
+                    font-family: 'Inter', sans-serif;
+                    background: var(--black);
+                    color: var(--white);
+                    border-radius: 0.5rem;
+                    padding: 0.875rem;
+                    font-weight: 600;
+                    font-size: 1rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 100%;
+                    cursor: pointer;
+                    transition: var(--transition);
+                    margin-top: 1.5rem;
+                    border: none;
+                }
+
+                /* Organization Dropdown */
+                .lux-menu {
+                    position: absolute;
+                    top: calc(100% + 0.5rem);
+                    left: 0;
+                    width: 240px;
+                    background: var(--white);
+                    border-radius: 0.5rem;
+                    box-shadow: var(--shadow-sm);
+                    z-index: 100;
+                    overflow: hidden;
+                    padding: 0.25rem;
+                    border: none;
+                }
+
+                .menu-content {
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .menu-header {
+                    padding: 0.625rem 0.75rem 0.375rem;
+                    font-size: 0.6875rem;
+                    font-weight: 500;
+                    color: var(--gray-40);
+                }
+
+                .calendar-selector-row {
+                    display: flex;
+                    align-items: center;
+                    padding: 0.5rem 0.75rem;
+                    gap: 0.75rem;
+                    cursor: pointer;
+                    transition: var(--transition);
+                    border-radius: 0.375rem;
+                    color: var(--black);
+                }
+
+                .calendar-selector-row:hover {
+                    background: var(--black-opacity-4);
+                }
+
+                .calendar-selector-row.selected {
+                    background: var(--black-opacity-4);
+                }
+
+                .calendar-avatar {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 4px;
+                    background-size: cover;
+                    background-position: center;
+                    background-color: var(--gray-10);
+                }
+
+                .calendar-avatar.round {
+                    border-radius: 50%;
+                }
+
+                .calendar-name {
+                    flex: 1;
+                    font-size: 0.9375rem;
+                    font-weight: 500;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .check-icon {
+                    color: var(--black);
+                }
+
+                .create-calendar-row {
+                    color: var(--gray-60);
+                    margin-top: 0.25rem;
+                    border-top: 1px solid var(--black-opacity-4);
+                    border-radius: 0;
+                }
+
+                .calendar-selector-row.privacy-row {
+                    align-items: flex-start;
+                    padding: 0.75rem;
+                }
+
+                .privacy-content {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.125rem;
+                }
+
+                .privacy-title {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: var(--black);
+                }
+
+                .privacy-desc {
+                    font-size: 0.813rem;
+                    color: var(--gray-40);
+                    line-height: 1.4;
+                }
+
+                .menu-footer {
+                    padding: 0.625rem 0.75rem;
+                    font-size: 0.6875rem;
+                    color: var(--gray-40);
+                    display: flex;
+                    gap: 0.5rem;
+                    line-height: 1.3;
+                }
+
+                /* Theme Modal Sheet Styles */
+                .lux-overlay {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 1000;
+                    display: flex;
+                    align-items: flex-end;
+                    justify-content: center;
+                    background: transparent;
+                    pointer-events: none;
+                }
+
+                .lux-modal.sheet {
+                    width: 100%;
+                    max-width: none;
+                    background: rgba(255, 255, 255, 0.65);
+                    backdrop-filter: blur(40px) saturate(200%);
+                    border-top: 1px solid rgba(255, 255, 255, 0.5);
+                    border-radius: 2rem 2rem 0 0;
+                    box-shadow: 0 -10px 50px rgba(0,0,0,0.08);
+                    display: flex;
+                    flex-direction: column;
+                    padding-bottom: 2rem;
+                    pointer-events: auto;
+                }
+
+                .sheet-header {
+                    height: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    cursor: pointer;
+                }
+
+                .dragbar {
+                    width: 32px;
+                    height: 4px;
+                    background: var(--gray-20);
+                    border-radius: 2px;
+                }
+
+                .theme-button {
+                    background: none;
+                    border: none;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    padding: 0.5rem;
+                    cursor: pointer;
+                    transition: var(--transition);
+                    min-width: 80px;
+                }
+
+                .theme-button.selected .icon {
+                    box-shadow: 0 0 0 1.5px var(--black);
+                    border-color: var(--black);
+                }
+
+                .theme-button .icon {
+                    width: 56px;
+                    height: 56px;
+                    border-radius: 0.75rem;
+                    overflow: hidden;
+                    background: var(--gray-10);
+                    margin-bottom: 0.5rem;
+                    border: 1px solid var(--gray-20);
+                }
+
+                .theme-button .icon img {
+                    width: 100%;
+                    height: 100%;
+                    object-cover: cover;
+                }
+
+                .theme-button .label {
+                    font-size: 0.625rem;
+                    font-weight: 600;
+                    color: var(--gray-60);
+                }
+
+                .theme-button.selected .label {
+                    color: var(--brand-color);
+                }
+
+                .theme-controls {
+                    display: flex;
+                    gap: 0.75rem;
+                    padding: 1rem 2rem;
+                    justify-content: center;
+                    flex-wrap: wrap;
+                }
+
+                .theme-option {
+                    background: rgba(0, 0, 0, 0.04);
+                    border-radius: 0.5rem;
+                    padding: 0.625rem 1.25rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    cursor: pointer;
+                    transition: var(--transition);
+                    min-width: 240px;
+                }
+
+                .theme-option:hover {
+                    background: var(--black-opacity-8);
+                }
+
+                .theme-option .dot {
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                }
+
+                .theme-option .content {
+                    flex: 1;
+                }
+
+                .theme-option .label {
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    color: var(--gray-60);
+                }
+
+                .theme-option .value {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: var(--black);
+                }
+
+                .create-button:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+                }
+
+                .create-button:active {
+                    transform: translateY(0);
+                }
+
+                /* Modals (Basic) */
+                .modal-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0,0,0,0.4);
+                    backdrop-filter: blur(4px);
+                    z-index: 1000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 1rem;
+                }
+
+                .modal-content {
+                    background: var(--white);
+                    border-radius: 2rem;
+                    width: 100%;
+                    max-width: 600px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    position: relative;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+                }
+            `}} />
+
+            <HeaderV2 transparent={true} theme={effectiveIsDark ? 'dark' : 'light'} />
+ 
+            <main 
+                className="page-wrapper pt-20"
+                data-theme-dark={effectiveIsDark ? "true" : "false"}
+                style={{
+                    ['--theme-bg' as any]: customColor ? getPastelColor(customColor) : (selectedThemeId === 'quantum' ? (effectiveIsDark ? getDeepColor(QUANTUM_PRESETS[quantumPreset].colors[0]) : getPastelColor(QUANTUM_PRESETS[quantumPreset].colors[0])) : selectedTheme.bgColor),
+                    ['--theme-text' as any]: selectedThemeId === 'quantum' ? getThemeTextColor(QUANTUM_PRESETS[quantumPreset].colors[0], effectiveIsDark) : selectedTheme.textColor,
+                    ['--theme-muted' as any]: selectedTheme.mutedColor,
+                    ['--theme-accent' as any]: customColor || (selectedThemeId === 'quantum' ? QUANTUM_PRESETS[quantumPreset].colors[0] : selectedTheme.accentColor),
+                    ['--theme-font' as any]: customFont || selectedTheme.fontFamily,
+                    ['--theme-base-rgb' as any]: selectedTheme.baseRgb,
+                    ['--q-color-1' as any]: QUANTUM_PRESETS[quantumPreset].colors[0],
+                    ['--q-color-2' as any]: QUANTUM_PRESETS[quantumPreset].colors[1],
+                    ['--q-color-3' as any]: QUANTUM_PRESETS[quantumPreset].colors[2],
+                    ['--q-bg-base' as any]: effectiveIsDark ? getDeepColor(QUANTUM_PRESETS[quantumPreset].colors[0]) : getPastelColor(QUANTUM_PRESETS[quantumPreset].colors[0]),
+                    ['--q-opacity' as any]: effectiveIsDark ? '0.6' : '0.55',
+                    ['--q-blend' as any]: effectiveIsDark ? 'screen' : 'overlay',
+                }}
+            >
+                {selectedThemeId === 'quantum' && !customColor && (
+                    <div className="quantum-background">
+                        <div className="quantum-glow glow-1"></div>
+                        <div className="quantum-glow glow-2"></div>
+                        <div className="quantum-glow glow-3"></div>
+                        <div className="quantum-glow glow-4"></div>
+                    </div>
+                )}
+                <div className="create-container max-w-6xl mx-auto px-4 py-8">
+                    {/* Left Side: Image */}
+                    <aside className="event-page-left">
+                        <motion.div
+                            className="photo-container"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            onClick={() => setIsImagePickerOpen(true)}
+                        >
+                            {coverImage ? (
+                                <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="photo-placeholder">
+                                    <ImageIcon strokeWidth={1.5} />
+                                    <span className="font-medium text-lg">Adicionar Capa</span>
+                                </div>
+                            )}
+                            <div className="absolute bottom-3 right-3 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center text-white">
+                                <ImageIcon size={16} />
+                            </div>
+                        </motion.div>
+
+                        {/* Theme picker and shuffle disabled temporarily */}
+                        {/* <div className="mt-4 flex gap-2">
+                            <div
+                                className="flex-1 bg-black/5 rounded-lg flex items-center justify-between cursor-pointer hover:bg-black/10 transition-colors"
+                                style={{ padding: '.5rem .625rem .5rem .75rem' }}
+                                onClick={() => setIsThemeModalOpen(true)}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-6 bg-black/10 rounded flex items-center justify-center text-[10px] text-gray-500 overflow-hidden">
+                                        <img src={selectedTheme.img} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div>
+                                        <div className="text-[12px] text-gray-400 font-bold">Tema</div>
+                                        <div className="text-[16px] font-bold text-gray-800">{selectedTheme.name}</div>
+                                    </div>
+                                </div>
+                                <ChevronDown size={16} className="text-gray-400" />
+                            </div>
+                            <div className="w-12 h-12 bg-black/5 rounded-lg flex items-center justify-center cursor-pointer hover:bg-black/10 transition-colors">
+                                <Shuffle size={20} className="text-gray-600" />
+                            </div>
+                        </div> */}
+                    </aside>
+
+                    {/* Right Side: Form */}
+                    <div className="event-page-right">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="relative">
+                                <button
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors bg-black/5 hover:bg-black/10 text-gray-700"
+                                    onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
+                                >
+                                    {selectedOrg?.logoUrl ? (
+                                        <img src={resolveImageUrl(selectedOrg.logoUrl)} className="w-4 h-4 rounded-full object-cover" />
+                                    ) : (
+                                        <div className="w-4 h-4 rounded-full bg-pink-400 flex items-center justify-center text-white text-[8px]">
+                                            {selectedOrg?.name?.charAt(0) || 'P'}
+                                        </div>
+                                    )}
+                                    <span className="text-sm font-bold">{selectedOrg?.name || "Calendário Pessoal"}</span>
+                                    <ChevronDown size={14} className="opacity-40" />
+                                </button>
+
+                                <AnimatePresence>
+                                    {isOrgDropdownOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-[90]" onClick={() => setIsOrgDropdownOpen(false)} />
+                                            <motion.div
+                                                className="lux-menu"
+                                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                                transition={{ duration: 0.15, ease: "easeOut" }}
+                                            >
+                                                <div className="menu-content">
+                                                    <div className="menu-header">Escolha o calendário:</div>
+
+                                                    {/* Personal Calendar */}
+                                                    <div
+                                                        className={`calendar-selector-row ${!selectedOrgId ? 'selected' : ''}`}
+                                                        onClick={() => {
+                                                            setSelectedOrgId("");
+                                                            setIsOrgDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        <div className="calendar-avatar round bg-pink-500 flex items-center justify-center text-white text-[10px]">P</div>
+                                                        <div className="calendar-name">Calendário Pessoal</div>
+                                                        {!selectedOrgId && (
+                                                            <div className="w-4 h-4 rounded-full bg-black flex items-center justify-center">
+                                                                <CheckIcon size={10} className="text-white" strokeWidth={4} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Orgs */}
+                                                    {orgs?.map(org => (
+                                                        <div
+                                                            key={org.id}
+                                                            className={`calendar-selector-row ${selectedOrgId === org.id ? 'selected' : ''}`}
+                                                            onClick={() => {
+                                                                setSelectedOrgId(org.id);
+                                                                setIsOrgDropdownOpen(false);
+                                                            }}
+                                                        >
+                                                            {org.logoUrl ? (
+                                                                <div className="calendar-avatar" style={{ backgroundImage: `url(${resolveImageUrl(org.logoUrl)})` }} />
+                                                            ) : (
+                                                                <div className="calendar-avatar flex items-center justify-center bg-gray-200 text-gray-500 text-[10px]">{org.name.charAt(0)}</div>
+                                                            )}
+                                                            <div className="calendar-name">{org.name}</div>
+                                                            {selectedOrgId === org.id && (
+                                                                <div className="w-4 h-4 rounded-full bg-black flex items-center justify-center">
+                                                                    <CheckIcon size={10} className="text-white" strokeWidth={4} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+
+                                                    <div className="calendar-selector-row create-calendar-row" onClick={() => navigate('/organizations/create')}>
+                                                        <Plus size={16} />
+                                                        <div className="calendar-name">Criar Calendário</div>
+                                                    </div>
+
+                                                    <div className="menu-footer">
+                                                        <Info size={14} className="mt-0.5 shrink-0" />
+                                                        <div>Criar o evento em um calendário concede aos seus administradores acesso de gerenciamento.</div>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
+                            <div className="relative">
+                                <button
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/5 hover:bg-black/10 transition-colors text-gray-700"
+                                    onClick={() => setIsPrivacyDropdownOpen(!isPrivacyDropdownOpen)}
+                                >
+                                    <Globe size={14} className="opacity-40" />
+                                    <span className="text-sm font-bold">{isPublic ? "Público" : "Privado"}</span>
+                                    <ChevronDown size={14} className="opacity-40" />
+                                </button>
+
+                                <AnimatePresence>
+                                    {isPrivacyDropdownOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-[90]" onClick={() => setIsPrivacyDropdownOpen(false)} />
+                                            <motion.div
+                                                className="lux-menu right-0 left-auto"
+                                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                                transition={{ duration: 0.15, ease: "easeOut" }}
+                                                style={{ width: '280px' }}
+                                            >
+                                                <div className="menu-content">
+                                                    {/* Public Option */}
+                                                    <div
+                                                        className={`calendar-selector-row privacy-row ${isPublic ? 'selected' : ''}`}
+                                                        onClick={() => {
+                                                            setIsPublic(true);
+                                                            setIsPrivacyDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        <Globe size={18} className="text-gray-400 mt-0.5 shrink-0" />
+                                                        <div className="privacy-content">
+                                                            <div className="privacy-title">Público</div>
+                                                            <div className="privacy-desc">Exibido no seu calendário e elegível para ser destacado.</div>
+                                                        </div>
+                                                        {isPublic && <CheckIcon size={14} className="shrink-0 mt-1 ml-auto" />}
+                                                    </div>
+
+                                                    {/* Private Option */}
+                                                    <div
+                                                        className={`calendar-selector-row privacy-row ${!isPublic ? 'selected' : ''}`}
+                                                        onClick={() => {
+                                                            setIsPublic(false);
+                                                            setIsPrivacyDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        <Sparkles size={18} className="text-gray-400 mt-0.5 shrink-0" />
+                                                        <div className="privacy-content">
+                                                            <div className="privacy-title">Privado</div>
+                                                            <div className="privacy-desc">Não listado. Apenas pessoas com o link podem se registrar.</div>
+                                                        </div>
+                                                        {!isPublic && <CheckIcon size={14} className="shrink-0 mt-1 ml-auto" />}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </div>
+
+                        <div className="name-input-wrapper">
+                            <textarea
+                                ref={nameInputRef}
+                                className="lux-naked-input overflow-hidden resize-none"
+                                placeholder="Nome do Evento"
+                                value={eventName}
+                                onChange={(e) => setEventName(e.target.value)}
+                                rows={1}
+                                autoFocus
+                                spellCheck={false}
+                                onFocus={() => setActiveFocus('name')}
+                                onBlur={() => setActiveFocus(null)}
+                                style={{
+                                    borderBottomColor: activeFocus === 'name' ? 'var(--black-opacity-20)' : 'transparent',
+                                    transition: 'border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    minHeight: '3.5rem',
+                                    fontSize: '3rem'
+                                }}
+                            />
+                        </div>
+
+                        {/* Date Time Picker */}
+                        <div className="flex gap-3 w-full">
+                            <div className="time-wrapper flex-1">
+                                <div className="timeline-new" />
+                                <div className="time-row-new">
+                                    <div className="dot-new" />
+                                    <div className="label-new">Início</div>
+                                    <div className="lux-datetime-input">
+                                        <LuxDatePicker
+                                            value={startDate}
+                                            onChange={setStartDate}
+                                            className="lux-date-input"
+                                        />
+                                        <div className="lux-divider" />
+                                        <LuxTimePicker
+                                            value={startTime}
+                                            onChange={setStartTime}
+                                            className="lux-time-input"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="time-row-new">
+                                    <div className="dot-new" style={{ background: 'transparent', border: '1px solid var(--gray-40)' }} />
+                                    <div className="label-new">Fim</div>
+                                    <div className="lux-datetime-input">
+                                        <LuxDatePicker
+                                            value={endDate}
+                                            onChange={setEndDate}
+                                            className="lux-date-input"
+                                        />
+                                        <div className="lux-divider" />
+                                        <LuxTimePicker
+                                            value={endTime}
+                                            onChange={setEndTime}
+                                            className="lux-time-input"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="tz-input min-w-[120px]">
+                                <Globe size={16} className="text-gray-400 mb-2" strokeWidth={1.5} />
+                                <div className="text-[0.875rem] font-medium text-gray-600">GMT-03:00</div>
+                                <div className="text-xs text-gray-500 font-normal">São Paulo</div>
+                            </div>
+                        </div>
+
+                        {/* Location & Timezone */}
+                        <div className="meta-section">
+                            <LuxLocationPicker
+                                value={locationData}
+                                onChange={setLocationData}
+                            />
+
+                            <div
+                                className="meta-row"
+                                onClick={() => setIsDescriptionOpen(true)}
+                            >
+                                <div className="meta-icon">
+                                    <Info size={18} strokeWidth={2} />
+                                </div>
+                                <div className="meta-content">
+                                    <div className="meta-title">
+                                        {description ? "Editar Descrição" : "Adicionar Descrição"}
+                                    </div>
+                                    <div className="meta-subtitle text-ellipses max-w-[250px]">
+                                        {description || "Diga mais sobre o seu evento"}
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        {/* Advanced Options */}
+                        <div className="advanced-options">
+                            <div className="section-label text-[14px] text-gray-400 font-bold mb-3 ml-1">Opções de Evento</div>
+                            <div className="meta-section">
+                                {/* Ticket Price Row */}
+                                <div 
+                                    className="meta-row"
+                                    onClick={() => setIsTicketModalOpen(true)}
+                                >
+                                    <div className="meta-icon text-[#22C55E]">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-5 h-5"><path fill="currentColor" fillRule="evenodd" d="M3.204 1.25C1.44 1.25.251 2.938.251 4.692v1.454c-.001.068-.001.163.007.247a.96.96 0 0 0 .162.466c.142.205.348.298.411.327l.005.002c.083.038.185.076.277.11l.016.007c.177.066.394.309.394.696s-.217.63-.394.696l-.017.007c-.091.034-.193.072-.276.11l-.005.002c-.063.029-.269.122-.411.327a.96.96 0 0 0-.162.465c-.008.084-.008.18-.008.247v1.453c0 1.755 1.188 3.443 2.954 3.443h9.592c1.766 0 2.954-1.688 2.954-3.443V9.854c0-.068 0-.163-.008-.247a.96.96 0 0 0-.162-.465c-.142-.205-.348-.298-.411-.327l-.005-.003a5 5 0 0 0-.276-.11l-.017-.006c-.177-.066-.394-.309-.394-.696s.217-.63.394-.696l.017-.007c.091-.034.193-.072.276-.11l.005-.002a1 1 0 0 0 .411-.327.96.96 0 0 0 .162-.466c.008-.084.008-.179.008-.247V4.693c0-1.755-1.19-3.443-2.954-3.443zM1.751 4.693c0-1.221.784-1.943 1.453-1.943H9.25v3.008a.75.75 0 0 0 1.5 0V2.75h2.046c.669 0 1.453.722 1.453 1.943v1.244c-.788.344-1.272 1.178-1.272 2.063s.484 1.72 1.273 2.063v1.244c0 1.221-.784 1.943-1.454 1.943H10.75v-2.492a.75.75 0 0 0-1.5 0v2.492H3.204c-.67 0-1.454-.722-1.454-1.943v-1.244C2.54 9.719 3.023 8.885 3.023 8S2.539 6.28 1.75 5.937z"></path></svg>
+                                    </div>
+                                    <div className="meta-content !flex-row !items-center !justify-between">
+                                        <div className="meta-title !mb-0">Preço do Ingresso</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-gray-900 font-bold text-[15px]">
+                                                {isFree ? "Grátis" : `R$ ${price?.toFixed(2).replace('.', ',')}`}
+                                            </div>
+                                            <div className="text-gray-300">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-4 h-4"><path fill="currentColor" fillRule="evenodd" d="M10.217 3.22c.354-.354.456-.451.543-.51.42-.28.969-.28 1.389 0 .087.059.189.156.543.51s.45.456.509.543c.28.42.28.968 0 1.389-.058.086-.155.189-.509.543l-.53.53L9.687 3.75zm-1.59 1.59L11.1 7.287l-5.76 5.76a1.25 1.25 0 0 1-.963.363l-.49-.031c-.48-.03-.768-.05-.977-.09-.185-.036-.213-.072-.214-.074-.001 0-.037-.028-.073-.213-.04-.209-.06-.498-.09-.978l-.031-.489a1.25 1.25 0 0 1 .363-.963zm1.3-3.347c-.227.152-.441.366-.719.644l-.052.052-1.06 1.06-6.29 6.291a2.75 2.75 0 0 0-.8 2.12l.03.489.003.042c.027.424.052.81.113 1.124.066.345.191.697.485.99.293.293.645.419.99.485.314.06.7.085 1.124.112l.042.003.489.031a2.75 2.75 0 0 0 2.12-.8l6.29-6.29 1.06-1.06.052-.053c.278-.277.493-.491.644-.718a2.75 2.75 0 0 0 0-3.056c-.151-.226-.366-.44-.644-.718l-.051-.052-.052-.052c-.278-.278-.492-.492-.719-.644a2.75 2.75 0 0 0-3.055 0m.578 11.986a.75.75 0 1 0 0 1.5h4a.75.75 0 1 0 0-1.5z"></path></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Approval Row */}
+                                <div className="meta-row">
+                                    <div className="meta-icon text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-5 h-5"><path fill="currentColor" fillRule="evenodd" d="M7.75.25C5.336.25 3.5 2.086 3.5 4.5c0 1.225.474 2.007.9 2.575.09.12.165.216.23.298.102.13.18.228.255.345.101.158.115.233.115.282 0 .34-.126.536-.392.728-.3.217-.708.375-1.25.585l-.13.05c-.55.215-1.233.49-1.767.954C.88 10.821.5 11.524.5 12.5c0 .752.341 1.354.85 1.799.488.427 1.133.717 1.81.92 1.354.406 3.065.531 4.59.531a.75.75 0 0 0 0-1.5c-1.475 0-3.014-.125-4.16-.468-.573-.173-.99-.383-1.252-.612-.242-.211-.338-.422-.338-.67 0-.524.18-.821.446-1.052.309-.269.751-.463 1.326-.687l.159-.061c.493-.19 1.087-.418 1.555-.756C6.064 9.527 6.5 8.91 6.5 8c0-.451-.174-.813-.353-1.093a8 8 0 0 0-.397-.537l-.15-.195c-.324-.432-.6-.9-.6-1.675 0-1.586 1.164-2.75 2.75-2.75S10.5 2.914 10.5 4.5c0 .672-.208 1.11-.463 1.484a.75.75 0 1 0 1.24.843A3.96 3.96 0 0 0 12 4.5C12 2.086 10.164.25 7.75.25m7.561 9.247a.75.75 0 0 0-1.122-.994l-2.962 3.34-.896-1.096a.75.75 0 0 0-1.161.95l1.454 1.778a.75.75 0 0 0 1.142.023z"></path></svg>
+                                    </div>
+                                    <div className="meta-content !flex-row !items-center !justify-between">
+                                        <div className="meta-title !mb-0">Exigir Aprovação</div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                className="sr-only peer"
+                                                checked={requireApproval}
+                                                onChange={(e) => setRequireApproval(e.target.checked)}
+                                            />
+                                            <div className="w-10 h-6 bg-black/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Capacity Row */}
+                                <div 
+                                    className="meta-row"
+                                    onClick={() => setIsCapacityModalOpen(true)}
+                                >
+                                    <div className="meta-icon text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-5 h-5"><path fill="currentColor" fillRule="evenodd" d="M8 15.5a.75.75 0 0 0 .75-.75V10.5h.041c.872 0 1.609 0 2.159-.08s1.195-.277 1.5-.928c.305-.65.043-1.273-.248-1.746-.29-.474-.762-1.04-1.32-1.71l-.04-.047-.422-.507-.033-.04c-.399-.478-.748-.897-1.072-1.19-.348-.314-.769-.578-1.315-.578s-.966.264-1.315.578c-.324.293-.673.712-1.071 1.19l-.034.04-.422.507-.04.047c-.557.67-1.03 1.236-1.32 1.71-.29.473-.552 1.096-.248 1.746.305.651.95.848 1.5.928s1.288.08 2.16.08h.04v4.25c0 .414.336.75.75.75M4.921 8.85c.046.022.145.057.345.086C5.695 8.998 6.321 9 7.27 9h1.46c.95 0 1.576-.002 2.004-.064.2-.03.3-.064.345-.086a1.3 1.3 0 0 0-.155-.32c-.227-.369-.626-.851-1.234-1.58l-.422-.507c-.442-.53-.723-.865-.958-1.077-.213-.193-.29-.192-.308-.192h-.003c-.02 0-.096 0-.308.192-.235.212-.516.546-.958 1.077l-.423.507c-.608.729-1.007 1.211-1.234 1.58a1.2 1.2 0 0 0-.155.32M14 2a.75.75 0 0 0 0-1.5H2A.75.75 0 1 0 2 2z"></path></svg>
+                                    </div>
+                                    <div className="meta-content !flex-row !items-center !justify-between">
+                                        <div className="meta-title !mb-0">Capacidade</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-gray-400 font-medium text-[15px]">
+                                                {isLimited ? capacity : "Ilimitado"}
+                                            </div>
+                                            <div className="text-gray-300">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-4 h-4"><path fill="currentColor" fillRule="evenodd" d="M10.217 3.22c.354-.354.456-.451.543-.51.42-.28.969-.28 1.389 0 .087.059.189.156.543.51s.45.456.509.543c.28.42.28.968 0 1.389-.058.086-.155.189-.509.543l-.53.53L9.687 3.75zm-1.59 1.59L11.1 7.287l-5.76 5.76a1.25 1.25 0 0 1-.963.363l-.49-.031c-.48-.03-.768-.05-.977-.09-.185-.036-.213-.072-.214-.074-.001 0-.037-.028-.073-.213-.04-.209-.06-.498-.09-.978l-.031-.489a1.25 1.25 0 0 1 .363-.963zm1.3-3.347c-.227.152-.441.366-.719.644l-.052.052-1.06 1.06-6.29 6.291a2.75 2.75 0 0 0-.8 2.12l.03.489.003.042c.027.424.052.81.113 1.124.066.345.191.697.485.99.293.293.645.419.99.485.314.06.7.085 1.124.112l.042.003.489.031a2.75 2.75 0 0 0 2.12-.8l6.29-6.29 1.06-1.06.052-.053c.278-.277.493-.491.644-.718a2.75 2.75 0 0 0 0-3.056c-.151-.226-.366-.44-.644-.718l-.051-.052-.052-.052c-.278-.278-.492-.492-.719-.644a2.75 2.75 0 0 0-3.055 0m.578 11.986a.75.75 0 1 0 0 1.5h4a.75.75 0 1 0 0-1.5z"></path></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <motion.button
+                            className="create-button"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            disabled={!eventName || isSubmitting}
+                            onClick={handleCreateEvent}
+                            style={{
+                                background: 'var(--theme-accent)',
+                                color: (customColor || selectedTheme.accentColor) === '#ffffff' ? '#000000' : '#ffffff',
+                                opacity: !eventName || isSubmitting ? 0.5 : 1
+                            }}
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="animate-spin" size={20} />
+                            ) : (
+                                "Criar Evento"
+                            )}
+                        </motion.button>
+                    </div>
+                </div>
+            </main>
+
+            <ImagePickerModalV2
+                isOpen={isImagePickerOpen}
+                onClose={() => setIsImagePickerOpen(false)}
+                onSelect={(url) => {
+                    setCoverImage(url);
+                    setIsImagePickerOpen(false);
+                }}
+            />
+
+            <DescriptionModalV2
+                isOpen={isDescriptionOpen}
+                onClose={() => setIsDescriptionOpen(false)}
+                value={description}
+                onChange={setDescription}
+                onOpenAI={() => {
+                    setIsDescriptionOpen(false); // Fecha descrição
+                    setIsAIModalOpen(true);      // Abre IA
+                }}
+            />
+
+            <AISuggestionModal
+                isOpen={isAIModalOpen}
+                onClose={() => {
+                    setIsAIModalOpen(false);
+                    setIsDescriptionOpen(true); // Reabre descrição ao cancelar
+                }}
+                onGenerate={(data) => {
+                    setDescription(`Descrição gerada com humor ${data.mood} e instruções: ${data.instructions}`);
+                    setIsAIModalOpen(false);
+                    setIsDescriptionOpen(true); // Reabre descrição ao gerar
+                }}
+            />
+
+            <TicketPriceModal
+                isOpen={isTicketModalOpen}
+                onClose={() => setIsTicketModalOpen(false)}
+                isFree={isFree}
+                price={price}
+                onChange={(free, p) => {
+                    setIsFree(free);
+                    setPrice(p);
+                }}
+            />
+
+            <EventCapacityModal
+                isOpen={isCapacityModalOpen}
+                onClose={() => setIsCapacityModalOpen(false)}
+                initialData={{ isLimited, capacity, waitlist }}
+                onConfirm={(data) => {
+                    setIsLimited(data.isLimited);
+                    setCapacity(data.capacity);
+                    setWaitlist(data.waitlist);
+                }}
+            />
+
+
+            <ThemePickerModalV2
+                isOpen={isThemeModalOpen}
+                onClose={() => setIsThemeModalOpen(false)}
+                selectedThemeId={selectedThemeId}
+                onSelect={(id) => {
+                    setSelectedThemeId(id);
+                    setCustomColor(null); // Reseta cor customizada ao trocar de tema
+                }}
+                themes={themes}
+                customColor={customColor}
+                onCustomColorSelect={setCustomColor}
+                customFont={customFont}
+                onCustomFontSelect={setCustomFont}
+                customStyle={customStyle}
+                onCustomStyleSelect={setCustomStyle}
+                customDisplay={customDisplay}
+                onCustomDisplaySelect={setCustomDisplay}
+                quantumPreset={quantumPreset}
+                setQuantumPreset={setQuantumPreset}
+            />
+        </div>
+    );
+};
+
+// --- Theme Modal ---
+const ThemePickerModalV2 = ({
+    isOpen,
+    onClose,
+    selectedThemeId,
+    onSelect,
+    themes,
+    customColor,
+    onCustomColorSelect,
+    customFont,
+    onCustomFontSelect,
+    customStyle,
+    onCustomStyleSelect,
+    customDisplay,
+    onCustomDisplaySelect,
+    quantumPreset,
+    setQuantumPreset
+}: {
+    isOpen: boolean,
+    onClose: () => void,
+    selectedThemeId: string,
+    onSelect: (id: string) => void,
+    themes: any[],
+    customColor: string | null,
+    onCustomColorSelect: (color: string | null) => void,
+    customFont: string | null,
+    onCustomFontSelect: (font: string | null) => void,
+    customStyle: string,
+    onCustomStyleSelect: (style: string) => void,
+    customDisplay: string,
+    onCustomDisplaySelect: (display: string) => void,
+    quantumPreset: string,
+    setQuantumPreset: (preset: string) => void
+}) => {
+    const [activePopover, setActivePopover] = useState<'color' | 'font' | 'style' | 'display' | null>(null);
+
+    const COLOR_OPTIONS = [
+        '#9ca3af', '#ec4899', '#a855f7', '#6366f1',
+        '#3b82f6', '#22c55e', '#eab308', '#f97316', '#ef4444'
+    ];
+
+    const FONT_OPTIONS = [
+        { name: 'Padrão', value: 'Inter, sans-serif' },
+        { name: 'Museo', value: '"museo-slab", serif' },
+        { name: 'Factoria', value: 'system-ui' },
+        { name: 'Ivy Presto', value: '"Playfair Display", serif' },
+        { name: 'Ivy Mode', value: '"Lora", serif' },
+        { name: 'Google', value: 'sans-serif' },
+        { name: 'Roc', value: '"Syne", sans-serif' },
+        { name: 'Nunito', value: 'Arial, sans-serif' },
+        { name: 'Degular', value: 'Helvetica, sans-serif' },
+        { name: 'Pearl', value: '"Playfair Display", "Times New Roman", serif' },
+        { name: 'Geist Mono', value: '"Space Mono", monospace' },
+        { name: 'New Spirit', value: '"Lora", "Times New Roman", serif' },
+        { name: 'Departure', value: '"Syne", Arial, sans-serif' },
+        { name: 'Garamond', value: '"Playfair Display", Georgia, serif' },
+        { name: 'Futura', value: 'Verdana, sans-serif' },
+        { name: 'Alternate', value: '"Lora", Georgia, serif' },
+    ];
+
+    const STYLE_OPTIONS = ['Padrão', 'Sólido', 'Linhas', 'Minimalista'];
+    const DISPLAY_OPTIONS = ['Automático', 'Claro', 'Escuro'];
+
+    const selectedTheme = themes.find(t => t.id === selectedThemeId) || themes[0];
+    const displayColor = customColor || selectedTheme.accentColor;
+
+    // Find name of current font, or default
+    const displayFontObj = FONT_OPTIONS.find(f => f.value === (customFont || selectedTheme.fontFamily));
+    const displayFontName = customFont ? (displayFontObj ? displayFontObj.name : 'Personalizada') : 'Padrão';
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <div className="lux-overlay" onClick={onClose}>
+                    <motion.div
+                        className="lux-modal sheet relative"
+                        initial={{ y: "100%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "100%" }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        onClick={(e) => { e.stopPropagation(); setActivePopover(null); }}
+                    >
+                        <div className="sheet-header" onClick={onClose}>
+                            <div className="dragbar"></div>
+                        </div>
+                        <div className="lux-modal-body px-8 pb-4">
+                            <div className="flex items-center justify-center gap-4 overflow-x-auto pb-8 pt-4 no-scrollbar">
+                                {themes.map((theme) => (
+                                    <button
+                                        key={theme.id}
+                                        className={`theme-button ${theme.id === selectedThemeId ? 'selected' : ''}`}
+                                        style={{ minWidth: '100px' }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onSelect(theme.id);
+                                            onCustomColorSelect(null);
+                                            onCustomFontSelect(null);
+                                        }}
+                                    >
+                                        <div className="icon" style={{ width: '80px', height: '54px', borderRadius: '0.75rem' }}>
+                                            <img src={theme.img} alt={theme.name} />
+                                        </div>
+                                        <div className="label" style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>{theme.name}</div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="theme-controls relative">
+                                {/* Cor Option - Contextual for Quantum */}
+                                <div className="relative">
+                                    <div
+                                        className="theme-option"
+                                        onClick={(e) => { e.stopPropagation(); setActivePopover(activePopover === 'color' ? null : 'color'); }}
+                                    >
+                                        {selectedThemeId === 'quantum' ? (
+                                            <div 
+                                                className="dot border border-white/20" 
+                                                style={{ 
+                                                    background: `linear-gradient(135deg, ${QUANTUM_PRESETS[quantumPreset].colors[0]}, ${QUANTUM_PRESETS[quantumPreset].colors[1]})`,
+                                                    width: '12px', 
+                                                    height: '12px' 
+                                                }} 
+                                            />
+                                        ) : (
+                                            <div className="dot" style={{ background: displayColor, width: '12px', height: '12px' }} />
+                                        )}
+                                        <div className="content flex items-center gap-2">
+                                            <div className="label">Cor</div>
+                                            <div className="value">
+                                                {selectedThemeId === 'quantum' ? QUANTUM_PRESETS[quantumPreset].name : (customColor ? 'Personalizado' : 'Padrão')}
+                                            </div>
+                                        </div>
+                                        <ChevronDown size={14} className="text-gray-300 ml-auto" />
+                                    </div>
+
+                                    {/* Color Popover - Contextual */}
+                                    <AnimatePresence>
+                                        {activePopover === 'color' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className={`absolute bottom-full left-0 mb-2 p-3 bg-white rounded-xl shadow-xl border border-black/5 z-50 flex items-center gap-2 ${selectedThemeId === 'quantum' ? 'w-[320px] flex-wrap justify-center' : ''}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {selectedThemeId === 'quantum' ? (
+                                                    <div className="grid grid-cols-4 gap-3 w-full">
+                                                        {Object.entries(QUANTUM_PRESETS).map(([id, preset]) => (
+                                                            <button
+                                                                key={id}
+                                                                onClick={() => { setQuantumPreset(id); setActivePopover(null); }}
+                                                                className={`flex flex-col items-center gap-1.5 p-1 rounded-lg transition-all ${quantumPreset === id ? 'bg-gray-50 ring-1 ring-indigo-500' : 'hover:bg-gray-50'}`}
+                                                            >
+                                                                <div className="w-8 h-8 rounded-full flex overflow-hidden border border-gray-100">
+                                                                    {preset.colors.map((c, i) => (
+                                                                        <div key={i} className="flex-1" style={{ background: c }} />
+                                                                    ))}
+                                                                </div>
+                                                                <span className="text-[9px] font-bold text-gray-500 truncate w-full text-center">{preset.name}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {COLOR_OPTIONS.map(c => (
+                                                            <button
+                                                                key={c}
+                                                                className="w-6 h-6 rounded-full hover:scale-110 transition-transform"
+                                                                style={{ background: c, outline: displayColor === c ? '2px solid black' : 'none', outlineOffset: '2px' }}
+                                                                onClick={() => { onCustomColorSelect(c); setActivePopover(null); }}
+                                                            />
+                                                        ))}
+                                                        <label className="w-6 h-6 rounded-full border-2 border-gray-300 hover:scale-110 transition-transform cursor-pointer relative overflow-hidden flex items-center justify-center">
+                                                            <div className="absolute inset-1 rounded-full border border-gray-400" />
+                                                            <input
+                                                                type="color"
+                                                                className="opacity-0 absolute inset-0 cursor-pointer"
+                                                                onChange={(e) => onCustomColorSelect(e.target.value)}
+                                                            />
+                                                        </label>
+                                                    </>
+                                                )}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* Estilo Option */}
+                                <div className="relative">
+                                    <div
+                                        className="theme-option"
+                                        onClick={(e) => { e.stopPropagation(); setActivePopover(activePopover === 'style' ? null : 'style'); }}
+                                    >
+                                        <div className="w-3 h-3 rounded-full border-2 border-gray-300" />
+                                        <div className="content flex items-center gap-2">
+                                            <div className="label">Estilo</div>
+                                            <div className="value">{customStyle}</div>
+                                        </div>
+                                        <ChevronDown size={14} className="text-gray-300 ml-auto" />
+                                    </div>
+
+                                    <AnimatePresence>
+                                        {activePopover === 'style' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute bottom-full left-0 mb-2 p-2 bg-white rounded-xl shadow-xl border border-black/5 z-50 min-w-[200px]"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {STYLE_OPTIONS.map(s => (
+                                                    <button
+                                                        key={s}
+                                                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-between"
+                                                        onClick={() => {
+                                                            onCustomStyleSelect(s);
+                                                            setActivePopover(null);
+                                                        }}
+                                                    >
+                                                        {s}
+                                                        {customStyle === s && <CheckIcon size={14} className="text-black" />}
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* Fonte Option */}
+                                <div className="relative">
+                                    <div
+                                        className="theme-option"
+                                        onClick={(e) => { e.stopPropagation(); setActivePopover(activePopover === 'font' ? null : 'font'); }}
+                                    >
+                                        <div className="flex items-center justify-center font-serif font-bold text-xs" style={{ fontFamily: customFont || selectedTheme.fontFamily }}>Ag</div>
+                                        <div className="content flex items-center gap-2">
+                                            <div className="label">Fonte</div>
+                                            <div className="value">{displayFontName}</div>
+                                        </div>
+                                        <ChevronDown size={14} className="text-gray-300 ml-auto" />
+                                    </div>
+
+                                    {/* Font Popover */}
+                                    <AnimatePresence>
+                                        {activePopover === 'font' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute bottom-full left-0 mb-2 p-4 bg-white rounded-xl shadow-xl border border-black/5 z-50 w-[380px]"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {FONT_OPTIONS.map(f => {
+                                                        const isSelected = (customFont || selectedTheme.fontFamily) === f.value;
+                                                        return (
+                                                            <button
+                                                                key={f.name}
+                                                                className={`flex flex-col items-center gap-1 p-2 rounded-xl border ${isSelected ? 'border-black ring-1 ring-black' : 'border-gray-200 hover:border-gray-300'}`}
+                                                                onClick={() => { onCustomFontSelect(f.value); setActivePopover(null); }}
+                                                            >
+                                                                <div
+                                                                    className={`flex items-center justify-center h-12 w-full rounded-lg bg-gray-50 text-2xl ${isSelected ? 'text-black' : 'text-gray-500'}`}
+                                                                    style={{ fontFamily: f.value }}
+                                                                >
+                                                                    Ag
+                                                                </div>
+                                                                <div className={`text-[10px] ${isSelected ? 'text-black font-semibold' : 'text-gray-500'}`}>
+                                                                    {f.name}
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* Exibição Option */}
+                                <div className="relative">
+                                    <div
+                                        className="theme-option"
+                                        onClick={(e) => { e.stopPropagation(); setActivePopover(activePopover === 'display' ? null : 'display'); }}
+                                    >
+                                        <div className="w-3 h-3 border-2 border-gray-400 rounded-sm" />
+                                        <div className="content flex items-center gap-2">
+                                            <div className="label">Exibição</div>
+                                            <div className="value">{customDisplay}</div>
+                                        </div>
+                                        <ChevronDown size={14} className="text-gray-300 ml-auto" />
+                                    </div>
+
+                                    <AnimatePresence>
+                                        {activePopover === 'display' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute bottom-full left-0 mb-2 p-2 bg-white rounded-xl shadow-xl border border-black/5 z-50 min-w-[200px]"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {DISPLAY_OPTIONS.map(d => (
+                                                    <button
+                                                        key={d}
+                                                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-between"
+                                                        onClick={() => {
+                                                            onCustomDisplaySelect(d);
+                                                            setActivePopover(null);
+                                                        }}
+                                                    >
+                                                        {d}
+                                                        {customDisplay === d && <CheckIcon size={14} className="text-black" />}
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
+    );
+};
+

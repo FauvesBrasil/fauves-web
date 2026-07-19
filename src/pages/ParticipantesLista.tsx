@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLayoutOffsets } from '@/context/LayoutOffsetsContext';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import EventDetailsSidebar from '@/components/EventDetailsSidebar';
@@ -495,7 +495,7 @@ export default function ParticipantesLista() {
         <div className="max-md:hidden">
           <EventDetailsSidebar
             eventIdOverride={eventId || null}
-            panelRoute={eventId ? `/painel-evento/${eventId}` : undefined}
+            panelRoute={eventId ? `/event/manage/${eventId}` : undefined}
             fixed
             fixedLeft={70}
             fixedWidth={300}
@@ -546,7 +546,7 @@ export default function ParticipantesLista() {
         <div className="max-md:hidden">
           <EventDetailsSidebar
             eventIdOverride={eventId || null}
-            panelRoute={eventId ? `/painel-evento/${eventId}` : undefined}
+            panelRoute={eventId ? `/event/manage/${eventId}` : undefined}
             fixed
             fixedLeft={70}
             fixedWidth={300}

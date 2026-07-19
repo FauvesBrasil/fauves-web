@@ -206,7 +206,7 @@ export default function AdminSlides() {
         try {
             const fd = new FormData();
             fd.append('file', file);
-            const res = await fetch('/api/upload', { method: 'POST', body: fd });
+            const res = await fetchApi('/api/upload', { method: 'POST', body: fd });
             if (!res.ok) throw new Error('Upload falhou');
             const json = await res.json();
             setFormData(prev => ({ ...prev, imageUrl: json.url }));

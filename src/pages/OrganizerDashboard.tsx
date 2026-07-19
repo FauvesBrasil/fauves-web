@@ -528,7 +528,7 @@ const OrganizerDashboard = () => {
                               Comece a planejar seu próximo evento e alcance ainda mais pessoas com a plataforma Fauves.
                             </div>
                             <Button
-                              onClick={() => navigate('/create-event')}
+                              onClick={() => navigate('/create')}
                               className="relative inline-flex items-center px-6 py-3 max-sm:px-5 max-sm:py-2.5 font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all duration-200 hover:-translate-y-0.5 shadow-md hover:shadow-lg mt-4"
                             >
                               Criar novo evento
@@ -582,7 +582,7 @@ const OrganizerDashboard = () => {
                       `}</style>
                           <div
                             className="flex items-start bg-[#F6F7FB] dark:bg-[#1A1A1A] rounded-xl px-6 max-sm:px-4 py-5 max-sm:py-4 gap-6 max-sm:gap-3 cursor-pointer hover:shadow-md transition"
-                            onClick={() => navigate(`/painel-evento/${nextEvent.id}`)}
+                            onClick={() => navigate(`/event/manage/${nextEvent.id}`)}
                             role="button"
                             tabIndex={0}
                           >
@@ -634,7 +634,7 @@ const OrganizerDashboard = () => {
                       <div className="text-sm text-center text-slate-700 dark:text-slate-300 w-full max-md:w-full max-md:max-w-[400px] max-sm:text-sm">Adicionar todos os detalhes do seu evento, criar novos ingressos e configurar eventos recorrentes</div>
                       <Button
                         className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold h-[45px] w-[120px] rounded-md"
-                        onClick={() => navigate("/create-event")}
+                        onClick={() => navigate("/create")}
                       >
                         Criar evento
                       </Button>

@@ -47,7 +47,7 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
       return;
     }
     if (!orgName.trim()) {
-      setError("Nome da organização obrigatório");
+      setError("Nome do calendário obrigatório");
       return;
     }
 
@@ -105,10 +105,10 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
           // Special handling for 409 Conflict
           if (res.status === 409) {
             setIsConflictError(true);
-            throw new Error('Já existe uma organização com esse nome cadastrada.');
+            throw new Error('Já existe um calendário com esse nome cadastrado.');
           }
           const err = await res.json().catch(() => ({}));
-          throw new Error(err?.error || err?.message || `Erro ao criar organização (status ${res.status})`);
+          throw new Error(err?.error || err?.message || `Erro ao criar calendário (status ${res.status})`);
         }
         const org = await res.json().catch(() => ({}));
         return org;
@@ -165,7 +165,7 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
       setExiting(false);
       setPhase(0);
       setLoading(false);
-      setError(e?.message || 'Erro ao criar organização');
+      setError(e?.message || 'Erro ao criar calendário');
     }
   };
   if (user === undefined) {
@@ -179,22 +179,22 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
   }
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#F6F7F9]/90">
-        <div className="bg-white rounded-2xl shadow-xl px-8 py-8 flex flex-col items-center border border-[#E5E7EB]" style={{ maxWidth: 420, minWidth: 340 }}>
+      <div className={`fixed inset-0 z-50 flex items-center justify-center ${onClose ? 'bg-black/60 backdrop-blur-sm' : 'bg-[#F6F7F9]/90 dark:bg-[#0c0c0e]/90'}`}>
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl px-8 py-8 flex flex-col items-center border border-[#E5E7EB] dark:border-zinc-800" style={{ maxWidth: 420, minWidth: 340 }}>
           {/* Intentionally no top-right close button: modal must be dismissed only via the Cancel button which navigates back. */}
           {/* if animating, show the circular stepper animation UI */}
           {!fullScreenAnimating && (
             <>
-              <span className="text-[18px] font-bold text-[#091747] text-center mb-7 leading-snug" style={{ lineHeight: 1.25 }}>
-                Crie o perfil da sua organização (V:D6)<br />antes de cadastrar seu evento.
+              <span className="text-[18px] font-bold text-[#091747] dark:text-zinc-100 text-center mb-7 leading-snug" style={{ lineHeight: 1.25 }}>
+                Crie o perfil do seu calendário antes de cadastrar seu evento.
               </span>
               <div className="flex items-center gap-4 w-full justify-center mb-7">
                 <OrgLogoUpload logoUrl={logoUrl} onSelect={handleLogoSelect} />
                 <Input
                   value={orgName}
                   onChange={e => setOrgName(e.target.value)}
-                  placeholder="Nome da organização"
-                  className="flex-1 h-14 rounded-full border border-[#E5E7EB] bg-white px-6 text-base text-[#091747] font-medium shadow-sm focus:ring-2 focus:ring-indigo-200 focus:border-[#2A2AD7]"
+                  placeholder="Nome do calendário"
+                  className="flex-1 h-14 rounded-full border border-[#E5E7EB] dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 text-base text-[#091747] dark:text-zinc-100 font-medium shadow-sm focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 focus:border-[#2A2AD7] dark:focus:border-indigo-500"
                   style={{ maxWidth: 260, minWidth: 180 }}
                 />
               </div>
@@ -250,17 +250,19 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
                 style={{ minHeight: 56, fontSize: 18, background: '#2A2AD7' }}
               >
                 {/* Do not show 'Criando...' on the button — the immersive overlay takes over */}
-                {userLoading ? "Carregando..." : "Criar organização"}
+                {userLoading ? "Carregando..." : "Criar calendário"}
               </Button>
               <div className="w-full mt-3">
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    // navigate back to previous page; do not allow closing the modal in-place
-                    try { navigate(-1); } catch (e) { window.history.back(); }
-                    if (onClose) onClose();
+                    if (onClose) {
+                      onClose();
+                    } else {
+                      try { navigate(-1); } catch (e) { window.history.back(); }
+                    }
                   }}
-                  className="w-full mt-0 text-sm text-gray-700 bg-white border border-[#E5E7EB] hover:bg-gray-50 rounded-full py-3"
+                  className="w-full mt-0 text-sm text-gray-700 dark:text-zinc-300 bg-white dark:bg-zinc-950 border border-[#E5E7EB] dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-900 rounded-full py-3"
                 >
                   Cancelar
                 </Button>
@@ -333,7 +335,7 @@ const RequireOrganization: React.FC<RequireOrganizationProps> = ({ onCreated, on
                     const translateY = -((phase - 1) * lineH);
                     return (
                       <div className="texts-inner" style={{ transform: `translateY(${translateY}px)` }}>
-                        <div className="texts-item text-[18px] font-semibold text-slate-900" style={{ height: lineH, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: phase === 1 ? 1 : 0.25 }}>Criando organização...</div>
+                        <div className="texts-item text-[18px] font-semibold text-slate-900" style={{ height: lineH, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: phase === 1 ? 1 : 0.25 }}>Criando calendário...</div>
                         <div className="texts-item text-[18px] text-slate-400" style={{ height: lineH, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: phase === 2 ? 1 : 0.25 }}>Montando palco...</div>
                         <div className="texts-item text-[18px] text-slate-400" style={{ height: lineH, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: phase === 3 ? 1 : 0.25 }}>Preparando camarim...</div>
                         <div className="texts-item text-[18px] text-slate-400" style={{ height: lineH, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: phase === 4 ? 1 : 0.25 }}>Testando luzes...</div>

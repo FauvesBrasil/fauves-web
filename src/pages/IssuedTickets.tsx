@@ -175,7 +175,7 @@ const IssuedTickets: React.FC = () => {
                     eventStatus={getStatusLabel(event?.status)}
                     onBack={() => navigate('/organizer-events')}
                     eventIdOverride={eventId || null}
-                    panelRoute={`/painel-evento/${eventId}`}
+                    panelRoute={`/event/manage/${eventId}`}
                     fixed
                     fixedLeft={70}
                     fixedWidth={300}

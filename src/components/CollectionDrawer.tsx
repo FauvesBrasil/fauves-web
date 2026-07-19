@@ -3,6 +3,8 @@ import { Upload, Trash2, Plus } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { WarpDialog } from '@/components/WarpDialog';
+import { fetchApi } from '@/lib/apiBase';
+import { FauvesSwitch } from '@/components/v2/FauvesSwitch';
 
 interface CollectionDrawerProps {
   open: boolean;
@@ -102,7 +104,7 @@ const CollectionDrawer: React.FC<CollectionDrawerProps> = ({
           const fd = new FormData();
             fd.append('file', bannerFile);
             // endpoint esperado: /api/upload (baseado no upload.controller.ts) -> deve retornar algo tipo { url: "..." }
-            const up = await fetch('/api/upload', { method: 'POST', body: fd });
+            const up = await fetchApi('/api/upload', { method: 'POST', body: fd });
             if (up.ok) {
               const upJson = await up.json();
               uploadedUrl = upJson?.url || upJson?.path || uploadedUrl;
@@ -247,13 +249,7 @@ const CollectionDrawer: React.FC<CollectionDrawerProps> = ({
               <div className="text-sm font-medium text-indigo-950">Publicar coleção</div>
               <div className="text-[11px] text-indigo-600 mt-0.5">Coleções publicadas ficam acessíveis via link público.</div>
             </div>
-            <button
-              type="button"
-              onClick={()=> setPublished(p=>!p)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${published ? 'bg-indigo-600' : 'bg-gray-300'}`}
-            >
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${published ? 'translate-x-5' : 'translate-x-1'}`} />
-            </button>
+            <FauvesSwitch checked={published} onCheckedChange={setPublished} label="Publicar coleção" />
           </div>
           {errorMsg && (
             <div className="text-sm text-red-600 font-medium bg-red-50 border border-red-200 rounded-lg px-3 py-2">

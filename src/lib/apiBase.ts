@@ -87,6 +87,9 @@ if (typeof window !== 'undefined') {
   // DEV: also patch fetch while developing locally so any relative /api calls
   // are routed to the local backend (127.0.0.1:4000). This avoids the browser
   // hitting stale frontend origins (ex: localhost:3000) when the frontend dev
+  // DEV: also patch fetch while developing locally so any relative /api calls
+  // are routed to the local backend (127.0.0.1:4000). This avoids the browser
+  // hitting stale frontend origins (ex: localhost:3000) when the frontend dev
   // server doesn't serve /api and prevents noisy probes.
   try {
     if (!((window as any).__apiFetchPatchedDev) && window.location) {
@@ -94,21 +97,51 @@ if (typeof window !== 'undefined') {
       if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
         const originalFetchDev = window.fetch.bind(window);
         (window as any).__apiFetchPatchedDev = true;
+
+        // Clean up mock tokens if present
+        const currentToken = window.localStorage.getItem('AUTH_TOKEN_V1');
+        const isMockToken = currentToken === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtb2NrLXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGZhdXZlcy5jb20uYnIiLCJuYW1lIjoiTGV2eSBDYXN0ZWxvIiwiaXNBZG1pbiI6ZmFsc2V9.signature';
+        if (isMockToken) {
+          window.localStorage.removeItem('AUTH_TOKEN_V1');
+        }
+
         window.fetch = async (input: RequestInfo, init?: RequestInit) => {
           try {
+            const urlString = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+            
+            // Intercept auth/me and organization requests to return mock data only if we are using the mock token
+            const currentToken = window.localStorage.getItem('AUTH_TOKEN_V1');
+            const isMockToken = currentToken === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJtb2NrLXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGZhdXZlcy5jb20uYnIiLCJuYW1lIjoiTGV2eSBDYXN0ZWxvIiwiaXNBZG1pbiI6ZmFsc2V9.signature';
+
+            if (isMockToken) {
+              if (urlString.includes('/api/auth/me')) {
+                return new Response(JSON.stringify({
+                  user: {
+                    id: "mock-user-123",
+                    email: "test@fauves.com.br",
+                    name: "Levy Castelo",
+                    isAdmin: false
+                  }
+                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+              }
+            }
+
             if (typeof input === 'string') {
               // rewrite /api, /api/whatever or api/whatever
               if (input === '/api' || input.startsWith('/api/') || /^\.?\/api\//.test(input) || /^api\//.test(input)) {
                 const path = input.startsWith('/') ? input : (input.startsWith('./') ? input.replace(/^\.\//, '/') : '/' + input);
-                const targetBase = (finalEnvBase && !/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(finalEnvBase)) 
+                const targetBase = hasRemoteEnvBase 
                   ? finalEnvBase.replace(/\/$/, '') 
-                  : 'http://127.0.0.1:4000';
+                  : ((h === 'localhost' || h === '127.0.0.1') ? 'http://localhost:4000' : DEFAULT_PROD_BACKEND);
                 input = targetBase + path;
               }
             } else if (input instanceof Request) {
               const reqUrl = new URL(input.url, window.location.origin);
               if (reqUrl.origin === window.location.origin && reqUrl.pathname.startsWith('/api')) {
-                const newUrl = 'http://127.0.0.1:4000' + reqUrl.pathname + reqUrl.search;
+                const targetBase = hasRemoteEnvBase 
+                  ? finalEnvBase.replace(/\/$/, '') 
+                  : ((h === 'localhost' || h === '127.0.0.1') ? 'http://localhost:4000' : DEFAULT_PROD_BACKEND);
+                const newUrl = targetBase + reqUrl.pathname + reqUrl.search;
                 input = new Request(newUrl, input);
               }
             }
@@ -143,12 +176,11 @@ if (isProd) {
   if (stored && !candidates.includes(stored)) candidates.push(stored);
   if (finalEnvBase) candidates.unshift(finalEnvBase); // authoritative
 } else {
-  // In development: prefer localhost candidates first! 
-  // This prevents a stale production URL in localStorage from hijacking the dev session.
-  localCandidates.forEach(b => candidates.push(b));
-  // Add envBase if exists (and not localhost, though we filtered that above)
+  // In development: PRIORITIZE localhost over any envBase (like Railway) to ensure local tests work
+  localCandidates.forEach(b => { if(!candidates.includes(b)) candidates.push(b); });
   if (finalEnvBase && !candidates.includes(finalEnvBase)) candidates.push(finalEnvBase);
-  // Stored is last resort in dev
+  // Ensure the Railway production URL is always a candidate even in dev if localhost fails
+  if (!candidates.includes(DEFAULT_PROD_BACKEND)) candidates.push(DEFAULT_PROD_BACKEND);
   if (stored && !candidates.includes(stored)) candidates.push(stored);
 }
 
@@ -203,9 +235,12 @@ export async function ensureApiBase(force = false): Promise<string> {
   // This ensures the running bundle does not attempt to call the frontend origin and receive 405s
   // while Vercel rewrites or envs are being fixed. Temporary emergency measure.
   try {
-    if (typeof window !== 'undefined' && window.location && window.location.hostname === 'app.fauves.com.br') {
-      resolvedBase = DEFAULT_PROD_BACKEND;
-      return resolvedBase;
+    if (typeof window !== 'undefined' && window.location) {
+      const h = window.location.hostname;
+      if (h === 'app.fauves.com.br') {
+        resolvedBase = DEFAULT_PROD_BACKEND;
+        return resolvedBase;
+      }
     }
   } catch (e) { }
   // If the development fetch override is active, short-circuit resolution and
@@ -215,7 +250,7 @@ export async function ensureApiBase(force = false): Promise<string> {
     if (typeof window !== 'undefined' && (window as any).__apiFetchPatchedDev) {
       const h = window.location && window.location.hostname;
       if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
-        const wanted = 'http://127.0.0.1:4000';
+        const wanted = 'http://localhost:4000';
         if (resolvedBase !== wanted) {
           resolvedBase = wanted;
         }
@@ -389,7 +424,7 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
  */
 export function resolveImageUrl(imagePath: string | null | undefined): string | null {
   if (!imagePath) return null;
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:') || imagePath.startsWith('blob:') || imagePath.startsWith('/src/')) {
     return imagePath;
   }
   const base = resolvedBase || (isProd ? DEFAULT_PROD_BACKEND : 'http://localhost:4000');

@@ -90,7 +90,7 @@ const PublishDetails: React.FC = () => {
   // Guard: if no eventId, redirect back to create-event
   React.useEffect(() => {
     if (!eventId) {
-      navigate('/create-event');
+      navigate('/create');
     }
   }, [eventId, navigate]);
 
@@ -429,7 +429,7 @@ const PublishDetails: React.FC = () => {
       setEventStatus('Publicado');
       // pequena pausa para o overlay ser percebido
       await new Promise(r => setTimeout(r, 800));
-      navigate(`/painel-evento/${eventId}`);
+      navigate(`/event/manage/${eventId}`);
     } catch (e) {
       // fallback: esconder overlay e manter na página
       setTimeout(() => setFlowVisible(false), 300);
@@ -474,7 +474,7 @@ const PublishDetails: React.FC = () => {
             eventName={eventName}
             eventDate={eventDateStr}
             eventStatus={eventStatus}
-            onBack={() => navigate("/organizer-dashboard")}
+            onBack={() => navigate("/organizer-events")}
             onStatusChange={() => { }}
             onViewEvent={() => { }}
           />

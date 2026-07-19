@@ -77,7 +77,7 @@ export default function OrganizerReportsOrders() {
       o.eventLocation,
       o.ticketQuantity,
       o.addonQuantity,
-      o.currency,
+      'BRL',
       o.paymentStatus,
       o.paymentType,
       o.paymentData,
@@ -257,7 +257,7 @@ export default function OrganizerReportsOrders() {
                             <td className="px-6 py-2 dark:text-white">{order.eventLocation}</td>
                             <td className="px-6 py-2 dark:text-white">{order.ticketQuantity}</td>
                             <td className="px-6 py-2 dark:text-white">{order.addonQuantity}</td>
-                            <td className="px-6 py-2 dark:text-white">{order.currency}</td>
+                            <td className="px-6 py-2 dark:text-white">BRL</td>
                             <td className="px-6 py-2 dark:text-white">{order.paymentStatus}</td>
                             <td className="px-6 py-2 dark:text-white">{order.paymentType}</td>
                             <td className="px-6 py-2 dark:text-white">{order.paymentData}</td>

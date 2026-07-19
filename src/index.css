@@ -1,6 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --page-top-spacing: 100px;
+  --page-top-spacing-mobile: 80px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --page-top-spacing: var(--page-top-spacing-mobile);
+  }
+}
+
+/* Ação secundária compacta usada em cards e cabeçalhos V2. */
+.v2-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 30px;
+  padding: 0.3125rem 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  color: rgba(19, 21, 23, 0.64);
+  background: rgba(19, 21, 23, 0.04);
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color 0.2s cubic-bezier(.4, 0, .2, 1),
+              color 0.2s cubic-bezier(.4, 0, .2, 1),
+              border-color 0.2s cubic-bezier(.4, 0, .2, 1);
+}
+
+.v2-secondary-action:hover {
+  color: rgba(19, 21, 23, 0.9);
+  background: rgba(19, 21, 23, 0.08);
+  border-color: rgba(19, 21, 23, 0.02);
+}
+
+.dark .v2-secondary-action,
+.dark-mode .v2-secondary-action {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dark .v2-secondary-action:hover,
+.dark-mode .v2-secondary-action:hover {
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.02);
+}
+
+.v2-secondary-action svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  stroke-width: 2;
+}
+
+/* Superfície única para menus, selects e demais elementos flutuantes. */
+.fauves-floating-surface {
+  background-color: rgba(250, 250, 251, 0.82) !important;
+  border-color: rgba(19, 21, 23, 0.12) !important;
+  box-shadow: 0 18px 48px rgba(10, 12, 16, 0.2), 0 2px 10px rgba(10, 12, 16, 0.08) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+}
+
+.dark .fauves-floating-surface,
+.dark-mode .fauves-floating-surface,
+[data-theme-dark="true"] .fauves-floating-surface {
+  background-color: rgba(37, 38, 40, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.46), 0 2px 12px rgba(0, 0, 0, 0.24) !important;
+}
+
+.fauves-modal-surface {
+  background-color: rgba(250, 250, 251, 0.9) !important;
+  border-color: rgba(19, 21, 23, 0.1) !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.3) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(165%) !important;
+  backdrop-filter: blur(32px) saturate(165%) !important;
+}
+
+.dark .fauves-modal-surface,
+.dark-mode .fauves-modal-surface,
+[data-theme-dark="true"] .fauves-modal-surface {
+  background-color: rgba(27, 28, 29, 0.88) !important;
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Compatibilidade para dropdowns locais anteriores aos primitives compartilhados. */
+:where(
+  [class*="absolute"][class*="shadow-2xl"][class*="bg-[#242526]"],
+  [class*="absolute"][class*="shadow-2xl"][class*="bg-[#292a2b]"],
+  [class*="absolute"][class*="shadow-2xl"][class*="bg-[#292a2c]"],
+  [class*="absolute"][class*="shadow-2xl"][class*="bg-[#18181b]"],
+  [class*="absolute"][class*="shadow-2xl"][class*="bg-[#181a1f]"],
+  [class*="absolute"][class*="shadow-xl"][class*="bg-[#1c1c21]"],
+  [class*="absolute"][class*="shadow-xl"][class*="bg-zinc-950"],
+  [class*="absolute"][class*="shadow-2xl"][class*="bg-[#252627]"],
+  [class*="absolute"][class*="shadow-2xl"][class*="bg-[#2a2b2d]"],
+  [class*="absolute"][class*="shadow-lg"][class*="dark:bg-[#242424]"],
+  [class*="absolute"][class*="shadow-lg"][class*="dark:bg-[#181a1f]"],
+  [class*="shadow-2xl"][class*="overflow-hidden"][class*="dark:bg-[#242424]"]
+) {
+  background-color: rgba(37, 38, 40, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.46), 0 2px 12px rgba(0, 0, 0, 0.24) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+}
+
+:where(.color-popover, .style-popover, .font-popover, .pattern-picker-popover) {
+  background-color: rgba(250, 250, 251, 0.82) !important;
+  border-color: rgba(19, 21, 23, 0.12) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+}
+
+.dark :where(.color-popover, .style-popover, .font-popover, .pattern-picker-popover),
+[data-theme-dark="true"] :where(.color-popover, .style-popover, .font-popover, .pattern-picker-popover) {
+  background-color: rgba(37, 38, 40, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Fallback semântico: cobre menus acessíveis criados fora da biblioteca visual. */
+:where([role="menu"], [role="listbox"]):not([data-fauves-solid="true"]) {
+  background-color: rgba(250, 250, 251, 0.82) !important;
+  border-color: rgba(19, 21, 23, 0.12) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+}
+
+.dark :where([role="menu"], [role="listbox"]):not([data-fauves-solid="true"]),
+.dark-mode :where([role="menu"], [role="listbox"]):not([data-fauves-solid="true"]),
+[data-theme-dark="true"] :where([role="menu"], [role="listbox"]):not([data-fauves-solid="true"]) {
+  background-color: rgba(37, 38, 40, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
 
 /* Prevent horizontal scroll and zoom on mobile */
 html {
@@ -114,7 +255,7 @@ body {
   animation: pulse-orange-bg 2.2s infinite;
 }
 
-/* Base font family */
+/* Base font family - Aggressive Inter font-family lock for V2 parity */
 html,
 body,
 #root,
@@ -127,8 +268,14 @@ h6,
 button,
 input,
 textarea,
-select {
-  font-family: 'DM Sans', sans-serif;
+select,
+.font-sans,
+[class*="font-sans"],
+.theme-root,
+.theme-root *,
+.luma-theme,
+.luma-theme * {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
 @layer utilities {
@@ -261,15 +408,15 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Use exact background requested for dark theme: #0A0A0A ≈ hsl(0 0% 3.9%) */
-    --background: 0 0% 3.9%;
+    /* Use exact background requested for dark theme: #131517 ≈ hsl(210 9.5% 8.2%) */
+    --background: 210 9.5% 8.2%;
     --foreground: 210 40% 98%;
 
-    /* Card background in dark mode: use exact #242424 as HSL (0 0% 14.1%) */
-    --card: 0 0% 14.1%;
+    /* Card background in dark mode: use exact #1e1f22 as HSL (225 6.6% 12.5%) */
+    --card: 225 6.6% 12.5%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 14.1%;
+    --popover: 225 6.6% 12.5%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 40% 98%;
@@ -476,11 +623,169 @@ All colors MUST be HSL.
 .dark input,
 .dark textarea,
 .dark select {
-  color: white;
+  color: #f3f4f6; /* gray-100 */
 }
 
 .dark input::placeholder,
 .dark textarea::placeholder {
-  color: #94a3b8;
-  /* slate-400 */
+  color: #737373 !important; /* Neutral-500: neutral gray, not blueish */
+  opacity: 1;
+}
+
+/* Also target webkit/moz engines explicitly for placeholders */
+.dark input::-webkit-input-placeholder,
+.dark textarea::-webkit-input-placeholder {
+  color: #737373 !important;
+}
+
+.dark input::-moz-placeholder,
+.dark textarea::-moz-placeholder {
+  color: #737373 !important;
+}
+
+.dark input:-ms-input-placeholder,
+.dark textarea:-ms-input-placeholder {
+  color: #737373 !important;
+}
+
+/* ==========================================
+   SISTEMA DE PADRÕES GEOMÉTRICOS DO TEMA PADRÃO (LUMA-LIKE)
+   ========================================== */
+
+/* Container com suporte a padrão */
+.theme-pattern-container {
+  position: relative;
+}
+
+.pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: var(--theme-accent, currentColor);
+}
+
+/* Pseudo-elemento do padrão com máscara CSS para herdar dinamicamente a cor de acento */
+.theme-pattern-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-color: var(--theme-accent, currentColor);
+  opacity: 0.12; /* sutil e luxuoso no claro */
+  transition: opacity 0.5s ease, background-color 0.5s ease;
+}
+
+[data-theme-dark="true"] .theme-pattern-bg {
+  opacity: 0.08; /* mais suave no escuro para manter o contraste perfeito */
+}
+
+/* Máscaras geométricas vetoriais de altíssima definição */
+.pattern-cross {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M16 8v16M8 16h16'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M16 8v16M8 16h16'/%3E%3C/svg%3E");
+  -webkit-mask-size: 32px 32px;
+  mask-size: 32px 32px;
+}
+
+.pattern-hypnotic {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='black' stroke-width='1.8'%3E%3Ccircle cx='20' cy='20' r='17'/%3E%3Ccircle cx='20' cy='20' r='11'/%3E%3Ccircle cx='20' cy='20' r='5'/%3E%3C/g%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='black' stroke-width='1.8'%3E%3Ccircle cx='20' cy='20' r='17'/%3E%3Ccircle cx='20' cy='20' r='11'/%3E%3Ccircle cx='20' cy='20' r='5'/%3E%3C/g%3E%3C/svg%3E");
+  -webkit-mask-size: 40px 40px;
+  mask-size: 40px 40px;
+}
+
+.pattern-plus {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M12 6v12M6 12h12M36 30v12M30 36h12'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M12 6v12M6 12h12M36 30v12M30 36h12'/%3E%3C/svg%3E");
+  -webkit-mask-size: 48px 48px;
+  mask-size: 48px 48px;
+}
+
+.pattern-polkadot {
+  -webkit-mask-image: radial-gradient(black 2.5px, transparent 2.5px);
+  mask-image: radial-gradient(black 2.5px, transparent 2.5px);
+  -webkit-mask-size: 28px 28px;
+  mask-size: 28px 28px;
+}
+
+.pattern-wave {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='24' viewBox='0 0 60 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M0 12c15-10 15 10 30 0s15-10 30 0'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='24' viewBox='0 0 60 24'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M0 12c15-10 15 10 30 0s15-10 30 0'/%3E%3C/svg%3E");
+  -webkit-mask-size: 60px 24px;
+  mask-size: 60px 24px;
+}
+
+.pattern-zigzag {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M0 10l10-8 10 8 10-8 10 8'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'%3E%3Cpath fill='none' stroke='black' stroke-width='1.8' d='M0 10l10-8 10 8 10-8 10 8'/%3E%3C/svg%3E");
+  -webkit-mask-size: 40px 20px;
+  mask-size: 40px 20px;
+}
+
+.pattern-grid {
+  -webkit-mask-image: linear-gradient(black 1.2px, transparent 1.2px), linear-gradient(90deg, black 1.2px, transparent 1.2px);
+  mask-image: linear-gradient(black 1.2px, transparent 1.2px), linear-gradient(90deg, black 1.2px, transparent 1.2px);
+  -webkit-mask-size: 32px 32px;
+  mask-size: 32px 32px;
+}
+
+.pattern-diamond {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect x='18' y='0' width='25.46' height='25.46' transform='rotate(45 18 0)' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Crect x='18' y='0' width='25.46' height='25.46' transform='rotate(45 18 0)' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
+  -webkit-mask-size: 36px 36px;
+  mask-size: 36px 36px;
+}
+
+/* Luma Custom Cards Consistency classes */
+:root {
+  --card-border-radius: .75rem;
+  --content-card-vertical-padding: 1rem;
+  --content-card-horizontal-padding: 1.125rem;
+  --card-bg-color: rgba(255, 255, 255, 0.8);
+  --card-border-color: white;
+  --card-backdrop-filter: blur(8px);
+}
+
+.dark, [data-theme-dark="true"], .theme-root.dark {
+  --card-bg-color: rgba(255, 255, 255, 0.04);
+  --card-border-color: #262626 !important; /* Neutral-800: clean gray border in dark mode instead of blueish/white */
+}
+
+.content-card {
+  background-color: var(--card-bg-color) !important;
+  border: 1px solid var(--card-border-color) !important;
+  -webkit-backdrop-filter: var(--card-backdrop-filter);
+  backdrop-filter: var(--card-backdrop-filter);
+  box-shadow: var(--card-shadow);
+  position: relative;
+  overflow: hidden;
+  padding: var(--content-card-vertical-padding) var(--content-card-horizontal-padding) !important;
+}
+
+.rounded-card {
+  border-radius: var(--card-border-radius) !important;
+}
+
+.fauves-button-secondary {
+  transition: all 0.3s ease !important;
+  color: rgba(255, 255, 255, 0.64) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0) !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  height: 30px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 0 10px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  outline: none !important;
+}
+
+.fauves-button-secondary:hover {
+  color: rgb(19, 21, 23) !important;
+  background-color: rgba(255, 255, 255, 0.64) !important;
 }

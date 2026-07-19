@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import HelpHeader from '@/components/HelpHeader';
+import { fetchApi } from '@/lib/apiBase';
+import { getArticlesByCategory, getCategoryBySlug } from '@/data/helpArticles';
 
 interface Article {
     id: string;
@@ -22,32 +24,47 @@ interface Category {
 }
 
 const HelpCategory = () => {
-    const { categorySlug } = useParams();
+    const { categorySlug, slug } = useParams();
+    const resolvedCategorySlug = categorySlug || slug;
     const navigate = useNavigate();
     const [category, setCategory] = useState<Category | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
 
     useEffect(() => {
-        if (categorySlug) {
+        if (resolvedCategorySlug) {
             loadCategory();
         }
-    }, [categorySlug]);
+    }, [resolvedCategorySlug]);
 
     const loadCategory = async () => {
         try {
-            const response = await fetch(`http://localhost:4000/api/help/categories/${categorySlug}`);
+            const response = await fetchApi(`/api/help/categories/${encodeURIComponent(resolvedCategorySlug || '')}`);
 
             if (!response.ok) {
-                setError(true);
-                return;
+                throw new Error('Categoria não encontrada na API');
             }
 
             const data = await response.json();
             setCategory(data);
-        } catch (error) {
-            // no-op
-            setError(true);
+        } catch {
+            const localCategory = resolvedCategorySlug ? getCategoryBySlug(resolvedCategorySlug) : undefined;
+            if (localCategory) {
+                setCategory({
+                    ...localCategory,
+                    articles: getArticlesByCategory(localCategory.id).map((article) => ({
+                        id: article.id,
+                        title: article.title,
+                        slug: article.slug,
+                        summary: article.summary,
+                        popular: Boolean(article.popular),
+                        views: 0,
+                    })),
+                });
+                setError(false);
+            } else {
+                setError(true);
+            }
         } finally {
             setLoading(false);
         }
