@@ -57,21 +57,23 @@ export function ProtectedOrganizerRoute({
   // Don't render until all checks pass
   if (!user) {
     return (
-      <div className="relative min-h-screen">
-        {/* Renderiza o conteúdo real da página desabilitado no fundo */}
-        <div className="pointer-events-none select-none filter blur-[4px]">
+      <div className="relative min-h-[100svh] overflow-hidden bg-[#111416]">
+        <div aria-hidden="true" className="pointer-events-none select-none opacity-45">
           {children}
         </div>
-        
-        {/* Modal de login moderno V2 forçado (backdrop blur integrado) */}
-        <SignInModalV2 
-          open={true} 
-          onClose={() => {}} 
-          preventClose={true} 
-          onSuccess={async () => {
-            if (refresh) await refresh();
-          }} 
-        />
+
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[7px]">
+          <SignInModalV2
+            open
+            pageMode
+            redirectPath={location.pathname}
+            onClose={() => {}}
+            preventClose
+            onSuccess={async () => {
+              if (refresh) await refresh();
+            }}
+          />
+        </div>
       </div>
     );
   }

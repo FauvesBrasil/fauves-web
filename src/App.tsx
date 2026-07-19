@@ -198,6 +198,7 @@ const AppInner = () => {
           <Route path="/" element={<FauvesHome />} />
           <Route path="/v2" element={<IndexV2 />} />
           <Route path="/signin" element={<SignInPage />} />
+          <Route path="/login" element={<SignInPage />} />
           <Route path="/map" element={<FullMapPage />} />
           <Route path="/v2/map" element={<Navigate to="/map" replace />} />
           <Route path="/:calendarSlug/map" element={<FullMapPage />} />
@@ -358,7 +359,7 @@ const AppInner = () => {
       <LoginWelcomeOverlay />
       {/* Hide ChatWidget on admin and organizer pages */}
       {location.pathname !== '/' &&
-        !['/termos-de-uso', '/politica-de-privacidade', '/seguranca', '/dmca'].includes(location.pathname) &&
+        !['/login', '/signin', '/termos-de-uso', '/politica-de-privacidade', '/seguranca', '/dmca'].includes(location.pathname) &&
         !location.pathname.startsWith('/admin') &&
         !location.pathname.startsWith('/organizer') &&
         !location.pathname.startsWith('/create') &&
@@ -383,7 +384,7 @@ const AuthModalWrapper = () => {
     <LoginModal 
       open={isLoginModalOpen} 
       onClose={closeLoginModal} 
-      redirectPath={loginModalRedirect} 
+      redirectPath={loginModalRedirect || '/events'} 
     />
   );
 };

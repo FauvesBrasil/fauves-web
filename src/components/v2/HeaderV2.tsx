@@ -399,7 +399,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   fixed = false,
   theme,
   actionButtonText = 'Entrar',
-  actionButtonLink = '/signin',
+  actionButtonLink = '/login',
   explorarLink = '/discover',
   explorarText = 'Explorar',
   scrollTransition = true,

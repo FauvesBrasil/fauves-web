@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -10,17 +11,22 @@ import heroVideo from '@/assets/0719.mp4';
 
 const FauvesHome = () => {
   const navigate = useNavigate();
-  const { user, openLoginModal } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   useSEO({
     title: 'Fauves · Eventos que deixam marca',
     description: 'Crie eventos, venda ingressos e transforme encontros em experiências inesquecíveis com a Fauves.',
   });
 
-  const startCreating = () => {
-    if (user) navigate('/create');
-    else openLoginModal('/create');
-  };
+  useEffect(() => {
+    if (!authLoading && user) navigate('/events', { replace: true });
+  }, [authLoading, user, navigate]);
+
+  const startCreating = () => navigate('/create');
+
+  if (authLoading || user) {
+    return <div className="min-h-[100svh] bg-[#111416]" />;
+  }
 
   return (
     <div className="fauves-home flex min-h-[100svh] flex-col overflow-hidden bg-[#111416] text-white selection:bg-[#2A2AD7] selection:text-white">

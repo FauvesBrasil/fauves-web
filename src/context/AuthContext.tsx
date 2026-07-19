@@ -272,8 +272,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.localStorage.removeItem(LS_TOKEN_KEY); 
       window.localStorage.setItem('EXPLICIT_LOGOUT', 'true');
     } catch {}
-    // Force reload to ensure all components reset their state
-    setTimeout(() => window.location.reload(), 100);
+    // Return to the public landing and reload so every authenticated state is cleared.
+    setTimeout(() => window.location.assign('/'), 100);
   }, []);
 
   const openLoginModal = useCallback((redirect?: string) => {

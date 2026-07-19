@@ -25,9 +25,16 @@
               }
             } catch(e) {}
 
-            // Not a popup (direct navigation) -> redirect to home with token still in query (AuthProvider will pick it up)
-            const home = '/?auth_token=' + encodeURIComponent(token);
-            window.location.replace(home);
+            // Not a popup: preserve the page that initiated login, defaulting to the authenticated home.
+            let destination = '/events';
+            try {
+              const pending = sessionStorage.getItem('FAUVES_OAUTH_REDIRECT');
+              if (pending && pending.startsWith('/') && !pending.startsWith('//')) destination = pending;
+              sessionStorage.removeItem('FAUVES_OAUTH_REDIRECT');
+              sessionStorage.setItem('FAUVES_LOGIN_WELCOME_PENDING', 'true');
+            } catch(e) {}
+            const separator = destination.includes('?') ? '&' : '?';
+            window.location.replace(destination + separator + 'auth_token=' + encodeURIComponent(token));
             return;
           }
         } catch (e) {}

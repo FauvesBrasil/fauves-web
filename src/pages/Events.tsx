@@ -144,7 +144,7 @@ const Events = () => {
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !user) navigate('/signin?redirect=/events');
+    if (!authLoading && !user) navigate('/login?redirect=/events');
   }, [authLoading, user, navigate]);
 
   // Sincroniza a largura máxima do header com o conteúdo abaixo

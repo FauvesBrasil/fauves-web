@@ -10,6 +10,7 @@ interface SignInModalV2Props {
   onSuccess?: () => void;
   preventClose?: boolean;
   pageMode?: boolean;
+  redirectPath?: string;
 }
 
 const LumaSignInStyles = () => (
@@ -342,6 +343,7 @@ export default function SignInModalV2({
   onSuccess,
   preventClose = false,
   pageMode = false,
+  redirectPath,
 }: SignInModalV2Props) {
   const { requestOtp, loginWithOtp } = useAuth();
 
@@ -443,7 +445,43 @@ export default function SignInModalV2({
   };
 
   const handleGoogleLogin = () => {
-    window.location.assign(apiUrl('/api/auth/google'));
+    const destination = redirectPath || '/events';
+    try {
+      window.sessionStorage.setItem('FAUVES_OAUTH_REDIRECT', destination);
+    } catch { /* storage can be unavailable in private contexts */ }
+
+    const oauthUrl = apiUrl('/api/auth/google');
+    const width = 600;
+    const height = 700;
+    const left = Math.max(0, Math.round((window.screen.width - width) / 2));
+    const top = Math.max(0, Math.round((window.screen.height - height) / 2));
+    const popup = window.open(oauthUrl, 'fauves_oauth', `toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=${width},height=${height},top=${top},left=${left}`);
+
+    if (!popup) {
+      window.location.assign(oauthUrl);
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== popup) return;
+      if (event.data?.type !== 'fauves_oauth' || !event.data?.token) return;
+      try {
+        window.localStorage.setItem('AUTH_TOKEN_V1', event.data.token);
+        window.sessionStorage.setItem('FAUVES_LOGIN_WELCOME_PENDING', 'true');
+        window.sessionStorage.removeItem('FAUVES_OAUTH_REDIRECT');
+      } catch { /* AuthProvider will still validate persisted auth when possible */ }
+      window.removeEventListener('message', handleMessage);
+      try { popup.close(); } catch { /* popup may already be closed */ }
+      window.location.assign(destination);
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    const popupWatcher = window.setInterval(() => {
+      if (!popup.closed) return;
+      window.clearInterval(popupWatcher);
+      window.removeEventListener('message', handleMessage);
+    }, 500);
   };
 
   if (!open) return null;

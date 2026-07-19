@@ -7,7 +7,10 @@ export default function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const sp = new URLSearchParams(location.search);
-  const redirect = sp.get('redirect') || (location.state as any)?.from?.pathname || '/v2';
+  const requestedRedirect = sp.get('redirect') || (location.state as any)?.from?.pathname || '/events';
+  const redirect = requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//')
+    ? requestedRedirect
+    : '/events';
 
   const handleSuccess = () => {
     navigate(redirect, { replace: true });
@@ -21,7 +24,7 @@ export default function SignInPage() {
         theme="dark"
         scrollTransition={false}
         actionButtonText="Entrar"
-        actionButtonLink="/signin"
+        actionButtonLink="/login"
         explorarLink="/discover"
         explorarText="Descobrir eventos"
       />
@@ -32,6 +35,7 @@ export default function SignInPage() {
           onClose={() => navigate('/v2')} 
           preventClose={true} 
           pageMode
+          redirectPath={redirect}
           onSuccess={handleSuccess}
         />
       </main>
