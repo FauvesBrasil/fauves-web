@@ -15,7 +15,7 @@ export function ProtectedOrganizerRoute({
 }: ProtectedOrganizerRouteProps) {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { selectedOrg, loading: orgLoading, refresh } = useOrganization();
+  const { selectedOrg, loading: orgLoading, refresh, error, hasAttemptedRefresh } = useOrganization();
   const params = useParams<{ id?: string; eventId?: string }>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -25,7 +25,7 @@ export function ProtectedOrganizerRoute({
 
   useEffect(() => {
     // Only check if we're not loading and don't have the required data
-    if (authLoading || orgLoading) return;
+    if (authLoading || orgLoading || !hasAttemptedRefresh) return;
 
     // Check 1: User must be logged in
     if (!user) {
@@ -37,11 +37,11 @@ export function ProtectedOrganizerRoute({
       navigate('/organizer-events', { replace: true });
       return;
     }
-  }, [user, authLoading, orgLoading, requireEventId, eventId, navigate]);
+  }, [user, authLoading, orgLoading, hasAttemptedRefresh, requireEventId, eventId, navigate]);
 
   // Show loading only on the FIRST load when we don't have user data yet
   // If we already have user/org, render immediately to avoid flash
-  const isFirstLoad = (authLoading && !user) || (orgLoading && user);
+  const isFirstLoad = (authLoading && !user) || (orgLoading && user) || (user && !hasAttemptedRefresh);
   
   if (isFirstLoad) {
     return (
@@ -78,6 +78,29 @@ export function ProtectedOrganizerRoute({
     );
   }
 
+  // Se houver erro ao conectar com o banco/servidor, mostramos uma tela amigável ao invés de forçar criação de calendário
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-background text-foreground text-center">
+        <div className="max-w-md space-y-4">
+          <div className="inline-flex p-3 bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold">Falha ao conectar com o servidor</h2>
+          <p className="text-sm text-muted-foreground">{error}. Por favor, tente recarregar.</p>
+          <button 
+            onClick={() => refresh && refresh()} 
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium transition-colors rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Se o usuário não possui organização/calendário, redireciona para a página V2 de criação
   if (!selectedOrg) {
     return (
@@ -91,4 +114,3 @@ export function ProtectedOrganizerRoute({
 
   return <>{children}</>;
 }
-

@@ -29,6 +29,7 @@ let finalEnvBase = envBase;
 if (isProd) {
   finalEnvBase = DEFAULT_PROD_BACKEND;
 }
+const hasRemoteEnvBase = !!finalEnvBase;
 // In development, ignore build-time env bases that point to localhost (they often
 // come from CI or incorrect configs and cause the client to probe a non-existent
 // host like :3000). Keep this only for non-production to avoid breaking intended setups.
