@@ -6,7 +6,7 @@ import { useSEO } from '@/hooks/useSEO';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import FooterV2 from '@/components/v2/FooterV2';
 import fauvesLogo from '@/assets/logo-fauves.svg';
-import heroVideo from '../../frontend/src/assets/0719.mp4';
+import heroVideo from '@/assets/0719.mp4';
 
 const FauvesHome = () => {
   const navigate = useNavigate();
