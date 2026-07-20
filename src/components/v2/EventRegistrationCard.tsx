@@ -221,11 +221,11 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
   const isSingleTicket = visibleTickets.length === 1;
   const greetingName = user?.name?.split(' ')[0] || 'Visitante';
   const actionLabel: Record<RegistrationAction, string> = {
-    checkout: isSingleTicket ? 'Pegar Ingresso' : 'Cadastrar-se',
+    checkout: 'Pegar ingresso',
     rsvp: 'RSVP com um clique',
     register: 'Cadastrar-se',
     request: 'Solicitar participação',
-    waitlist: 'Entrar na Lista de Espera',
+    waitlist: 'Entrar na Lista de espera',
     closed: '',
   };
 
