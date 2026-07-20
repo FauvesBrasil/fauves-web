@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { fetchApi } from '@/lib/apiBase';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import ArticleViewer from './ArticleViewer';
 
 interface Message {
@@ -382,10 +383,7 @@ const ChatWidget = () => {
     useEffect(() => {
         const isMobile = window.innerWidth < 768; // md breakpoint
         if (isOpen && !isMinimized && isMobile) {
-            document.body.style.overflow = 'hidden';
-            return () => {
-                document.body.style.overflow = '';
-            };
+            return acquireDocumentScrollLock();
         }
     }, [isOpen, isMinimized]);
 

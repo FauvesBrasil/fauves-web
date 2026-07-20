@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/apiBase';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 
 type CalendarMember = {
   id?: string;
@@ -374,8 +375,7 @@ export function CalendarPeoplePanel({ isPersonal, members, tiers, onCreateTier, 
 
   React.useEffect(() => {
     if (!addStep && !selectedMember) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseScrollLock = acquireDocumentScrollLock();
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       if (selectedMember) setSelectedMember(null);
@@ -383,7 +383,7 @@ export function CalendarPeoplePanel({ isPersonal, members, tiers, onCreateTier, 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [addStep, selectedMember]);

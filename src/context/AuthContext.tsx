@@ -3,8 +3,10 @@ import { fetchApi } from '@/lib/apiBase';
 
 interface AuthUser { id: string; email: string; name?: string | null; isAdmin?: boolean; photoUrl?: string | null; cpf?: string | null; phone?: string | null }
 interface AuthState { user: AuthUser | null; token: string | null; loading: boolean }
-interface AuthContextValue extends AuthState { 
-  login(email: string, password: string): Promise<boolean>; 
+interface PasswordLoginResult { success: boolean; twoFactorRequired?: boolean; challengeToken?: string; message?: string }
+interface AuthContextValue extends AuthState {
+  login(email: string, password: string): Promise<PasswordLoginResult>;
+  completeTwoFactorLogin(challengeToken: string, code: string): Promise<PasswordLoginResult>;
   requestOtp(email: string): Promise<{ success: boolean; message?: string }>;
   loginWithOtp(email: string, otp: string): Promise<{ success: boolean; message?: string }>;
   logout(): void; 
@@ -187,36 +189,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return p;
   }, [token, user]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const persistLogin = useCallback((data: any, fallbackEmail: string): PasswordLoginResult => {
+    if (!data?.token) return { success: false };
+    const signedInUser: AuthUser = {
+      id: data.user?.id || data.user?.sub || fallbackEmail,
+      email: data.user?.email || fallbackEmail,
+      name: data.user?.name ?? data.user?.nome ?? null,
+      isAdmin: Boolean(data.user?.isAdmin),
+      photoUrl: data.user?.photoUrl ?? data.user?.photo ?? data.user?.avatarUrl ?? getAvatarFallback(data.user?.email || fallbackEmail),
+      cpf: data.user?.cpf || null,
+      phone: data.user?.phone || null,
+    };
+    setToken(data.token);
+    setUser(signedInUser);
+    setLoginWelcomeUser(signedInUser);
+    try {
+      window.localStorage.setItem(LS_TOKEN_KEY, data.token);
+      window.localStorage.removeItem('EXPLICIT_LOGOUT');
+    } catch {}
+    return { success: true };
+  }, []);
+
+  const login = useCallback(async (email: string, password: string): Promise<PasswordLoginResult> => {
     try {
       const res = await fetchApi('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-      if (!res.ok) return false;
+      if (!res.ok) return { success: false, message: 'Credenciais inválidas' };
       const data = await res.json();
-      if (data?.token) {
-        const signedInUser: AuthUser = {
-          id: data.user?.id || data.user?.sub || email,
-          email: data.user?.email || email,
-          name: data.user?.name ?? data.user?.nome ?? null,
-          isAdmin: Boolean(data.user?.isAdmin),
-          photoUrl: data.user?.photoUrl ?? data.user?.photo ?? data.user?.avatarUrl ?? getAvatarFallback(data.user?.email || email),
-          cpf: data.user?.cpf || null,
-          phone: data.user?.phone || null,
-        };
-        setToken(data.token);
-        setUser(signedInUser);
-        setLoginWelcomeUser(signedInUser);
-        try { 
-          window.localStorage.setItem(LS_TOKEN_KEY, data.token); 
-          window.localStorage.removeItem('EXPLICIT_LOGOUT');
-        } catch {}
-        return true;
-      }
-      return false;
+      if (data?.twoFactorRequired && data?.challengeToken) return { success: false, twoFactorRequired: true, challengeToken: data.challengeToken };
+      return persistLogin(data, email);
     } catch (e) {
-      // no-op
-      return false;
+      return { success: false, message: 'Erro de conexão' };
     }
-  }, []);
+  }, [persistLogin]);
+
+  const completeTwoFactorLogin = useCallback(async (challengeToken: string, code: string): Promise<PasswordLoginResult> => {
+    try {
+      const response = await fetchApi('/api/auth/login/2fa', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ challengeToken, code }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return { success: false, message: data.message || data.error || 'Código inválido ou expirado' };
+      return persistLogin(data, data.user?.email || '');
+    } catch {
+      return { success: false, message: 'Erro de conexão' };
+    }
+  }, [persistLogin]);
 
   const requestOtp = useCallback(async (email: string) => {
     try {
@@ -267,6 +284,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(() => {
+    if (token) {
+      void fetchApi('/account-settings/security/session/current', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
     setToken(null); setUser(null);
     try { 
       window.localStorage.removeItem(LS_TOKEN_KEY); 
@@ -285,7 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoginModalOpen(false);
     // Delay clearing redirect so modal can finish transitions if needed
     setTimeout(() => setLoginModalRedirect(undefined), 300);
-  }, []);
+  }, [token]);
 
   const dismissLoginWelcome = useCallback(() => {
     setLoginWelcomeUser(null);
@@ -303,7 +326,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user, 
     token, 
     loading, 
-    login, 
+    login,
+    completeTwoFactorLogin,
     requestOtp,
     loginWithOtp,
     logout, 

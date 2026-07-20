@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import HeaderV2 from '../components/v2/HeaderV2';
-import FooterV2 from '../components/v2/FooterV2';
 import { useAuth } from '@/context/AuthContext';
-import { fetchApi, apiUrl, resolveImageUrl } from '@/lib/apiBase';
+import { fetchApi, apiUrl } from '@/lib/apiBase';
 import LoginModal from '@/components/LoginModal';
+import { useTheme } from '@/context/ThemeContext';
 
 import displaySystem from '@/assets/display-system.jpg';
 import displayLight from '@/assets/display-light.jpg';
@@ -59,26 +59,6 @@ const AppleIcon = () => (
     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
   </svg>
 );
-const ZoomIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="#2D8CFF">
-    <path d="M4.5 8.25v7.5a3.75 3.75 0 0 0 3.75 3.75h7.5a3.75 3.75 0 0 0 3.75-3.75v-7.5A3.75 3.75 0 0 0 15.75 4.5h-7.5A3.75 3.75 0 0 0 4.5 8.25zm12 1.5 3 -2.25v9l-3 -2.25z"/>
-  </svg>
-);
-const SolanaIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 397.7 311.7" fill="currentColor">
-    <linearGradient id="sol1" gradientUnits="userSpaceOnUse" x1="360.879" y1="351.455" x2="141.213" y2="-69.294" gradientTransform="matrix(1 0 0 -1 0 314)">
-      <stop offset="0" stopColor="#00FFA3"/><stop offset="1" stopColor="#DC1FFF"/>
-    </linearGradient>
-    <path fill="url(#sol1)" d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/>
-    <path fill="url(#sol1)" d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/>
-    <path fill="url(#sol1)" d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/>
-  </svg>
-);
-const EthIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="#627EEA">
-    <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
-  </svg>
-);
 const PlusIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -131,7 +111,7 @@ const PhoneIcon = () => (
   </svg>
 );
 const SaveIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
   </svg>
 );
@@ -150,7 +130,8 @@ const TAB_PATH_MAP: Record<string, 'conta' | 'preferencias' | 'pagamento'> = {
 
 /* ─── MAIN COMPONENT ─────────────────────────────────────────────────────── */
 const AccountSettingsV2: React.FC = () => {
-  const { user, token, loading } = useAuth();
+  const { user, token, loading, logout } = useAuth();
+  const { isDark } = useTheme();
   const { tab: tabParam } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
 
@@ -187,13 +168,31 @@ const AccountSettingsV2: React.FC = () => {
   const [emails, setEmails] = useState<{ address: string; primary: boolean }[]>([]);
 
   // Phone
-  const [phone, setPhone] = useState('+55 98 99110 2121');
+  const [phone, setPhone] = useState('');
 
-  // Devices
-  const devices = [
-    { id: '1', browser: 'Safari no macOS', location: 'Fortaleza, BR', isActive: true, date: '' },
-    { id: '2', browser: 'Opera no Windows', location: 'Fortaleza, BR', isActive: false, date: 'Ativo 8 de jun.' },
-  ];
+  type ActiveDevice = { id: string; browser: string; location: string; isCurrent: boolean; createdAt?: string; lastSeenAt?: string };
+  const [securityOverview, setSecurityOverview] = useState<{
+    twoFactorEnabled: boolean;
+    passkeys: Array<{ id: string; label: string; createdAt: string }>;
+    connections: { google: { connected: boolean; email?: string }; apple: { connected: boolean; available?: boolean } };
+    googleContacts: { connected: boolean; count: number };
+    sessions: ActiveDevice[];
+  }>({
+    twoFactorEnabled: false,
+    passkeys: [],
+    connections: { google: { connected: false }, apple: { connected: false, available: false } },
+    googleContacts: { connected: false, count: 0 },
+    sessions: [],
+  });
+  const [accountModal, setAccountModal] = useState<'2fa' | 'passkey' | 'ical' | 'session' | 'delete' | null>(null);
+  const [twoFactorStep, setTwoFactorStep] = useState<'method' | 'code' | 'done'>('method');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [modalBusy, setModalBusy] = useState(false);
+  const [modalError, setModalError] = useState('');
+  const [icalUrl, setIcalUrl] = useState('');
+  const [selectedSession, setSelectedSession] = useState<ActiveDevice | null>(null);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const [integrationNotice, setIntegrationNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   const [selectedTheme, setSelectedTheme] = useState<'sistema' | 'claro' | 'escuro'>('escuro');
 
@@ -235,6 +234,24 @@ const AccountSettingsV2: React.FC = () => {
   });
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  const loadSecurityOverview = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await fetchApi('/account-settings/security', { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) return;
+      const data = await response.json();
+      setSecurityOverview(data);
+    } catch {}
+  }, [token]);
+
+  useEffect(() => { void loadSecurityOverview(); }, [loadSecurityOverview]);
+
+  useEffect(() => {
+    const googleResult = new URLSearchParams(window.location.search).get('google');
+    if (googleResult === 'connected') setIntegrationNotice({ tone: 'success', text: 'Conta Google vinculada. Agora você já pode sincronizar seus contatos.' });
+    if (googleResult === 'error') setIntegrationNotice({ tone: 'error', text: 'Não foi possível vincular a conta Google.' });
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -331,8 +348,7 @@ const AccountSettingsV2: React.FC = () => {
         tiktok,
         linkedin,
         website,
-        phone,
-        emailPreferences: prefs
+        phone
       }),
     }).catch(() => {});
     setSaving(false);
@@ -355,7 +371,204 @@ const AccountSettingsV2: React.FC = () => {
     setPasswordEmailSending(false);
   };
 
+  const openAccountModal = (modal: typeof accountModal) => {
+    setModalError('');
+    setModalBusy(false);
+    if (modal === '2fa') {
+      setTwoFactorStep('method');
+      setTwoFactorCode('');
+    }
+    if (modal === 'delete') setDeleteConfirmed(false);
+    setAccountModal(modal);
+  };
+
+  const requestTwoFactorCode = async () => {
+    if (!token) return;
+    setModalBusy(true);
+    setModalError('');
+    try {
+      const response = await fetchApi('/account-settings/security/two-factor/request', {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || data.error || 'Não foi possível enviar o código.');
+      setTwoFactorStep('code');
+    } catch (error: any) {
+      setModalError(error?.message || 'Não foi possível enviar o código.');
+    } finally {
+      setModalBusy(false);
+    }
+  };
+
+  const verifyTwoFactorCode = async () => {
+    if (!token || twoFactorCode.length !== 6) return;
+    setModalBusy(true);
+    setModalError('');
+    try {
+      const response = await fetchApi('/account-settings/security/two-factor/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code: twoFactorCode }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || data.error || 'Código inválido ou expirado.');
+      setTwoFactorStep('done');
+      await loadSecurityOverview();
+    } catch (error: any) {
+      setModalError(error?.message || 'Código inválido ou expirado.');
+    } finally {
+      setModalBusy(false);
+    }
+  };
+
+  const arrayBufferToBase64Url = (value: ArrayBuffer) => {
+    const bytes = new Uint8Array(value);
+    let binary = '';
+    bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+
+  const addPasskey = async () => {
+    if (!token || !user || !window.PublicKeyCredential) {
+      setModalError('Este navegador não oferece suporte a passkeys.');
+      return;
+    }
+    setModalBusy(true);
+    setModalError('');
+    try {
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rp: { name: 'Fauves' },
+          user: { id: new TextEncoder().encode(user.id), name: user.email, displayName: user.name || user.email },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+          timeout: 60_000,
+          attestation: 'none',
+          authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
+        },
+      }) as PublicKeyCredential | null;
+      if (!credential) throw new Error('A criação da passkey foi cancelada.');
+      const responseData = credential.response as AuthenticatorAttestationResponse;
+      const response = await fetchApi('/account-settings/security/passkeys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          credentialId: credential.id,
+          label: navigator.platform || 'Este dispositivo',
+          registrationData: {
+            type: credential.type,
+            clientDataJSON: arrayBufferToBase64Url(responseData.clientDataJSON),
+            attestationObject: arrayBufferToBase64Url(responseData.attestationObject),
+          },
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || data.error || 'Não foi possível adicionar a passkey.');
+      await loadSecurityOverview();
+      setAccountModal(null);
+    } catch (error: any) {
+      setModalError(error?.message || 'Não foi possível adicionar a passkey.');
+    } finally {
+      setModalBusy(false);
+    }
+  };
+
+  const startGoogleConnection = async () => {
+    if (!token) return;
+    setModalBusy(true);
+    setModalError('');
+    setIntegrationNotice(null);
+    try {
+      const response = await fetchApi('/account-settings/security/google/start', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.url) throw new Error(data.message || data.error || 'Integração Google indisponível.');
+      window.location.assign(data.url);
+    } catch (error: any) {
+      const message = error?.message || 'Integração Google indisponível.';
+      setModalError(message);
+      setIntegrationNotice({ tone: 'error', text: message });
+      setModalBusy(false);
+    }
+  };
+
+  const syncGoogleContacts = async () => {
+    if (!securityOverview.connections.google.connected) return startGoogleConnection();
+    setModalBusy(true);
+    setModalError('');
+    setIntegrationNotice(null);
+    try {
+      const response = await fetchApi('/account-settings/security/google/contacts/sync', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || data.error || 'Não foi possível sincronizar os contatos.');
+      await loadSecurityOverview();
+      setIntegrationNotice({ tone: 'success', text: `${Number(data.count || 0)} contatos sincronizados com sucesso.` });
+    } catch (error: any) {
+      const message = error?.message || 'Não foi possível sincronizar os contatos.';
+      setModalError(message);
+      setIntegrationNotice({ tone: 'error', text: message });
+    } finally {
+      setModalBusy(false);
+    }
+  };
+
+  const prepareIcal = async () => {
+    openAccountModal('ical');
+    if (!token || icalUrl) return;
+    setModalBusy(true);
+    try {
+      const response = await fetchApi('/account-settings/security/ical', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.url) throw new Error(data.message || data.error || 'Não foi possível criar a assinatura.');
+      setIcalUrl(data.url);
+    } catch (error: any) {
+      setModalError(error?.message || 'Não foi possível criar a assinatura.');
+    } finally {
+      setModalBusy(false);
+    }
+  };
+
+  const calendarLink = (provider: 'google' | 'outlook' | 'apple') => {
+    if (!icalUrl) return '#';
+    const webcal = icalUrl.replace(/^https?:/, 'webcal:');
+    if (provider === 'google') return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`;
+    if (provider === 'outlook') return `https://outlook.live.com/calendar/0/addcalendar?url=${encodeURIComponent(icalUrl)}&name=${encodeURIComponent('Eventos Fauves')}`;
+    return webcal;
+  };
+
+  const revokeSelectedSession = async () => {
+    if (!selectedSession || !token) return;
+    setModalBusy(true);
+    try {
+      const response = await fetchApi(`/account-settings/security/sessions/${selectedSession.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || data.error || 'Não foi possível encerrar a sessão.');
+      setAccountModal(null);
+      setSelectedSession(null);
+      await loadSecurityOverview();
+    } catch (error: any) {
+      setModalError(error?.message || 'Não foi possível encerrar a sessão.');
+    } finally { setModalBusy(false); }
+  };
+
+  const deleteAccount = async () => {
+    if (!deleteConfirmed || !token) return;
+    setModalBusy(true);
+    try {
+      const response = await fetchApi('/api/auth/me', { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error('Não foi possível excluir sua conta.');
+      logout();
+    } catch (error: any) {
+      setModalError(error?.message || 'Não foi possível excluir sua conta.');
+      setModalBusy(false);
+    }
+  };
+
   const resolvedPhoto = photoUrl ? (photoUrl.startsWith('http') ? photoUrl : apiUrl(photoUrl.startsWith('/') ? photoUrl : '/' + photoUrl)) : '';
+  const displayedEmails = emails.length > 0
+    ? emails
+    : user?.email
+      ? [{ address: user.email, primary: true }]
+      : [];
 
   /* ─── TABS ─────────────────────────────────────────────────────────────── */
   const TABS = [
@@ -365,24 +578,24 @@ const AccountSettingsV2: React.FC = () => {
   ] as const;
 
   /* ─── THIRD-PARTY CARD ──────────────────────────────────────────────────── */
-  const ThirdPartyCard = ({ icon, name }: any) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '0.75rem', padding: '0.875rem 1rem' }}>
+  const ThirdPartyCard = ({ icon, name, connected = false, detail, onClick, disabled = false }: any) => (
+    <div className="account-provider-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.625rem', padding: '0.75rem 0.875rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</div>
         <div>
           <div style={{ fontSize: '13.5px', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{name}</div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>Não vinculado</div>
+          <div style={{ fontSize: '12px', color: connected ? '#86efac' : 'rgba(255,255,255,0.35)' }}>{connected ? (detail || 'Vinculado') : disabled ? 'Em breve' : 'Não vinculado'}</div>
         </div>
       </div>
-      <button style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>
-        <PlusIcon />
+      <button disabled={disabled || connected} onClick={onClick} title={disabled ? 'Em breve' : connected ? 'Conta vinculada' : 'Vincular'} className="account-button account-icon-button account-provider-add" aria-label={`Vincular ${name}`} style={{ width: '28px', height: '28px', borderRadius: '0.5rem', background: '#f6f6f6', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#17191c', cursor: disabled || connected ? 'default' : 'pointer', opacity: disabled ? 0.45 : 1 }}>
+        {connected ? <span style={{ fontWeight: 800 }}>✓</span> : <PlusIcon />}
       </button>
     </div>
   );
 
   /* ─── SECURITY ROW ──────────────────────────────────────────────────────── */
   const SecurityRow = ({ icon, title, desc, btnLabel, btnVariant = 'ghost', onClick, btnDisabled, descStyle }: any) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)', width: '100%' }}>
+    <div className="account-action-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
         <div style={{ color: 'rgba(255,255,255,0.4)', marginTop: '2px', flexShrink: 0 }}>{icon}</div>
         <div>
@@ -391,6 +604,7 @@ const AccountSettingsV2: React.FC = () => {
         </div>
       </div>
       <button 
+        className={`account-button ${btnVariant === 'ghost' ? 'account-button-primary' : 'account-button-danger'} account-button-compact`}
         onClick={onClick}
         disabled={btnDisabled}
         style={{
@@ -401,9 +615,9 @@ const AccountSettingsV2: React.FC = () => {
           cursor: btnDisabled ? 'default' : 'pointer',
           whiteSpace: 'nowrap',
           flexShrink: 0,
-          background: btnVariant === 'ghost' ? 'rgba(255,255,255,0.07)' : '#c8382e',
-          border: btnVariant === 'ghost' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-          color: '#fff',
+          background: btnVariant === 'ghost' ? '#f6f6f6' : '#ef3e42',
+          border: 'none',
+          color: btnVariant === 'ghost' ? '#17191c' : '#fff',
           transition: 'all 0.15s',
           opacity: btnDisabled ? 0.7 : 1,
         }}
@@ -414,8 +628,8 @@ const AccountSettingsV2: React.FC = () => {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#131517', color: '#fff', fontFamily: 'Inter, -apple-system, sans-serif' }}>
-      <HeaderV2 transparent={true} scrollTransition={false} />
+    <div className={`account-settings-page ${isDark ? 'is-dark' : 'is-light'}`} style={{ minHeight: '100vh', background: isDark ? '#131517' : '#f5f5f6', color: isDark ? '#fff' : '#18181b', fontFamily: 'Inter, -apple-system, sans-serif', transition: 'background-color .2s ease, color .2s ease' }}>
+      <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
 
       {/* Main container with padding-top to compensate for absolute/transparent header */}
       <div style={{ paddingTop: 'var(--page-top-spacing)' }}>
@@ -427,19 +641,19 @@ const AccountSettingsV2: React.FC = () => {
             top: 0,
             zIndex: 50,
             width: '100%',
-            background: isScrolled ? 'rgba(19, 21, 23, 0.9)' : 'transparent',
+            background: isScrolled ? (isDark ? 'rgba(19, 21, 23, 0.9)' : 'rgba(245,245,246,.9)') : 'transparent',
             backdropFilter: isScrolled ? 'blur(16px)' : 'none',
             WebkitBackdropFilter: isScrolled ? 'blur(16px)' : 'none',
             transition: 'all 0.3s ease',
           }}
         >
-          <div style={{ maxWidth: '780px', margin: '0 auto', padding: '0 1.5rem' }}>
+          <div className="account-settings-shell" style={{ maxWidth: '780px', margin: '0 auto', padding: '0 1.5rem' }}>
             <div style={{ padding: isScrolled ? '12px 0 0 0' : '20px 0 0 0', transition: 'all 0.3s ease' }}>
               {/* Title Header */}
               <h1 style={{ 
                 fontSize: isScrolled ? '20px' : '28px', 
                 fontWeight: 600, 
-                color: '#fff', 
+                color: isDark ? '#fff' : '#18181b',
                 marginBottom: isScrolled ? '8px' : '16px',
                 lineHeight: isScrolled ? '24px' : '33.6px',
                 transition: 'all 0.3s ease'
@@ -452,11 +666,11 @@ const AccountSettingsV2: React.FC = () => {
           {/* Tab line divider full width */}
           <div style={{ 
             width: '100%', 
-            borderBottom: '1px solid rgba(255, 255, 255, 0.07)', 
-            marginBottom: isScrolled ? '0' : '2rem',
+            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,.07)' : 'rgba(24,24,27,.1)'}`,
+            marginBottom: 0,
             transition: 'all 0.3s ease'
           }}>
-            <div style={{ maxWidth: '780px', margin: '0 auto', padding: '0 1.5rem' }}>
+            <div className="account-settings-shell" style={{ maxWidth: '780px', margin: '0 auto', padding: '0 1.5rem' }}>
               <div className="premium-tab-container !mb-0" style={{ display: 'flex', gap: '16px', marginBottom: '-1px' }}>
                 {TABS.map(tab => (
                   <a
@@ -465,12 +679,12 @@ const AccountSettingsV2: React.FC = () => {
                     className={`premium-tab ${activeTab === tab.id ? 'active' : ''}`}
                     style={{
                       fontSize: '16px',
-                      color: activeTab === tab.id ? '#fff' : 'rgba(255, 255, 255, 0.5)',
+                      color: activeTab === tab.id ? (isDark ? '#fff' : '#18181b') : (isDark ? 'rgba(255,255,255,.5)' : '#71717a'),
                       textDecoration: 'none',
                       padding: '0px 4px 8px 4px',
                       display: 'block',
                       fontWeight: 500,
-                      borderBottom: activeTab === tab.id ? '2px solid #fff' : '2px solid transparent',
+                      borderBottom: activeTab === tab.id ? `2px solid ${isDark ? '#fff' : '#18181b'}` : '2px solid transparent',
                       transition: '0.3s ease'
                     }}
                     onClick={(e) => {
@@ -492,24 +706,25 @@ const AccountSettingsV2: React.FC = () => {
         </div>
 
         {/* Content body */}
-        <div style={{ maxWidth: '780px', margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
+        <main data-header-align className="account-settings-content" style={{ maxWidth: '780px', margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
 
         {/* ─── ABA CONTA ─────────────────────────────────────────────────── */}
         {activeTab === 'conta' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+          <div className="account-tab-content" style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
 
             {/* SEU PERFIL */}
             <section>
               <h2 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#fff', marginBottom: '1.25rem' }}>Seu Perfil</h2>
 
-              <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+              <div className="account-profile-grid" style={{ display: 'grid', gridTemplateColumns: '342px 160px', columnGap: '72px', alignItems: 'start' }}>
                 {/* Left column: fields */}
-                <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                <div className="account-profile-fields" style={{ width: '342px', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                   {/* Nome + Sobrenome */}
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <div className="account-name-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '5px' }}>Nome</label>
                       <input
+                        className="account-input"
                         type="text"
                         value={firstName}
                         onChange={e => setFirstName(e.target.value)}
@@ -519,6 +734,7 @@ const AccountSettingsV2: React.FC = () => {
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '5px' }}>Sobrenome</label>
                       <input
+                        className="account-input"
                         type="text"
                         value={lastName}
                         onChange={e => setLastName(e.target.value)}
@@ -530,9 +746,10 @@ const AccountSettingsV2: React.FC = () => {
                   {/* Username */}
                   <div>
                     <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '5px' }}>Nome de usuário</label>
-                    <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', overflow: 'hidden' }}>
-                      <span style={{ padding: '9px 10px 9px 12px', color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>@</span>
+                    <div className="account-prefix-control" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                      <span className="account-control-prefix" style={{ padding: '9px 10px 9px 12px', color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>@</span>
                       <input
+                        className="account-prefix-input"
                         type="text"
                         value={username}
                         onChange={e => setUsername(e.target.value)}
@@ -545,6 +762,7 @@ const AccountSettingsV2: React.FC = () => {
                   <div>
                     <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '5px' }}>Bio</label>
                     <textarea
+                      className="account-textarea"
                       value={bio}
                       onChange={e => setBio(e.target.value)}
                       placeholder="Compartilhe um pouco sobre seu histórico e interesses."
@@ -555,8 +773,8 @@ const AccountSettingsV2: React.FC = () => {
                 </div>
 
                 {/* Right column: photo */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                  <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginBottom: '4px' }}>Foto de Perfil</label>
+                <div className="account-profile-photo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', textAlign: 'left', marginBottom: '4px' }}>Foto de Perfil</label>
                   <div style={{ position: 'relative' }}>
                     <div style={{ width: '76px', height: '76px', borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg, #e879a0, #f87171)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {resolvedPhoto ? (
@@ -584,28 +802,23 @@ const AccountSettingsV2: React.FC = () => {
               {/* Social Links */}
               <div style={{ marginTop: '1.375rem' }}>
                 <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '0.625rem' }}>Links sociais</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <SocialRow icon={<InstagramIcon />} prefix="instagram.com/" value={instagram} onChange={setInstagram} placeholder="nome de usuário" />
-                    <SocialRow icon={<XIcon />} prefix="x.com/" value={twitter} onChange={setTwitter} placeholder="nome de usuário" />
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <SocialRow icon={<YoutubeIcon />} prefix="youtube.com/@" value={youtube} onChange={setYoutube} placeholder="nome de usuário" />
-                    <SocialRow icon={<TikTokIcon />} prefix="tiktok.com/@" value={tiktok} onChange={setTiktok} placeholder="nome de usuário" />
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <SocialRow icon={<LinkedInIcon />} prefix="linkedin.com" value={linkedin} onChange={setLinkedin} placeholder="/in/identificador" />
-                    <SocialRow icon={<WebIcon />} prefix="" value={website} onChange={setWebsite} placeholder="Seu site" />
-                  </div>
+                <div className="account-social-grid" style={{ display: 'grid', gridTemplateColumns: '342px 342px', gap: '0.625rem 1.25rem' }}>
+                  <SocialRow icon={<InstagramIcon />} prefix="instagram.com/" value={instagram} onChange={setInstagram} placeholder="nome de usuário" />
+                  <SocialRow icon={<XIcon />} prefix="x.com/" value={twitter} onChange={setTwitter} placeholder="nome de usuário" />
+                  <SocialRow icon={<YoutubeIcon />} prefix="youtube.com/@" value={youtube} onChange={setYoutube} placeholder="nome de usuário" />
+                  <SocialRow icon={<TikTokIcon />} prefix="tiktok.com/@" value={tiktok} onChange={setTiktok} placeholder="nome de usuário" />
+                  <SocialRow icon={<LinkedInIcon />} prefix="linkedin.com" value={linkedin} onChange={setLinkedin} placeholder="/in/identificador" />
+                  <SocialRow icon={<WebIcon />} prefix="" value={website} onChange={setWebsite} placeholder="Seu site" />
                 </div>
               </div>
 
               {/* Save button */}
               <div style={{ marginTop: '1.25rem' }}>
                 <button
+                  className="account-button account-button-primary"
                   onClick={handleSave}
                   disabled={saving}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0.5rem 1.125rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '0.5rem', color: '#fff', fontSize: '13.5px', fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0.5rem 1.125rem', background: '#f6f6f6', border: 'none', borderRadius: '0.5rem', color: '#17191c', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
                 >
                   <SaveIcon />
                   {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar Alterações'}
@@ -618,9 +831,10 @@ const AccountSettingsV2: React.FC = () => {
 
             {/* E-MAILS */}
             <section>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div className="account-section-heading" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <h2 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#fff' }}>E-mails</h2>
                 <button 
+                  className="account-button account-button-secondary account-button-compact"
                   onClick={() => setShowAddEmailModal(true)}
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0.3rem 0.75rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '0.375rem', color: 'rgba(255,255,255,0.75)', fontSize: '12.5px', cursor: 'pointer' }}
                 >
@@ -630,9 +844,9 @@ const AccountSettingsV2: React.FC = () => {
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
                 Adicione e-mails adicionais para receber convites de eventos enviados para esses endereços.
               </p>
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.75rem', overflow: 'hidden' }}>
-                {(emails.length > 0 ? emails : [{ address: user?.email || 'levycamara@hotmail.com', primary: true }]).map((em, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '1rem 1.125rem', borderBottom: i < emails.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <div className="account-panel" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                {displayedEmails.map((em, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '1rem 1.125rem', borderBottom: i < displayedEmails.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '4px' }}>
                         <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.85)' }}>{em.address}</span>
@@ -650,6 +864,11 @@ const AccountSettingsV2: React.FC = () => {
                     )}
                   </div>
                 ))}
+                {displayedEmails.length === 0 && (
+                  <div style={{ padding: '1rem 1.125rem', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+                    Nenhum e-mail cadastrado.
+                  </div>
+                )}
               </div>
             </section>
 
@@ -659,11 +878,12 @@ const AccountSettingsV2: React.FC = () => {
             <section>
               <h2 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#fff', marginBottom: '0.375rem' }}>Número de celular</h2>
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
-                Gerencie o número de celular que você usa para fazer login no Luma e receber atualizações por SMS.
+                Gerencie o número de celular que você usa para fazer login na Fauves e receber atualizações por SMS.
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', padding: '0 14px', color: 'rgba(255,255,255,0.85)', fontSize: '14px', height: '38px', boxSizing: 'border-box' }}>
+              <div className="account-phone-row" style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem' }}>
+                <div className="account-phone-control" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', padding: '0 14px', color: 'rgba(255,255,255,0.85)', fontSize: '14px', height: '38px', boxSizing: 'border-box' }}>
                   <input
+                    className="account-phone-input"
                     type="text"
                     value={(() => {
                       const clean = phone.replace(/\D/g, '');
@@ -688,8 +908,9 @@ const AccountSettingsV2: React.FC = () => {
                   <span style={{ fontSize: '18px', userSelect: 'none' }}>🇧🇷</span>
                 </div>
                 <button 
+                  className="account-button account-button-secondary"
                   onClick={handleSave}
-                  style={{ padding: '9px 1.125rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '0.5rem', color: '#fff', fontSize: '13.5px', fontWeight: 500, cursor: 'pointer', height: '38px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ padding: '9px 1.125rem', background: '#f6f6f6', border: 'none', borderRadius: '0.5rem', color: '#17191c', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer', height: '38px', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   {saving ? 'Salvando...' : 'Atualizar'}
                 </button>
@@ -704,7 +925,7 @@ const AccountSettingsV2: React.FC = () => {
             {/* SENHA E SEGURANÇA */}
             <section>
               <h2 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#fff', marginBottom: '1rem' }}>Senha e Segurança</h2>
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.875rem', padding: '0 1.125rem' }}>
+              <div className="account-panel" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', padding: '0 1.125rem' }}>
                 <SecurityRow 
                   icon={<KeyIcon />} 
                   title="Senha da conta" 
@@ -714,8 +935,8 @@ const AccountSettingsV2: React.FC = () => {
                   onClick={handleResetPassword}
                   descStyle={passwordEmailSent ? { color: '#eab308' } : undefined}
                 />
-                <SecurityRow icon={<ShieldIcon />} title="Autenticação de Dois Fatores" desc="Adicione uma camada extra de segurança à sua conta." btnLabel="Ativar 2FA" />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 0' }}>
+                <SecurityRow icon={<ShieldIcon />} title="Autenticação de Dois Fatores" desc={securityOverview.twoFactorEnabled ? 'A confirmação por e-mail está ativada.' : 'Adicione uma camada extra de segurança à sua conta.'} btnLabel={securityOverview.twoFactorEnabled ? 'Ativado' : 'Ativar 2FA'} btnDisabled={securityOverview.twoFactorEnabled} onClick={() => openAccountModal('2fa')} />
+                <div className="account-action-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 0' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
                     <div style={{ color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}><FingerprintIcon /></div>
                     <div>
@@ -723,8 +944,8 @@ const AccountSettingsV2: React.FC = () => {
                       <div style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.4)' }}>Passkeys são uma forma segura e conveniente de fazer login.</div>
                     </div>
                   </div>
-                  <button style={{ padding: '0.4rem 0.875rem', borderRadius: '0.375rem', fontSize: '13px', fontWeight: 500, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    Adicionar Passkey
+                  <button onClick={() => openAccountModal('passkey')} className="account-button account-button-primary account-button-compact" style={{ padding: '0.4rem 0.875rem', borderRadius: '0.375rem', fontSize: '13px', fontWeight: 600, background: '#f6f6f6', border: 'none', color: '#17191c', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {securityOverview.passkeys.length ? `Adicionar outra (${securityOverview.passkeys.length})` : 'Adicionar Passkey'}
                   </button>
                 </div>
               </div>
@@ -736,14 +957,11 @@ const AccountSettingsV2: React.FC = () => {
             <section>
               <h2 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#fff', marginBottom: '0.375rem' }}>Contas de Terceiros</h2>
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
-                Vincule suas contas para fazer login no Luma e automatizar seus fluxos de trabalho.
+                Vincule suas contas para fazer login na Fauves e automatizar seus fluxos de trabalho.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.625rem' }}>
-                <ThirdPartyCard icon={<GoogleIcon />} name="Google" />
-                <ThirdPartyCard icon={<AppleIcon />} name="Apple" />
-                <ThirdPartyCard icon={<ZoomIcon />} name="Zoom" />
-                <ThirdPartyCard icon={<SolanaIcon />} name="Solana" />
-                <ThirdPartyCard icon={<EthIcon />} name="Ethereum" />
+              <div className="account-provider-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.625rem' }}>
+                <ThirdPartyCard icon={<GoogleIcon />} name="Google" connected={securityOverview.connections.google.connected} detail={securityOverview.connections.google.email} onClick={startGoogleConnection} />
+                <ThirdPartyCard icon={<AppleIcon />} name="Apple" connected={securityOverview.connections.apple.connected} disabled={!securityOverview.connections.apple.available} />
               </div>
             </section>
 
@@ -752,20 +970,20 @@ const AccountSettingsV2: React.FC = () => {
             {/* SINCRONIZAÇÃO */}
             <section>
               <h2 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#fff', marginBottom: '1rem' }}>Sincronização de Conta</h2>
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.875rem', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 1.125rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="account-panel" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                <div className="account-action-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 1.125rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
                     <div style={{ color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}><CalendarSyncIcon /></div>
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.85)', marginBottom: '2px' }}>Sincronização de Calendário</div>
-                      <div style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.4)' }}>Sincronize seus eventos do Luma com seu calendário do Google, Outlook ou Apple.</div>
+                      <div style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.4)' }}>Sincronize seus eventos da Fauves com seu calendário do Google, Outlook ou Apple.</div>
                     </div>
                   </div>
-                  <button style={{ padding: '0.4rem 0.875rem', borderRadius: '0.375rem', fontSize: '13px', fontWeight: 500, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <button onClick={prepareIcal} className="account-button account-button-secondary account-button-compact" style={{ padding: '0.4rem 0.875rem', borderRadius: '0.375rem', fontSize: '13px', fontWeight: 500, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     Adicionar assinatura iCal
                   </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 1.125rem' }}>
+                <div className="account-action-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.125rem 1.125rem' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
                     <div style={{ color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}><GoogleIcon /></div>
                     <div>
@@ -773,11 +991,12 @@ const AccountSettingsV2: React.FC = () => {
                       <div style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.4)' }}>Sincronize seus contatos do Gmail para convidá-los facilmente para seus eventos.</div>
                     </div>
                   </div>
-                  <button style={{ padding: '0.4rem 0.875rem', borderRadius: '0.375rem', fontSize: '13px', fontWeight: 500, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    Ativar Sincronização
+                  <button disabled={modalBusy} onClick={syncGoogleContacts} className="account-button account-button-primary account-button-compact" style={{ padding: '0.4rem 0.875rem', borderRadius: '0.375rem', fontSize: '13px', fontWeight: 600, background: '#f6f6f6', border: 'none', color: '#17191c', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {modalBusy ? 'Sincronizando...' : securityOverview.googleContacts.count ? `${securityOverview.googleContacts.count} contatos sincronizados` : securityOverview.connections.google.connected ? 'Sincronizar agora' : 'Ativar Sincronização'}
                   </button>
                 </div>
               </div>
+              {integrationNotice && <p style={{ margin: '10px 2px 0', fontSize: 12.5, color: integrationNotice.tone === 'success' ? '#86efac' : '#ff7676' }}>{integrationNotice.text}</p>}
             </section>
 
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)' }} />
@@ -786,32 +1005,33 @@ const AccountSettingsV2: React.FC = () => {
             <section>
               <h2 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#fff', marginBottom: '0.375rem' }}>Dispositivos Ativos</h2>
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
-                Você está atualmente conectado ao Luma nos seguintes dispositivos.
+                Você está atualmente conectado à Fauves neste dispositivo.
               </p>
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.875rem', overflow: 'hidden' }}>
-                {devices.map((device, i) => (
-                  <div key={device.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.125rem', borderBottom: i < devices.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <div className="account-panel" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                {securityOverview.sessions.map((device, i) => (
+                  <div key={device.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.125rem', borderBottom: i < securityOverview.sessions.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
                       <div style={{ color: 'rgba(255,255,255,0.4)' }}><MonitorIcon /></div>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span style={{ fontSize: '13.5px', fontWeight: 500, color: 'rgba(255,255,255,0.85)' }}>{device.browser}</span>
-                          {device.isActive && (
+                          {device.isCurrent && (
                             <span style={{ fontSize: '11px', fontWeight: 600, color: '#4ade80', background: 'rgba(74,222,128,0.15)', padding: '1px 7px', borderRadius: '100px' }}>Este Dispositivo</span>
                           )}
                         </div>
                         <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>
-                          {device.date ? `${device.date} · ${device.location}` : device.location}
+                          {device.lastSeenAt ? `${new Date(device.lastSeenAt).toLocaleString('pt-BR')} · ${device.location}` : device.location}
                         </div>
                       </div>
                     </div>
-                    {!device.isActive && (
-                      <button style={{ width: '28px', height: '28px', background: 'transparent', border: 'none', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.35)', cursor: 'pointer' }}>
+                    {!device.isCurrent && (
+                      <button title="Sair" onClick={() => { setSelectedSession(device); openAccountModal('session'); }} style={{ width: '28px', height: '28px', background: 'transparent', border: 'none', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.35)', cursor: 'pointer' }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                       </button>
                     )}
                   </div>
                 ))}
+                {securityOverview.sessions.length === 0 && <div style={{ padding: '1rem 1.125rem', color: 'rgba(255,255,255,.42)', fontSize: 13 }}>Carregando a sessão atual…</div>}
               </div>
             </section>
 
@@ -821,9 +1041,9 @@ const AccountSettingsV2: React.FC = () => {
             <section>
               <h2 style={{ fontSize: '1.0625rem', fontWeight: 600, color: '#fff', marginBottom: '0.375rem' }}>Excluir Conta</h2>
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '1.125rem' }}>
-                Se você não quiser mais usar o Luma, pode excluir sua conta permanentemente.
+                Se você não quiser mais usar a Fauves, pode excluir sua conta permanentemente.
               </p>
-              <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0.55rem 1.125rem', background: '#c8382e', border: 'none', borderRadius: '0.5rem', color: '#fff', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => openAccountModal('delete')} className="account-button account-button-danger" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0.55rem 1.125rem', background: '#ef3e42', border: 'none', borderRadius: '0.5rem', color: '#fff', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }}>
                 <TrashIcon /> Excluir Minha Conta
               </button>
             </section>
@@ -833,6 +1053,9 @@ const AccountSettingsV2: React.FC = () => {
 
         {/* ─── ABA PREFERÊNCIAS ─────────────────────────────────────────────── */}
         {activeTab === 'preferencias' && (
+          <AccountPreferencesPanel token={token} hasPhone={Boolean(phone)} calendarCount={organizations.length} />
+        )}
+        {false && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
             {/* Exibição */}
             <section>
@@ -2156,9 +2379,9 @@ const AccountSettingsV2: React.FC = () => {
                 </div>
               </div>
 
-              {/* Luma */}
+              {/* Fauves */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'none', marginBottom: '8px' }}>Luma</div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'none', marginBottom: '8px' }}>Fauves</div>
                 <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.75rem', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2270,7 +2493,7 @@ const AccountSettingsV2: React.FC = () => {
                       <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)' }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                       </div>
-                      <span style={{ fontSize: '13.5px', fontWeight: 500 }}>Páginas de Descoberta do Luma</span>
+                      <span style={{ fontSize: '13.5px', fontWeight: 500 }}>Páginas de descoberta da Fauves</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.4)', fontSize: '12.5px', cursor: 'pointer' }}>
                       <span>0 Página</span>
@@ -2446,12 +2669,12 @@ const AccountSettingsV2: React.FC = () => {
 
               <span style={{ fontSize: '15px', fontWeight: 600, color: '#fff', marginBottom: '6px' }}>Sem Pagamentos</span>
               <p style={{ fontSize: '13.5px', color: 'rgba(255, 255, 255, 0.4)', maxWidth: '380px', lineHeight: 1.5 }}>
-                Seus pagamentos aparecerão aqui. Para ver os pagamentos do Luma Plus, selecione o calendário correspondente na seção acima.
+                Seus pagamentos aparecerão aqui. Para ver os pagamentos do Fauves Plus, selecione o calendário correspondente na seção acima.
               </p>
             </section>
           </div>
         )}
-      </div>
+      </main>
 
        </div> {/* End of main padding container */}
       <style>{`
@@ -2459,9 +2682,436 @@ const AccountSettingsV2: React.FC = () => {
         .theme-card-preview:hover .theme-card-img {
           filter: grayscale(0%) !important;
         }
+        .account-settings-content input,
+        .account-settings-content textarea,
+        .account-settings-content button {
+          font-family: inherit;
+        }
+        .account-tab-content label {
+          color: #d4d4d8 !important;
+          font-size: 13px !important;
+          font-weight: 600;
+        }
+        .account-input,
+        .account-textarea {
+          width: 100% !important;
+          border: 1px solid rgba(255,255,255,.10) !important;
+          border-radius: 8px !important;
+          background: #151617 !important;
+          color: #fff !important;
+          font-size: 14px !important;
+          font-weight: 600;
+          outline: none !important;
+          transition: border-color .18s ease, background-color .18s ease;
+        }
+        .account-input {
+          height: 38px !important;
+          padding: 0 12px !important;
+        }
+        .account-textarea {
+          min-height: 76px !important;
+          padding: 10px 12px !important;
+          resize: vertical;
+        }
+        .account-input::placeholder,
+        .account-textarea::placeholder,
+        .account-social-input::placeholder,
+        .account-phone-input::placeholder {
+          color: #52525b !important;
+          opacity: 1;
+        }
+        .account-input:focus,
+        .account-textarea:focus,
+        .account-prefix-control:focus-within,
+        .account-social-row:focus-within .account-social-input,
+        .account-phone-control:focus-within {
+          border-color: rgba(255,255,255,.35) !important;
+        }
+        .account-prefix-control {
+          height: 38px !important;
+          border: 1px solid rgba(255,255,255,.10) !important;
+          border-radius: 8px !important;
+          background: #151617 !important;
+        }
+        .account-control-prefix {
+          align-self: stretch;
+          display: flex;
+          align-items: center;
+          padding: 0 12px !important;
+          background: rgba(255,255,255,.09);
+          color: #a1a1aa !important;
+          font-size: 14px !important;
+          font-weight: 600;
+        }
+        .account-prefix-input,
+        .account-phone-input {
+          min-width: 0;
+          border: 0 !important;
+          background: transparent !important;
+          color: #fff !important;
+          font-size: 14px !important;
+          font-weight: 600;
+          outline: none !important;
+        }
+        .account-prefix-input {
+          height: 100%;
+          padding: 0 12px !important;
+        }
+        .account-social-row {
+          height: 38px;
+          overflow: visible !important;
+          border: 0 !important;
+          background: transparent !important;
+        }
+        .account-social-icon {
+          width: 36px;
+          height: 38px;
+          justify-content: flex-start;
+          padding: 0 !important;
+          color: #71717a !important;
+        }
+        .account-social-prefix {
+          display: flex;
+          height: 38px;
+          align-items: center;
+          padding: 0 11px !important;
+          border-radius: 8px 0 0 8px;
+          background: rgba(255,255,255,.10);
+          color: #d4d4d8 !important;
+          font-size: 14px !important;
+          font-weight: 600;
+        }
+        .account-social-input {
+          height: 38px;
+          min-width: 0;
+          flex: 1;
+          border: 1px solid rgba(255,255,255,.10) !important;
+          border-radius: 8px !important;
+          background: #151617 !important;
+          color: #fff !important;
+          padding: 0 12px !important;
+          font-size: 14px !important;
+          font-weight: 600;
+          outline: none !important;
+          transition: border-color .18s ease;
+        }
+        .account-social-input.has-prefix {
+          border-left: 0 !important;
+          border-radius: 0 8px 8px 0 !important;
+        }
+        .account-phone-control {
+          height: 38px !important;
+          border: 1px solid rgba(255,255,255,.10) !important;
+          border-radius: 8px !important;
+          background: #151617 !important;
+        }
+        .account-button {
+          display: inline-flex !important;
+          height: 38px !important;
+          min-height: 38px;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
+          padding: 0 14px !important;
+          border-radius: 8px !important;
+          font-size: 15px !important;
+          font-weight: 600 !important;
+          line-height: 1 !important;
+          cursor: pointer;
+          transition: background-color .18s ease, color .18s ease, opacity .18s ease !important;
+        }
+        .account-button-primary {
+          border: 0 !important;
+          background: #fff !important;
+          color: #171819 !important;
+        }
+        .account-button-primary:hover:not(:disabled) {
+          background: #f4f4f5 !important;
+        }
+        .account-button-secondary {
+          border: 1px solid transparent !important;
+          background: rgba(255,255,255,.08) !important;
+          color: rgba(255,255,255,.80) !important;
+        }
+        .account-button-secondary:hover:not(:disabled) {
+          background: rgba(255,255,255,.12) !important;
+          color: #fff !important;
+        }
+        .account-button-danger {
+          border: 0 !important;
+          background: #ff2e39 !important;
+          color: #fff !important;
+        }
+        .account-button-danger:hover:not(:disabled) {
+          background: #dc2626 !important;
+        }
+        .account-button-compact {
+          height: 32px !important;
+          min-height: 32px;
+          padding: 0 11px !important;
+          font-size: 14px !important;
+        }
+        .account-icon-button {
+          width: 30px !important;
+          height: 30px !important;
+          min-height: 30px;
+          padding: 0 !important;
+          border: 0 !important;
+          background: #fff !important;
+          color: #171819 !important;
+        }
+        .account-button:disabled {
+          cursor: not-allowed;
+          opacity: .45 !important;
+        }
+        .account-provider-card {
+          min-width: 0;
+        }
+        .preferences-panel {
+          --pref-text: #f5f5f5;
+          --pref-muted: rgba(255,255,255,.5);
+          --pref-border: rgba(255,255,255,.09);
+          --pref-surface: #1d1f21;
+          --pref-surface-raised: #242628;
+          display: flex;
+          flex-direction: column;
+          gap: 34px;
+          color: var(--pref-text);
+        }
+        .account-settings-page.is-light .preferences-panel {
+          --pref-text: #18181b;
+          --pref-muted: #71717a;
+          --pref-border: rgba(24,24,27,.12);
+          --pref-surface: #fff;
+          --pref-surface-raised: #f4f4f5;
+        }
+        .preferences-loading { min-height: 220px; display: grid; place-items: center; color: rgba(255,255,255,.45); font-size: 13px; }
+        .account-settings-page.is-light .preferences-loading { color: #71717a; }
+        .preferences-section h2 { margin: 0 0 16px; color: var(--pref-text); font-size: 17px; font-weight: 650; line-height: 1.25; }
+        .preferences-heading-line { display: flex; align-items: center; justify-content: space-between; min-height: 24px; }
+        .preferences-heading-line h2 { margin-bottom: 0; }
+        .preferences-save-state { min-height: 18px; color: var(--pref-muted); font-size: 12px; }
+        .preferences-save-state.is-saved { color: #4ade80; }
+        .preferences-save-state.is-error { color: #ff7676; }
+        .preferences-theme-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-top: 16px; margin-bottom: 22px; }
+        .preferences-theme-card { padding: 0; overflow: hidden; border: 1px solid var(--pref-border); border-radius: 9px; background: var(--pref-surface); color: var(--pref-text); text-align: left; cursor: pointer; transition: border-color .18s ease, transform .18s ease; }
+        .preferences-theme-card:hover { border-color: color-mix(in srgb, var(--pref-text) 28%, transparent); transform: translateY(-1px); }
+        .preferences-theme-card.is-selected { border-color: color-mix(in srgb, var(--pref-text) 45%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--pref-text) 8%, transparent); }
+        .preferences-theme-card img { display: block; width: 100%; height: 70px; object-fit: cover; filter: grayscale(1); opacity: .78; }
+        .preferences-theme-card.is-selected img, .preferences-theme-card:hover img { filter: none; opacity: 1; }
+        .preferences-theme-card > span { min-height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 13px; font-size: 13px; font-weight: 600; }
+        .preferences-theme-card b { width: 17px; height: 17px; border-radius: 50%; display: grid; place-items: center; background: var(--pref-text); color: var(--pref-surface); font-size: 11px; }
+        .preferences-field { position: relative; width: 240px; }
+        .preferences-field > label { display: block; margin-bottom: 6px; color: var(--pref-muted) !important; font-size: 12px !important; font-weight: 600; }
+        .preferences-field > small { display: block; margin-top: 6px; color: var(--pref-muted); font-size: 11px; }
+        .preferences-select-wrap { position: relative; }
+        .preferences-select-trigger { width: 100%; height: 38px; border: 1px solid var(--pref-border); border-radius: 8px; background: var(--pref-surface); color: var(--pref-text); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .preferences-chevron { flex: 0 0 16px; color: var(--pref-muted); transition: transform .15s ease; }
+        .preferences-chevron:not(.is-double).is-open { transform: rotate(180deg); }
+        .preferences-select-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 120; padding: 5px; border: 1px solid var(--pref-border); border-radius: 9px; background: var(--pref-surface); box-shadow: 0 16px 38px rgba(0,0,0,.28); }
+        .preferences-select-menu button { width: 100%; min-height: 34px; border: 0; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; padding: 0 9px; background: var(--pref-surface-raised); color: var(--pref-text); font-size: 12.5px; cursor: pointer; }
+        .preferences-divider { height: 1px; background: var(--pref-border); }
+        .preferences-description { margin: -7px 0 23px; color: var(--pref-muted); font-size: 13px; line-height: 1.5; }
+        .preferences-group { margin-bottom: 24px; }
+        .preferences-group > h3, .preferences-following > h3 { margin: 0 0 8px; color: var(--pref-muted); font-size: 12px; font-weight: 650; }
+        .preferences-list { position: relative; border: 1px solid var(--pref-border); border-radius: 11px; background: var(--pref-surface); }
+        .preferences-row { position: relative; min-height: 51px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 13px; }
+        .preferences-row.has-divider::after { content: ''; position: absolute; left: 49px; right: 0; bottom: 0; height: 1px; background: var(--pref-border); }
+        .preferences-row-label { min-width: 0; display: flex; align-items: center; gap: 10px; color: var(--pref-text); font-size: 13.5px; font-weight: 600; }
+        .preferences-row-icon { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; background: var(--pref-surface-raised); color: var(--pref-muted); }
+        .preferences-dropdown-wrap { position: relative; }
+        .preferences-dropdown-trigger { max-width: 285px; min-height: 34px; border: 0; border-radius: 7px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 5px 0 10px; background: transparent; color: var(--pref-muted); font-size: 12.5px; cursor: pointer; }
+        .preferences-dropdown-trigger:hover, .preferences-dropdown-trigger[aria-expanded='true'] { background: var(--pref-surface-raised); color: var(--pref-text); }
+        .preferences-dropdown-trigger > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .preferences-chevron.is-double.is-open { color: var(--pref-text); }
+        .preferences-dropdown-menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 150; width: 196px; padding: 5px; border: 1px solid var(--pref-border); border-radius: 10px; background: var(--pref-surface); box-shadow: 0 18px 46px rgba(0,0,0,.35); }
+        .preferences-dropdown-menu > button { width: 100%; min-height: 36px; border: 0; border-radius: 7px; display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; background: transparent; color: var(--pref-muted); font-size: 13px; text-align: left; cursor: pointer; }
+        .preferences-dropdown-menu > button:hover, .preferences-dropdown-menu > button.is-active { background: var(--pref-surface-raised); color: var(--pref-text); }
+        .preferences-dropdown-menu > button:disabled { opacity: .42; cursor: default; }
+        .preferences-dropdown-menu > button span { display: flex; flex-direction: column; gap: 2px; }
+        .preferences-dropdown-menu > button small { color: var(--pref-muted); font-size: 9.5px; }
+        .preferences-dropdown-menu > button b { font-size: 13px; }
+        .preferences-dropdown-menu > i { display: block; height: 1px; margin: 4px; background: var(--pref-border); }
+        .preferences-following { margin-top: -8px; }
+        .preferences-nav-row { width: 100%; min-height: 50px; border: 0; border-bottom: 1px solid var(--pref-border); display: flex; align-items: center; justify-content: space-between; padding: 0 13px; background: transparent; color: var(--pref-text); cursor: pointer; }
+        .preferences-nav-row:last-child { border-bottom: 0; }
+        .preferences-nav-row > span { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; }
+        .preferences-nav-row > b { color: var(--pref-muted); font-size: 12.5px; font-weight: 500; }
+        .account-modal-copy { margin: 0 0 18px; color: rgba(255,255,255,.7); font-size: 14px; line-height: 1.55; }
+        .account-modal-action { width: 100%; min-height: 42px; border: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 9px; padding: 9px 14px; margin-top: 9px; font: 600 14px/1.2 inherit; cursor: pointer; text-decoration: none; box-sizing: border-box; }
+        .account-modal-action:disabled { cursor: default; opacity: .45; }
+        .account-modal-action.is-primary, .account-modal-action.calendar-apple { color: #17191c; background: #f6f6f6; }
+        .account-modal-action.is-muted { color: rgba(255,255,255,.8); background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.06); }
+        .account-modal-action.is-danger { color: #fff; background: #f52f36; }
+        .account-modal-action.calendar-google { color: #fff; background: #4285f4; }
+        .account-modal-action.calendar-outlook { color: #fff; background: #0aa5e8; }
+        .account-modal-link { width: 100%; border: 0; background: transparent; color: rgba(255,255,255,.52); font: 600 13px/1.3 inherit; padding: 12px 4px 0; cursor: pointer; }
+        .account-modal-code { width: 100%; height: 46px; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; background: #121315; color: #fff; text-align: center; font: 700 20px/1 inherit; letter-spacing: .28em; outline: none; box-sizing: border-box; }
+        .account-modal-code:focus { border-color: rgba(255,255,255,.45); }
+        .account-modal-note, .account-modal-loading { border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: rgba(255,255,255,.04); color: rgba(255,255,255,.56); font-size: 12.5px; line-height: 1.45; padding: 11px 12px; margin-bottom: 10px; }
+        .account-modal-error { color: #ff7676; font-size: 12.5px; line-height: 1.4; margin: 12px 0 0; }
+        .account-modal-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .account-delete-confirm { display: flex !important; align-items: flex-start; gap: 10px; color: #ff7777 !important; font-size: 14px !important; line-height: 1.45; margin: 4px 0 12px; cursor: pointer; }
+        .account-delete-confirm input { appearance: none; width: 20px; height: 20px; flex: 0 0 20px; border: 1px solid rgba(255,95,95,.55); border-radius: 6px; background: transparent; margin: 0; }
+        .account-delete-confirm input:checked { background: #ff6b6b; box-shadow: inset 0 0 0 4px #ff6b6b; }
+        .account-delete-confirm input:checked::after { content: '✓'; color: white; display: block; text-align: center; font-size: 14px; line-height: 18px; }
+        .outlook-mark { font-size: 20px; line-height: 1; }
+        @media (max-width: 820px) {
+          .account-profile-grid {
+            grid-template-columns: minmax(0, 342px) 140px !important;
+            column-gap: 48px !important;
+          }
+          .account-social-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+          .account-provider-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (max-width: 620px) {
+          .account-settings-shell,
+          .account-settings-content {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .account-settings-content {
+            padding-top: 24px !important;
+            padding-bottom: 64px !important;
+          }
+          .account-profile-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            row-gap: 24px !important;
+          }
+          .account-profile-fields {
+            width: 100% !important;
+            grid-row: 2;
+          }
+          .account-profile-photo {
+            grid-row: 1;
+          }
+          .account-social-grid,
+          .account-provider-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .account-action-row {
+            align-items: flex-start !important;
+            flex-direction: column !important;
+            gap: 14px !important;
+          }
+          .account-action-row > button {
+            margin-left: 30px;
+          }
+          .account-section-heading {
+            align-items: flex-start !important;
+            gap: 12px;
+          }
+          .account-phone-row {
+            align-items: stretch !important;
+            flex-direction: column !important;
+          }
+          .account-phone-row > div,
+          .account-phone-row > button {
+            width: 100%;
+          }
+          .account-phone-row input {
+            flex: 1;
+            width: auto !important;
+          }
+          .preferences-theme-grid { gap: 8px; }
+          .preferences-theme-card img { height: 56px; }
+          .preferences-theme-card > span { min-height: 36px; padding: 0 9px; font-size: 12px; }
+          .preferences-field { width: 100%; }
+          .preferences-row { min-height: 58px; padding: 8px 10px; }
+          .preferences-row-label { font-size: 12.5px; }
+          .preferences-dropdown-trigger { max-width: 150px; font-size: 11.5px; }
+          .preferences-dropdown-menu { position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; padding: 7px; border-radius: 13px; }
+          .preferences-dropdown-menu > button { min-height: 43px; }
+          .preferences-nav-row { padding: 0 10px; }
+          .preferences-nav-row > b { max-width: 135px; text-align: right; }
+        }
+        @media (max-width: 390px) {
+          .account-name-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .premium-tab-container {
+            gap: 10px !important;
+          }
+          .premium-tab {
+            font-size: 14px !important;
+          }
+        }
       `}</style>
 
       <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
+
+      {accountModal === '2fa' && (
+        <AccountModalShell icon={<ShieldIcon />} title={twoFactorStep === 'done' ? '2FA ativada' : 'Confirmar Acesso'} onClose={() => setAccountModal(null)}>
+          {twoFactorStep === 'method' && <>
+            <p className="account-modal-copy">Esta é uma ação sensível que requer confirmação adicional.</p>
+            <button disabled className="account-modal-action is-muted" title="Confirmação por WhatsApp em breve">Enviar Código pelo WhatsApp · Em breve</button>
+            <button disabled={modalBusy} onClick={requestTwoFactorCode} className="account-modal-action is-muted">{modalBusy ? 'Enviando…' : 'Enviar Código por E-mail'}</button>
+          </>}
+          {twoFactorStep === 'code' && <>
+            <p className="account-modal-copy">Digite o código de 6 dígitos enviado para o seu e-mail.</p>
+            <input autoFocus inputMode="numeric" maxLength={6} value={twoFactorCode} onChange={event => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className="account-modal-code" placeholder="000000" />
+            <button disabled={twoFactorCode.length !== 6 || modalBusy} onClick={verifyTwoFactorCode} className="account-modal-action is-primary">{modalBusy ? 'Confirmando…' : 'Confirmar e ativar'}</button>
+            <button disabled={modalBusy} onClick={requestTwoFactorCode} className="account-modal-link">Reenviar código</button>
+          </>}
+          {twoFactorStep === 'done' && <>
+            <p className="account-modal-copy">A confirmação em duas etapas foi ativada para sua conta.</p>
+            <button onClick={() => setAccountModal(null)} className="account-modal-action is-primary">Concluído</button>
+          </>}
+          {modalError && <p className="account-modal-error">{modalError}</p>}
+        </AccountModalShell>
+      )}
+
+      {accountModal === 'passkey' && (
+        <AccountModalShell icon={<FingerprintIcon />} title="Adicionar Passkey" onClose={() => setAccountModal(null)}>
+          <p className="account-modal-copy">Use o Face ID, Touch ID, Windows Hello ou a segurança do seu dispositivo para criar uma passkey.</p>
+          <div className="account-modal-note">A passkey ficará vinculada a <strong>{user?.email}</strong>.</div>
+          <button disabled={modalBusy} onClick={addPasskey} className="account-modal-action is-primary">{modalBusy ? 'Aguardando o dispositivo…' : 'Adicionar Passkey'}</button>
+          {modalError && <p className="account-modal-error">{modalError}</p>}
+        </AccountModalShell>
+      )}
+
+      {accountModal === 'ical' && (
+        <AccountModalShell icon={<CalendarSyncIcon />} title="Adicionar assinatura iCal" onClose={() => setAccountModal(null)}>
+          <p className="account-modal-copy">Adicione o feed de eventos ao seu app de calendário para acompanhar novos eventos e atualizações.</p>
+          {modalBusy ? <div className="account-modal-loading">Preparando sua assinatura…</div> : icalUrl ? <>
+            <a href={calendarLink('google')} target="_blank" rel="noreferrer" className="account-modal-action calendar-google"><GoogleIcon /> Google Calendar</a>
+            <a href={calendarLink('outlook')} target="_blank" rel="noreferrer" className="account-modal-action calendar-outlook"><span className="outlook-mark">⊞</span> Calendário do Outlook</a>
+            <a href={calendarLink('apple')} className="account-modal-action calendar-apple"><AppleIcon /> Apple Calendar</a>
+            <button onClick={async () => { await navigator.clipboard.writeText(icalUrl); }} className="account-modal-link">Copiar URL para a área de transferência</button>
+          </> : null}
+          {modalError && <p className="account-modal-error">{modalError}</p>}
+        </AccountModalShell>
+      )}
+
+      {accountModal === 'session' && selectedSession && (
+        <AccountModalShell icon={<MonitorIcon />} iconTone="danger" title="Sair do Dispositivo" onClose={() => setAccountModal(null)}>
+          <p className="account-modal-copy">Tem certeza que deseja sair de <strong>{selectedSession.browser}</strong> e removê-lo da lista?</p>
+          <div className="account-modal-buttons">
+            <button disabled={modalBusy} onClick={revokeSelectedSession} className="account-modal-action is-danger">{modalBusy ? 'Saindo…' : 'Sair'}</button>
+            <button disabled={modalBusy} onClick={() => setAccountModal(null)} className="account-modal-action is-muted">Cancelar</button>
+          </div>
+          {modalError && <p className="account-modal-error">{modalError}</p>}
+        </AccountModalShell>
+      )}
+
+      {accountModal === 'delete' && (
+        <AccountModalShell icon={<TrashIcon />} iconTone="danger" title="Excluir Conta" onClose={() => setAccountModal(null)}>
+          <p className="account-modal-copy">Tem certeza que deseja excluir a conta vinculada a <strong>{user?.email}</strong>?</p>
+          <label className="account-delete-confirm">
+            <input type="checkbox" checked={deleteConfirmed} onChange={event => setDeleteConfirmed(event.target.checked)} />
+            <span>Entendo que não serei capaz de recuperar minha conta.</span>
+          </label>
+          <div className="account-modal-buttons">
+            <button disabled={!deleteConfirmed || modalBusy} onClick={deleteAccount} className="account-modal-action is-danger">{modalBusy ? 'Excluindo…' : 'Excluir'}</button>
+            <button disabled={modalBusy} onClick={() => setAccountModal(null)} className="account-modal-action is-muted">Cancelar</button>
+          </div>
+          {modalError && <p className="account-modal-error">{modalError}</p>}
+        </AccountModalShell>
+      )}
 
       {/* Add Email Modal */}
       {showAddEmailModal && (
@@ -2547,6 +3197,7 @@ const AccountSettingsV2: React.FC = () => {
               }
             }}>
               <input
+                className="account-input"
                 type="email"
                 name="email"
                 required
@@ -2567,6 +3218,7 @@ const AccountSettingsV2: React.FC = () => {
               />
 
               <button
+                className="account-button account-button-primary"
                 type="submit"
                 style={{
                   width: '100%',
@@ -2594,14 +3246,277 @@ const AccountSettingsV2: React.FC = () => {
 
 export default AccountSettingsV2;
 
+const AccountModalShell: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  onClose: () => void;
+  iconTone?: 'default' | 'danger';
+  children: React.ReactNode;
+}> = ({ icon, title, onClose, iconTone = 'default', children }) => (
+  <div role="dialog" aria-modal="true" aria-label={title} onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+    <div style={{ width: 'min(360px, 100%)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, background: 'linear-gradient(145deg, #1d1f21, #18191b)', boxShadow: '0 24px 70px rgba(0,0,0,.55)', padding: 22, boxSizing: 'border-box', position: 'relative', color: '#fff' }}>
+      <button aria-label="Fechar" onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, width: 30, height: 30, border: 0, borderRadius: '50%', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.65)', display: 'grid', placeItems: 'center', fontSize: 18, lineHeight: 1, cursor: 'pointer' }}>×</button>
+      <div style={{ width: 50, height: 50, borderRadius: '50%', display: 'grid', placeItems: 'center', color: iconTone === 'danger' ? '#ff5d62' : 'rgba(255,255,255,.78)', background: iconTone === 'danger' ? 'rgba(239,62,66,.16)' : 'rgba(255,255,255,.08)', marginBottom: 18 }}>
+        {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { width: 24, height: 24 }) : icon}
+      </div>
+      <h3 style={{ margin: '0 36px 10px 0', fontSize: 22, lineHeight: 1.2, fontWeight: 700, letterSpacing: '-.02em' }}>{title}</h3>
+      {children}
+    </div>
+  </div>
+);
+
+type PreferenceChannel = 'email' | 'whatsapp' | 'push';
+type PreferenceChannelState = Record<PreferenceChannel, boolean>;
+type NotificationChannels = Record<string, PreferenceChannelState>;
+
+const PREFERENCE_DEFAULTS: NotificationChannels = {
+  event_invites: { email: true, whatsapp: false, push: true },
+  event_reminders: { email: true, whatsapp: false, push: true },
+  event_streams: { email: true, whatsapp: false, push: true },
+  event_updates: { email: true, whatsapp: false, push: true },
+  feedback_requests: { email: true, whatsapp: false, push: false },
+  guest_registrations: { email: true, whatsapp: false, push: true },
+  feedback_responses: { email: true, whatsapp: false, push: false },
+  calendar_members: { email: true, whatsapp: false, push: true },
+  event_submissions: { email: true, whatsapp: false, push: false },
+  product_updates: { email: true, whatsapp: false, push: false },
+};
+
+const PREFERENCE_GROUPS = [
+  {
+    title: 'Eventos que você participa',
+    items: [
+      { key: 'event_invites', label: 'Convites de Eventos', icon: 'mail', channels: ['email', 'whatsapp', 'push'] },
+      { key: 'event_reminders', label: 'Lembretes de Evento', icon: 'clock', channels: ['email', 'whatsapp', 'push'] },
+      { key: 'event_streams', label: 'Transmissões do Evento', icon: 'speaker', channels: ['email', 'whatsapp', 'push'] },
+      { key: 'event_updates', label: 'Atualizações do Evento', icon: 'calendar', channels: ['email', 'whatsapp', 'push'] },
+      { key: 'feedback_requests', label: 'Solicitações de Feedback', icon: 'feedback', channels: ['email'] },
+    ],
+  },
+  {
+    title: 'Eventos que você organiza',
+    items: [
+      { key: 'guest_registrations', label: 'Inscrições de Convidados', icon: 'guest', channels: ['email', 'push'] },
+      { key: 'feedback_responses', label: 'Respostas de Feedback', icon: 'star', channels: ['email'] },
+    ],
+  },
+  {
+    title: 'Calendários que você gerencia',
+    items: [
+      { key: 'calendar_members', label: 'Novos Membros', icon: 'member', channels: ['email', 'push'] },
+      { key: 'event_submissions', label: 'Submissões de Eventos', icon: 'ticket', channels: ['email'] },
+    ],
+  },
+  {
+    title: 'Fauves',
+    items: [
+      { key: 'product_updates', label: 'Atualizações de Produto', icon: 'sparkle', channels: ['email'] },
+    ],
+  },
+] as const;
+
+const PreferenceGlyph: React.FC<{ name: string }> = ({ name }) => {
+  const common = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  if (name === 'mail') return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>;
+  if (name === 'clock') return <svg {...common}><circle cx="12" cy="13" r="8"/><path d="M9 2h6M12 9v5l3 2"/></svg>;
+  if (name === 'speaker') return <svg {...common}><path d="m4 13 4 1 8 5V5L8 10l-4 1zM19 9a5 5 0 0 1 0 6"/></svg>;
+  if (name === 'calendar') return <svg {...common}><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><circle cx="15.5" cy="15.5" r="2.5"/></svg>;
+  if (name === 'feedback') return <svg {...common}><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 9h6M9 14h4"/></svg>;
+  if (name === 'guest' || name === 'member') return <svg {...common}><circle cx="10" cy="8" r="3"/><path d="M4 20a6 6 0 0 1 12 0M18 8v6M15 11h6"/></svg>;
+  if (name === 'star') return <svg {...common}><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>;
+  if (name === 'ticket') return <svg {...common}><path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/><path d="M13 8v8"/></svg>;
+  return <svg {...common}><path d="m12 3 1.3 4.4L17 6l-1.4 3.7L20 11l-4.4 1.3L17 16l-3.7-1.4L12 19l-1.3-4.4L7 16l1.4-3.7L4 11l4.4-1.3L7 6l3.7 1.4z"/></svg>;
+};
+
+const PreferenceChevron: React.FC<{ double?: boolean; open?: boolean }> = ({ double = false, open = false }) => (
+  <svg className={`preferences-chevron ${double ? 'is-double' : ''} ${open ? 'is-open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    {double
+      ? <><path d="m8 9 4-4 4 4"/><path d="m8 15 4 4 4-4"/></>
+      : <path d="m7 9 5 5 5-5"/>}
+  </svg>
+);
+
+const AccountPreferencesPanel: React.FC<{ token: string | null; hasPhone: boolean; calendarCount: number }> = ({ token, hasPhone, calendarCount }) => {
+  const { mode, setMode } = useTheme();
+  const navigate = useNavigate();
+  const [locale, setLocale] = useState('pt-BR');
+  const [channels, setChannels] = useState<NotificationChannels>(PREFERENCE_DEFAULTS);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const [loadingPreferences, setLoadingPreferences] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const panelRef = useRef<HTMLDivElement>(null);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const saveRevisionRef = useRef(0);
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (!panelRef.current?.contains(event.target as Node)) {
+        setOpenDropdown(null);
+        setLanguageOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    fetchApi('/account-settings/preferences', { headers: { Authorization: `Bearer ${token}` } })
+      .then(async response => response.ok ? response.json() : null)
+      .then(data => {
+        if (!active || !data) return;
+        if (data.displayMode === 'light' || data.displayMode === 'dark' || data.displayMode === 'system') setMode(data.displayMode);
+        setLocale(data.locale === 'pt-BR' ? 'pt-BR' : 'pt-BR');
+        setChannels({ ...PREFERENCE_DEFAULTS, ...(data.notificationChannels || {}) });
+        document.documentElement.lang = data.locale === 'pt-BR' ? 'pt-BR' : 'pt-BR';
+      })
+      .catch(() => setSaveStatus('error'))
+      .finally(() => { if (active) setLoadingPreferences(false); });
+    return () => { active = false; };
+  }, [token, setMode]);
+
+  const persist = (nextMode: 'light' | 'dark' | 'system', nextLocale: string, nextChannels: NotificationChannels) => {
+    if (!token) return Promise.resolve();
+    const revision = ++saveRevisionRef.current;
+    setSaveStatus('saving');
+    const operation = saveQueueRef.current.catch(() => undefined).then(async () => {
+      const response = await fetchApi('/account-settings/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ displayMode: nextMode, locale: nextLocale, notificationChannels: nextChannels }),
+      });
+      if (!response.ok) throw new Error('save failed');
+    });
+    saveQueueRef.current = operation.catch(() => undefined);
+    void operation.then(() => {
+      if (revision !== saveRevisionRef.current) return;
+      setSaveStatus('saved');
+      window.setTimeout(() => {
+        if (revision === saveRevisionRef.current) setSaveStatus('idle');
+      }, 1600);
+    }).catch(() => {
+      if (revision === saveRevisionRef.current) setSaveStatus('error');
+    });
+    return operation;
+  };
+
+  const selectTheme = (next: 'light' | 'dark' | 'system') => {
+    setMode(next);
+    void persist(next, locale, channels);
+  };
+
+  const setNotificationChannels = (key: string, next: PreferenceChannelState) => {
+    const updated = { ...channels, [key]: next };
+    setChannels(updated);
+    void persist(mode, locale, updated);
+  };
+
+  const toggleChannel = (key: string, channel: PreferenceChannel) => {
+    if (channel === 'whatsapp' && !hasPhone) return;
+    const current = channels[key] || PREFERENCE_DEFAULTS[key];
+    setNotificationChannels(key, { ...current, [channel]: !current[channel] });
+  };
+
+  const channelSummary = (state: PreferenceChannelState) => {
+    const labels = [state.email && 'Email', state.whatsapp && 'WhatsApp', state.push && 'Push'].filter(Boolean);
+    return labels.length ? labels.join(', ') : 'Desligado';
+  };
+
+  const themeCards = [
+    { id: 'system', label: 'Sistema', image: displaySystem },
+    { id: 'light', label: 'Claro', image: displayLight },
+    { id: 'dark', label: 'Escuro', image: displayDark },
+  ] as const;
+
+  if (loadingPreferences) return <div className="preferences-loading">Carregando preferências…</div>;
+
+  return (
+    <div ref={panelRef} className="preferences-panel">
+      <section className="preferences-section">
+        <div className="preferences-heading-line">
+          <h2>Exibição</h2>
+          <span className={`preferences-save-state is-${saveStatus}`} aria-live="polite">
+            {saveStatus === 'saving' ? 'Salvando…' : saveStatus === 'saved' ? 'Salvo' : saveStatus === 'error' ? 'Não foi possível salvar' : ''}
+          </span>
+        </div>
+        <div className="preferences-theme-grid">
+          {themeCards.map(theme => (
+            <button key={theme.id} type="button" aria-pressed={mode === theme.id} onClick={() => selectTheme(theme.id)} className={`preferences-theme-card ${mode === theme.id ? 'is-selected' : ''}`}>
+              <img src={theme.image} alt="" />
+              <span>{theme.label}{mode === theme.id && <b aria-hidden>✓</b>}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="preferences-field">
+          <label>Idioma</label>
+          <div className="preferences-select-wrap">
+            <button type="button" aria-haspopup="listbox" aria-expanded={languageOpen} onClick={() => { setOpenDropdown(null); setLanguageOpen(value => !value); }} className="preferences-select-trigger">
+              <span>Português (Brasil)</span><PreferenceChevron open={languageOpen} />
+            </button>
+            {languageOpen && <div role="listbox" className="preferences-select-menu">
+              <button type="button" role="option" aria-selected onClick={() => { setLocale('pt-BR'); document.documentElement.lang = 'pt-BR'; setLanguageOpen(false); void persist(mode, 'pt-BR', channels); }}>Português (Brasil)<span>✓</span></button>
+            </div>}
+          </div>
+          <small>Outros idiomas serão adicionados futuramente.</small>
+        </div>
+      </section>
+
+      <div className="preferences-divider" />
+
+      <section className="preferences-section">
+        <h2>Notificações</h2>
+        <p className="preferences-description">Escolha como você deseja ser notificado sobre atualizações, convites e assinaturas.</p>
+
+        {PREFERENCE_GROUPS.map(group => <div key={group.title} className="preferences-group">
+          <h3>{group.title}</h3>
+          <div className="preferences-list">
+            {group.items.map((item, index) => {
+              const state = channels[item.key] || PREFERENCE_DEFAULTS[item.key];
+              return <div key={item.key} className={`preferences-row ${index < group.items.length - 1 ? 'has-divider' : ''}`}>
+                <div className="preferences-row-label"><span className="preferences-row-icon"><PreferenceGlyph name={item.icon} /></span><span>{item.label}</span></div>
+                <div className="preferences-dropdown-wrap">
+                  <button type="button" aria-label={`Configurar notificações de ${item.label}`} aria-haspopup="menu" aria-expanded={openDropdown === item.key} onClick={() => { setLanguageOpen(false); setOpenDropdown(current => current === item.key ? null : item.key); }} className="preferences-dropdown-trigger">
+                    <span>{channelSummary(state)}</span><PreferenceChevron double open={openDropdown === item.key} />
+                  </button>
+                  {openDropdown === item.key && <div role="menu" className="preferences-dropdown-menu">
+                    <button type="button" role="menuitemcheckbox" aria-checked={!state.email && !state.whatsapp && !state.push} onClick={() => setNotificationChannels(item.key, { email: false, whatsapp: false, push: false })} className={!state.email && !state.whatsapp && !state.push ? 'is-active' : ''}><span>Desligado</span>{!state.email && !state.whatsapp && !state.push && <b>✓</b>}</button>
+                    <i />
+                    {(item.channels as readonly PreferenceChannel[]).map(channel => {
+                      const disabled = channel === 'whatsapp' && !hasPhone;
+                      const label = channel === 'email' ? 'Email' : channel === 'whatsapp' ? 'WhatsApp' : 'Notificação push';
+                      return <button key={channel} type="button" role="menuitemcheckbox" aria-checked={state[channel]} disabled={disabled} title={disabled ? 'Adicione um número de celular para ativar o WhatsApp' : undefined} onClick={() => toggleChannel(item.key, channel)} className={state[channel] ? 'is-active' : ''}><span>{label}{disabled && <small>Adicione seu celular</small>}</span>{state[channel] && <b>✓</b>}</button>;
+                    })}
+                  </div>}
+                </div>
+              </div>;
+            })}
+          </div>
+        </div>)}
+      </section>
+
+      <section className="preferences-section preferences-following">
+        <h3>Assinaturas e seguidos</h3>
+        <div className="preferences-list">
+          <button type="button" onClick={() => navigate('/discover')} className="preferences-nav-row"><span><span className="preferences-row-icon"><WebIcon /></span>Páginas de descoberta</span><b>Explorar ›</b></button>
+          <button type="button" onClick={() => navigate('/organizations')} className="preferences-nav-row"><span><span className="preferences-row-icon"><CalendarSyncIcon /></span>Calendários</span><b>{calendarCount} {calendarCount === 1 ? 'calendário' : 'calendários'} ›</b></button>
+        </div>
+      </section>
+    </div>
+  );
+};
+
 /* ─── SOCIAL ROW HELPER ─────────────────────────────────────────────────── */
 const SocialRow = ({ icon, prefix, value, onChange, placeholder }: any) => (
-  <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.5rem', overflow: 'hidden', flex: 1 }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 10px', color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>
+  <div className="account-social-row" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.5rem', overflow: 'hidden', flex: 1 }}>
+    <div className="account-social-icon" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 10px', color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>
       {icon}
     </div>
-    <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', padding: '10px 0 10px 0', whiteSpace: 'nowrap', userSelect: 'none' }}>{prefix}</div>
+    {prefix && <div className="account-social-prefix" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', padding: '10px 0 10px 0', whiteSpace: 'nowrap', userSelect: 'none' }}>{prefix}</div>}
     <input
+      className={`account-social-input ${prefix ? 'has-prefix' : ''}`}
       type="text"
       value={value}
       onChange={e => onChange(e.target.value)}

@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Bell, LogOut, Settings, User, Mail, Plus, Search, Home, Users, Compass, HelpCircle, Calendar, ChevronRight, Copy, Download, Check } from 'lucide-react';
-import { apiUrl } from '@/lib/apiBase';
+import { apiUrl, fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { getEventPath, getOrganizationPath } from '@/lib/eventUrl';
 import fauvesBrandSvg from '@/assets/fauves-logotipo-brand.svg?raw';
 
 /* ─── LUMA DESIGN TOKENS ────────────────────────────────────────────────── */
@@ -146,13 +147,72 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
   const [orgs, setOrgs] = useState<any[]>([]);
   const [organizing, setOrganizing] = useState<any[]>([]);
   const [participating, setParticipating] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<{
+    events: any[];
+    collections: any[];
+    organizations: any[];
+    users: any[];
+  }>({ events: [], collections: [], organizations: [], users: [] });
 
   useEffect(() => {
     if (isOpen && user) {
       loadData();
     }
   }, [isOpen, user]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setQuery('');
+      setSearchResults({ events: [], collections: [], organizations: [], users: [] });
+      setSearchLoading(false);
+      return;
+    }
+
+    const term = query.trim();
+    if (term.length < 2) {
+      setSearchResults({ events: [], collections: [], organizations: [], users: [] });
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchResults({ events: [], collections: [], organizations: [], users: [] });
+    setSearchLoading(true);
+    let active = true;
+    const timeoutId = window.setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const normalizedTerm = term
+          .normalize('NFD')
+          .replace(/\p{Diacritic}/gu, '')
+          .toLowerCase();
+        const response = await fetchApi(
+          `/api/search?term=${encodeURIComponent(term)}&term_norm=${encodeURIComponent(normalizedTerm)}`,
+        );
+        if (!response.ok) throw new Error(`Busca indisponível (${response.status})`);
+        const data = await response.json();
+        if (active) {
+          setSearchResults({
+            events: Array.isArray(data?.events) ? data.events : [],
+            collections: Array.isArray(data?.collections) ? data.collections : [],
+            organizations: Array.isArray(data?.organizations) ? data.organizations : [],
+            users: Array.isArray(data?.users) ? data.users : [],
+          });
+        }
+      } catch (error) {
+        console.error('SearchModal search error:', error);
+        if (active) setSearchResults({ events: [], collections: [], organizations: [], users: [] });
+      } finally {
+        if (active) setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [isOpen, query]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -168,7 +228,7 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
 
   const loadData = async () => {
     if (!user) return;
-    setLoading(true);
+    setInitialLoading(true);
     try {
       const [orgsRes, organizingRes, participatingRes] = await Promise.all([
         fetchApi('/api/organization/list'),
@@ -180,8 +240,8 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
       const organizingData = await organizingRes.json();
       const participatingData = await participatingRes.json();
 
-      if (Array.isArray(orgsData)) setOrgs(orgsData.slice(0, 5));
-      if (Array.isArray(organizingData)) setOrganizing(organizingData.slice(0, 5));
+      if (Array.isArray(orgsData)) setOrgs(orgsData);
+      if (Array.isArray(organizingData)) setOrganizing(organizingData);
       if (participatingData?.items && Array.isArray(participatingData.items)) {
         // Group by event to show unique events
         const uniqueEvents: any[] = [];
@@ -192,14 +252,62 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
             uniqueEvents.push(t);
           }
         });
-        setParticipating(uniqueEvents.slice(0, 5));
+        setParticipating(uniqueEvents);
       }
     } catch (e) {
       console.error('SearchModal data fetch error:', e);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
+
+  const normalizedQuery = query
+    .trim()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+  const matchesQuery = (...values: unknown[]) => values.some((value) => (
+    typeof value === 'string'
+    && value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().includes(normalizedQuery)
+  ));
+
+  const ownEventResults = normalizedQuery.length >= 2
+    ? organizing.filter((event) => matchesQuery(event.name, event.locationCity, event.locationUf))
+    : [];
+  const participatingResults = normalizedQuery.length >= 2
+    ? participating.filter((ticket) => matchesQuery(ticket.eventName))
+    : [];
+  const ownCalendarResults = normalizedQuery.length >= 2
+    ? orgs.filter((org) => matchesQuery(org.name, org.description, org.bio))
+    : [];
+
+  const publicEventIds = new Set(searchResults.events.map((event) => event.id));
+  const matchedEvents = [
+    ...ownEventResults.map((event) => ({ ...event, isManagedByUser: true })),
+    ...participatingResults
+      .filter((ticket) => !publicEventIds.has(ticket.eventId))
+      .map((ticket) => ({
+        id: ticket.eventId,
+        slug: ticket.eventSlug,
+        name: ticket.eventName,
+        startDate: ticket.eventStartDate,
+        image: ticket.eventBannerUrl,
+      })),
+    ...searchResults.events.filter((event) => !ownEventResults.some((ownEvent) => ownEvent.id === event.id)),
+  ].slice(0, 8);
+
+  const matchedOrganizations = [
+    ...ownCalendarResults,
+    ...searchResults.organizations.filter((organization) => (
+      !ownCalendarResults.some((ownOrganization) => ownOrganization.id === organization.id)
+    )),
+  ].slice(0, 8);
+
+  const hasSearchResults = matchedEvents.length > 0
+    || matchedOrganizations.length > 0
+    || searchResults.collections.length > 0
+    || searchResults.users.length > 0;
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -312,10 +420,16 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
                     <ListItem icon={<Compass size={18} />} label="Abrir Descobrir" to="/discover" />
                     <ListItem icon={<HelpCircle size={18} />} label="Abrir Ajuda" to="https://help.fauves.com.br" />
 
+                    {initialLoading && orgs.length === 0 && organizing.length === 0 && participating.length === 0 && (
+                      <div style={{ padding: '0.75rem 1rem', color: '#939597', fontSize: '0.75rem' }}>
+                        Carregando seus eventos e calendários...
+                      </div>
+                    )}
+
                     {orgs.length > 0 && (
                       <>
                         <SectionHeader title="Calendários" />
-                        {orgs.map(org => (
+                        {orgs.slice(0, 5).map(org => (
                           <ListItem 
                             key={org.id}
                             image={org.logoUrl}
@@ -329,7 +443,7 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
                     {organizing.length > 0 && (
                       <>
                         <SectionHeader title="Organizando" />
-                        {organizing.map(event => (
+                        {organizing.slice(0, 5).map(event => (
                           <ListItem 
                             key={event.id}
                             icon={<Calendar size={16} />}
@@ -344,7 +458,7 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
                     {participating.length > 0 && (
                       <>
                         <SectionHeader title="Participando" />
-                        {participating.map(ticket => (
+                        {participating.slice(0, 5).map(ticket => (
                           <ListItem 
                             key={ticket.id}
                             icon={<Calendar size={16} />}
@@ -356,9 +470,88 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
                       </>
                     )}
                   </>
+                ) : query.trim().length < 2 ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#939597' }}>
+                    Digite pelo menos 2 caracteres para buscar.
+                  </div>
+                ) : searchLoading && !hasSearchResults ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#939597' }}>
+                    Buscando...
+                  </div>
+                ) : hasSearchResults ? (
+                  <>
+                    {matchedEvents.length > 0 && (
+                      <>
+                        <SectionHeader title="Eventos" />
+                        {matchedEvents.map((event) => (
+                          <ListItem
+                            key={`event-${event.id}`}
+                            image={event.image || event.bannerUrl}
+                            icon={<Calendar size={16} />}
+                            label={event.name}
+                            sublabel={formatDate(event.startDate)}
+                            to={event.isManagedByUser ? `/event/manage/${event.id}` : getEventPath(event)}
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    {matchedOrganizations.length > 0 && (
+                      <>
+                        <SectionHeader title="Calendários" />
+                        {matchedOrganizations.map((organization) => (
+                          <ListItem
+                            key={`organization-${organization.id}`}
+                            image={organization.logoUrl}
+                            icon={<Users size={16} />}
+                            label={organization.name}
+                            sublabel={organization.description || organization.bio}
+                            to={getOrganizationPath(organization)}
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    {searchResults.users.length > 0 && (
+                      <>
+                        <SectionHeader title="Pessoas" />
+                        {searchResults.users.slice(0, 5).map((person) => (
+                          <ListItem
+                            key={`person-${person.id}`}
+                            image={person.photoUrl}
+                            icon={<User size={16} />}
+                            label={[person.name, person.surname].filter(Boolean).join(' ') || person.username || 'Usuário'}
+                            sublabel={person.username ? `@${person.username}` : person.bio}
+                            to={`/u/${person.id}`}
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    {searchResults.collections.length > 0 && (
+                      <>
+                        <SectionHeader title="Coleções" />
+                        {searchResults.collections.slice(0, 5).map((collection) => (
+                          <ListItem
+                            key={`collection-${collection.id}`}
+                            image={collection.bannerImage}
+                            icon={<Calendar size={16} />}
+                            label={collection.title}
+                            to={`/colecao/${collection.slug || collection.id}`}
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    {searchLoading && (
+                      <div style={{ padding: '0.75rem 1rem', color: '#939597', fontSize: '0.75rem' }}>
+                        Atualizando resultados...
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div style={{ padding: '2rem', textAlign: 'center', color: '#939597' }}>
-                    {loading ? 'Buscando...' : 'Nenhum resultado encontrado para "' + query + '"'}
+                    Nenhum resultado encontrado para "{query.trim()}".
                   </div>
                 )}
               </div>
@@ -421,6 +614,11 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   const [systemIsDark, setSystemIsDark] = useState(() =>
     typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : false
   );
+  // Transparent headers no longer imply a dark page. Pages rendered over dark
+  // artwork can still opt in explicitly with theme="dark".
+  const currentTheme = theme ?? (systemIsDark ? 'dark' : 'light');
+  const isDarkTheme = currentTheme === 'dark';
+  const contentColor = isDarkTheme ? '#fff' : '#131517';
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -493,8 +691,12 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
     const pageRoot = navRef.current?.parentElement;
     if (!pageRoot || !blueGlow) return;
     pageRoot.classList.add('header-blue-page');
-    return () => pageRoot.classList.remove('header-blue-page');
-  }, [blueGlow]);
+    pageRoot.classList.toggle('header-blue-page-dark', isDarkTheme);
+    pageRoot.classList.toggle('header-blue-page-light', !isDarkTheme);
+    return () => {
+      pageRoot.classList.remove('header-blue-page', 'header-blue-page-dark', 'header-blue-page-light');
+    };
+  }, [blueGlow, isDarkTheme]);
 
   useLayoutEffect(() => {
     let frame = 0;
@@ -542,12 +744,6 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [transparent, scrollTransition]);
-
-  // Se a prop 'theme' foi passada explicitamente, usa ela.
-  // Caso contrário, detecta automaticamente pelo dark mode do sistema (classe 'dark' no <html>).
-  const currentTheme = theme ?? (systemIsDark ? 'dark' : (transparent && !isScrolled ? 'dark' : 'light'));
-  const isDarkTheme = currentTheme === 'dark';
-  const contentColor = isDarkTheme ? '#fff' : '#131517';
 
   return (
     <>
@@ -728,9 +924,19 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           width: 100%;
           height: 380px;
           pointer-events: none;
+        }
+
+        .header-blue-page-dark::before {
           background:
             radial-gradient(900px 380px at 50% -100px, rgba(53, 113, 160, 0.34), transparent 72%),
             linear-gradient(180deg, rgba(17, 24, 32, .96) 0, rgba(18, 20, 22, .72) 190px, transparent 100%);
+        }
+
+        .header-blue-page-light::before {
+          height: 300px;
+          background:
+            radial-gradient(820px 300px at 50% -110px, rgba(42, 42, 215, .14), transparent 72%),
+            linear-gradient(180deg, rgba(226, 232, 240, .88) 0, rgba(241, 244, 248, .58) 150px, transparent 100%);
         }
 
         .header-content-alignment {

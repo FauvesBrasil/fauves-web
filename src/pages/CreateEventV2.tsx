@@ -41,6 +41,7 @@ import { toast } from '@/components/ui/sonner';
 import RequireOrganization from '@/components/RequireOrganization';
 import { useAuth } from '@/context/AuthContext';
 import { useOrganization } from '@/context/OrganizationContext';
+import { useTheme } from '@/context/ThemeContext';
 
 
 
@@ -83,6 +84,7 @@ export default function CreateEventV2() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { orgs, loading: loadingOrgs, addOrganization } = useOrganization();
+    const { isDark: siteIsDark } = useTheme();
 
     // Form State
     const [eventName, setEventName] = useState("");
@@ -556,31 +558,6 @@ export default function CreateEventV2() {
         return brightness < 128;
     }, [derivedPalette, activeCustomColor, selectedTheme]);
 
-    // Escuta a preferência de esquema de cores (claro/escuro) do sistema operacional do usuário em tempo real
-    const [systemPrefersDark, setSystemPrefersDark] = useState(() => 
-        typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
-    );
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        const handleChange = (e: MediaQueryListEvent) => {
-            setSystemPrefersDark(e.matches);
-        };
-        if (mediaQuery.addEventListener) {
-            mediaQuery.addEventListener('change', handleChange);
-        } else {
-            (mediaQuery as any).addListener(handleChange);
-        }
-        return () => {
-            if (mediaQuery.removeEventListener) {
-                mediaQuery.removeEventListener('change', handleChange);
-            } else {
-                (mediaQuery as any).removeListener(handleChange);
-            }
-        };
-    }, []);
-
     const effectiveIsDark = useMemo(() => {
         // Sazonal sempre claro
         if (selectedThemeId === 'seasonal') return false;
@@ -589,9 +566,10 @@ export default function CreateEventV2() {
         if (customDisplay === 'Escuro') return true;
         if (customDisplay === 'Claro') return false;
         
-        // Exibição como "Automático" -> segue a preferência de esquema de cores do sistema operacional!
-        return systemPrefersDark;
-    }, [selectedThemeId, customDisplay, systemPrefersDark]);
+        // "Automático" respeita a preferência global da conta. No modo
+        // "Sistema", o próprio ThemeContext acompanha o sistema operacional.
+        return siteIsDark;
+    }, [selectedThemeId, customDisplay, siteIsDark]);
 
     const effectiveBaseRgb = useMemo(() => {
         if (effectiveIsDark) return '255, 255, 255'; // No tema escuro, a base de contraste deve ser sempre branca!
@@ -1479,7 +1457,7 @@ export default function CreateEventV2() {
 
     if (authLoading || (user && loadingOrgs)) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#f7f8f9]">
+            <div className="flex items-center justify-center min-h-screen bg-[#f7f8f9] dark:bg-[#131517]">
                 <Loader2 className="animate-spin text-gray-400" size={32} />
             </div>
         );
@@ -1487,8 +1465,8 @@ export default function CreateEventV2() {
 
     if (!user) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#f7f8f9] p-4 text-center">
-                <p className="text-gray-600 mb-4">Você precisa estar logado para criar eventos.</p>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#f7f8f9] dark:bg-[#131517] p-4 text-center">
+                <p className="text-gray-600 dark:text-white/60 mb-4">Você precisa estar logado para criar eventos.</p>
                 <button
                     onClick={() => navigate('/signin')}
                     className="px-4 py-2 bg-black text-white rounded-lg font-medium"
@@ -1501,8 +1479,8 @@ export default function CreateEventV2() {
 
     if (!orgs || orgs.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#f7f8f9] p-4 text-center">
-                <p className="text-gray-600 mb-4">Você precisa criar um calendário antes de criar eventos.</p>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#f7f8f9] dark:bg-[#131517] p-4 text-center">
+                <p className="text-gray-600 dark:text-white/60 mb-4">Você precisa criar um calendário antes de criar eventos.</p>
                 <button
                     onClick={() => navigate('/organizations/create-calendar')}
                     className="px-4 py-2 bg-black text-white rounded-lg font-medium"

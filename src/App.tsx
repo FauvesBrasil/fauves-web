@@ -5,7 +5,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { OrganizationProvider } from '@/context/OrganizationContext';
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from 'framer-motion';
-import React, { Suspense, Component } from 'react';
+import React, { Suspense, Component, useLayoutEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import IndexV2 from "./pages/IndexV2";
@@ -67,13 +67,16 @@ import CheckoutCanceled from './pages/CheckoutCanceled';
 import SelectTickets from "./pages/SelectTickets";
 import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
-import { initApiDetection } from '@/lib/apiBase';
+import { useTheme } from '@/context/ThemeContext';
+import { fetchApi, initApiDetection } from '@/lib/apiBase';
 import { LocationProvider } from '@/context/LocationContext';
 import OrganizationTransitionOverlay from '@/components/OrganizationTransitionOverlay';
 import OrganizerSettingsV2 from './pages/OrganizerSettingsV2';
 import Notifications from './pages/Notifications';
 import PricingPage from './pages/PricingPage';
 import CalendarEmbed from './pages/CalendarEmbed';
+import ConnectionStatusToast from '@/components/ConnectionStatusToast';
+import { resetDocumentScrollLocks } from '@/lib/documentScrollLock';
 
 // Lazy-loaded admin pages (only load when accessed)
 const AdminLayout = React.lazy(() => import('./pages/Admin'));
@@ -190,6 +193,15 @@ const getRoutesKey = (pathname: string) => {
 const AppInner = () => {
   const { selectedOrg, transitioning, fromOrgName } = useOrganization();
   const location = useLocation();
+  const mountedRouteRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!mountedRouteRef.current) {
+      resetDocumentScrollLocks();
+      mountedRouteRef.current = true;
+    }
+    return resetDocumentScrollLocks;
+  }, [location.pathname]);
 
   return (
     <>
@@ -394,6 +406,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <ConnectionStatusToast />
       <AuthProvider>
         <OrganizationProvider>
           <LocationProvider>
@@ -419,8 +432,10 @@ const OrganizationRedirect: React.FC = () => {
 
 function Bootstrap() {
   // Warm API resolution as early as possible and prefetch organizations when auth is ready.
-  const { user, loading: authLoading } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
+  const { setMode } = useTheme();
   const { refresh } = useOrganization();
+  const syncedThemeUserRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     // warm API base resolution (non-blocking)
     try { initApiDetection(); } catch (e) { }
@@ -432,6 +447,27 @@ function Bootstrap() {
       try { refresh(); } catch (e) { }
     }
   }, [user, authLoading, refresh]);
+
+  React.useEffect(() => {
+    if (authLoading || !user || !token || syncedThemeUserRef.current === user.id) return;
+    syncedThemeUserRef.current = user.id;
+    let active = true;
+    fetchApi('/account-settings/preferences', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async response => response.ok ? response.json() : null)
+      .then(preferences => {
+        if (!active) return;
+        const displayMode = preferences?.displayMode;
+        if (displayMode === 'light' || displayMode === 'dark' || displayMode === 'system') {
+          setMode(displayMode);
+        }
+      })
+      .catch(() => {
+        // Keep the locally persisted choice when the preference API is unavailable.
+      });
+    return () => { active = false; };
+  }, [authLoading, setMode, token, user]);
 
   return null;
 }

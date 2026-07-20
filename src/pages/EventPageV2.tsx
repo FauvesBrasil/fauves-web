@@ -7,6 +7,7 @@ import { getEventTimezoneAndCity } from '@/lib/timezone';
 import { useAuth } from '@/context/AuthContext';
 import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 import EventRegistrationCard from '@/components/v2/EventRegistrationCard';
+import TicketCheckoutModal from '@/components/v2/TicketCheckoutModal';
 
 /* ─── HELPERS E CONFIGURAÇÕES DE TEMA ────────────────── */
 const THEMES = [
@@ -659,6 +660,10 @@ const EventPageV2: React.FC = () => {
             name: data.organization?.name || "Organização",
             avatar: resolveImageUrl(data.organization?.logoUrl || data.organization?.logo || "https://cdn.lu.ma/avatars-default/community_avatar_12.png"),
           },
+          hosts: Array.isArray(data.hosts) ? data.hosts.map((host: any) => ({
+            ...host,
+            avatar: resolveImageUrl(host.photoUrl || host.avatar || "https://cdn.lu.ma/avatars-default/community_avatar_12.png"),
+          })) : [],
           organizer: {
             name: data.organizer?.name || data.organization?.name || "Organizador",
             avatar: resolveImageUrl(data.organizer?.avatar || data.organization?.logoUrl || "https://cdn.lu.ma/avatars-default/avatar_25.png"),
@@ -2355,6 +2360,26 @@ const EventPageV2: React.FC = () => {
                 </a>
               </div>
             </div>
+            {Array.isArray(event.hosts) && event.hosts.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.85rem' }}>
+                {event.hosts.map((host: any) => (
+                  <div key={host.id || host.email} className="jsx-da66ad346e2cad37 flex-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <img
+                      className="square rounded"
+                      width="32"
+                      height="32"
+                      alt={host.name || 'Anfitrião'}
+                      src={host.avatar}
+                      style={{ border: '0.5px solid rgba(0,0,0,0.08)', borderRadius: 'var(--border-radius)', objectFit: 'cover' }}
+                    />
+                    <div className="jsx-da66ad346e2cad37 flex-1 ml-1">
+                      <div className="jsx-da66ad346e2cad37 fs-xxs text-tinted reduced-line-height presenter-label">Anfitrião</div>
+                      <div className="jsx-da66ad346e2cad37 fw-medium text-ellipses presenter-name">{host.name || host.email}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* COLUNA DIREITA */}
@@ -2523,8 +2548,20 @@ const EventPageV2: React.FC = () => {
         <FooterV2 maxWidth="960px" />
       </div>
 
-      {/* MODAL DE CHECKOUT EXPRESSO LUMA-STYLE */}
-      {isCheckoutModalOpen && (() => {
+      {/* Checkout de ingressos em tela cheia */}
+      {isCheckoutModalOpen && (
+        <TicketCheckoutModal
+          event={event}
+          user={user}
+          ticketCounts={ticketCounts}
+          setTicketCounts={setTicketCounts}
+          initialCouponCode={couponCode}
+          onClose={() => setIsCheckoutModalOpen(false)}
+        />
+      )}
+
+      {/* Implementação anterior mantida temporariamente como referência, sem renderização. */}
+      {false && isCheckoutModalOpen && (() => {
         const brandColor = event?.customColor || '#bc3f57';
         const rightColumnBg = {
           background: `linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1))`,

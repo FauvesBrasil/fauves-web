@@ -6,6 +6,7 @@ import FooterV2 from '@/components/v2/FooterV2';
 import { useAuth } from '@/context/AuthContext';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useSEO } from '@/hooks/useSEO';
+import { useTheme } from '@/context/ThemeContext';
 import explainerWelcome from '@/assets/explainer-welcome.svg';
 import explainerTeam from '@/assets/explainer-team.svg';
 import explainerPage from '@/assets/explainer-page.svg';
@@ -74,6 +75,7 @@ const CalendarLogo: React.FC<{ organization: Organization }> = ({ organization }
 
 const OrganizationsV2: React.FC = () => {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const [myOrgs, setMyOrgs] = useState<Organization[]>([]);
   const [followingOrgs, setFollowingOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,8 +127,8 @@ const OrganizationsV2: React.FC = () => {
   const currentSlide = slides[welcomeSlide];
 
   return (
-    <div className="calendars-page dark dark-mode">
-      <HeaderV2 transparent fixed theme="dark" />
+    <div className={`calendars-page theme-root ${isDark ? 'dark dark-mode' : 'light'}`}>
+      <HeaderV2 transparent fixed theme={isDark ? 'dark' : 'light'} />
 
       <main className="calendars-container" data-header-align>
         <h1>Calendários</h1>
@@ -254,6 +256,45 @@ const calendarStyles = `
   .calendars-empty { margin: 0; padding: 22px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: #202224; }
   .calendar-skeleton { display: block; height: 130px; border-radius: 12px; background: rgba(255,255,255,.06); animation: calendars-pulse 1.4s ease-in-out infinite; }
   .calendar-skeleton.is-wide { height: 171px; }
+  .calendars-page.light {
+    --footer-text-color: #71717a;
+    --footer-hover-color: #18181b;
+    --footer-border-color: rgba(24,24,27,.1);
+    --footer-social-color: #71717a;
+    --footer-social-hover: #18181b;
+    --footer-logo-color: #18181b;
+    color: #27272a;
+    background: #f7f8f9;
+  }
+  .calendars-page.light .calendars-container > h1,
+  .calendars-page.light .calendars-section h2,
+  .calendars-page.light .calendar-own-card,
+  .calendars-page.light .calendar-following-info > strong,
+  .calendars-page.light .calendar-upcoming > a strong { color: #18181b; }
+  .calendars-page.light .calendars-welcome,
+  .calendars-page.light .calendar-own-card,
+  .calendars-page.light .calendar-following-card,
+  .calendars-page.light .calendars-empty {
+    border-color: rgba(24,24,27,.1);
+    background: #fff;
+  }
+  .calendars-page.light .calendars-welcome-art { background: #f1f1f2; }
+  .calendars-page.light .calendars-welcome h2 { color: #18181b; }
+  .calendars-page.light .calendars-welcome p,
+  .calendars-page.light .calendar-own-card > small,
+  .calendars-page.light .calendar-upcoming > span,
+  .calendars-page.light .calendar-upcoming > a time,
+  .calendars-page.light .calendar-upcoming > small,
+  .calendars-page.light .calendars-empty { color: #71717a; }
+  .calendars-page.light .calendars-welcome-close { color: #71717a; }
+  .calendars-page.light .calendars-welcome-close:hover { color: #18181b; }
+  .calendars-page.light .calendars-welcome-steps button { background: rgba(24,24,27,.13); }
+  .calendars-page.light .calendars-welcome-steps button.is-active { background: #27272a; }
+  .calendars-page.light .calendars-next { color: #fff; background: #18181b; }
+  .calendars-page.light .calendars-following { border-top-color: rgba(24,24,27,.1); }
+  .calendars-page.light .calendar-own-card:hover,
+  .calendars-page.light .calendar-following-card:hover { border-color: rgba(24,24,27,.26); }
+  .calendars-page.light .calendar-skeleton { background: rgba(24,24,27,.07); }
   @keyframes calendars-pulse { 50% { opacity: .55; } }
   @media (max-width: 700px) {
     .calendars-container { padding-top: var(--page-top-spacing-mobile); }

@@ -14,6 +14,8 @@ import {
   X,
 } from 'lucide-react';
 import type { Organization } from '@/context/OrganizationContext';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
+import { useTheme } from '@/context/ThemeContext';
 
 export interface CloneEventOptions {
   organizationId?: string;
@@ -309,6 +311,7 @@ export function CloneEventModal({
   onClose,
   onConfirm,
 }: CloneEventModalProps) {
+  const { isDark } = useTheme();
   const [organizationId, setOrganizationId] = React.useState('');
   const [privacy, setPrivacy] = React.useState<'public' | 'private'>('public');
   const [schedules, setSchedules] = React.useState<ScheduleDraft[]>([]);
@@ -356,11 +359,10 @@ export function CloneEventModal({
         else onClose();
       }
     };
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseScrollLock = acquireDocumentScrollLock();
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [loading, onClose, open, view]);
@@ -425,7 +427,7 @@ export function CloneEventModal({
             exit={{ scale: 0.96, y: 14 }}
             transition={{ duration: 0.17, ease: 'easeOut' }}
             onSubmit={submit}
-            className="my-auto max-h-[calc(100dvh-24px)] w-full max-w-[340px] overflow-y-auto rounded-[17px] border border-white/[0.06] bg-[#1b1c1d]/95 p-5 text-left text-white shadow-[0_24px_70px_rgba(0,0,0,.62)] backdrop-blur-2xl"
+            className={`manage-theme-surface ${isDark ? 'dark dark-mode' : 'light'} my-auto max-h-[calc(100dvh-24px)] w-full max-w-[340px] overflow-y-auto rounded-[14px] border border-white/[0.06] bg-[#1b1c1d]/95 p-5 text-left text-white shadow-[0_24px_70px_rgba(0,0,0,.62)] backdrop-blur-2xl`}
           >
             {view === 'recurrence' && schedules[0] ? (
               <RecurrenceStep

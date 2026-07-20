@@ -1,3 +1,5 @@
+import { resolveBundledCoverUrl } from './coverAssets';
+
 // Centraliza a base da API com detecção resiliente.
 // Estratégia revisada:
 // 1. Usa VITE_BACKEND_URL se definido e responder 200 OK.
@@ -8,6 +10,7 @@
 // 6. Persiste a base saudável (chave localStorage 'API_BASE_WORKING').
 
 const LS_KEY = 'API_BASE_WORKING';
+
 // Read stored candidate but keep it if it's localhost (dev environment needs it)
 let stored = (typeof window !== 'undefined') ? window.localStorage.getItem(LS_KEY) : null;
 // Normaliza env base removendo barras finais e um sufixo /api (para evitar construir /api/api/* em probes)
@@ -210,6 +213,40 @@ let envBaseBackoffUntil = 0; // epoch ms até quando não tentamos usar finalEnv
 const ENVBASE_BACKOFF_MS = 60 * 1000; // 60s
 let lastEnsureCall = 0; // ms - rate limit multiple callers
 
+export type ApiConnectionReason = 'browser-offline' | 'server-unreachable' | 'timeout' | null;
+export type ApiConnectionStatus = 'online' | 'offline' | 'checking';
+
+export interface ApiConnectionState {
+  status: ApiConnectionStatus;
+  reason: ApiConnectionReason;
+  checkedAt: number;
+}
+
+let apiConnectionState: ApiConnectionState = {
+  status: typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'online',
+  reason: typeof navigator !== 'undefined' && navigator.onLine === false ? 'browser-offline' : null,
+  checkedAt: 0,
+};
+
+const apiConnectionListeners = new Set<(state: ApiConnectionState) => void>();
+
+function updateApiConnection(status: ApiConnectionStatus, reason: ApiConnectionReason = null) {
+  if (apiConnectionState.status === status && apiConnectionState.reason === reason) return;
+  apiConnectionState = { status, reason, checkedAt: Date.now() };
+  apiConnectionListeners.forEach(listener => listener(apiConnectionState));
+}
+
+export function getApiConnectionState(): ApiConnectionState {
+  return apiConnectionState;
+}
+
+export function subscribeApiConnection(listener: (state: ApiConnectionState) => void) {
+  apiConnectionListeners.add(listener);
+  return () => {
+    apiConnectionListeners.delete(listener);
+  };
+}
+
 async function probe(base: string): Promise<boolean> {
   try {
     const ctrl = new AbortController();
@@ -366,6 +403,10 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
   const now = Date.now();
   // Se estamos em período de backoff porque nada respondeu, devolve resposta fake 503 para evitar spam de network errors.
   if (backendDownUntil && now < backendDownUntil) {
+    updateApiConnection(
+      'offline',
+      typeof navigator !== 'undefined' && navigator.onLine === false ? 'browser-offline' : 'server-unreachable',
+    );
     return new Response(JSON.stringify({ error: 'backend_offline', hint: 'API indisponível (cache). Tentando novamente em breve.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
   await ensureApiBase();
@@ -385,7 +426,11 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
     if ((userSignal as AbortSignal).aborted) ctrl.abort();
     else (userSignal as AbortSignal).addEventListener('abort', () => ctrl.abort());
   }
-  const to = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  let timedOut = false;
+  const to = setTimeout(() => {
+    timedOut = true;
+    ctrl.abort();
+  }, TIMEOUT_MS);
   const reqStart = Date.now();
   try {
     const finalInitWithSignal: RequestInit = { ...finalInit, signal: ctrl.signal };
@@ -397,6 +442,9 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
       }
     }
     clearTimeout(to);
+    // Qualquer resposta HTTP comprova que o navegador alcançou o servidor. Erros
+    // específicos (401, 404, 500 etc.) devem ser tratados pela tela que fez a chamada.
+    updateApiConnection('online');
     // no-op diagnostics removed for production cleanliness
     return r;
   } catch (e) {
@@ -408,6 +456,11 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
       }
     }
     const isAbort = (e && (e.name === 'AbortError' || e instanceof DOMException && e.name === 'AbortError')) || (ctrl.signal && ctrl.signal.aborted);
+    const browserOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    // Um cancelamento solicitado pelo próprio componente não significa que a API caiu.
+    if (!isAbort || timedOut || browserOffline) {
+      updateApiConnection('offline', browserOffline ? 'browser-offline' : (timedOut ? 'timeout' : 'server-unreachable'));
+    }
     // Differentiate timeout/abort from network refused
     // no-op diagnostics removed for production cleanliness
     if (isAbort) {
@@ -419,12 +472,49 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
 }
 
 /**
+ * Ignora os backoffs anteriores e testa a API imediatamente. É usado pelo aviso
+ * global de conexão e pelo botão "Reconectar".
+ */
+export async function retryApiConnection(options: { showChecking?: boolean } = {}): Promise<boolean> {
+  const browserOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  if (browserOffline) {
+    updateApiConnection('offline', 'browser-offline');
+    return false;
+  }
+
+  if (options.showChecking !== false) updateApiConnection('checking');
+  backendDownUntil = 0;
+  envBaseBackoffUntil = 0;
+  Object.keys(failureCount).forEach(key => { failureCount[key] = 0; });
+  Object.keys(candidateBackoffUntil).forEach(key => { candidateBackoffUntil[key] = 0; });
+
+  try {
+    const base = await ensureApiBase(true);
+    const ok = await probe(base);
+    if (ok) {
+      backendDownUntil = 0;
+      lastResolutionTs = Date.now();
+      updateApiConnection('online');
+      return true;
+    }
+  } catch {
+    // O estado offline abaixo dá um retorno único e consistente à interface.
+  }
+
+  backendDownUntil = Date.now() + BACKOFF_MS;
+  updateApiConnection('offline', 'server-unreachable');
+  return false;
+}
+
+/**
  * Resolve image URLs to incluir a base do backend se necessário
  * @param imagePath - Caminho relativo ou URL completa
  * @returns URL completa ou original
  */
 export function resolveImageUrl(imagePath: string | null | undefined): string | null {
   if (!imagePath) return null;
+  const bundledCoverUrl = resolveBundledCoverUrl(imagePath);
+  if (bundledCoverUrl) return bundledCoverUrl;
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:') || imagePath.startsWith('blob:') || imagePath.startsWith('/src/')) {
     return imagePath;
   }

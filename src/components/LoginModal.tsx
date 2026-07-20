@@ -37,12 +37,14 @@ const Spinner: React.FC<{ className?: string }> = ({ className = '' }) => (
 const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initialEmail, redirectPath, preventClose = false }) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const { login, completeTwoFactorLogin } = useAuth();
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [isClosing, setIsClosing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState('');
   const [nome, setNome] = useState('');
   const [sobrenome, setSobrenome] = useState('');
   const [acceptMarketing, setAcceptMarketing] = useState(false);
@@ -59,6 +61,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
     setError(null);
     setEmail('');
     setPassword('');
+    setTwoFactorCode('');
+    setTwoFactorChallenge('');
     setNome('');
     setSobrenome('');
     // prefill email when provided (useful when opening from checkout)
@@ -158,10 +162,25 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
     if (!email || !password) {
       throw new Error('Campos vazios');
     }
-    const ok = await login(email, password);
-    if (!ok) {
-      throw new Error('Credenciais inválidas');
+    const result = await login(email, password);
+    if (result.twoFactorRequired && result.challengeToken) {
+      setTwoFactorChallenge(result.challengeToken);
+      setStep(3);
+      return;
     }
+    if (!result.success) {
+      throw new Error(result.message || 'Credenciais inválidas');
+    }
+    onSuccess?.();
+    handleClose();
+    if (redirectPath) navigate(redirectPath);
+  };
+
+  const submitTwoFactor = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (twoFactorCode.length !== 6 || !twoFactorChallenge) throw new Error('Digite o código de 6 dígitos');
+    const result = await completeTwoFactorLogin(twoFactorChallenge, twoFactorCode);
+    if (!result.success) throw new Error(result.message || 'Código inválido ou expirado');
     onSuccess?.();
     handleClose();
     if (redirectPath) navigate(redirectPath);
@@ -353,6 +372,44 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, onClose, onSuccess, initi
                   </form>
 
                   <div className="pt-6 max-md:pt-4 text-[12px] max-md:text-[11px] text-muted-foreground dark:text-slate-400 text-center max-md:leading-relaxed">Ao continuar, você concorda com os&nbsp;Termos de uso&nbsp;e confirma que leu nossa&nbsp;Política de privacidade e cookies.<br /><br />Este site é protegido por reCAPTCHA e sujeito à&nbsp;Política de privacidade&nbsp;e aos&nbsp;Termos de serviço&nbsp;do Google.</div>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="px-6 py-5 max-md:px-4 max-md:py-6 max-md:flex max-md:flex-col max-md:h-full">
+                <div className="flex flex-col h-full">
+                  <div className="flex flex-col items-start gap-5 mb-6">
+                    <div className="w-12 h-12 flex items-center justify-center">
+                      <LogoSquare className="w-12 h-12 block" />
+                    </div>
+                    <div>
+                      <div className="text-card-foreground dark:text-white text-[22px] font-medium">Confirme que é você</div>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground dark:text-slate-400">Enviamos um código de 6 dígitos para o seu e-mail.</p>
+                    </div>
+                  </div>
+                  <form className="flex flex-col gap-4" onSubmit={submitTwoFactor}>
+                    <input
+                      autoFocus
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={twoFactorCode}
+                      onChange={event => setTwoFactorCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      className="border border-border dark:border-[#2d2d2d] bg-input dark:bg-[#242424] text-foreground dark:text-white rounded-lg px-3 py-3 text-center text-xl tracking-[0.3em] w-full"
+                    />
+                    <MultiStateButton
+                      type="submit"
+                      onClick={submitTwoFactor}
+                      idleText="Confirmar acesso"
+                      loadingText="Confirmando..."
+                      successText="Conectado!"
+                      errorText="Código inválido"
+                      className="w-full"
+                    />
+                    <button type="button" onClick={() => { setStep(1); setTwoFactorCode(''); setTwoFactorChallenge(''); }} className="text-sm text-muted-foreground hover:text-foreground">Voltar ao login</button>
+                  </form>
                 </div>
               </div>
             )}

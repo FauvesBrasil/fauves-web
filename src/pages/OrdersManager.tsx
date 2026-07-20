@@ -11,6 +11,7 @@ import { useOrganization } from '@/context/OrganizationContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { WarpDialog } from '@/components/WarpDialog';
 import reportsSvg from '@/assets/reports.svg';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 
 interface OrderRow {
   id: string;
@@ -141,14 +142,8 @@ const OrdersManager: React.FC = () => {
 
   // Lock body scroll when modal is open to prevent background scrolling
   useEffect(() => {
-    if (selected) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
+    if (!selected) return;
+    return acquireDocumentScrollLock();
   }, [selected]);
 
   // --- Helpers & static data (were missing -> white screen due to ReferenceError) ---

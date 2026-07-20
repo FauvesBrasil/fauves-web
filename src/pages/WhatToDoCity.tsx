@@ -6,6 +6,7 @@ import FooterV2 from '@/components/v2/FooterV2';
 import SubscribeControl from '@/components/v2/SubscribeControl';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useSEO } from '@/hooks/useSEO';
+import { useTheme } from '@/context/ThemeContext';
 
 type CityEvent = {
   id: string;
@@ -76,6 +77,7 @@ const StickyEventDay: React.FC<{ date: Date }> = ({ date }) => {
 };
 
 const WhatToDoCity: React.FC = () => {
+  const { isDark } = useTheme();
   const { citySlug: legacyCitySlug, slugOrId } = useParams<{ citySlug?: string; slugOrId?: string }>();
   const citySlug = legacyCitySlug || slugOrId || '';
   const cityName = displayCity(citySlug);
@@ -119,7 +121,7 @@ const WhatToDoCity: React.FC = () => {
   const heroImage = cityImages[citySlug] || `https://images.unsplash.com/featured/?${encodeURIComponent(cityName)},city,skyline`;
 
   return (
-    <div className="city-events-page dark dark-mode">
+    <div className={`city-events-page theme-root ${isDark ? 'dark dark-mode' : 'light'}`}>
       <HeaderV2 transparent fixed theme="dark" blueGlow={false} contentMaxWidth="928px" />
 
       <section className="city-events-hero" style={{ '--city-image': `url("${heroImage}")` } as React.CSSProperties}>
@@ -232,6 +234,42 @@ const cityStyles = `
   .city-events-map { display:flex; height:260px; margin-top:32px; align-items:center; justify-content:center; gap:6px; border-radius:10px; color:rgba(255,255,255,.45); background:radial-gradient(circle at 60% 35%,rgba(255,255,255,.09),transparent 28%),repeating-linear-gradient(35deg,#292b2d 0 2px,#222426 2px 14px); }
   .city-events-empty { padding:25px; border:1px solid rgba(255,255,255,.07); border-radius:12px; color:rgba(255,255,255,.48); background:#202224; font-size:.875rem; }
   .city-events-loader { display:block; width:30px; height:30px; margin:80px auto; border:2px solid rgba(255,255,255,.12); border-top-color:#fff; border-radius:50%; animation:city-spin .8s linear infinite; }
+  .city-events-page.light {
+    --footer-text-color:#71717a;
+    --footer-hover-color:#18181b;
+    --footer-border-color:rgba(24,24,27,.1);
+    --footer-social-color:#71717a;
+    --footer-social-hover:#18181b;
+    --footer-logo-color:#18181b;
+    color:#27272a;
+    background:#f7f8f9;
+  }
+  .city-events-page.light .city-events-list-header h2,
+  .city-events-page.light .city-event-day strong,
+  .city-events-page.light .city-event-copy h3,
+  .city-events-page.light .city-events-aside h3 { color:#18181b; }
+  .city-events-page.light .city-square-button { color:#71717a; background:rgba(24,24,27,.07); }
+  .city-events-page.light .city-square-button:hover { color:#18181b; background:rgba(24,24,27,.11); }
+  .city-events-page.light .city-event-group::before { border-left-color:rgba(24,24,27,.11); }
+  .city-events-page.light .city-event-day.is-stuck { background:rgba(247,248,249,.84); box-shadow:0 1px 0 rgba(24,24,27,.1); }
+  .city-events-page.light .city-event-day i { background:rgba(24,24,27,.35); }
+  .city-events-page.light .city-event-day-pill > span,
+  .city-events-page.light .city-event-copy time,
+  .city-events-page.light .city-event-copy p,
+  .city-events-page.light .city-events-aside > p { color:#71717a; }
+  .city-events-page.light .city-event-card,
+  .city-events-page.light .city-events-empty {
+    border-color:rgba(24,24,27,.1);
+    background:#fff;
+  }
+  .city-events-page.light .city-event-card:hover { border-color:rgba(24,24,27,.27); }
+  .city-events-page.light .city-event-image { color:#a1a1aa; background:#f1f1f2; }
+  .city-events-page.light .city-events-map {
+    color:#71717a;
+    background:radial-gradient(circle at 60% 35%,rgba(255,255,255,.9),transparent 28%),repeating-linear-gradient(35deg,#e4e4e7 0 2px,#eeeeef 2px 14px);
+  }
+  .city-events-page.light .city-events-empty { color:#71717a; }
+  .city-events-page.light .city-events-loader { border-color:rgba(24,24,27,.12); border-top-color:#27272a; }
   @keyframes city-spin { to { transform:rotate(360deg); } }
   @media(max-width:760px){
     .city-events-hero{height:620px}.city-events-hero-content>p:first-of-type{font-size:1.25rem}.city-events-hero h1{font-size:2.5rem}.city-events-rule{width:100%}

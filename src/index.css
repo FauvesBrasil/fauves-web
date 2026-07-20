@@ -6,6 +6,10 @@
 :root {
   --page-top-spacing: 100px;
   --page-top-spacing-mobile: 80px;
+  --fauves-modal-width: 440px;
+  --fauves-side-panel-width: 520px;
+  --fauves-modal-radius: 14px;
+  --fauves-control-radius: 8px;
 }
 
 @media (max-width: 768px) {
@@ -79,6 +83,7 @@
 }
 
 .fauves-modal-surface {
+  border-radius: var(--fauves-modal-radius) !important;
   background-color: rgba(250, 250, 251, 0.9) !important;
   border-color: rgba(19, 21, 23, 0.1) !important;
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.3) !important;
@@ -91,6 +96,40 @@
 [data-theme-dark="true"] .fauves-modal-surface {
   background-color: rgba(27, 28, 29, 0.88) !important;
   border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+html:not(.dark) .fauves-modal-surface {
+  color: #18181b !important;
+}
+
+html:not(.dark) .fauves-modal-surface :where(.text-white, .text-zinc-100, .text-zinc-200) {
+  color: #18181b !important;
+}
+
+html:not(.dark) .fauves-modal-surface :where(.text-zinc-300, .text-zinc-400) {
+  color: #65686d !important;
+}
+
+html:not(.dark) .fauves-modal-surface :where(
+  [class*="bg-[#121316]"], [class*="bg-[#121417]"],
+  [class*="bg-[#151617]"], [class*="bg-[#171919]"],
+  [class*="bg-[#181a1f]"], [class*="bg-[#1c1c1e]"],
+  [class*="bg-[#202224]"], [class*="bg-[#252830]"]
+) {
+  background-color: #f0f1f2 !important;
+}
+
+html:not(.dark) .fauves-modal-surface :where([class^="border-white/"], [class*=" border-white/"], .border-zinc-800) {
+  border-color: rgba(24, 24, 27, 0.12) !important;
+}
+
+html:not(.dark) .fauves-modal-surface :where(
+  [class*="bg-[#2A2AD7]"], [class*="bg-[#EF4118]"],
+  [class^="bg-red-"], [class*=" bg-red-"],
+  [class^="bg-blue-"], [class*=" bg-blue-"],
+  [class^="bg-green-"], [class*=" bg-green-"]
+) {
+  color: #ffffff !important;
 }
 
 /* Compatibilidade para dropdowns locais anteriores aos primitives compartilhados. */
@@ -788,4 +827,323 @@ All colors MUST be HSL.
 .fauves-button-secondary:hover {
   color: rgb(19, 21, 23) !important;
   background-color: rgba(255, 255, 255, 0.64) !important;
+}
+
+/* Shared semantic surface for every tab in event/calendar management.
+   Several legacy panels still use literal dark Tailwind utilities; these
+   mappings keep them readable in light mode without changing dark mode. */
+.manage-theme-surface {
+  --manage-page-bg: #f7f8f9;
+  --manage-surface: #ffffff;
+  --manage-surface-raised: #f0f1f2;
+  --manage-surface-soft: #f6f7f8;
+  --manage-text: #18181b;
+  --manage-text-muted: #65686d;
+  --manage-text-subtle: #91949a;
+  --manage-border: rgba(24, 24, 27, 0.11);
+  --manage-border-strong: rgba(24, 24, 27, 0.2);
+  --manage-hover: rgba(24, 24, 27, 0.065);
+  color-scheme: light;
+}
+
+.manage-theme-surface.dark {
+  --manage-page-bg: #131517;
+  --manage-surface: #181a1c;
+  --manage-surface-raised: #242628;
+  --manage-surface-soft: #1d1f21;
+  --manage-text: rgba(255, 255, 255, 0.94);
+  --manage-text-muted: rgba(255, 255, 255, 0.62);
+  --manage-text-subtle: rgba(255, 255, 255, 0.42);
+  --manage-border: rgba(255, 255, 255, 0.09);
+  --manage-border-strong: rgba(255, 255, 255, 0.18);
+  --manage-hover: rgba(255, 255, 255, 0.08);
+  color-scheme: dark;
+}
+
+.manage-theme-surface.light {
+  background-color: var(--manage-page-bg) !important;
+  border-color: var(--manage-border) !important;
+  color: var(--manage-text);
+}
+
+.manage-theme-surface.light .fauves-button-secondary {
+  color: var(--manage-text-muted) !important;
+  background-color: var(--manage-surface-raised) !important;
+  border-color: var(--manage-border) !important;
+}
+
+.manage-theme-surface.light .fauves-button-secondary:hover {
+  color: var(--manage-text) !important;
+  background-color: var(--manage-hover) !important;
+}
+
+/* Typography that was authored specifically for the dark theme. */
+.manage-theme-surface.light :where(.text-white, .text-zinc-100, .text-zinc-200) {
+  color: var(--manage-text) !important;
+}
+
+.manage-theme-surface.light :where(.text-zinc-300, .text-zinc-400, .text-gray-300, .text-gray-400) {
+  color: var(--manage-text-muted) !important;
+}
+
+.manage-theme-surface.light :where(.text-zinc-500, .text-gray-500) {
+  color: var(--manage-text-subtle) !important;
+}
+
+.manage-theme-surface.light :where(
+  [class^="text-[rgba(255,255,255"], [class*=" text-[rgba(255,255,255"],
+  [class^="text-[rgba(255,_255,_255"], [class*=" text-[rgba(255,_255,_255"]
+) {
+  color: var(--manage-text-muted) !important;
+}
+
+.manage-theme-surface.light :where([class^="text-white/"], [class*=" text-white/"]) {
+  color: var(--manage-text-muted) !important;
+}
+
+.manage-theme-surface.light :where(
+  [class~="text-white/90"],
+  [class~="text-white/[.88]"],
+  [class~="text-white/[.9]"],
+  [class~="text-white/[.92]"],
+  [class~="text-white/[.94]"],
+  [class~="text-white/[0.88]"],
+  [class~="text-white/[0.9]"],
+  [class~="text-white/[0.92]"],
+  [class~="text-white/[0.94]"]
+) {
+  color: var(--manage-text) !important;
+}
+
+.manage-theme-surface.light :where([class^="placeholder:text-white/"], [class*=" placeholder:text-white/"])::placeholder {
+  color: var(--manage-text-subtle) !important;
+}
+
+/* Neutral cards, controls, menus and fields. */
+.manage-theme-surface.light :where(
+  [class*="bg-[#0c0c0e]"], [class*="bg-[#0d0e11]"],
+  [class*="bg-[#111112]"], [class*="bg-[#111214]"],
+  [class*="bg-[#121316]"], [class*="bg-[#121417]"],
+  [class*="bg-[#131315]"], [class*="bg-[#131416]"], [class*="bg-[#131517]"],
+  [class*="bg-[#151617]"], [class*="bg-[#151719]"],
+  [class*="bg-[#161618]"], [class*="bg-[#171819]"], [class*="bg-[#171919]"],
+  [class*="bg-[#18181b]"], [class*="bg-[#18191a]"], [class*="bg-[#181a1c]"], [class*="bg-[#181a1f]"],
+  [class*="bg-[#191a1b]"], [class*="bg-[#191a1c]"],
+  [class*="bg-[#1b1c1d]"], [class*="bg-[#1b1d20]"],
+  [class*="bg-[#1c1c1e]"], [class*="bg-[#1c1c21]"], [class*="bg-[#1c1d1e]"], [class*="bg-[#1c1e20]"],
+  [class*="bg-[#1d1e1e]"], [class*="bg-[#1d1f20]"], [class*="bg-[#1d1f21]"],
+  [class*="bg-[#1e1e20]"], [class*="bg-[#1e1f22]"],
+  [class*="bg-[#202123]"], [class*="bg-[#202224]"],
+  [class*="bg-[rgba(15,17,17,.48)]"], [class*="bg-[rgba(15,17,17,.72)]"],
+  [class*="bg-[rgba(25,26,26,.92)]"], [class*="bg-[rgba(25,26,26,.94)]"],
+  [class*="bg-[rgba(31,32,32,.94)]"], [class*="bg-[rgba(35,36,36,.96)]"]
+) {
+  background-color: var(--manage-surface) !important;
+}
+
+.manage-theme-surface.light :where(
+  [class*="bg-[#202122]"], [class*="bg-[#222426]"], [class*="bg-[#232526]"],
+  [class*="bg-[#242526]"], [class*="bg-[#252627]"], [class*="bg-[#252729]"], [class*="bg-[#252830]"],
+  [class*="bg-[#27272a]"], [class*="bg-[#292a2b]"], [class*="bg-[#292a2c]"],
+  [class*="bg-[#2a2b2d]"], [class*="bg-[#2b2c2e]"], [class*="bg-[#303235]"], [class*="bg-[#343537]"],
+  [class^="bg-white/"], [class*=" bg-white/"],
+  [class*="bg-[rgba(255,255,255,0.02)]"], [class*="bg-[rgba(255,255,255,0.06)]"],
+  [class*="bg-[rgba(255,255,255,0.08)]"], [class*="bg-[rgba(255,255,255,0.12)]"]
+) {
+  background-color: var(--manage-surface-raised) !important;
+}
+
+.manage-theme-surface.light :where(
+  .bg-zinc-950, .bg-zinc-900,
+  [class^="bg-zinc-950/"], [class*=" bg-zinc-950/"],
+  [class^="bg-zinc-900/"], [class*=" bg-zinc-900/"]
+) {
+  background-color: var(--manage-surface-soft) !important;
+}
+
+.manage-theme-surface.light :where(
+  .bg-zinc-850, .bg-zinc-800, .bg-zinc-700,
+  [class^="bg-zinc-850/"], [class*=" bg-zinc-850/"],
+  [class^="bg-zinc-800/"], [class*=" bg-zinc-800/"],
+  [class^="bg-zinc-700/"], [class*=" bg-zinc-700/"]
+) {
+  background-color: var(--manage-surface-raised) !important;
+}
+
+.manage-theme-surface.light :where(
+  .border-zinc-950, .border-zinc-900, .border-zinc-850, .border-zinc-800, .border-zinc-700,
+  [class^="border-zinc-950/"], [class*=" border-zinc-950/"],
+  [class^="border-zinc-900/"], [class*=" border-zinc-900/"],
+  [class^="border-zinc-850/"], [class*=" border-zinc-850/"],
+  [class^="border-zinc-800/"], [class*=" border-zinc-800/"],
+  [class^="border-zinc-700/"], [class*=" border-zinc-700/"]
+) {
+  border-color: var(--manage-border) !important;
+}
+
+.manage-theme-surface.light :where(
+  [class^="hover:bg-zinc-950"], [class*=" hover:bg-zinc-950"],
+  [class^="hover:bg-zinc-900"], [class*=" hover:bg-zinc-900"],
+  [class^="hover:bg-zinc-850"], [class*=" hover:bg-zinc-850"],
+  [class^="hover:bg-zinc-800"], [class*=" hover:bg-zinc-800"],
+  [class^="hover:bg-zinc-700"], [class*=" hover:bg-zinc-700"]
+):hover {
+  background-color: var(--manage-hover) !important;
+}
+
+.manage-theme-surface.light :where(
+  button.bg-white.text-zinc-950,
+  button.bg-white.text-zinc-900,
+  button.bg-white.text-black,
+  button.bg-white[class*="text-[#"],
+  button[class*="bg-[#ebeced]"]
+) {
+  background-color: var(--manage-text) !important;
+  border-color: var(--manage-text) !important;
+  color: #ffffff !important;
+}
+
+.manage-theme-surface.light :where(
+  button.bg-white.text-zinc-950,
+  button.bg-white.text-zinc-900,
+  button.bg-white.text-black,
+  button.bg-white[class*="text-[#"],
+  button[class*="bg-[#ebeced]"]
+):hover {
+  background-color: #2f3033 !important;
+  color: #ffffff !important;
+}
+
+.manage-theme-surface.light :where([class^="disabled:bg-zinc-"], [class*=" disabled:bg-zinc-"]):disabled {
+  background-color: #e5e7eb !important;
+  border-color: #e5e7eb !important;
+  color: #a1a1aa !important;
+}
+
+.manage-theme-surface.light :where(input, textarea, select)[class*="[color-scheme:dark]"] {
+  color-scheme: light !important;
+}
+
+.manage-theme-surface.light :where(
+  [class^="border-white/"], [class*=" border-white/"], .border-white,
+  [class^="ring-white/"], [class*=" ring-white/"]
+) {
+  border-color: var(--manage-border) !important;
+  --tw-ring-color: var(--manage-border) !important;
+}
+
+.manage-theme-surface.light :where([class^="divide-white/"], [class*=" divide-white/"]) > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--manage-border) !important;
+}
+
+.manage-theme-surface.light :where([class^="hover:bg-white/"], [class*=" hover:bg-white/"]):hover {
+  background-color: var(--manage-hover) !important;
+}
+
+.manage-theme-surface.light :where([class^="hover:text-white"], [class*=" hover:text-white"]):hover {
+  color: var(--manage-text) !important;
+}
+
+.manage-theme-surface.light :where([class^="focus:border-white/"], [class*=" focus:border-white/"]):focus,
+.manage-theme-surface.light :where([class^="focus-within:border-white/"], [class*=" focus-within:border-white/"]):focus-within {
+  border-color: var(--manage-border-strong) !important;
+}
+
+/* Keep text on semantic/brand actions white after the neutral text mapping. */
+.manage-theme-surface.light :where(
+  [class*="bg-[#2A2AD7]"], [class*="bg-[#1e1eb8]"],
+  [class*="bg-[#EF4118]"], [class*="bg-[#D63814]"],
+  [class*="bg-[#de3163]"], [class*="bg-[#db2777]"],
+  [class*="bg-[#ff2e39]"], [class*="bg-[#ff2d38]"], [class*="bg-[#ff4b13]"],
+  [class*="bg-[#31C72D]"], [class*="bg-[#34c759]"], [class*="bg-[#22c55e]"],
+  [class^="bg-indigo-"], [class*=" bg-indigo-"],
+  [class^="bg-blue-"], [class*=" bg-blue-"],
+  [class^="bg-violet-"], [class*=" bg-violet-"],
+  [class^="bg-purple-"], [class*=" bg-purple-"],
+  [class^="bg-pink-"], [class*=" bg-pink-"],
+  [class^="bg-red-"], [class*=" bg-red-"],
+  [class^="bg-green-"], [class*=" bg-green-"]
+) {
+  color: #ffffff !important;
+}
+
+.manage-theme-surface.light :where(
+  [class*="bg-[#2A2AD7]"], [class*="bg-[#EF4118]"],
+  [class^="bg-indigo-"], [class*=" bg-indigo-"],
+  [class^="bg-blue-"], [class*=" bg-blue-"],
+  [class^="bg-pink-"], [class*=" bg-pink-"],
+  [class^="bg-red-"], [class*=" bg-red-"],
+  [class^="bg-green-"], [class*=" bg-green-"]
+) :where(.text-white, [class^="text-white/"], [class*=" text-white/"]) {
+  color: #ffffff !important;
+}
+
+/* Compatibility for older manage-tab fragments authored with inline dark
+   colors. React normalizes these declarations to rgb/rgba in the DOM. */
+.manage-theme-surface.light :where(
+  [style*="color: #fff"],
+  [style*="color: #ffffff"],
+  [style*="color: rgb(255, 255, 255)"]
+) {
+  color: var(--manage-text) !important;
+}
+
+.manage-theme-surface.light :where(
+  [style*="color: rgba(255, 255, 255"],
+  [style*="color: rgba(255,255,255"]
+) {
+  color: var(--manage-text-muted) !important;
+}
+
+.manage-theme-surface.light :where(
+  [style*="background: #0c0c0e"], [style*="background-color: #0c0c0e"],
+  [style*="background: #121417"], [style*="background-color: #121417"],
+  [style*="background: #131517"], [style*="background-color: #131517"],
+  [style*="background: #161618"], [style*="background-color: #161618"],
+  [style*="background: #171919"], [style*="background-color: #171919"],
+  [style*="background: #181a1f"], [style*="background-color: #181a1f"],
+  [style*="background: #1a1c22"], [style*="background-color: #1a1c22"],
+  [style*="background: #1c1c1e"], [style*="background-color: #1c1c1e"],
+  [style*="background: rgb(12, 12, 14)"], [style*="background-color: rgb(12, 12, 14)"],
+  [style*="background: rgb(18, 20, 23)"], [style*="background-color: rgb(18, 20, 23)"],
+  [style*="background: rgb(19, 21, 23)"], [style*="background-color: rgb(19, 21, 23)"],
+  [style*="background: rgb(22, 22, 24)"], [style*="background-color: rgb(22, 22, 24)"],
+  [style*="background: rgb(23, 25, 25)"], [style*="background-color: rgb(23, 25, 25)"],
+  [style*="background: rgb(24, 26, 31)"], [style*="background-color: rgb(24, 26, 31)"],
+  [style*="background: rgb(26, 28, 34)"], [style*="background-color: rgb(26, 28, 34)"],
+  [style*="background: rgb(28, 28, 30)"], [style*="background-color: rgb(28, 28, 30)"]
+) {
+  background: var(--manage-surface) !important;
+  background-color: var(--manage-surface) !important;
+}
+
+.manage-theme-surface.light :where(
+  [style*="background: rgba(255, 255, 255, 0.0"],
+  [style*="background-color: rgba(255, 255, 255, 0.0"],
+  [style*="background: rgba(255,255,255,0.0"],
+  [style*="background-color: rgba(255,255,255,0.0"]
+) {
+  background: var(--manage-surface-raised) !important;
+  background-color: var(--manage-surface-raised) !important;
+}
+
+.manage-theme-surface.light :where(
+  [style*="border: 1px solid rgba(255, 255, 255"],
+  [style*="border: 1px solid rgba(255,255,255"],
+  [style*="border-color: rgba(255, 255, 255"],
+  [style*="border-color: rgba(255,255,255"]
+) {
+  border-color: var(--manage-border) !important;
+}
+
+/* Media overlays and saturated inline actions deliberately keep white copy. */
+.manage-theme-surface.light :where(
+  [style*="background: rgba(19, 21, 23, 0.55)"],
+  [style*="background-color: rgba(19, 21, 23, 0.55)"],
+  [style*="background: rgb(42, 42, 215)"],
+  [style*="background-color: rgb(42, 42, 215)"],
+  [style*="background: rgb(239, 65, 24)"],
+  [style*="background-color: rgb(239, 65, 24)"]
+) :where([style*="color"], .text-white, [class^="text-white/"], [class*=" text-white/"]) {
+  color: #ffffff !important;
 }

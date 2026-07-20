@@ -23,44 +23,48 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
     return 'system';
   });
+  const [systemDark, setSystemDark] = useState(() =>
+    typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-color-scheme: dark)').matches,
+  );
 
-  const prefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-  const isDark = mode === 'system' ? prefersDark : mode === 'dark';
+  const isDark = mode === 'system' ? systemDark : mode === 'dark';
 
   const applyClass = useCallback((dark: boolean) => {
     try {
       const root = document.documentElement;
       if (dark) root.classList.add('dark'); else root.classList.remove('dark');
+      root.dataset.theme = dark ? 'dark' : 'light';
+      root.style.colorScheme = dark ? 'dark' : 'light';
     } catch (e) { void e; }
   }, []);
 
-  // apply on mount and when mode changes
+  // Keep the document theme in sync for every page and portal.
   useEffect(() => {
-    const update = () => {
-      const prefers = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const dark = mode === 'system' ? prefers : mode === 'dark';
-      applyClass(dark);
-    };
-    update();
+    applyClass(isDark);
+  }, [isDark, applyClass]);
 
-    // if system mode, listen for changes
-    let mq: MediaQueryList | null = null;
-    if (mode === 'system' && typeof window !== 'undefined' && window.matchMedia) {
-      mq = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = () => update();
-      if (mq.addEventListener) mq.addEventListener('change', handler); else mq.addListener(handler);
-      return () => {
-        if (mq) {
-          if (mq.removeEventListener) mq.removeEventListener('change', handler);
-          else mq.removeListener(handler);
-        }
-      };
-    }
+  // System mode remains reactive when the operating-system preference changes.
+  useEffect(() => {
+    if (mode !== 'system' || typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setSystemDark(mq.matches);
+    const handler = (event: MediaQueryListEvent) => setSystemDark(event.matches);
+    if (mq.addEventListener) mq.addEventListener('change', handler); else mq.addListener(handler);
     return () => {
-      // noop
+      if (mq.removeEventListener) mq.removeEventListener('change', handler);
+      else mq.removeListener(handler);
     };
-  }, [mode, applyClass]);
+  }, [mode]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY) return;
+      const next = event.newValue;
+      if (next === 'light' || next === 'dark' || next === 'system') setModeState(next);
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const setMode = useCallback((m: ThemeMode) => {
     setModeState(m);

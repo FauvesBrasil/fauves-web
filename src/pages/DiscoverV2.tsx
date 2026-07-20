@@ -24,6 +24,7 @@ import HeaderV2 from '@/components/v2/HeaderV2';
 import FooterV2 from '@/components/v2/FooterV2';
 import { useSEO } from '@/hooks/useSEO';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { useTheme } from '@/context/ThemeContext';
 
 type CategoryVisual = {
   Icon: LucideIcon;
@@ -105,6 +106,7 @@ const getInitials = (name: string) =>
     .toUpperCase();
 
 const DiscoverV2: React.FC = () => {
+  const { isDark } = useTheme();
   useSEO({ title: 'Descobrir eventos · Fauves' });
 
   const [events, setEvents] = useState<any[]>([]);
@@ -197,11 +199,11 @@ const DiscoverV2: React.FC = () => {
   const currentStateData = stateLocations.find((state) => state.uf === selectedState);
 
   return (
-    <div className="discover-v2-page">
+    <div className={`discover-v2-page theme-root ${isDark ? 'dark dark-mode' : 'light'}`}>
       <HeaderV2
         transparent
         fixed
-        theme="dark"
+        theme={isDark ? 'dark' : 'light'}
         contentMaxWidth="840px"
         explorarText="Descobrir Eventos"
       />
@@ -670,6 +672,61 @@ const DiscoverV2: React.FC = () => {
         .discover-v2-skeleton-category { height: 66px; }
         .discover-v2-skeleton-calendar { height: 154px; }
         .discover-v2-skeleton-city { height: 56px; }
+
+        .discover-v2-page.light {
+          --footer-text-color: #71717a;
+          --footer-hover-color: #18181b;
+          --footer-border-color: rgba(24,24,27,.1);
+          --footer-social-color: #71717a;
+          --footer-social-hover: #18181b;
+          --footer-logo-color: #18181b;
+          color: #27272a;
+          background: #f7f8f9;
+        }
+        .discover-v2-page.light .discover-v2-hero h1,
+        .discover-v2-page.light .discover-v2-section-heading h2,
+        .discover-v2-page.light .discover-v2-category-copy strong,
+        .discover-v2-page.light .discover-v2-city-card strong,
+        .discover-v2-page.light .discover-v2-calendar-card h3 { color: #18181b; }
+        .discover-v2-page.light .discover-v2-hero p,
+        .discover-v2-page.light .discover-v2-category-copy small,
+        .discover-v2-page.light .discover-v2-city-card small,
+        .discover-v2-page.light .discover-v2-calendar-card p { color: #71717a; }
+        .discover-v2-page.light .discover-v2-section-divided { border-top-color: rgba(24,24,27,.1); }
+        .discover-v2-page.light .discover-v2-category-card,
+        .discover-v2-page.light .discover-v2-calendar-card {
+          border-color: rgba(24,24,27,.1);
+          background: #fff;
+        }
+        .discover-v2-page.light .discover-v2-category-card:hover,
+        .discover-v2-page.light .discover-v2-calendar-card:hover { border-color: rgba(24,24,27,.28); }
+        .discover-v2-page.light .discover-v2-calendar-logo {
+          color: #52525b;
+          border-color: rgba(24,24,27,.1);
+          background: linear-gradient(145deg,#f4f4f5,#e4e4e7);
+        }
+        .discover-v2-page.light .discover-v2-open-pill {
+          color: #52525b;
+          border-color: rgba(24,24,27,.06);
+          background: #f1f1f2;
+        }
+        .discover-v2-page.light .discover-v2-open-pill:hover { color: #fff; background: #18181b; }
+        .discover-v2-page.light .discover-v2-tabs button { color: #71717a; }
+        .discover-v2-page.light .discover-v2-tabs button:hover,
+        .discover-v2-page.light .discover-v2-tabs button.is-active { color: #18181b; background: rgba(24,24,27,.07); }
+        .discover-v2-page.light .discover-v2-city-card:hover { background: rgba(24,24,27,.045); }
+        .discover-v2-page.light .discover-v2-empty {
+          color: #71717a;
+          border-color: rgba(24,24,27,.13);
+          background: #fff;
+        }
+        .discover-v2-page.light .discover-v2-skeleton {
+          border-color: rgba(24,24,27,.06);
+          background: rgba(24,24,27,.06);
+        }
+        .discover-v2-page.light .discover-v2-skeleton::after {
+          background: linear-gradient(100deg,transparent 15%,rgba(255,255,255,.6) 50%,transparent 85%);
+        }
 
         @keyframes discover-shimmer {
           to { transform: translateX(100%); }

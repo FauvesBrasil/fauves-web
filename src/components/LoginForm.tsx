@@ -13,8 +13,10 @@ export const LoginForm: React.FC<{ onSuccess?: () => void }> = ({ onSuccess }) =
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true); setError(null);
-    const ok = await login(email, password);
-    if (!ok) setError('Falha no login'); else if (onSuccess) onSuccess();
+    const result = await login(email, password);
+    if (result.twoFactorRequired) setError('Confirme o código de dois fatores no modal de login.');
+    else if (!result.success) setError(result.message || 'Falha no login');
+    else if (onSuccess) onSuccess();
     setSubmitting(false);
   };
 

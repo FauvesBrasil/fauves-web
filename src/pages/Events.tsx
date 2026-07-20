@@ -22,8 +22,9 @@ import HeaderV2 from '@/components/v2/HeaderV2';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import FooterV2 from '@/components/v2/FooterV2';
 import { useAuth } from '@/context/AuthContext';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { useTheme } from '@/context/ThemeContext';
-import { fetchApi, apiUrl } from '@/lib/apiBase';
+import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import QRCode from 'qrcode';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -202,7 +203,7 @@ const Events = () => {
         eventId: e.id,
         name: e.name,
         startDate: e.startDate,
-        image: e.image ? (e.image.startsWith('http') ? e.image : apiUrl(e.image)) : '',
+        image: resolveImageUrl(e.image || e.bannerUrl) || '',
         venue: e.venue || 'Local não definido',
         location: e.location || '',
         organizerName: e.organizationName || 'Minha Organização',
@@ -219,7 +220,7 @@ const Events = () => {
         eventId: t.eventId,
         name: t.eventName || e?.name || 'Evento',
         startDate: t.eventStartDate || e?.startDate,
-        image: t.eventBannerUrl || (e?.image ? (e.image.startsWith('http') ? e.image : apiUrl(e.image)) : ''),
+        image: resolveImageUrl(t.eventBannerUrl || e?.image || e?.bannerUrl) || '',
         venue: t.eventVenue || e?.venue || 'Local não definido',
         location: t.eventLocation || e?.location || '',
         organizerName: e?.organizationName || 'Organizador',
@@ -295,9 +296,7 @@ const Events = () => {
     const [transferLoading, setTransferLoading] = useState(false);
 
     useEffect(() => {
-      const original = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = original; };
+      return acquireDocumentScrollLock();
     }, []);
 
     useEffect(() => {

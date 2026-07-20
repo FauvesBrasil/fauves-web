@@ -489,7 +489,7 @@ const OrganizationPublicProfile: React.FC = () => {
       overflowX: 'hidden'
     }}>
       {/* ── App Header ── */}
-      <HeaderV2 transparent={true} fixed={false} blueGlow={false} />
+      <HeaderV2 transparent={true} fixed={false} theme={isDark ? 'dark' : 'light'} blueGlow={false} />
 
       {/* A capa começa logo abaixo do header, como na referência pública. */}
       <div style={{ height: 36 }} />

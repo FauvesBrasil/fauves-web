@@ -56,10 +56,10 @@ const LumaSignInStyles = () => (
       color: #131517 !important;
       --panel-padding: 1.25rem;
       padding: var(--panel-padding);
-      border-radius: 1.25rem;
+      border-radius: var(--fauves-modal-radius, 14px);
       flex: 1;
       width: 100%;
-      max-width: 380px;
+      max-width: var(--fauves-modal-width, 440px);
       height: fit-content;
       position: relative;
       overflow: visible;
@@ -70,7 +70,7 @@ const LumaSignInStyles = () => (
       content: "";
       border: 1px solid rgba(19, 21, 23, 0.12) !important;
       pointer-events: none;
-      border-radius: calc(1.25rem + 1px);
+      border-radius: calc(var(--fauves-modal-radius, 14px) + 1px);
       position: absolute;
       top: -1px; bottom: -1px; left: -1px; right: -1px;
     }
@@ -92,7 +92,7 @@ const LumaSignInStyles = () => (
     .signin-theme-root-modal .lux-input {
       background: #ffffff !important;
       border: 1px solid rgba(19, 21, 23, 0.16) !important;
-      border-radius: 12px !important;
+      border-radius: var(--fauves-control-radius, 8px) !important;
       color: #131517 !important;
       padding: 0.75rem 1rem !important;
       width: 100% !important;
@@ -188,7 +188,7 @@ const LumaSignInStyles = () => (
       width: 46px !important;
       height: 52px !important;
       border: 1px solid rgba(19, 21, 23, 0.16) !important;
-      border-radius: 12px !important;
+      border-radius: var(--fauves-control-radius, 8px) !important;
       font-size: 22px !important;
       font-weight: 600 !important;
       text-align: center !important;
@@ -228,7 +228,7 @@ const LumaSignInStyles = () => (
     .signin-theme-root-modal.page-mode .onboarding-card {
       max-width: 364px !important;
       padding: 20px !important;
-      border-radius: 20px !important;
+      border-radius: var(--fauves-modal-radius, 14px) !important;
       background: rgba(47, 42, 44, 0.82) !important;
       color: #f8f8f8 !important;
       box-shadow: 0 28px 90px rgba(0, 0, 0, 0.3) !important;
@@ -238,7 +238,7 @@ const LumaSignInStyles = () => (
 
     .signin-theme-root-modal.page-mode .onboarding-card.show-border:after {
       border-color: rgba(255, 255, 255, 0.16) !important;
-      border-radius: 21px !important;
+      border-radius: calc(var(--fauves-modal-radius, 14px) + 1px) !important;
     }
 
     .signin-theme-root-modal.page-mode .icon-door {

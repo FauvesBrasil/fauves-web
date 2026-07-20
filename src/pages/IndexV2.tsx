@@ -996,7 +996,7 @@ const IndexV2 = () => {
       <div className={`luma-v2 ${isDark ? 'dark dark-mode' : ''}`} style={{ minHeight: '100vh', background: isDark ? 'hsl(var(--background))' : luma.gray10, color: isDark ? 'hsl(var(--foreground))' : luma.black }}>
 
         {/* ── NAVBAR ──────────────────────────────────────────────────────── */}
-        <HeaderV2 transparent />
+        <HeaderV2 transparent theme="dark" blueGlow={false} />
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
         {/* Luma: full-bleed, height ~560px, city photo + dark left gradient */}

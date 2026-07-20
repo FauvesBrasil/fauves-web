@@ -23,6 +23,7 @@ import 'leaflet/dist/leaflet.css';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 import EventRegistrationCard from './EventRegistrationCard';
 
@@ -159,17 +160,13 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
 
   React.useEffect(() => {
     if (!isOpen) return;
-    const bodyOverflow = document.body.style.overflow;
-    const htmlOverflow = document.documentElement.style.overflow;
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
+    const releaseScrollLock = acquireDocumentScrollLock();
     const onKeyDown = (keyboardEvent: KeyboardEvent) => {
       if (keyboardEvent.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
-      document.body.style.overflow = bodyOverflow;
-      document.documentElement.style.overflow = htmlOverflow;
+      releaseScrollLock();
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [isOpen, onClose]);
@@ -331,92 +328,92 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
     <AnimatePresence>
       <>
         <style>{`
-          .edm-backdrop { position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.54); backdrop-filter:blur(5px); }
-          .edm-panel { --edm-bg:#fff; --edm-raised:#f1f2f3; --edm-soft:#f7f7f8; --edm-text:#151719; --edm-muted:#737577; --edm-border:rgba(19,21,23,.10); position:fixed; z-index:1201; top:12px; right:12px; bottom:12px; width:min(600px,calc(100vw - 24px)); display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--edm-border); border-radius:20px; background:var(--edm-bg); color:var(--edm-text); box-shadow:0 24px 80px rgba(0,0,0,.34); font-family:inherit; }
+          .edm-backdrop { position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.56); backdrop-filter:blur(4px); }
+          .edm-panel { --edm-bg:#fff; --edm-raised:#f1f2f3; --edm-soft:#f7f7f8; --edm-text:#151719; --edm-muted:#737577; --edm-border:rgba(19,21,23,.10); position:fixed; z-index:1201; top:12px; right:12px; bottom:12px; width:min(var(--fauves-side-panel-width,520px),calc(100vw - 24px)); display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--edm-border); border-radius:var(--fauves-modal-radius,14px); background:var(--edm-bg); color:var(--edm-text); box-shadow:0 22px 64px rgba(0,0,0,.32); font-family:inherit; }
           .edm-panel.is-dark { --edm-bg:#181a1b; --edm-raised:#2b2d2f; --edm-soft:#222425; --edm-text:#f7f7f7; --edm-muted:#a0a2a4; --edm-border:rgba(255,255,255,.09); }
-          .edm-toolbar { min-height:64px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px; border-bottom:1px solid var(--edm-border); background:color-mix(in srgb,var(--edm-bg) 92%,transparent); backdrop-filter:blur(18px); }
-          .edm-toolbar-group { min-width:0; display:flex; align-items:center; gap:8px; }
-          .edm-button { min-height:38px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 13px; border:0; border-radius:10px; background:var(--edm-raised); color:var(--edm-text); font:inherit; font-size:14px; font-weight:500; line-height:1; text-decoration:none; cursor:pointer; transition:background .16s ease,transform .16s ease,opacity .16s ease; }
+          .edm-toolbar { min-height:52px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:9px; padding:8px 11px; border-bottom:1px solid var(--edm-border); background:color-mix(in srgb,var(--edm-bg) 92%,transparent); backdrop-filter:blur(18px); }
+          .edm-toolbar-group { min-width:0; display:flex; align-items:center; gap:6px; }
+          .edm-button { min-height:34px; display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:0 10px; border:0; border-radius:var(--fauves-control-radius,8px); background:var(--edm-raised); color:var(--edm-text); font:inherit; font-size:12px; font-weight:550; line-height:1; text-decoration:none; cursor:pointer; transition:background .16s ease,transform .16s ease,opacity .16s ease; }
           .edm-button:hover { background:color-mix(in srgb,var(--edm-raised) 84%,var(--edm-text) 16%); }
           .edm-button:active { transform:scale(.98); }
           .edm-button:disabled { opacity:.28; cursor:default; }
-          .edm-icon-button { width:38px; padding:0; flex:0 0 auto; }
+          .edm-icon-button { width:34px; padding:0; flex:0 0 auto; }
           .edm-scroll { flex:1; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--edm-raised) transparent; }
-          .edm-manage-bar { min-height:72px; display:flex; align-items:center; justify-content:space-between; gap:18px; padding:14px 24px; background:color-mix(in srgb,var(--edm-accent) 18%,var(--edm-bg)); color:color-mix(in srgb,var(--edm-accent) 74%,var(--edm-text)); border-bottom:1px solid color-mix(in srgb,var(--edm-accent) 22%,transparent); }
-          .edm-manage-copy { min-width:0; font-size:16px; font-weight:500; line-height:1.35; }
-          .edm-manage-action { min-height:42px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:0 18px; border-radius:999px; background:var(--edm-accent); color:#fff; font-size:15px; font-weight:600; line-height:1; text-decoration:none; box-shadow:0 8px 22px color-mix(in srgb,var(--edm-accent) 25%,transparent); transition:filter .16s ease,transform .16s ease; }
+          .edm-manage-bar { min-height:58px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:10px 16px; background:color-mix(in srgb,var(--edm-accent) 18%,var(--edm-bg)); color:color-mix(in srgb,var(--edm-accent) 74%,var(--edm-text)); border-bottom:1px solid color-mix(in srgb,var(--edm-accent) 22%,transparent); }
+          .edm-manage-copy { min-width:0; font-size:13px; font-weight:500; line-height:1.35; }
+          .edm-manage-action { min-height:34px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; gap:5px; padding:0 13px; border-radius:999px; background:var(--edm-accent); color:#fff; font-size:12px; font-weight:650; line-height:1; text-decoration:none; box-shadow:0 7px 18px color-mix(in srgb,var(--edm-accent) 22%,transparent); transition:filter .16s ease,transform .16s ease; }
           .edm-manage-action:hover { filter:brightness(1.08); transform:translateY(-1px); }
           .edm-manage-action:active { transform:translateY(0) scale(.98); }
-          .edm-content { padding:30px 32px 42px; }
-          .edm-cover-wrap { position:relative; width:min(340px,100%); aspect-ratio:1; margin:12px auto 34px; }
-          .edm-cover-glow { position:absolute; inset:7%; border-radius:22px; background:center/cover no-repeat; filter:blur(34px); opacity:.16; transform:scale(1.08); }
-          .edm-cover { position:relative; width:100%; height:100%; display:grid; place-items:center; overflow:hidden; border:1px solid var(--edm-border); border-radius:16px; background:var(--edm-soft); box-shadow:0 16px 38px rgba(0,0,0,.22); }
+          .edm-content { padding:24px 24px 34px; }
+          .edm-cover-wrap { position:relative; width:min(286px,100%); aspect-ratio:1; margin:7px auto 27px; }
+          .edm-cover-glow { position:absolute; inset:7%; border-radius:14px; background:center/cover no-repeat; filter:blur(30px); opacity:.15; transform:scale(1.07); }
+          .edm-cover { position:relative; width:100%; height:100%; display:grid; place-items:center; overflow:hidden; border:1px solid var(--edm-border); border-radius:11px; background:var(--edm-soft); box-shadow:0 14px 32px rgba(0,0,0,.2); }
           .edm-cover img { width:100%; height:100%; object-fit:cover; }
           .edm-cover-placeholder { color:var(--edm-muted); }
-          .edm-title { margin:0 0 13px; font-size:2rem; line-height:1.12; letter-spacing:-.025em; font-weight:600; overflow-wrap:anywhere; }
-          .edm-org-summary { width:fit-content; max-width:100%; display:flex; align-items:center; gap:10px; margin-bottom:25px; color:var(--edm-muted); font-size:16px; font-weight:500; text-decoration:none; transition:color .16s ease; }
+          .edm-title { margin:0 0 10px; font-size:1.625rem; line-height:1.14; letter-spacing:-.02em; font-weight:650; overflow-wrap:anywhere; }
+          .edm-org-summary { width:fit-content; max-width:100%; display:flex; align-items:center; gap:8px; margin-bottom:21px; color:var(--edm-muted); font-size:14px; font-weight:500; text-decoration:none; transition:color .16s ease; }
           .edm-org-summary:hover { color:var(--edm-text); }
-          .edm-avatar { width:28px; height:28px; display:grid; place-items:center; flex:0 0 auto; overflow:hidden; border:1px solid var(--edm-border); border-radius:8px; background:var(--edm-soft); font-size:11px; }
+          .edm-avatar { width:24px; height:24px; display:grid; place-items:center; flex:0 0 auto; overflow:hidden; border:1px solid var(--edm-border); border-radius:7px; background:var(--edm-soft); font-size:10px; }
           .edm-avatar img { width:100%; height:100%; object-fit:cover; }
-          .edm-info-list { display:grid; gap:18px; margin-bottom:27px; }
-          .edm-info-row { display:grid; grid-template-columns:56px minmax(0,1fr); align-items:center; gap:14px; }
-          .edm-info-icon { width:52px; height:52px; display:grid; place-items:center; overflow:hidden; border:1px solid var(--edm-border); border-radius:13px; background:transparent; color:var(--edm-muted); }
+          .edm-info-list { display:grid; gap:14px; margin-bottom:23px; }
+          .edm-info-row { display:grid; grid-template-columns:46px minmax(0,1fr); align-items:center; gap:12px; }
+          .edm-info-icon { width:44px; height:44px; display:grid; place-items:center; overflow:hidden; border:1px solid var(--edm-border); border-radius:10px; background:transparent; color:var(--edm-muted); }
           .edm-calendar { align-content:stretch; padding:0; }
           .edm-calendar span:first-child { align-self:stretch; display:grid; place-items:center; background:var(--edm-raised); font-size:10px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; }
-          .edm-calendar span:last-child { display:grid; place-items:center; font-size:22px; font-weight:600; }
-          .edm-info-primary { color:var(--edm-text); font-size:17px; font-weight:600; line-height:1.25; }
-          .edm-info-secondary { margin-top:3px; color:var(--edm-muted); font-size:15px; font-weight:400; line-height:1.35; }
+          .edm-calendar span:last-child { display:grid; place-items:center; font-size:18px; font-weight:600; }
+          .edm-info-primary { color:var(--edm-text); font-size:14px; font-weight:600; line-height:1.25; }
+          .edm-info-secondary { margin-top:2px; color:var(--edm-muted); font-size:12px; font-weight:400; line-height:1.35; }
           .edm-location-link { color:var(--edm-text); text-decoration:none; transition:color .16s ease; }
           .edm-location-link:hover { color:var(--edm-accent); }
-          .edm-registration { margin-bottom:33px; }
-          .edm-external { padding:16px; border:1px solid var(--edm-border); border-radius:13px; background:var(--edm-soft); }
-          .edm-external p { margin:0 0 13px; color:var(--edm-muted); font-size:14px; line-height:1.5; }
+          .edm-registration { margin-bottom:27px; }
+          .edm-external { padding:13px; border:1px solid var(--edm-border); border-radius:10px; background:var(--edm-soft); }
+          .edm-external p { margin:0 0 10px; color:var(--edm-muted); font-size:12px; line-height:1.5; }
           .edm-primary-action { width:100%; background:var(--edm-text); color:var(--edm-bg); }
-          .edm-section { margin-top:31px; }
-          .edm-section-head { min-height:38px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid var(--edm-border); color:var(--edm-muted); font-size:14px; font-weight:600; }
-          .edm-description { padding-top:18px; color:var(--edm-text); font-size:16px; line-height:1.65; overflow-wrap:anywhere; }
-          .edm-description p { margin:0 0 16px; }
+          .edm-section { margin-top:25px; }
+          .edm-section-head { min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:8px; border-bottom:1px solid var(--edm-border); color:var(--edm-muted); font-size:12px; font-weight:600; }
+          .edm-description { padding-top:14px; color:var(--edm-text); font-size:14px; line-height:1.58; overflow-wrap:anywhere; }
+          .edm-description p { margin:0 0 13px; }
           .edm-description p:last-child { margin-bottom:0; }
           .edm-description a { color:var(--edm-accent); }
           .edm-description ul,.edm-description ol { padding-left:22px; }
           .edm-icon-link { width:30px; height:30px; display:grid; place-items:center; border-radius:8px; color:var(--edm-muted); text-decoration:none; transition:color .16s ease,background .16s ease; }
           .edm-icon-link:hover { color:var(--edm-text); background:var(--edm-soft); }
-          .edm-location-copy { padding:17px 0; }
-          .edm-location-copy strong { display:block; font-size:18px; font-weight:600; }
-          .edm-location-copy span { display:block; margin-top:4px; color:var(--edm-muted); font-size:15px; }
-          .edm-map { position:relative; height:210px; overflow:hidden; border:1px solid var(--edm-border); border-radius:14px; background:var(--edm-soft); }
+          .edm-location-copy { padding:14px 0; }
+          .edm-location-copy strong { display:block; font-size:15px; font-weight:600; }
+          .edm-location-copy span { display:block; margin-top:3px; color:var(--edm-muted); font-size:13px; }
+          .edm-map { position:relative; height:180px; overflow:hidden; border:1px solid var(--edm-border); border-radius:10px; background:var(--edm-soft); }
           .edm-map .leaflet-container { width:100%; height:100%; background:var(--edm-soft); }
           .edm-map-link { position:absolute; z-index:500; top:12px; left:12px; min-height:34px; display:inline-flex; align-items:center; gap:6px; padding:0 11px; border-radius:8px; background:rgba(9,10,11,.88); color:#fff; font-size:13px; font-weight:600; text-decoration:none; box-shadow:0 4px 14px rgba(0,0,0,.25); }
-          .edm-presented { padding-top:18px; }
-          .edm-presented-top { display:flex; align-items:center; gap:12px; }
-          .edm-org-logo { width:46px; height:46px; display:grid; place-items:center; flex:0 0 auto; overflow:hidden; border:1px solid var(--edm-border); border-radius:10px; background:var(--edm-soft); font-weight:600; }
+          .edm-presented { padding-top:14px; }
+          .edm-presented-top { display:flex; align-items:center; gap:10px; }
+          .edm-org-logo { width:40px; height:40px; display:grid; place-items:center; flex:0 0 auto; overflow:hidden; border:1px solid var(--edm-border); border-radius:8px; background:var(--edm-soft); font-weight:600; }
           .edm-org-logo img { width:100%; height:100%; object-fit:cover; }
-          .edm-presented-label { color:var(--edm-muted); font-size:13px; font-weight:600; }
-          .edm-presented-name { margin-top:2px; color:var(--edm-text); font-size:20px; font-weight:600; text-decoration:none; }
+          .edm-presented-label { color:var(--edm-muted); font-size:11px; font-weight:600; }
+          .edm-presented-name { margin-top:2px; color:var(--edm-text); font-size:16px; font-weight:600; text-decoration:none; }
           .edm-follow { margin-left:auto; }
-          .edm-org-description { margin:17px 0 11px; color:var(--edm-muted); font-size:15px; line-height:1.55; }
+          .edm-org-description { margin:14px 0 9px; color:var(--edm-muted); font-size:13px; line-height:1.5; }
           .edm-socials { display:flex; align-items:center; gap:3px; }
-          .edm-hosts { display:grid; gap:13px; padding-top:17px; }
-          .edm-host { display:flex; align-items:center; gap:11px; min-width:0; }
+          .edm-hosts { display:grid; gap:11px; padding-top:14px; }
+          .edm-host { display:flex; align-items:center; gap:9px; min-width:0; font-size:13px; }
           .edm-host strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
           .edm-host-socials { margin-left:auto; display:flex; }
-          .edm-support { display:grid; gap:9px; margin-top:30px; }
-          .edm-support a { width:fit-content; color:var(--edm-muted); font-size:14px; font-weight:600; text-decoration:none; }
+          .edm-support { display:grid; gap:7px; margin-top:25px; }
+          .edm-support a { width:fit-content; color:var(--edm-muted); font-size:12px; font-weight:600; text-decoration:none; }
           .edm-support a:hover { color:var(--edm-text); }
-          .edm-tag { width:fit-content; display:inline-flex; align-items:center; margin-top:26px; padding:7px 12px; border:1px solid var(--edm-border); border-radius:999px; color:var(--edm-muted); font-size:13px; font-weight:500; }
+          .edm-tag { width:fit-content; display:inline-flex; align-items:center; margin-top:22px; padding:6px 10px; border:1px solid var(--edm-border); border-radius:999px; color:var(--edm-muted); font-size:11px; font-weight:500; }
           .edm-tooltip { position:relative; }
           .edm-tooltip::after { content:attr(data-tip); position:absolute; z-index:4; left:50%; bottom:-42px; transform:translateX(-50%) translateY(-4px); max-width:250px; padding:7px 10px; border-radius:8px; background:#fff; color:#171717; box-shadow:0 7px 20px rgba(0,0,0,.24); font-size:12px; font-weight:500; line-height:1; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .12s ease,transform .12s ease; }
           .edm-tooltip:hover::after,.edm-tooltip:focus-visible::after { opacity:1; transform:translateX(-50%) translateY(0); }
           @media (max-width:640px) {
             .edm-panel { inset:0; width:100%; max-width:none; border-radius:0; border-left:0; border-right:0; }
-            .edm-toolbar { padding:9px 11px; }
+            .edm-toolbar { padding:8px 10px; }
             .edm-toolbar .edm-button-label { display:none; }
-            .edm-toolbar .edm-button { width:38px; padding:0; }
-            .edm-manage-bar { min-height:64px; padding:12px 16px; gap:12px; }
-            .edm-manage-copy { font-size:14px; }
-            .edm-manage-action { min-height:38px; padding:0 14px; font-size:14px; }
-            .edm-content { padding:25px 20px 36px; }
-            .edm-cover-wrap { width:min(310px,100%); margin-top:3px; }
+            .edm-toolbar .edm-button { width:34px; padding:0; }
+            .edm-manage-bar { min-height:56px; padding:9px 14px; gap:10px; }
+            .edm-manage-copy { font-size:12px; }
+            .edm-manage-action { min-height:34px; padding:0 12px; font-size:12px; }
+            .edm-content { padding:22px 18px 32px; }
+            .edm-cover-wrap { width:min(276px,100%); margin-top:2px; }
           }
         `}</style>
 
@@ -444,23 +441,23 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
           <header className="edm-toolbar">
             <div className="edm-toolbar-group">
               <button type="button" className="edm-button edm-icon-button edm-tooltip" data-tip="Fechar" onClick={onClose} aria-label="Fechar">
-                <ChevronsRight size={22} strokeWidth={2.6} />
+                <ChevronsRight size={18} strokeWidth={2.5} />
               </button>
               <button type="button" className="edm-button edm-tooltip" data-tip={copied ? 'Link copiado' : 'Copiar link'} onClick={copyLink}>
-                {copied ? <Check size={17} /> : <Copy size={17} />}
+                {copied ? <Check size={15} /> : <Copy size={15} />}
                 <span className="edm-button-label">{copied ? 'Copiado' : 'Copiar Link'}</span>
               </button>
               <Link className="edm-button edm-tooltip" data-tip="Abrir página completa" to={canonicalPath} target="_blank">
                 <span className="edm-button-label">Página do Evento</span>
-                <ArrowUpRight size={17} />
+                <ArrowUpRight size={15} />
               </Link>
             </div>
             <div className="edm-toolbar-group">
               <button type="button" className="edm-button edm-icon-button edm-tooltip" data-tip="Evento anterior" disabled={!hasPrev} onClick={onPrev} aria-label="Evento anterior">
-                <ChevronUp size={19} />
+                <ChevronUp size={16} />
               </button>
               <button type="button" className="edm-button edm-icon-button edm-tooltip" data-tip="Próximo evento" disabled={!hasNext} onClick={onNext} aria-label="Próximo evento">
-                <ChevronDown size={19} />
+                <ChevronDown size={16} />
               </button>
             </div>
           </header>
@@ -476,7 +473,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
                   rel="noopener noreferrer"
                   aria-label={`Gerenciar ${title}`}
                 >
-                  Gerenciar <ArrowUpRight size={18} strokeWidth={2.4} />
+                  Gerenciar <ArrowUpRight size={15} strokeWidth={2.4} />
                 </Link>
               </div>
             )}
@@ -519,7 +516,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
                 )}
 
                 <div className="edm-info-row">
-                  <div className="edm-info-icon"><MapPin size={29} strokeWidth={2.1} /></div>
+                  <div className="edm-info-icon"><MapPin size={23} strokeWidth={2.1} /></div>
                   <div>
                     {mapsUrl && !isOnline ? (
                       <a className="edm-info-primary edm-location-link" href={mapsUrl} target="_blank" rel="noopener noreferrer">

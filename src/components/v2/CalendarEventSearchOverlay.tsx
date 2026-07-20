@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ArrowRight, MapPin, Search, Sparkles, X } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/apiBase';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 
 type Props = { open: boolean; events: any[]; organization: any; canManage: boolean; onClose: () => void; onEventClick: (event: any) => void; onManage: (event: any) => void };
 
@@ -8,11 +9,10 @@ export default function CalendarEventSearchOverlay({ open, events, organization,
   const [query, setQuery] = React.useState('');
   React.useEffect(() => {
     if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseScrollLock = acquireDocumentScrollLock();
     const escape = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
     window.addEventListener('keydown', escape);
-    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', escape); };
+    return () => { releaseScrollLock(); window.removeEventListener('keydown', escape); };
   }, [open, onClose]);
   React.useEffect(() => { if (!open) setQuery(''); }, [open]);
   const results = React.useMemo(() => {

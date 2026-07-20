@@ -54,11 +54,15 @@
   <!-- Inline theme detection script to prevent flash -->
   <script>
     try {
-      const isDark = localStorage.getItem('theme') === 'dark' || 
-                     (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      }
+      const storedMode = localStorage.getItem('theme-mode');
+      const mode = storedMode === 'light' || storedMode === 'dark' || storedMode === 'system'
+        ? storedMode
+        : 'system';
+      const isDark = mode === 'dark' ||
+        (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
     } catch (e) {}
   </script>
 

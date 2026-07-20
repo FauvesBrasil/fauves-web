@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { 
   Edit, 
   ChevronRight, 
@@ -231,9 +232,7 @@ const Profile = () => {
     const [transferLoading, setTransferLoading] = useState(false);
 
     useEffect(() => {
-      const original = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = original; };
+      return acquireDocumentScrollLock();
     }, []);
 
     useEffect(() => {
@@ -479,9 +478,7 @@ const Profile = () => {
 
   const OrderModal = ({ order, onClose }: { order: any; onClose: () => void }) => {
     useEffect(() => {
-      const original = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = original; };
+      return acquireDocumentScrollLock();
     }, []);
 
     return (

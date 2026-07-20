@@ -19,6 +19,7 @@ import FooterV2 from '@/components/v2/FooterV2';
 import SubscribeControl from '@/components/v2/SubscribeControl';
 import { useSEO } from '@/hooks/useSEO';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { useTheme } from '@/context/ThemeContext';
 
 type Category = {
   id: string;
@@ -139,6 +140,7 @@ const WorldMap: React.FC = () => (
 );
 
 const EventsByCategory: React.FC = () => {
+  const { isDark } = useTheme();
   const { categorySlug } = useParams<{ categorySlug: string }>();
   const [category, setCategory] = useState<Category | null>(null);
   const [events, setEvents] = useState<CategoryEvent[]>([]);
@@ -243,8 +245,8 @@ const EventsByCategory: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="category-page category-loading-page">
-        <HeaderV2 transparent fixed theme="dark" contentMaxWidth="960px" explorarText="Descobrir Eventos" />
+      <div className={`category-page category-loading-page theme-root ${isDark ? 'dark dark-mode' : 'light'}`}>
+        <HeaderV2 transparent fixed theme={isDark ? 'dark' : 'light'} contentMaxWidth="960px" explorarText="Descobrir Eventos" />
         <span className="category-loader" aria-label="Carregando" />
         <style>{categoryStyles}</style>
       </div>
@@ -253,8 +255,8 @@ const EventsByCategory: React.FC = () => {
 
   if (notFound || !category) {
     return (
-      <div className="category-page category-loading-page">
-        <HeaderV2 transparent fixed theme="dark" contentMaxWidth="960px" explorarText="Descobrir Eventos" />
+      <div className={`category-page category-loading-page theme-root ${isDark ? 'dark dark-mode' : 'light'}`}>
+        <HeaderV2 transparent fixed theme={isDark ? 'dark' : 'light'} contentMaxWidth="960px" explorarText="Descobrir Eventos" />
         <span className="category-not-found">Categoria não encontrada.</span>
         <style>{categoryStyles}</style>
       </div>
@@ -262,8 +264,8 @@ const EventsByCategory: React.FC = () => {
   }
 
   return (
-    <div className="category-page" style={{ '--category-accent': accent } as React.CSSProperties}>
-      <HeaderV2 transparent fixed theme="dark" contentMaxWidth="960px" explorarText="Descobrir Eventos" />
+    <div className={`category-page theme-root ${isDark ? 'dark dark-mode' : 'light'}`} style={{ '--category-accent': accent } as React.CSSProperties}>
+      <HeaderV2 transparent fixed theme={isDark ? 'dark' : 'light'} contentMaxWidth="960px" explorarText="Descobrir Eventos" />
 
       <main className="category-container" data-header-align>
         <section className="category-hero">
@@ -687,6 +689,47 @@ const categoryStyles = `
   .category-loading-page { display: grid; min-height: 100vh; place-items: center; }
   .category-loader { width: 34px; height: 34px; border: 2px solid rgba(255,255,255,.12); border-top-color: #fff; border-radius: 50%; animation: category-spin .8s linear infinite; }
   .category-not-found { color: rgba(255,255,255,.58); font-size: .875rem; }
+  .category-page.light {
+    --footer-text-color:#71717a;
+    --footer-hover-color:#18181b;
+    --footer-border-color:rgba(24,24,27,.1);
+    --footer-social-color:#71717a;
+    --footer-social-hover:#18181b;
+    --footer-logo-color:#18181b;
+    color:#27272a;
+    background:#f7f8f9;
+  }
+  .category-page.light .category-hero-copy h1,
+  .category-page.light .category-section > h2,
+  .category-page.light .category-nearby-heading h2,
+  .category-page.light .category-event-copy strong,
+  .category-page.light .category-calendar-card h3,
+  .category-page.light .category-map-empty-copy h3,
+  .category-page.light .category-subscribe-aside h3 { color:#18181b; }
+  .category-page.light .category-stats { color:#3f3f46; }
+  .category-page.light .category-stats svg,
+  .category-page.light .category-description,
+  .category-page.light .category-event-meta,
+  .category-page.light .category-calendar-card p,
+  .category-page.light .category-map-empty-copy p,
+  .category-page.light .category-subscribe-aside p,
+  .category-page.light .category-not-found { color:#71717a; }
+  .category-page.light .category-description,
+  .category-page.light .category-section { border-color:rgba(24,24,27,.1); }
+  .category-page.light .category-artwork { border-color:rgba(24,24,27,.07); background:rgba(24,24,27,.05); }
+  .category-page.light .category-events-list,
+  .category-page.light .category-calendar-card { border-color:rgba(24,24,27,.1); background:#fff; }
+  .category-page.light .category-month-heading { color:#71717a; background:#f1f1f2; }
+  .category-page.light .category-event-row { background:#fff; }
+  .category-page.light .category-event-row:hover { background:#f7f7f8; }
+  .category-page.light .category-event-image,
+  .category-page.light .category-calendar-logo { color:#71717a; border-color:rgba(24,24,27,.09); background:#f1f1f2; }
+  .category-page.light .category-calendar-card:hover { border-color:rgba(24,24,27,.27); }
+  .category-page.light .category-follow-button,
+  .category-page.light .category-nearby-heading button { color:#52525b; background:rgba(24,24,27,.07); }
+  .category-page.light .category-map-empty-copy a { color:#fff; background:#27272a; }
+  .category-page.light .category-world-map path { fill:rgba(24,24,27,.13); }
+  .category-page.light .category-loader { border-color:rgba(24,24,27,.12); border-top-color:#27272a; }
   @keyframes category-spin { to { transform: rotate(360deg); } }
 
   .category-page footer { margin-top: 0 !important; }

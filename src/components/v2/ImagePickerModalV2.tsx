@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Search, Image as ImageIcon, ArrowLeft } from "lucide-react";
+import { coverAssetUrls } from "@/lib/coverAssets";
 
 interface ImagePickerModalV2Props {
     isOpen: boolean;
@@ -12,8 +13,8 @@ interface ImagePickerModalV2Props {
     variant?: "event" | "calendar";
 }
 
-// Carrega as capas dinamicamente usando import.meta.glob do Vite
-const coverModules = import.meta.glob('/src/assets/covers/**/*.avif', { eager: true, import: 'default' });
+// Carrega as capas dinamicamente usando o mesmo mapa utilizado nas listagens.
+const coverModules = coverAssetUrls;
 
 const fallbackPresets = [
     "https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,anim=false,background=white,quality=75/event-covers/q6/f2c92e76-32d8-4f5a-9d6e-1d5d5d5d5d5d.jpg",

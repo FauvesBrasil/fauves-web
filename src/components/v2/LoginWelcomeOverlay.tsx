@@ -2,6 +2,7 @@ import * as React from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { resolveImageUrl } from '@/lib/apiBase';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 
 type Palette = { primary: string; secondary: string; tertiary: string };
 
@@ -104,9 +105,7 @@ export default function LoginWelcomeOverlay() {
 
   React.useEffect(() => {
     if (!loginWelcomeUser) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previousOverflow; };
+    return acquireDocumentScrollLock();
   }, [loginWelcomeUser]);
 
   const firstName = loginWelcomeUser?.name?.trim().split(/\s+/)[0]

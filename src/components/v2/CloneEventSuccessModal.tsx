@@ -2,6 +2,8 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ExternalLink, X } from 'lucide-react';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
+import { useTheme } from '@/context/ThemeContext';
 
 export interface ClonedEventSummary {
   id?: string;
@@ -34,14 +36,14 @@ const eventDateParts = (value?: string | null) => {
 };
 
 export function CloneEventSuccessModal({ events, onClose, onOpenEvent }: CloneEventSuccessModalProps) {
+  const { isDark } = useTheme();
   React.useEffect(() => {
     if (!events.length) return;
-    const previousOverflow = document.body.style.overflow;
+    const releaseScrollLock = acquireDocumentScrollLock();
     const handleKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [events.length, onClose]);
@@ -67,7 +69,7 @@ export function CloneEventSuccessModal({ events, onClose, onOpenEvent }: CloneEv
           initial={{ scale: 0.96, y: 12 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.96, y: 12 }}
-          className="my-auto max-h-[calc(100dvh-24px)] w-full max-w-[340px] overflow-y-auto rounded-[17px] border border-white/[0.06] bg-[#1b1c1d]/95 p-5 text-white shadow-[0_24px_70px_rgba(0,0,0,.62)] backdrop-blur-2xl"
+          className={`manage-theme-surface ${isDark ? 'dark dark-mode' : 'light'} my-auto max-h-[calc(100dvh-24px)] w-full max-w-[340px] overflow-y-auto rounded-[14px] border border-white/[0.06] bg-[#1b1c1d]/95 p-5 text-white shadow-[0_24px_70px_rgba(0,0,0,.62)] backdrop-blur-2xl`}
         >
           <div className="flex justify-end">
             <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-zinc-400 transition hover:text-white" aria-label="Fechar">

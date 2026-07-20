@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
 
 type GuestStatus = 'confirmed' | 'invited' | 'declined' | 'waitlist' | 'pending' | 'checkedin';
@@ -429,8 +430,12 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onCheck
 function ChevronUpIcon() { return <ChevronLeft size={19} className="rotate-90" />; }
 
 function Portal({ children }: { children: React.ReactNode }) {
+  const { isDark } = useTheme();
   if (typeof document === 'undefined') return null;
-  return createPortal(children, document.body);
+  return createPortal(
+    <div className={`manage-theme-surface ${isDark ? 'dark dark-mode' : 'light'}`}>{children}</div>,
+    document.body,
+  );
 }
 
 function ModalShell({ children, onClose, maxWidth = 420, showClose = true }: { children: React.ReactNode; onClose: () => void; maxWidth?: number; showClose?: boolean }) {
