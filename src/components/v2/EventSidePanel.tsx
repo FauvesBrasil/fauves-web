@@ -156,6 +156,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
   const [following, setFollowing] = React.useState(false);
   const [followLoading, setFollowLoading] = React.useState(false);
   const [managementAccess, setManagementAccess] = React.useState<{ userId: string; eventIds: Set<string> } | null>(null);
+  const [loading, setLoading] = React.useState(true);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -172,7 +173,10 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
   }, [isOpen, onClose]);
 
   React.useEffect(() => {
-    if (event && (event.description || event.descriptionHtml || event.organization || event.organizer)) {
+    const hasFullDetails = event && (event.description || event.descriptionHtml || event.organization || event.organizer);
+    setLoading(!hasFullDetails);
+
+    if (hasFullDetails) {
       setFullEvent(event);
       if (event.organization || event.organizer) {
         setOrganization(event.organization || event.organizer);
@@ -188,8 +192,15 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
     let cancelled = false;
     fetchApi(`/api/event/${eventId}`)
       .then((response) => response.ok ? response.json() : null)
-      .then((data) => { if (!cancelled && data) setFullEvent(data); })
-      .catch(() => undefined);
+      .then((data) => {
+        if (!cancelled && data) {
+          setFullEvent(data);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => { cancelled = true; };
   }, [event?.id, event?._id, isOpen]);
 
@@ -297,7 +308,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
         : [];
   const orgDescription = cleanHtml(first(org.bio, org.description));
   const contactEmail = first(resolvedEvent.contactEmail, org.showContactEmail !== false ? org.contactEmail : null);
-  const accent = first(resolvedEvent.themeColor, org.themeColor) || '#ef4f9a';
+  const accent = first(resolvedEvent.themeColor, org.themeColor) || '#ff4b13';
 
   const copyLink = async () => {
     try {
@@ -335,6 +346,17 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
     <AnimatePresence>
       <>
         <style>{`
+          @keyframes edm-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .4; }
+          }
+          .edm-skeleton {
+            animation: edm-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          }
+          .edm-skeleton-bar {
+            background-color: var(--edm-soft);
+            border-radius: 4px;
+          }
           .edm-backdrop { position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,.56); backdrop-filter:blur(4px); }
           .edm-panel { --edm-bg:#fff; --edm-raised:#f1f2f3; --edm-soft:#f7f7f8; --edm-text:#151719; --edm-muted:#737577; --edm-border:rgba(19,21,23,.10); position:fixed; z-index:1201; top:12px; right:12px; bottom:12px; width:min(var(--fauves-side-panel-width,520px),calc(100vw - 24px)); display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--edm-border); border-radius:var(--fauves-modal-radius,14px); background:var(--edm-bg); color:var(--edm-text); box-shadow:0 22px 64px rgba(0,0,0,.32); font-family:inherit; }
           .edm-panel.is-dark { --edm-bg:#181a1b; --edm-raised:#2b2d2f; --edm-soft:#222425; --edm-text:#f7f7f7; --edm-muted:#a0a2a4; --edm-border:rgba(255,255,255,.09); }
@@ -470,7 +492,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
           </header>
 
           <div ref={scrollRef} className="edm-scroll">
-            {canManage && managerEventId && (
+            {canManage && managerEventId && !loading && (
               <div className="edm-manage-bar">
                 <div className="edm-manage-copy">Você tem acesso de gerenciamento para este evento.</div>
                 <Link
@@ -546,16 +568,29 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
                 ) : <EventRegistrationCard event={resolvedEvent} compact />}
               </div>
 
-              {description && (
+              {loading ? (
                 <section className="edm-section">
                   <div className="edm-section-head">
                     <span>Sobre o Evento</span>
-                    <button type="button" className="edm-icon-link edm-tooltip" data-tip="Traduzir" onClick={openTranslation} aria-label="Traduzir">
-                      <Languages size={19} />
-                    </button>
                   </div>
-                  <div className="edm-description" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(resolvedEvent.description) }} />
+                  <div className="edm-skeleton" style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div className="edm-skeleton-bar" style={{ width: '94%', height: '11px' }} />
+                    <div className="edm-skeleton-bar" style={{ width: '88%', height: '11px' }} />
+                    <div className="edm-skeleton-bar" style={{ width: '65%', height: '11px' }} />
+                  </div>
                 </section>
+              ) : (
+                description && (
+                  <section className="edm-section">
+                    <div className="edm-section-head">
+                      <span>Sobre o Evento</span>
+                      <button type="button" className="edm-icon-link edm-tooltip" data-tip="Traduzir" onClick={openTranslation} aria-label="Traduzir">
+                        <Languages size={19} />
+                      </button>
+                    </div>
+                    <div className="edm-description" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(resolvedEvent.description) }} />
+                  </section>
+                )
               )}
 
               {!isOnline && location.full && (
