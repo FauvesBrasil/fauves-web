@@ -985,7 +985,7 @@ export default function OrganizerSettingsV2() {
         name: e.name || e.title || 'Evento',
         startDate: e.startDate,
         endDate: e.endDate,
-        image: e.image ? (e.image.startsWith('http') ? e.image : apiUrl(e.image)) : (e.coverUrl || ''),
+        image: e.image || e.coverUrl || '',
         venue: e.locationCity
           ? `${e.locationCity}${e.locationUf ? `, ${e.locationUf}` : ''}`
           : e.venue || e.locationName || e.locationAddress || (e.location === 'Evento online' ? 'Online' : e.location) || 'Local não definido',
@@ -1603,7 +1603,7 @@ export default function OrganizerSettingsV2() {
                                     {/* Right Column: Cover Thumbnail */}
                                     <div className="event-card-cover">
                                       {item.image ? (
-                                        <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        <img src={resolveImageUrl(item.image) || undefined} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                       ) : (
                                         <Calendar className="w-8 h-8 text-neutral-300" />
                                       )}

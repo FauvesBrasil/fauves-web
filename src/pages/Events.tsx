@@ -371,7 +371,7 @@ const Events = () => {
                 {/* Banner image */}
                 <div className="relative h-44 shrink-0 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
                   <img
-                    src={ticket.eventBannerUrl || (ticket.event?.image ? (ticket.event.image.startsWith('http') ? ticket.event.image : apiUrl(ticket.event.image)) : '')}
+                    src={resolveImageUrl(ticket.eventBannerUrl || ticket.event?.image || ticket.event?.bannerUrl) || ''}
                     className="w-full h-full object-cover"
                     alt=""
                   />

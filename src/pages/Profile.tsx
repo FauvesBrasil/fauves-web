@@ -36,7 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { getFirstName, getDisplayName } from '@/lib/user';
-import { fetchApi, apiUrl } from '@/lib/apiBase';
+import { fetchApi, apiUrl, resolveImageUrl } from '@/lib/apiBase';
 import ProfilePageSkeleton from '@/components/skeletons/ProfilePageSkeleton';
 
 // --- Shared Components for Premium Feel ---
@@ -331,7 +331,7 @@ const Profile = () => {
                   {/* Event Image */}
                   <div className="relative h-56 sm:h-64 shrink-0 overflow-hidden">
                     <img 
-                      src={ticket.eventBannerUrl || (ticket.event?.image ? (ticket.event.image.startsWith('http') ? ticket.event.image : apiUrl(ticket.event.image)) : '')} 
+                      src={resolveImageUrl(ticket.eventBannerUrl || ticket.event?.image || ticket.event?.bannerUrl) || ''} 
                       className="w-full h-full object-cover" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] via-transparent to-black/20" />

@@ -581,11 +581,18 @@ export function resolveImageUrl(imagePath: string | null | undefined): string | 
   if (!imagePath) return null;
   const bundledCoverUrl = resolveBundledCoverUrl(imagePath);
   if (bundledCoverUrl) return bundledCoverUrl;
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:') || imagePath.startsWith('blob:') || imagePath.startsWith('/src/')) {
-    return imagePath;
+
+  let path = imagePath;
+  // Se estivermos em produção e o caminho apontar para localhost/127.0.0.1, reescreve para o backend de produção.
+  if (isProd && (path.includes('localhost') || path.includes('127.0.0.1'))) {
+    path = path.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, DEFAULT_PROD_BACKEND);
+  }
+
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:') || path.startsWith('/src/')) {
+    return path;
   }
   const base = resolvedBase || (isProd ? DEFAULT_PROD_BACKEND : 'http://localhost:4000');
-  return `${base}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+  return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
 // Chamar cedo (ex.: em App.tsx) para já resolver a base antes dos primeiros hooks.
