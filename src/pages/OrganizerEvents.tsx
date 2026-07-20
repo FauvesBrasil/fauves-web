@@ -599,7 +599,7 @@ const OrganizerEvents: React.FC = () => {
                                   <div className="flex items-center gap-4">
                                     {ev.image ? (
                                       <img 
-                                        src={ev.image.startsWith('http') || ev.image.startsWith('/') ? ev.image : `/${ev.image}`} 
+                                        src={resolveImageUrl(ev.image) || undefined} 
                                         alt={ev.name || 'Banner do evento'} 
                                         className="w-11 h-11 rounded-[5px] object-cover flex-shrink-0 border border-zinc-200" 
                                       />
@@ -716,7 +716,7 @@ const OrganizerEvents: React.FC = () => {
                             <div className="flex gap-3">
                               {ev.image ? (
                                 <img 
-                                  src={ev.image.startsWith('http') || ev.image.startsWith('/') ? ev.image : `/${ev.image}`} 
+                                  src={resolveImageUrl(ev.image) || undefined} 
                                   alt={ev.name || 'Banner do evento'} 
                                   className="w-16 h-16 rounded-lg object-cover flex-shrink-0 border border-zinc-200 dark:border-[#1F1F1F]" 
                                 />
