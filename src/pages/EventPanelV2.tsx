@@ -3875,8 +3875,8 @@ const EventPanelV2: React.FC = () => {
     if (orgLoading || (!event && loading)) {
         return (
             <div className={`event-manage-page manage-theme-surface theme-root ${isDark ? 'dark dark-mode' : 'light'} w-full min-h-screen font-sans transition-colors duration-300`}>
-                {/* Skeleton Header */}
-                <div style={{ height: '52px', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.06)' }} />
+                {/* Real Header to preserve layout while content is loading */}
+                <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
                 <main className="w-full pb-20 relative pt-12">
                     {/* Skeleton sticky header */}
                     <div style={{ padding: '0.75rem 1rem', maxWidth: '900px', margin: '0 auto' }}>
