@@ -172,8 +172,15 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
   }, [isOpen, onClose]);
 
   React.useEffect(() => {
-    setFullEvent(null);
-    setOrganization(null);
+    if (event && (event.description || event.descriptionHtml || event.organization || event.organizer)) {
+      setFullEvent(event);
+      if (event.organization || event.organizer) {
+        setOrganization(event.organization || event.organizer);
+      }
+    } else {
+      setFullEvent(null);
+      setOrganization(null);
+    }
     setCopied(false);
     scrollRef.current?.scrollTo({ top: 0 });
     const eventId = event?.id || event?._id;

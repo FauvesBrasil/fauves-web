@@ -171,7 +171,6 @@ try {
 } catch (e) { }
 
 // Ordem montada dinamicamente
-// Ordem montada dinamicamente
 let candidates: string[] = [];
 const localCandidates = ['http://localhost:4000', 'http://127.0.0.1:4000'];
 
@@ -398,8 +397,16 @@ export function getApiDiagnostics() {
   };
 }
 
-// Helper para fazer fetch com fallback automático se a base falhar na primeira tentativa.
-export async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
+const responseCache = new Map<string, { data: any; status: number; headers: [string, string][]; timestamp: number }>();
+const pendingRequests = new Map<string, Promise<Response>>();
+
+function isCacheable(method: string, path: string): boolean {
+  if (method !== 'GET') return false;
+  return path.includes('/api/event/') || path.includes('/api/ticket-type/') || path.includes('/events');
+}
+
+// Internal implementation of fetchApi to make the actual request.
+async function executeFetchApi(path: string, init?: RequestInit): Promise<Response> {
   const now = Date.now();
   // Se estamos em período de backoff porque nada respondeu, devolve resposta fake 503 para evitar spam de network errors.
   if (backendDownUntil && now < backendDownUntil) {
@@ -468,6 +475,65 @@ export async function fetchApi(path: string, init?: RequestInit): Promise<Respon
     }
     // Resposta offline controlada
     return new Response(JSON.stringify({ error: 'network_refused', base: resolvedBase, hint: 'API não acessível agora. Repetiremos automaticamente.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+  }
+}
+
+// Helper para fazer fetch com fallback automático se a base falhar na primeira tentativa.
+export async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
+  const method = init?.method?.toUpperCase() || 'GET';
+  if (method !== 'GET') {
+    responseCache.clear();
+  }
+
+  if (!isCacheable(method, path)) {
+    return executeFetchApi(path, init);
+  }
+
+  const cacheKey = `${method}:${path}`;
+
+  // 1. Check cache
+  const cached = responseCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < 15000) { // 15 seconds TTL
+    return new Response(JSON.stringify(cached.data), {
+      status: cached.status,
+      headers: cached.headers,
+    });
+  }
+
+  // 2. Check pending request to de-duplicate parallel requests
+  let pending = pendingRequests.get(cacheKey);
+  if (!pending) {
+    pending = executeFetchApi(path, init);
+    pendingRequests.set(cacheKey, pending);
+  }
+
+  try {
+    const res = await pending;
+    const clonedRes = res.clone();
+
+    if (clonedRes.ok) {
+      try {
+        const data = await clonedRes.json();
+        const headers: [string, string][] = [];
+        clonedRes.headers.forEach((value, name) => {
+          headers.push([name, value]);
+        });
+        responseCache.set(cacheKey, {
+          data,
+          status: clonedRes.status,
+          headers,
+          timestamp: Date.now(),
+        });
+      } catch (err) {
+        // Fail silent: Not JSON, skip caching
+      }
+    }
+
+    pendingRequests.delete(cacheKey);
+    return res.clone();
+  } catch (err) {
+    pendingRequests.delete(cacheKey);
+    throw err;
   }
 }
 

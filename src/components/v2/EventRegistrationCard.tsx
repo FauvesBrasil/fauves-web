@@ -84,10 +84,20 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
   const [applyingAccessCode, setApplyingAccessCode] = React.useState(false);
   const [grantedTicketIds, setGrantedTicketIds] = React.useState<string[]>([]);
   const [appliedAccessCode, setAppliedAccessCode] = React.useState('');
+  const [loadingTickets, setLoadingTickets] = React.useState(!disableRemoteFetch && (!providedTicketTypes || !providedTicketTypes.length));
 
-  React.useEffect(() => setResolvedEvent(initialEvent), [initialEvent]);
   React.useEffect(() => {
-    if (providedTicketTypes?.length) setLoadedTicketTypes(providedTicketTypes);
+    setResolvedEvent(initialEvent);
+    if (initialEvent?.ticketTypes?.length && !providedTicketTypes?.length) {
+      setLoadedTicketTypes(initialEvent.ticketTypes);
+    }
+  }, [initialEvent, providedTicketTypes]);
+
+  React.useEffect(() => {
+    if (providedTicketTypes?.length) {
+      setLoadedTicketTypes(providedTicketTypes);
+      setLoadingTickets(false);
+    }
   }, [providedTicketTypes]);
 
   React.useEffect(() => {
@@ -96,13 +106,24 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
     if (!eventId) return;
     let cancelled = false;
 
-    Promise.all([
-      fetchApi(`/api/event/${eventId}`).then((response) => response.ok ? response.json() : null).catch(() => null),
+    setLoadingTickets(true);
+
+    const hasFullDetails = initialEvent && (initialEvent.description || initialEvent.descriptionHtml || initialEvent.registrationForm);
+
+    const promises = [
+      hasFullDetails
+        ? Promise.resolve(initialEvent)
+        : fetchApi(`/api/event/${eventId}`).then((response) => response.ok ? response.json() : null).catch(() => null),
       fetchApi(`/api/ticket-type/event/${eventId}/with-stats`).then((response) => response.ok ? response.json() : []).catch(() => []),
-    ]).then(([fullEvent, tickets]) => {
+    ] as const;
+
+    Promise.all(promises).then(([fullEvent, tickets]) => {
       if (cancelled) return;
       if (fullEvent) setResolvedEvent((current: any) => ({ ...current, ...fullEvent }));
       if (Array.isArray(tickets) && tickets.length) setLoadedTicketTypes(tickets);
+      setLoadingTickets(false);
+    }).catch(() => {
+      if (!cancelled) setLoadingTickets(false);
     });
 
     return () => { cancelled = true; };
@@ -332,158 +353,210 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
 
       <div className="erc-header">{header}</div>
 
-      {showUrgency && (
-        <div className="erc-status">
-          <div className="erc-status-icon"><Clock3 size={15} /></div>
-          <div>
-            <div className="erc-status-title">{totalAvailable} {totalAvailable === 1 ? 'Vaga Restante' : 'Vagas Restantes'}</div>
-            <div className="erc-status-copy">Corra e se cadastre antes que o evento esgote!</div>
-          </div>
-        </div>
-      )}
-
-      {action === 'request' && !showUrgency && (
-        <div className="erc-status">
-          <div className="erc-status-icon"><UserRoundCheck size={15} /></div>
-          <div>
-            <div className="erc-status-title">Aprovação Necessária</div>
-            <div className="erc-status-copy">Seu cadastro está sujeito à aprovação do organizador.</div>
-          </div>
-        </div>
-      )}
-
-      {action === 'waitlist' && (
-        <div className="erc-status">
-          <div className="erc-status-icon"><Hourglass size={15} /></div>
-          <div>
-            <div className="erc-status-title">Evento Lotado</div>
-            <div className="erc-status-copy">Se quiser, você pode entrar na lista de espera.</div>
-          </div>
-        </div>
-      )}
-
-      {action === 'closed' && (
-        <div className="erc-status" style={{ borderBottom: 0 }}>
-          <div className="erc-status-icon"><Minus size={15} /></div>
-          <div>
-            <div className="erc-status-title">{soldOut ? 'Ingressos Esgotados' : 'Inscrições Encerradas'}</div>
-            <div className="erc-status-copy">Este evento não está aceitando inscrições no momento. Você pode entrar em contato com o organizador ou se inscrever para receber atualizações.</div>
-          </div>
-        </div>
-      )}
-
-      {action !== 'closed' && (
+      {loadingTickets ? (
         <div className="erc-body">
-          {action === 'waitlist' ? (
-            <p className="erc-copy">Clique no botão abaixo para entrar na lista de espera. Você será notificado se mais vagas ficarem disponíveis.</p>
-          ) : (
-            <>
-              {action === 'checkout' && isSingleTicket && (
-                <div>
-                  <div className="erc-price-label">Preço do Ingresso</div>
-                  <div className="erc-price">
-                    {formatMoney(asNumber(firstTicket.price))}
-                    {asNumber(firstTicket.perUserLimit, firstTicket.maxPerUser, form.perUserLimit) > 1 && <small>Por ingresso</small>}
-                  </div>
-                  <div className="erc-divider" />
-                </div>
-              )}
-
-              <p className="erc-copy">
-                Olá, <strong>{greetingName}</strong>! {isRsvp || registrationRequired
-                  ? 'Para participar do evento, cadastre-se abaixo.'
-                  : isSingleTicket
-                    ? 'Para participar do evento, pegue seu ingresso abaixo.'
-                    : 'Por favor, escolha o tipo de ingresso desejado:'}
-              </p>
-
-              {visibleTickets.length > 1 && (
-                <div className="erc-ticket-list">
-                  {visibleTickets.map((ticket: any) => {
-                    const count = currentQuantities[ticket.id] || 0;
-                    const available = availableFor(ticket);
-                    const capacity = asNumber(ticket.maxQuantity, ticket.maxTickets, ticket.capacity);
-                    const ticketLow = capacity > 0 && available > 0 && available <= getLowAvailabilityThreshold(capacity);
-                    const maxPerUser = Math.max(1, asNumber(ticket.perUserLimit, ticket.maxPerUser, form.perUserLimit) || 10);
-                    return (
-                      <button key={ticket.id} type="button" className={`erc-ticket ${count > 0 ? 'is-selected' : ''}`} onClick={() => updateQuantity(ticket, count > 0 ? -count : 1)}>
-                        <div className="erc-ticket-main">
-                          <div className="erc-ticket-top">
-                            <span>{ticket.name}</span>
-                            <span className="erc-ticket-price">{asNumber(ticket.price) === 0 ? 'Gratuito' : formatMoney(asNumber(ticket.price))}</span>
-                          </div>
-                          {ticket.description && <div className="erc-ticket-description">{ticket.description}</div>}
-                          <div className="erc-meta">
-                            {ticketLow && <span>{available} restantes</span>}
-                            {(ticket.requiresApproval || ticket.requireApproval || requiresApproval) && <span className="erc-badge">Requer Aprovação</span>}
-                            {ticket.salesEnd && <><span className="erc-availability-dot" /><span>Disponível até {new Date(ticket.salesEnd).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span></>}
-                          </div>
-                        </div>
-                        {maxPerUser > 1 && (
-                          <div className="erc-counter" onClick={(clickEvent) => clickEvent.stopPropagation()}>
-                            <button type="button" disabled={count <= 0} onClick={() => updateQuantity(ticket, -1)} aria-label={`Remover ${ticket.name}`}><Minus size={12} /></button>
-                            {count > 0 && <span>{count}</span>}
-                            <button type="button" disabled={count >= Math.min(maxPerUser, available || maxPerUser)} onClick={() => updateQuantity(ticket, 1)} aria-label={`Adicionar ${ticket.name}`}><Plus size={12} /></button>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {isSingleTicket && asNumber(firstTicket?.perUserLimit, firstTicket?.maxPerUser, form.perUserLimit) > 1 && (
-                <div className="erc-ticket" style={{ cursor: 'default' }}>
-                  <div className="erc-ticket-main"><div className="erc-ticket-top"><span>Ingressos</span></div></div>
-                  <div className="erc-counter">
-                    <button type="button" disabled={(currentQuantities[firstTicket.id] || 0) <= 1} onClick={() => updateQuantity(firstTicket, -1)}><Minus size={12} /></button>
-                    <span>{currentQuantities[firstTicket.id] || 1}</span>
-                    <button type="button" onClick={() => updateQuantity(firstTicket, 1)}><Plus size={12} /></button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {visibleTickets.length > 0 && (
-            <>
-              <div className="erc-user">
-                <img className="erc-avatar" src={resolveImageUrl(user?.photoUrl || user?.avatar || 'https://cdn.lu.ma/avatars-default/avatar_25.png')} alt="" />
-                <div className="erc-user-text">{user ? <><strong>{user.name || 'Usuário'}</strong> {user.email}</> : <strong>Entre ou informe seus dados para continuar</strong>}</div>
-              </div>
-              <button className="erc-button" type="button" onClick={handleAction} disabled={specialActionStatus === 'loading' || specialActionStatus === 'done'}>
-                {specialActionStatus === 'loading'
-                  ? 'Enviando...'
-                  : specialActionStatus === 'done'
-                    ? (action === 'waitlist' ? 'Você está na lista de espera' : 'Solicitação enviada')
-                    : specialActionStatus === 'error'
-                      ? 'Tentar novamente'
-                      : actionLabel[action]}
-              </button>
-            </>
-          )}
-          {hiddenTickets.length > 0 && (
-            <div className="erc-access-box">
-              <div className="erc-access-label"><LockKeyhole size={12} /> Tem um código de acesso?</div>
-              <div className="erc-access-form">
-                <input
-                  value={accessCode}
-                  onChange={(event) => setAccessCode(event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
-                  onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void applyAccessCode(); } }}
-                  placeholder="Digite o código"
-                  className="erc-access-input"
-                />
-                <button type="button" className="erc-access-submit" disabled={!accessCode.trim() || applyingAccessCode} onClick={() => void applyAccessCode()}>
-                  {applyingAccessCode ? 'Validando...' : 'Aplicar'}
-                </button>
+          <style>{`
+            @keyframes erc-pulse {
+              0%, 100% { opacity: 1; }
+              50% { opacity: .4; }
+            }
+            .erc-skeleton {
+              animation: erc-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            .erc-skeleton-bar {
+              height: 11px;
+              background-color: var(--erc-border);
+              border-radius: 4px;
+              margin: 8px 0;
+            }
+            .erc-skeleton-button {
+              height: 35px;
+              background-color: var(--erc-border);
+              border-radius: 8px;
+              width: 100%;
+              margin-top: 14px;
+            }
+            .erc-skeleton-ticket {
+              height: 50px;
+              background-color: var(--erc-row);
+              border-radius: 7px;
+              border: 1px solid var(--erc-border);
+              margin: 10px 0;
+            }
+          `}</style>
+          
+          <div className="erc-skeleton">
+            <div className="erc-skeleton-bar" style={{ width: '40%' }} />
+            <div className="erc-skeleton-bar" style={{ width: '75%' }} />
+            
+            <div className="erc-divider" />
+            
+            <div className="erc-skeleton-ticket" />
+            
+            <div className="erc-user" style={{ marginTop: '12px', gap: '8px' }}>
+              <div className="erc-avatar" style={{ background: 'var(--erc-border)' }} />
+              <div className="erc-skeleton-bar" style={{ width: '55%', margin: 0 }} />
+            </div>
+            
+            <div className="erc-skeleton-button" />
+          </div>
+        </div>
+      ) : (
+        <>
+          {showUrgency && (
+            <div className="erc-status">
+              <div className="erc-status-icon"><Clock3 size={15} /></div>
+              <div>
+                <div className="erc-status-title">{totalAvailable} {totalAvailable === 1 ? 'Vaga Restante' : 'Vagas Restantes'}</div>
+                <div className="erc-status-copy">Corra e se cadastre antes que o evento esgote!</div>
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      {action === 'closed' && (
-        <div className="erc-access" style={{ padding: '0 14px 12px' }}><LockKeyhole size={11} /> Tem um código de acesso? Você pode inserir aqui.</div>
+          {action === 'request' && !showUrgency && (
+            <div className="erc-status">
+              <div className="erc-status-icon"><UserRoundCheck size={15} /></div>
+              <div>
+                <div className="erc-status-title">Aprovação Necessária</div>
+                <div className="erc-status-copy">Seu cadastro está sujeito à aprovação do organizador.</div>
+              </div>
+            </div>
+          )}
+
+          {action === 'waitlist' && (
+            <div className="erc-status">
+              <div className="erc-status-icon"><Hourglass size={15} /></div>
+              <div>
+                <div className="erc-status-title">Evento Lotado</div>
+                <div className="erc-status-copy">Se quiser, você pode entrar na lista de espera.</div>
+              </div>
+            </div>
+          )}
+
+          {action === 'closed' && (
+            <div className="erc-status" style={{ borderBottom: 0 }}>
+              <div className="erc-status-icon"><Minus size={15} /></div>
+              <div>
+                <div className="erc-status-title">{soldOut ? 'Ingressos Esgotados' : 'Inscrições Encerradas'}</div>
+                <div className="erc-status-copy">Este evento não está aceitando inscrições no momento. Você pode entrar em contato com o organizador ou se inscrever para receber atualizações.</div>
+              </div>
+            </div>
+          )}
+
+          {action !== 'closed' && (
+            <div className="erc-body">
+              {action === 'waitlist' ? (
+                <p className="erc-copy">Clique no botão abaixo para entrar na lista de espera. Você será notificado se mais vagas ficarem disponíveis.</p>
+              ) : (
+                <>
+                  {action === 'checkout' && isSingleTicket && (
+                    <div>
+                      <div className="erc-price-label">Preço do Ingresso</div>
+                      <div className="erc-price">
+                        {formatMoney(asNumber(firstTicket.price))}
+                        {asNumber(firstTicket.perUserLimit, firstTicket.maxPerUser, form.perUserLimit) > 1 && <small>Por ingresso</small>}
+                      </div>
+                      <div className="erc-divider" />
+                    </div>
+                  )}
+
+                  <p className="erc-copy">
+                    Olá, <strong>{greetingName}</strong>! {isRsvp || registrationRequired
+                      ? 'Para participar do evento, cadastre-se abaixo.'
+                      : isSingleTicket
+                        ? 'Para participar do evento, pegue seu ingresso abaixo.'
+                        : 'Por favor, escolha o tipo de ingresso desejado:'}
+                  </p>
+
+                  {visibleTickets.length > 1 && (
+                    <div className="erc-ticket-list">
+                      {visibleTickets.map((ticket: any) => {
+                        const count = currentQuantities[ticket.id] || 0;
+                        const available = availableFor(ticket);
+                        const capacity = asNumber(ticket.maxQuantity, ticket.maxTickets, ticket.capacity);
+                        const ticketLow = capacity > 0 && available > 0 && available <= getLowAvailabilityThreshold(capacity);
+                        const maxPerUser = Math.max(1, asNumber(ticket.perUserLimit, ticket.maxPerUser, form.perUserLimit) || 10);
+                        return (
+                          <button key={ticket.id} type="button" className={`erc-ticket ${count > 0 ? 'is-selected' : ''}`} onClick={() => updateQuantity(ticket, count > 0 ? -count : 1)}>
+                            <div className="erc-ticket-main">
+                              <div className="erc-ticket-top">
+                                <span>{ticket.name}</span>
+                                <span className="erc-ticket-price">{asNumber(ticket.price) === 0 ? 'Gratuito' : formatMoney(asNumber(ticket.price))}</span>
+                              </div>
+                              {ticket.description && <div className="erc-ticket-description">{ticket.description}</div>}
+                              <div className="erc-meta">
+                                {ticketLow && <span>{available} restantes</span>}
+                                {(ticket.requiresApproval || ticket.requireApproval || requiresApproval) && <span className="erc-badge">Requer Aprovação</span>}
+                                {ticket.salesEnd && <><span className="erc-availability-dot" /><span>Disponível até {new Date(ticket.salesEnd).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span></>}
+                              </div>
+                            </div>
+                            {maxPerUser > 1 && (
+                              <div className="erc-counter" onClick={(clickEvent) => clickEvent.stopPropagation()}>
+                                <button type="button" disabled={count <= 0} onClick={() => updateQuantity(ticket, -1)} aria-label={`Remover ${ticket.name}`}><Minus size={12} /></button>
+                                {count > 0 && <span>{count}</span>}
+                                <button type="button" disabled={count >= Math.min(maxPerUser, available || maxPerUser)} onClick={() => updateQuantity(ticket, 1)} aria-label={`Adicionar ${ticket.name}`}><Plus size={12} /></button>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {isSingleTicket && asNumber(firstTicket?.perUserLimit, firstTicket?.maxPerUser, form.perUserLimit) > 1 && (
+                    <div className="erc-ticket" style={{ cursor: 'default' }}>
+                      <div className="erc-ticket-main"><div className="erc-ticket-top"><span>Ingressos</span></div></div>
+                      <div className="erc-counter">
+                        <button type="button" disabled={(currentQuantities[firstTicket.id] || 0) <= 1} onClick={() => updateQuantity(firstTicket, -1)}><Minus size={12} /></button>
+                        <span>{currentQuantities[firstTicket.id] || 1}</span>
+                        <button type="button" onClick={() => updateQuantity(firstTicket, 1)}><Plus size={12} /></button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {visibleTickets.length > 0 && (
+                <>
+                  <div className="erc-user">
+                    <img className="erc-avatar" src={resolveImageUrl(user?.photoUrl || user?.avatar || 'https://cdn.lu.ma/avatars-default/avatar_25.png')} alt="" />
+                    <div className="erc-user-text">{user ? <><strong>{user.name || 'Usuário'}</strong> {user.email}</> : <strong>Entre ou informe seus dados para continuar</strong>}</div>
+                  </div>
+                  <button className="erc-button" type="button" onClick={handleAction} disabled={specialActionStatus === 'loading' || specialActionStatus === 'done'}>
+                    {specialActionStatus === 'loading'
+                      ? 'Enviando...'
+                      : specialActionStatus === 'done'
+                        ? (action === 'waitlist' ? 'Você está na lista de espera' : 'Solicitação enviada')
+                        : specialActionStatus === 'error'
+                          ? 'Tentar novamente'
+                          : actionLabel[action]}
+                  </button>
+                </>
+              )}
+              {hiddenTickets.length > 0 && (
+                <div className="erc-access-box">
+                  <div className="erc-access-label"><LockKeyhole size={12} /> Tem um código de acesso?</div>
+                  <div className="erc-access-form">
+                    <input
+                      value={accessCode}
+                      onChange={(event) => setAccessCode(event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
+                      onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void applyAccessCode(); } }}
+                      placeholder="Digite o código"
+                      className="erc-access-input"
+                    />
+                    <button type="button" className="erc-access-submit" disabled={!accessCode.trim() || applyingAccessCode} onClick={() => void applyAccessCode()}>
+                      {applyingAccessCode ? 'Validando...' : 'Aplicar'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {action === 'closed' && (
+            <div className="erc-access" style={{ padding: '0 14px 12px' }}><LockKeyhole size={11} /> Tem um código de acesso? Você pode inserir aqui.</div>
+          )}
+        </>
       )}
     </section>
   );
