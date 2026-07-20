@@ -4,7 +4,7 @@ import TextLink from '@/components/TextLink';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import SidebarMenu from '@/components/SidebarMenu';
 import { useOrganization } from '@/context/OrganizationContext';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
+import { useTheme } from '@/context/ThemeContext';
 import { fetchApi, apiUrl, resolveImageUrl } from '@/lib/apiBase';
 import MobileTopBar from '@/components/MobileTopBar';
 import MobileDrawerMenu from '@/components/MobileDrawerMenu';
@@ -153,6 +155,7 @@ export default function OrganizerSettingsV2() {
   const { selectedOrg, orgs, setSelectedOrgById, refresh: refreshOrganizations } = useOrganization();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { calendarId } = useParams<{ calendarId?: string }>();
@@ -300,7 +303,16 @@ export default function OrganizerSettingsV2() {
   const [showInsightsDropdown, setShowInsightsDropdown] = React.useState(false);
   const [feedbackFilter, setFeedbackFilter] = React.useState('Por Evento');
   const [showFeedbackDropdown, setShowFeedbackDropdown] = React.useState(false);
-  const [settingsSubTab, setSettingsSubTab] = React.useState('exibicao');
+  const [searchParams] = useSearchParams();
+  const subTabParam = searchParams.get('subTab');
+  const [settingsSubTab, setSettingsSubTab] = React.useState(subTabParam || 'exibicao');
+
+  React.useEffect(() => {
+    if (subTabParam) {
+      setSettingsSubTab(subTabParam);
+    }
+  }, [subTabParam]);
+
   const [isAddAdminOpen, setIsAddAdminOpen] = React.useState(false);
   const [admins, setAdmins] = React.useState<CalendarAdmin[]>([]);
   const [loadingAdmins, setLoadingAdmins] = React.useState(false);
@@ -704,7 +716,7 @@ export default function OrganizerSettingsV2() {
 
   React.useEffect(() => {
     if (!isTagEditorOpen && !calendarTagPendingDelete) return;
-    const previousOverflow = document.body.style.overflow;
+    const releaseScrollLock = acquireDocumentScrollLock();
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || savingCalendarTag || deletingCalendarTag) return;
       setIsTagEditorOpen(false);
@@ -712,10 +724,9 @@ export default function OrganizerSettingsV2() {
       setCalendarTagPendingDelete(null);
       setCalendarTagFormError('');
     };
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleEscape);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       window.removeEventListener('keydown', handleEscape);
     };
   }, [isTagEditorOpen, calendarTagPendingDelete, savingCalendarTag, deletingCalendarTag]);
@@ -755,7 +766,7 @@ export default function OrganizerSettingsV2() {
 
   React.useEffect(() => {
     if (!isAddAdminOpen) return;
-    const previousOverflow = document.body.style.overflow;
+    const releaseScrollLock = acquireDocumentScrollLock();
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !addingAdmins) {
         setIsAddAdminOpen(false);
@@ -763,10 +774,9 @@ export default function OrganizerSettingsV2() {
         setAdminFormError('');
       }
     };
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleEscape);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
       window.removeEventListener('keydown', handleEscape);
     };
   }, [isAddAdminOpen, addingAdmins]);
@@ -1021,9 +1031,9 @@ export default function OrganizerSettingsV2() {
   };
 
   return (
-    <div className="theme-root dark dark-mode" style={{ minHeight: '100vh', background: '#131517', color: '#fff', fontFamily: 'Inter, -apple-system, sans-serif' }}>
+    <div className={`organizer-settings-page manage-theme-surface theme-root ${isDark ? 'dark dark-mode' : 'light'}`} style={{ minHeight: '100vh', background: isDark ? '#131517' : '#f7f8f9', color: isDark ? '#fff' : '#18181b', fontFamily: 'Inter, -apple-system, sans-serif' }}>
       {/* Import the existing premium HeaderV2 directly inside layout instead of local stub */}
-      <HeaderV2 transparent={true} scrollTransition={false} />
+      <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
 
       <div style={{ paddingTop: '3rem' }}>
         
@@ -1034,10 +1044,10 @@ export default function OrganizerSettingsV2() {
             top: 0,
             zIndex: 50,
             width: '100%',
-            background: isHeaderScrolled ? 'rgba(19, 21, 23, 0.88)' : 'transparent',
+            background: isHeaderScrolled ? (isDark ? 'rgba(19, 21, 23, 0.88)' : 'rgba(247,248,249,.9)') : 'transparent',
             backdropFilter: isHeaderScrolled ? 'blur(16px)' : 'none',
             WebkitBackdropFilter: isHeaderScrolled ? 'blur(16px)' : 'none',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,.07)' : 'rgba(24,24,27,.1)'}`,
             marginBottom: '0.75rem',
             transition: 'background-color 220ms ease, backdrop-filter 220ms ease, -webkit-backdrop-filter 220ms ease'
           }}
@@ -1055,7 +1065,7 @@ export default function OrganizerSettingsV2() {
                         height: '25px',
                         borderRadius: '6px',
                         objectFit: 'cover',
-                        border: '1px solid rgba(255, 255, 255, 0.08)'
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,.08)' : 'rgba(24,24,27,.1)'}`
                       }}
                     />
                   ) : (
@@ -1063,13 +1073,13 @@ export default function OrganizerSettingsV2() {
                       width: '25px',
                       height: '25px',
                       borderRadius: '6px',
-                      background: 'rgba(255, 255, 255, 0.1)',
+                      background: isDark ? 'rgba(255,255,255,.1)' : 'rgba(24,24,27,.08)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '12px',
                       fontWeight: 600,
-                      color: 'rgba(255, 255, 255, 0.6)'
+                      color: isDark ? 'rgba(255,255,255,.6)' : '#52525b'
                     }}>
                       {calendarDisplayName.charAt(0).toUpperCase()}
                     </div>
@@ -1077,7 +1087,7 @@ export default function OrganizerSettingsV2() {
                   <h1 style={{ 
                     fontSize: '28px', 
                     fontWeight: 600, 
-                    color: '#fff', 
+                    color: isDark ? '#fff' : '#18181b',
                     lineHeight: '33.6px',
                     margin: 0
                   }}>
@@ -1088,7 +1098,9 @@ export default function OrganizerSettingsV2() {
                 <button
                     type="button"
                     onClick={() => window.open(orgUrl, '_blank')}
-                    className="transition-all duration-300 text-[rgba(255,255,255,0.64)] hover:text-[rgb(19,21,23)] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.64)]"
+                    className={isDark
+                      ? 'transition-all duration-300 text-[rgba(255,255,255,0.64)] hover:text-[rgb(19,21,23)] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.64)]'
+                      : 'transition-all duration-300 text-zinc-600 hover:text-zinc-950 bg-zinc-200/70 hover:bg-zinc-200'}
                     style={{
                         borderColor: 'rgba(0, 0, 0, 0)',
                         border: '1px solid rgba(0, 0, 0, 0)',
@@ -1140,7 +1152,7 @@ export default function OrganizerSettingsV2() {
                   className={`premium-tab ${activeTab === tab.id ? 'active' : ''}`}
                   style={{
                     fontSize: '16px',
-                    color: activeTab === tab.id ? '#fff' : 'rgba(255, 255, 255, 0.5)',
+                    color: activeTab === tab.id ? (isDark ? '#fff' : '#18181b') : (isDark ? 'rgba(255,255,255,.5)' : '#71717a'),
                     background: 'transparent',
                     border: 'none',
                     outline: 'none',
@@ -1148,7 +1160,7 @@ export default function OrganizerSettingsV2() {
                     padding: '0px 4px 8px 4px',
                     display: 'block',
                     fontWeight: 500,
-                    borderBottom: activeTab === tab.id ? '2px solid #fff' : '2px solid transparent',
+                    borderBottom: activeTab === tab.id ? `2px solid ${isDark ? '#fff' : '#18181b'}` : '2px solid transparent',
                     transition: '0.3s ease'
                   }}
                   onClick={() => setActiveTab(tab.id)}

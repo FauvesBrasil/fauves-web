@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from '@/context/OrganizationContext';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import HeaderV2 from "@/components/v2/HeaderV2";
 import { LuxDatePicker } from "@/components/v2/LuxDatePicker";
 import { LuxTimePicker } from "@/components/v2/LuxTimePicker";
@@ -80,6 +81,12 @@ import EventInsightsPanel from "@/components/v2/EventInsightsPanel";
 import EventMorePanel from "@/components/v2/EventMorePanel";
 import { FauvesSwitch } from "@/components/v2/FauvesSwitch";
 import EventGuestsPanel from "@/components/v2/EventGuestsPanel";
+import {
+    CheckinTeamPanel,
+    EditEventHostModal,
+    EventVisibilityModal,
+    TransferEventModal,
+} from "@/components/v2/EventManagementModals";
 
 const stripHtml = (html: string) => {
     if (!html) return "";
@@ -343,6 +350,7 @@ const TicketToggle: React.FC<{
 
 const EventPanelV2: React.FC = () => {
     const { user } = useAuth();
+    const { isDark } = useTheme();
     const { id, tab } = useParams<{ id: string; tab?: string }>();
     const navigate = useNavigate();
     const location = useLocation();
@@ -1045,6 +1053,8 @@ const EventPanelV2: React.FC = () => {
     const [hostShowOnPage, setHostShowOnPage] = React.useState(true);
     const [hostNameInput, setHostNameInput] = React.useState('');
     const [hostAccessRole, setHostAccessRole] = React.useState<'manager' | 'non-manager'>('manager');
+    const [editingHost, setEditingHost] = React.useState<any | null>(null);
+    const [savingHost, setSavingHost] = React.useState(false);
 
     // Modal de Convidar Participantes
     const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
@@ -1058,6 +1068,7 @@ const EventPanelV2: React.FC = () => {
     const [tempPrivacy, setTempPrivacy] = React.useState<'public' | 'private'>('public');
     const [savingVisibility, setSavingVisibility] = React.useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+    const [isTransferCalendarModalOpen, setIsTransferCalendarModalOpen] = React.useState(false);
     const [showInsightsPeriodDropdown, setShowInsightsPeriodDropdown] = React.useState(false);
     const [showInviteCloseTooltip, setShowInviteCloseTooltip] = React.useState(false);
     const [showInviteLimitView, setShowInviteLimitView] = React.useState(false);
@@ -1097,7 +1108,16 @@ const EventPanelV2: React.FC = () => {
     const [ethQuestionType, setEthQuestionType] = React.useState<'off' | 'optional' | 'required'>('off');
     const [solQuestionType, setSolQuestionType] = React.useState<'off' | 'optional' | 'required'>('off');
     const [showStripeBanner, setShowStripeBanner] = React.useState(true);
-    const [customQuestions, setCustomQuestions] = React.useState<{ id: string; text: string; type: 'text' | 'choice' }[]>([
+    const [customQuestions, setCustomQuestions] = React.useState<Array<{
+        id: string;
+        text: string;
+        type: string;
+        required?: boolean;
+        options?: string[];
+        length?: 'short' | 'long';
+        selectionType?: 'single' | 'multiple';
+        platform?: string;
+    }>>([
         { id: '1', text: 'Como você soube do evento?', type: 'text' }
     ]);
     const [isAddQuestionModalOpen, setIsAddQuestionModalOpen] = React.useState(false);
@@ -1908,19 +1928,46 @@ const EventPanelV2: React.FC = () => {
         }
     }, [isInviteModalOpen]);
 
-    React.useEffect(() => {
-        if (user && hostsList.length === 0) {
-            setHostsList([
-                {
-                    id: 'creator',
-                    name: user.name || 'Organizador',
-                    email: user.email,
-                    avatarUrl: user.avatarUrl || "https://cdn.lu.ma/avatars-default/community_avatar_12.png",
-                    role: 'Criador'
-                }
-            ]);
+    const loadEventTeam = React.useCallback(async () => {
+        if (!id) return;
+        try {
+            const response = await fetchApi(`/api/event/${id}/team`);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data?.message || 'Não foi possível carregar a equipe do evento.');
+            const hosts = (Array.isArray(data?.items) ? data.items : [])
+                .filter((member: any) => member.funcao !== 'CHECKIN')
+                .map((member: any) => ({
+                    id: member.userId,
+                    userId: member.userId,
+                    name: member.name || member.email,
+                    email: member.email,
+                    avatarUrl: member.photoUrl || "https://cdn.lu.ma/avatars-default/community_avatar_12.png",
+                    role: member.isOwner ? 'Criador' : member.funcao === 'SECURITY' ? 'Anfitrião (Apenas Destaque)' : 'Anfitrião',
+                    showOnPage: member.showOnPage !== false,
+                }));
+            setHostsList(hosts.length ? hosts : user ? [{
+                id: 'creator',
+                userId: user.id,
+                name: user.name || 'Organizador',
+                email: user.email,
+                avatarUrl: user.photoUrl || "https://cdn.lu.ma/avatars-default/community_avatar_12.png",
+                role: 'Criador',
+                showOnPage: true,
+            }] : []);
+        } catch {
+            if (user) setHostsList([{
+                id: 'creator',
+                userId: user.id,
+                name: user.name || 'Organizador',
+                email: user.email,
+                avatarUrl: user.photoUrl || "https://cdn.lu.ma/avatars-default/community_avatar_12.png",
+                role: 'Criador',
+                showOnPage: true,
+            }]);
         }
-    }, [user, hostsList]);
+    }, [id, user]);
+
+    React.useEffect(() => { void loadEventTeam(); }, [loadEventTeam]);
 
     React.useEffect(() => {
         if (!isAddHostModalOpen) {
@@ -1932,6 +1979,53 @@ const EventPanelV2: React.FC = () => {
             setHostAccessRole('manager');
         }
     }, [isAddHostModalOpen]);
+
+    const saveHost = async () => {
+        const email = selectedHostEmail.trim().toLowerCase();
+        if (!email || savingHost) return;
+        setSavingHost(true);
+        try {
+            const existing = hostsList.find((host) => host.email?.toLowerCase() === email);
+            const response = await fetchApi(existing?.userId
+                ? `/api/event/${id}/team/${existing.userId}`
+                : `/api/event/${id}/team`, {
+                method: existing?.userId ? 'PATCH' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...(!existing?.userId ? { email } : {}),
+                    funcao: hostAccessRole === 'manager' ? 'ORGANIZER' : 'SECURITY',
+                    showOnPage: hostShowOnPage,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data?.message || 'Não foi possível salvar o anfitrião.');
+            await loadEventTeam();
+            setHostSearchQuery('');
+            setIsAddHostModalOpen(false);
+            toast({
+                title: existing ? 'Anfitrião atualizado!' : 'Anfitrião adicionado!',
+                description: `${hostNameInput.trim() || email} foi salvo na equipe do evento.`,
+            });
+        } catch (error: any) {
+            toast({ title: 'Erro ao salvar anfitrião', description: error.message, variant: 'destructive' });
+        } finally { setSavingHost(false); }
+    };
+
+    const updateHostVisibility = async (host: any, showOnPage: boolean) => {
+        const response = await fetchApi(`/api/event/${id}/team/${host.userId || host.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ showOnPage }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            toast({ title: 'Erro ao atualizar anfitrião', description: data?.message, variant: 'destructive' });
+            throw new Error(data?.message || 'Não foi possível atualizar o anfitrião.');
+        }
+        await loadEventTeam();
+        setEditingHost(null);
+        toast({ title: 'Anfitrião atualizado!' });
+    };
 
     const [stats, setStats] = React.useState({
         totalRevenue: 0,
@@ -2115,7 +2209,12 @@ const EventPanelV2: React.FC = () => {
         const newQuestion = {
             id: Math.random().toString(36).substring(2, 9),
             text: newQuestionText.trim(),
-            type: newQuestionType
+            type: newQuestionType,
+            required: newQuestionRequired,
+            options: newQuestionType === 'choice' ? newQuestionOptions.filter(option => option.trim()) : [],
+            length: newQuestionLength,
+            selectionType: newQuestionSelectionType,
+            platform: newQuestionType === 'social' ? newQuestionPlatform : undefined,
         };
 
         const updatedQuestions = [...customQuestions, newQuestion];
@@ -2146,7 +2245,11 @@ const EventPanelV2: React.FC = () => {
                 const updated = await res.json();
                 setEvent(updated);
                 setNewQuestionText('');
+                setNewQuestionRequired(false);
+                setNewQuestionLength('short');
+                setNewQuestionOptions([]);
                 setIsAddQuestionModalOpen(false);
+                setAddQuestionStep('select');
                 toast({
                     title: "Pergunta adicionada!",
                     description: "A pergunta personalizada foi salva com sucesso."
@@ -2443,8 +2546,7 @@ const EventPanelV2: React.FC = () => {
         }
     };
 
-    const handleVisibilitySubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const saveVisibility = async (privacy: 'public' | 'private') => {
         setSavingVisibility(true);
         try {
             const res = await fetchApi(`/api/event/${id}`, {
@@ -2453,7 +2555,7 @@ const EventPanelV2: React.FC = () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    privacy: tempPrivacy
+                    privacy
                 })
             });
             if (res.ok) {
@@ -2461,7 +2563,7 @@ const EventPanelV2: React.FC = () => {
                 setEvent(updated);
                 toast({
                     title: "Visibilidade atualizada!",
-                    description: `A visibilidade do evento foi alterada para ${tempPrivacy === 'public' ? 'Pública' : 'Privada'}.`
+                    description: `A visibilidade do evento foi alterada para ${privacy === 'public' ? 'Pública' : 'Privada'}.`
                 });
                 setIsVisibilityModalOpen(false);
             } else {
@@ -2482,6 +2584,28 @@ const EventPanelV2: React.FC = () => {
         }
     };
 
+    const handleVisibilitySubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await saveVisibility(tempPrivacy);
+    };
+
+    const transferEventToCalendar = async (organization: any) => {
+        const response = await fetchApi(`/api/event/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ organizationId: organization.id }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            toast({ title: 'Erro ao transferir evento', description: data?.message || 'Não foi possível concluir a transferência.', variant: 'destructive' });
+            throw new Error(data?.message || 'Não foi possível transferir o evento.');
+        }
+        setEvent(data);
+        selectOrganization(organization.id);
+        setIsTransferCalendarModalOpen(false);
+        toast({ title: 'Evento transferido!', description: `O evento agora é gerenciado pelo calendário ${organization.name}.` });
+    };
+
     const handleSaveRegistrationForm = async () => {
         setSavingRegistrationForm(true);
         try {
@@ -2495,7 +2619,10 @@ const EventPanelV2: React.FC = () => {
                     text: q.text,
                     type: q.type,
                     required: (q as any).required ?? false,
-                    options: (q as any).options ?? []
+                    options: (q as any).options ?? [],
+                    length: (q as any).length ?? 'short',
+                    selectionType: (q as any).selectionType ?? 'single',
+                    platform: (q as any).platform,
                 }))
             };
 
@@ -3747,7 +3874,7 @@ const EventPanelV2: React.FC = () => {
 
     if (orgLoading || (!event && loading)) {
         return (
-            <div className="bg-[#f8f9fa] dark:bg-[#131517] w-full min-h-screen font-sans text-gray-900 transition-colors duration-300">
+            <div className={`event-manage-page manage-theme-surface theme-root ${isDark ? 'dark dark-mode' : 'light'} w-full min-h-screen font-sans transition-colors duration-300`}>
                 {/* Skeleton Header */}
                 <div style={{ height: '52px', background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.06)' }} />
                 <main className="w-full pb-20 relative pt-12">
@@ -3787,7 +3914,7 @@ const EventPanelV2: React.FC = () => {
 
     if (error) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen text-zinc-500 gap-4 bg-gray-50/50">
+            <div className={`event-manage-page manage-theme-surface theme-root ${isDark ? 'dark dark-mode' : 'light'} flex flex-col items-center justify-center min-h-screen text-zinc-500 gap-4`}>
                 <div className="text-lg font-medium">{error}</div>
                 <Button variant="outline" onClick={() => window.location.reload()}>Tentar novamente</Button>
             </div>
@@ -3795,7 +3922,7 @@ const EventPanelV2: React.FC = () => {
     }
 
     return (
-        <div className="bg-[#f8f9fa] dark:bg-[#131517] w-full min-h-screen font-sans text-gray-900 transition-colors duration-300">
+        <div className={`event-manage-page manage-theme-surface theme-root ${isDark ? 'dark dark-mode' : 'light'} w-full min-h-screen font-sans transition-colors duration-300`}>
             <style dangerouslySetInnerHTML={{
                 __html: `
                 /* Estilo do lux-button Luma */
@@ -6151,7 +6278,7 @@ const EventPanelV2: React.FC = () => {
                   }
             `}} />
 
-            <HeaderV2 transparent={true} scrollTransition={false} />
+            <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
 
             <main className="w-full pb-20 relative pt-12 transition-all duration-300">
                 {/* Sticky/Transforming Glassmorphism Header */}
@@ -7409,14 +7536,7 @@ const EventPanelV2: React.FC = () => {
                                                             >
                                                                 <div
                                                                     onClick={() => {
-                                                                        if (h.role !== 'Criador') {
-                                                                            setSelectedHostEmail(h.email);
-                                                                            setHostNameInput(h.name);
-                                                                            setHostShowOnPage(h.showOnPage ?? true);
-                                                                            setHostAccessRole(h.role === 'Anfitrião' ? 'manager' : 'non-manager');
-                                                                            setAddHostStep('configure');
-                                                                            setIsAddHostModalOpen(true);
-                                                                        }
+                                                                        setEditingHost(h);
                                                                     }}
                                                                     style={{
                                                                         gap: '8px',
@@ -7426,7 +7546,7 @@ const EventPanelV2: React.FC = () => {
                                                                         alignItems: 'center',
                                                                         display: 'flex',
                                                                         boxSizing: 'border-box',
-                                                                        cursor: h.role !== 'Criador' ? 'pointer' : 'default'
+                                                                        cursor: 'pointer'
                                                                     }}
                                                                 >
                                                                     <div style={{ boxSizing: 'border-box', width: 'fit-content', position: 'relative' }}>
@@ -7532,12 +7652,7 @@ const EventPanelV2: React.FC = () => {
                                                                          aria-label="Editar"
                                                                          type="button"
                                                                          onClick={() => {
-                                                                             setSelectedHostEmail(h.email);
-                                                                             setHostNameInput(h.name);
-                                                                             setHostShowOnPage(h.showOnPage ?? true);
-                                                                             setHostAccessRole(h.role === 'Anfitrião' ? 'manager' : 'non-manager');
-                                                                             setAddHostStep('configure');
-                                                                             setIsAddHostModalOpen(true);
+                                                                             setEditingHost(h);
                                                                          }}
                                                                          style={{
                                                                              outline: 'rgba(255, 255, 255, 0.5) none 0px',
@@ -7591,7 +7706,7 @@ const EventPanelV2: React.FC = () => {
                                                                     <button
                                                                         aria-label="Editar"
                                                                         type="button"
-                                                                        onClick={handleOpenEditEventModal}
+                                                                        onClick={() => setEditingHost(h)}
                                                                         style={{
                                                                             outline: 'rgba(255, 255, 255, 0.5) none 0px',
                                                                             minWidth: '0px',
@@ -7851,7 +7966,7 @@ const EventPanelV2: React.FC = () => {
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setIsVisibilityModalOpen(true)}
+                                                        onClick={() => setIsTransferCalendarModalOpen(true)}
                                                         className="transition-all duration-300 text-[rgba(255,255,255,0.64)] hover:text-[rgb(19,21,23)] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.64)]"
                                                         style={{
                                                             borderColor: 'rgba(0, 0, 0, 0)',
@@ -9637,10 +9752,13 @@ const EventPanelV2: React.FC = () => {
                                             Quando você escolher uma nova URL, a atual não funcionará mais. Não mude sua URL se você já compartilhou o evento.
                                         </p>
 
-                                        {/* Luma Plus Upgrade Banner */}
+                                        {/* Fauves Plus Upgrade Banner */}
                                         <div className="mt-4 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-850 p-3.5 rounded-xl flex items-center justify-between gap-3 text-xs">
-                                            <span className="text-zinc-600 dark:text-zinc-300 font-medium">Faça upgrade para o Luma Plus para definir uma URL personalizada para este evento.</span>
-                                            <button className="bg-zinc-200 dark:bg-zinc-800/70 hover:bg-zinc-300 dark:hover:bg-zinc-850 border border-zinc-300 dark:border-zinc-700/60 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 px-2.5 py-1.5 rounded-lg flex-shrink-0 cursor-pointer transition-colors">
+                                            <span className="text-zinc-600 dark:text-zinc-300 font-medium">Faça upgrade para o Fauves Plus para definir uma URL personalizada para este evento.</span>
+                                            <button 
+                                                onClick={() => navigate(`/calendar/manage/cal-${selectedOrg?.id || event?.organizationId}?subTab=plus`)}
+                                                className="bg-zinc-200 dark:bg-zinc-800/70 hover:bg-zinc-300 dark:hover:bg-zinc-850 border border-zinc-300 dark:border-zinc-700/60 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 px-2.5 py-1.5 rounded-lg flex-shrink-0 cursor-pointer transition-colors"
+                                            >
                                                 Saiba mais
                                             </button>
                                         </div>
@@ -9651,16 +9769,20 @@ const EventPanelV2: React.FC = () => {
                                             <div className="flex items-center gap-2 mt-1.5">
                                                 <div className="flex items-center">
                                                     <span className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800/80 text-zinc-500 rounded-l-xl px-3 py-2 text-xs flex items-center h-9 border-r-0">
-                                                        lu.ma/
+                                                        fauves.com.br/
                                                     </span>
                                                     <input 
                                                         type="text" 
                                                         readOnly 
-                                                        value="5z12gj52" 
-                                                        className="text-xs font-medium text-zinc-800 dark:text-white bg-transparent outline-none py-2 px-3 border border-zinc-250 dark:border-zinc-800/80 rounded-r-xl h-9 w-40"
+                                                        disabled
+                                                        value={event?.slug || "5z12gj52"} 
+                                                        className="text-xs font-medium text-zinc-400 dark:text-zinc-500 bg-transparent outline-none py-2 px-3 border border-zinc-250 dark:border-zinc-800/80 rounded-r-xl h-9 w-40 cursor-not-allowed opacity-60"
                                                     />
                                                 </div>
-                                                <button className="bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700/60 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700/60 text-xs font-bold px-3 py-2 rounded-xl h-9 cursor-pointer transition-colors">
+                                                <button 
+                                                    disabled 
+                                                    className="bg-zinc-100 dark:bg-zinc-800/40 border border-zinc-300 dark:border-zinc-800/60 text-zinc-400 dark:text-zinc-500 text-xs font-bold px-3 py-2 rounded-xl h-9 cursor-not-allowed transition-colors"
+                                                >
                                                     Atualizar
                                                 </button>
                                             </div>
@@ -10502,58 +10624,63 @@ const EventPanelV2: React.FC = () => {
 
                                                     {/* Outros (desabilitados conforme imagem) */}
                                                     {[
-                                                        { label: 'Perfil Social', icon: (
+                                                        { label: 'Perfil Social', type: 'social', icon: (
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.0" stroke="currentColor" style={{ width: '18px', height: '18px' }}>
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                                                             </svg>
                                                         )},
-                                                        { label: 'Empresa', icon: (
+                                                        { label: 'Empresa', type: 'company', icon: (
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.0" stroke="currentColor" style={{ width: '18px', height: '18px' }}>
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21h10.5" />
                                                             </svg>
                                                         )},
-                                                        { label: 'Caixa de seleção', icon: (
+                                                        { label: 'Caixa de seleção', type: 'checkbox', icon: (
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.0" stroke="currentColor" style={{ width: '18px', height: '18px' }}>
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                             </svg>
                                                         )},
-                                                        { label: 'Termos', icon: (
+                                                        { label: 'Termos', type: 'terms', icon: (
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.0" stroke="currentColor" style={{ width: '18px', height: '18px' }}>
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                                                             </svg>
                                                         )},
-                                                        { label: 'Telefone', icon: (
+                                                        { label: 'Telefone', type: 'phone', icon: (
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.0" stroke="currentColor" style={{ width: '18px', height: '18px' }}>
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
                                                             </svg>
                                                         )},
-                                                        { label: 'Site', icon: (
+                                                        { label: 'Site', type: 'website', icon: (
                                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.0" stroke="currentColor" style={{ width: '18px', height: '18px' }}>
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
                                                             </svg>
                                                         )}
                                                     ].map((item, idx) => (
-                                                        <div
+                                                        <button
+                                                            type="button"
                                                             key={idx}
+                                                            onClick={() => {
+                                                                setNewQuestionType(item.type);
+                                                                setAddQuestionStep('configure');
+                                                            }}
                                                             style={{
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 gap: '12px',
-                                                                backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                                                                border: '1px solid rgba(255, 255, 255, 0.04)',
+                                                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                                                border: '1px solid rgba(255, 255, 255, 0.08)',
                                                                 borderRadius: '12px',
                                                                 padding: '12px 16px',
-                                                                color: 'rgba(255, 255, 255, 0.35)',
+                                                                color: '#ffffff',
                                                                 fontSize: '14px',
                                                                 fontWeight: 600,
-                                                                cursor: 'not-allowed',
+                                                                cursor: 'pointer',
                                                                 width: '100%',
                                                                 boxSizing: 'border-box'
                                                             }}
                                                         >
-                                                            <div style={{ color: 'rgba(255, 255, 255, 0.25)', display: 'flex', alignItems: 'center' }}>{item.icon}</div>
+                                                            <div style={{ color: 'rgba(255, 255, 255, 0.6)', display: 'flex', alignItems: 'center' }}>{item.icon}</div>
                                                             <span>{item.label}</span>
-                                                        </div>
+                                                        </button>
                                                     ))}
                                                 </div>
                                             </div>
@@ -10573,6 +10700,27 @@ const EventPanelV2: React.FC = () => {
                                                             placeholder="Ex: Como soube do evento?"
                                                         />
                                                     </div>
+                                                    {newQuestionType === 'choice' && (
+                                                        <div>
+                                                            <label className="block text-xs font-semibold text-zinc-400 mb-1">Opções (uma por linha)</label>
+                                                            <textarea
+                                                                value={newQuestionOptions.join('\n')}
+                                                                onChange={(e) => setNewQuestionOptions(e.target.value.split('\n'))}
+                                                                className="w-full min-h-[104px] bg-[#131315] border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-700 resize-y"
+                                                                placeholder={'Opção 1\nOpção 2\nOpção 3'}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {newQuestionType === 'text' && (
+                                                        <div className="flex gap-2">
+                                                            <button type="button" onClick={() => setNewQuestionLength('short')} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold border ${newQuestionLength === 'short' ? 'bg-white text-[#131517] border-white' : 'bg-transparent text-zinc-400 border-zinc-800'}`}>Resposta curta</button>
+                                                            <button type="button" onClick={() => setNewQuestionLength('long')} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold border ${newQuestionLength === 'long' ? 'bg-white text-[#131517] border-white' : 'bg-transparent text-zinc-400 border-zinc-800'}`}>Resposta longa</button>
+                                                        </div>
+                                                    )}
+                                                    <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                                                        <input type="checkbox" checked={newQuestionRequired} onChange={(e) => setNewQuestionRequired(e.target.checked)} className="w-4 h-4 accent-[#EF4118]" />
+                                                        Resposta obrigatória
+                                                    </label>
                                                 </div>
 
                                                 <div className="flex justify-end gap-2 mt-6">
@@ -11523,9 +11671,37 @@ const EventPanelV2: React.FC = () => {
                             )}
                         </AnimatePresence>
 
-                    {/* Modal de Visibilidade do Evento */}
+                    <EventVisibilityModal
+                        open={isVisibilityModalOpen}
+                        currentPrivacy={event?.privacy === 'private' ? 'private' : 'public'}
+                        onClose={() => setIsVisibilityModalOpen(false)}
+                        onSave={saveVisibility}
+                    />
+                    <TransferEventModal
+                        open={isTransferCalendarModalOpen}
+                        organizations={organizations}
+                        currentOrganization={organizations.find((organization) => organization.id === event?.organizationId) || selectedOrg}
+                        ownerAvatar={user?.photoUrl || undefined}
+                        onClose={() => setIsTransferCalendarModalOpen(false)}
+                        onTransfer={transferEventToCalendar}
+                        onCreateCalendar={() => navigate('/organizations/create-calendar')}
+                    />
+                    <EditEventHostModal
+                        host={editingHost}
+                        onClose={() => setEditingHost(null)}
+                        onSave={updateHostVisibility}
+                    />
+                    <CheckinTeamPanel
+                        open={isCheckinModalOpen}
+                        eventId={id || ''}
+                        event={event}
+                        onClose={() => setIsCheckinModalOpen(false)}
+                        onEventUpdated={setEvent}
+                    />
+
+                    {/* Modal legado de Visibilidade do Evento */}
                     <AnimatePresence>
-                        {isVisibilityModalOpen && (
+                        {false && isVisibilityModalOpen && (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -11682,9 +11858,9 @@ const EventPanelV2: React.FC = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Modal de Opções de Check-In (Drawer Lateral) */}
+                    {/* Drawer legado de Opções de Check-In */}
                     <AnimatePresence>
-                        {isCheckinModalOpen && (
+                        {false && isCheckinModalOpen && (
                             <div className="fixed inset-0 z-[99999] overflow-hidden flex justify-end">
                                 {/* Backdrop */}
                                 <motion.div
@@ -11803,7 +11979,7 @@ const EventPanelV2: React.FC = () => {
                                             {/* Container de Upgrade */}
                                             <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-4 mt-3 flex items-center justify-between gap-4">
                                                 <div className="flex-1 min-w-0">
-                                                    <h4 className="text-sm font-bold text-white leading-tight">Faça upgrade para o Luma Plus</h4>
+                                                    <h4 className="text-sm font-bold text-white leading-tight">Faça upgrade para o Fauves Plus</h4>
                                                     <p className="text-xs text-zinc-400 mt-1 leading-normal">
                                                         Conceda acesso de check-in à sua equipe de evento.
                                                     </p>
@@ -11811,10 +11987,7 @@ const EventPanelV2: React.FC = () => {
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        toast({
-                                                            title: "Fauves Plus",
-                                                            description: "Esta funcionalidade requer assinatura do plano Plus."
-                                                        });
+                                                        navigate(`/calendar/manage/cal-${selectedOrg?.id || event?.organizationId}?subTab=plus`);
                                                     }}
                                                     className="py-1.5 px-4 bg-[#db2777] hover:bg-[#be185d] text-white rounded-xl font-bold text-xs transition-colors shrink-0 cursor-pointer border-0 shadow-sm"
                                                 >
@@ -12038,7 +12211,7 @@ const EventPanelV2: React.FC = () => {
                                                     <div className="flex-1 min-w-0">
                                                         <span className="block text-sm font-bold text-white leading-tight">Mostrar na Página do Evento</span>
                                                         <span className="block text-[11px] text-zinc-400 mt-1 leading-normal">
-                                                            Ajude-os a configurar o perfil deles no Luma para que apareçam bem na página do evento.
+                                                            Ajude-os a configurar o perfil deles na Fauves para que apareçam bem na página do evento.
                                                         </span>
                                                     </div>
                                                     <FauvesSwitch checked={hostShowOnPage} onCheckedChange={setHostShowOnPage} label="Exibir anfitrião na página do evento" />
@@ -12137,47 +12310,11 @@ const EventPanelV2: React.FC = () => {
                                             <div className="pt-5 border-t border-zinc-800/50 mt-4 select-none">
                                                 <button
                                                     type="button"
-                                                    onClick={() => {
-                                                        const email = selectedHostEmail;
-                                                        const isExisting = hostsList.some(h => h.email.toLowerCase() === email.toLowerCase());
-                                                        
-                                                        if (isExisting) {
-                                                            setHostsList(prev => prev.map(h => {
-                                                                if (h.email.toLowerCase() === email.toLowerCase()) {
-                                                                    return {
-                                                                        ...h,
-                                                                        name: hostNameInput.trim() || email.split('@')[0],
-                                                                        role: hostAccessRole === 'manager' ? 'Anfitrião' : 'Anfitrião (Apenas Destaque)',
-                                                                        showOnPage: hostShowOnPage
-                                                                    };
-                                                                }
-                                                                return h;
-                                                            }));
-                                                            toast({
-                                                                title: "Anfitrião atualizado!",
-                                                                description: `As configurações de ${email} foram atualizadas com sucesso.`,
-                                                            });
-                                                        } else {
-                                                            const name = hostNameInput.trim() || email.split('@')[0];
-                                                            setHostsList(prev => [...prev, {
-                                                                id: Math.random().toString(),
-                                                                name: name.charAt(0).toUpperCase() + name.slice(1),
-                                                                email,
-                                                                avatarUrl: "https://cdn.lu.ma/avatars-default/community_avatar_12.png",
-                                                                role: hostAccessRole === 'manager' ? 'Anfitrião' : 'Anfitrião (Apenas Destaque)',
-                                                                showOnPage: hostShowOnPage
-                                                            }]);
-                                                            toast({
-                                                                title: "Anfitrião adicionado!",
-                                                                description: `${email} foi definido como co-anfitrião.`,
-                                                            });
-                                                        }
-                                                        setHostSearchQuery('');
-                                                        setIsAddHostModalOpen(false);
-                                                    }}
+                                                    disabled={savingHost}
+                                                    onClick={() => void saveHost()}
                                                     className="h-11 w-full bg-white hover:bg-zinc-100 text-zinc-950 font-bold rounded-xl transition-all text-sm flex items-center justify-center border-0 cursor-pointer shadow-sm"
                                                 >
-                                                    {hostsList.some(h => h.email.toLowerCase() === selectedHostEmail.toLowerCase()) ? "Salvar Alterações" : "Enviar Convite"}
+                                                    {savingHost ? "Salvando..." : hostsList.some(h => h.email.toLowerCase() === selectedHostEmail.toLowerCase()) ? "Salvar Alterações" : "Enviar Convite"}
                                                 </button>
                                             </div>
                                         </>
