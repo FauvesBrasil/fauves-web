@@ -202,12 +202,20 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (finalList.length === 0 && uid && !userLoading) {
           // 3. Auto-create organization if none exists
           try {
+            const idOrEmail = uid || user?.email || '';
+            let sum = 0;
+            for (let i = 0; i < idOrEmail.length; i++) {
+              sum += idOrEmail.charCodeAt(i);
+            }
+            const logoUrl = user?.photoUrl || `/avatars/avatar_${(sum % 47) + 1}.avif`;
+
             const createRes = await fetchApi(`/api/organization`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
-                name: `Organização de ${user?.name || 'Novo Usuário'}`,
-                bio: `Página oficial de eventos de ${user?.name || 'Novo Usuário'}`,
+                name: 'Pessoal',
+                bio: 'Este é o seu calendário pessoal. Você pode editar o nome, a bio e a identidade visual nas configurações.',
+                logoUrl,
                 locationType: 'global',
                 locationText: 'Global'
               })
