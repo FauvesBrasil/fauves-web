@@ -2,6 +2,7 @@ import "./lib/apiBase"; // Apply global fetch patch immediately
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import "leaflet/dist/leaflet.css";
 import { LayoutOffsetsProvider } from '@/context/LayoutOffsetsContext';
 import { OrganizationProvider } from '@/context/OrganizationContext';
 import { ThemeProvider } from '@/context/ThemeContext';

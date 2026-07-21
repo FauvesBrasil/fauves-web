@@ -64,10 +64,13 @@ const luma = {
 const ChangeMapView = ({ markers }: { markers: [number, number][] }) => {
   const map = useMap();
   useEffect(() => {
+    map.invalidateSize();
+    const timer = setTimeout(() => map.invalidateSize(), 250);
     if (markers.length > 0) {
       const bounds = L.latLngBounds(markers);
       map.fitBounds(bounds, { padding: [20, 20], maxZoom: 14 });
     }
+    return () => clearTimeout(timer);
   }, [markers, map]);
   return null;
 };
@@ -1083,8 +1086,6 @@ const IndexV2 = () => {
             {/* Real Interactive Map Area - Now as a Button to Full Map */}
             <Link to="/map" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
               <div style={{ marginTop: '1.5rem', borderRadius: '1rem', overflow: 'hidden', border: isDark ? '1px solid rgba(255,255,255,0.12)' : `1px solid ${luma.gray20}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)', position: 'relative', cursor: 'pointer' }}>
-                {/* Inject Leaflet CSS */}
-                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossOrigin="" />
 
                 <div style={{ width: '260px', height: '260px', pointerEvents: 'none' }}>
                   {(() => {

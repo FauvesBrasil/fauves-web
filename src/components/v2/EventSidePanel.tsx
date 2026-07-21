@@ -18,7 +18,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { CircleMarker, MapContainer, TileLayer } from 'react-leaflet';
+import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -114,6 +114,17 @@ const SocialLink = ({ href, label, children }: { href: string | null; label: str
   );
 };
 
+const MapInvalidator = () => {
+  const map = useMap();
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+};
+
 const EventLocationMap = ({ latitude, longitude, isDark, accent }: { latitude: number; longitude: number; isDark: boolean; accent: string }) => (
   <MapContainer
     key={`${latitude}-${longitude}-${isDark ? 'dark' : 'light'}`}
@@ -136,6 +147,7 @@ const EventLocationMap = ({ latitude, longitude, isDark, accent }: { latitude: n
       radius={7}
       pathOptions={{ color: '#fff', weight: 2, fillColor: accent, fillOpacity: 1 }}
     />
+    <MapInvalidator />
   </MapContainer>
 );
 

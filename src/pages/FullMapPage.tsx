@@ -405,6 +405,9 @@ const StickyDateHeader = ({ children, className }: { children: React.ReactNode, 
 const MapController = ({ markers, selectedId }: { markers: any[], selectedId: string | null }) => {
   const map = useMap();
   useEffect(() => {
+    map.invalidateSize();
+    const timer = setTimeout(() => map.invalidateSize(), 250);
+    
     if (selectedId) {
       const selected = markers.find(m => m.id === selectedId);
       if (selected && selected.lat && selected.lng) {
@@ -414,6 +417,8 @@ const MapController = ({ markers, selectedId }: { markers: any[], selectedId: st
       const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng] as [number, number]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
     }
+    
+    return () => clearTimeout(timer);
   }, [markers, selectedId, map]);
   return null;
 };
@@ -530,7 +535,6 @@ const FullMapPage: React.FC = () => {
   return (
     <div className={`tint-root ${isDark ? 'dark dark-mode' : ''}`}>
       <LumaStyle />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
       <div className="map-page">
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.25rem', borderBottom: '1px solid #f0f0f0', background: '#fff', position: 'relative', zIndex: 10 }}>

@@ -16,6 +16,7 @@ import CalendarEventSearchOverlay from '@/components/v2/CalendarEventSearchOverl
 import CalendarIcalModal from '@/components/v2/CalendarIcalModal';
 import CalendarAddEventMenu from '@/components/v2/CalendarAddEventMenu';
 import CalendarExternalEventModal from '@/components/v2/CalendarExternalEventModal';
+import { EventSidePanel } from '@/components/v2/EventSidePanel';
 
 // Helper to convert hex to HSL for dynamic theme-tinted backgrounds
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
@@ -76,6 +77,25 @@ const OrganizationPublicProfile: React.FC = () => {
   const [showEventSearch, setShowEventSearch] = React.useState(false);
   const [showIcalModal, setShowIcalModal] = React.useState(false);
   const [externalEventToEdit, setExternalEventToEdit] = React.useState<any | null>(null);
+  const [selectedPanelEvent, setSelectedPanelEvent] = React.useState<any | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = React.useState(false);
+
+  const selectedPanelIndex = React.useMemo(() => {
+    if (!selectedPanelEvent) return -1;
+    return events.findIndex((ev: any) => ev.id === selectedPanelEvent.id);
+  }, [selectedPanelEvent, events]);
+
+  const handleNext = React.useCallback(() => {
+    if (selectedPanelIndex >= 0 && selectedPanelIndex < events.length - 1) {
+      setSelectedPanelEvent(events[selectedPanelIndex + 1]);
+    }
+  }, [selectedPanelIndex, events]);
+
+  const handlePrev = React.useCallback(() => {
+    if (selectedPanelIndex > 0) {
+      setSelectedPanelEvent(events[selectedPanelIndex - 1]);
+    }
+  }, [selectedPanelIndex, events]);
   const [mapGeoCache, setMapGeoCache] = React.useState<Record<string, { lat: number; lng: number }>>(() => {
     try { return JSON.parse(localStorage.getItem('fauves_geo_cache_v1') || '{}'); } catch { return {}; }
   });
@@ -222,8 +242,9 @@ const OrganizationPublicProfile: React.FC = () => {
       window.open(externalUrl, '_blank', 'noopener,noreferrer');
       return;
     }
-    navigate(`/${event.slug || event.id}`);
-  }, [navigate]);
+    setSelectedPanelEvent(event);
+    setIsPanelOpen(true);
+  }, []);
 
   const removeExternalEvent = React.useCallback(async (event: any) => {
     const response = await fetchApi(`/api/event/${event.id}`, { method: 'DELETE' });
@@ -1146,6 +1167,16 @@ const OrganizationPublicProfile: React.FC = () => {
         event={externalEventToEdit}
         onClose={() => setExternalEventToEdit(null)}
         onSaved={refreshCalendarEvents}
+      />
+
+      <EventSidePanel
+        event={selectedPanelEvent}
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        hasNext={selectedPanelIndex >= 0 && selectedPanelIndex < events.length - 1}
+        hasPrev={selectedPanelIndex > 0}
       />
 
       {showLoginModal && (
