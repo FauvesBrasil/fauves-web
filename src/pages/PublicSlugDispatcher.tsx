@@ -5,6 +5,8 @@ import EventPageV2 from './EventPageV2';
 import OrganizationPublicProfile from './OrganizationPublicProfile';
 import WhatToDoCity from './WhatToDoCity';
 import NotFound from './NotFound';
+import HeaderV2 from '@/components/v2/HeaderV2';
+import { useTheme } from '@/context/ThemeContext';
 
 const toSlug = (value: string) => value
   .normalize('NFD')
@@ -107,26 +109,35 @@ const PublicSlugDispatcher: React.FC = () => {
     checkSlug();
   }, [slugOrId]);
 
+  const { isDark } = useTheme();
+
   if (loading) {
     return (
       <div style={{
         minHeight: '100vh',
-        background: '#030c1e',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        background: isDark ? '#121416' : '#f7f8f9',
+        color: isDark ? '#f5f5f5' : '#1c1e21',
+        fontFamily: 'Inter, sans-serif'
       }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          border: '3px solid rgba(255, 255, 255, 0.1)',
-          borderTopColor: '#ffffff',
-          animation: 'spin 1s linear infinite'
-        }} />
+        <HeaderV2 transparent={true} theme={isDark ? 'dark' : 'light'} />
+        <div style={{ height: '70px' }} />
         <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes spin { to { transform: rotate(360deg); } }
+          @keyframes shimmer { 0%, 100% { opacity: .45 } 50% { opacity: .85 } }
+          .skeleton-pulse { animation: shimmer 1.5s infinite ease-in-out; background: ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}; border-radius: 8px; }
         ` }} />
+        <div style={{ maxWidth: '928px', margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Cover skeleton */}
+          <div className="skeleton-pulse" style={{ width: '100%', height: '240px', borderRadius: '16px' }} />
+          {/* Title skeleton */}
+          <div className="skeleton-pulse" style={{ height: '32px', width: '60%' }} />
+          {/* Subtitle skeleton */}
+          <div className="skeleton-pulse" style={{ height: '18px', width: '35%', marginBottom: '1rem' }} />
+          {/* Content lines */}
+          <div className="skeleton-pulse" style={{ height: '14px', width: '100%' }} />
+          <div className="skeleton-pulse" style={{ height: '14px', width: '90%' }} />
+          <div className="skeleton-pulse" style={{ height: '14px', width: '95%' }} />
+          <div className="skeleton-pulse" style={{ height: '14px', width: '70%' }} />
+        </div>
       </div>
     );
   }

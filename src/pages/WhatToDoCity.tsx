@@ -174,7 +174,17 @@ const WhatToDoCity: React.FC = () => {
             </div>
           </header>
 
-          {loading ? <span className="city-events-loader" /> : groups.length ? groups.map(([key, group]) => {
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes shimmer { 0%, 100% { opacity: .45 } 50% { opacity: .85 } }
+                .skeleton-pulse { animation: shimmer 1.5s infinite ease-in-out; background: ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}; border-radius: 8px; }
+              ` }} />
+              <div className="skeleton-pulse" style={{ height: '140px', width: '100%', borderRadius: '12px' }} />
+              <div className="skeleton-pulse" style={{ height: '140px', width: '100%', borderRadius: '12px' }} />
+              <div className="skeleton-pulse" style={{ height: '140px', width: '100%', borderRadius: '12px' }} />
+            </div>
+          ) : groups.length ? groups.map(([key, group]) => {
             const date = new Date(group[0].startDate);
             return <section className="city-event-group" key={key}>
               <StickyEventDay date={date} />

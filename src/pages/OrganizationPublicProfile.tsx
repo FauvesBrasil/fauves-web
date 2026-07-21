@@ -451,20 +451,41 @@ const OrganizationPublicProfile: React.FC = () => {
     return (
       <div style={{
         minHeight: '100vh',
-        background: '#040815',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        background: isDark ? '#121416' : '#f7f8f9',
+        color: isDark ? '#f5f5f5' : '#1c1e21',
+        fontFamily: 'Inter, sans-serif'
       }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          borderRadius: '50%',
-          border: '3px solid rgba(255, 255, 255, 0.1)',
-          borderTopColor: '#ffffff',
-          animation: 'spin 1s linear infinite'
-        }} />
-        <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg); } }` }} />
+        <HeaderV2 transparent={true} theme={isDark ? 'dark' : 'light'} blueGlow={false} />
+        <div style={{ height: '70px' }} />
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes shimmer { 0%, 100% { opacity: .45 } 50% { opacity: .85 } }
+          .skeleton-pulse { animation: shimmer 1.5s infinite ease-in-out; background: ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}; border-radius: 8px; }
+        ` }} />
+        <div style={{ maxWidth: '1056px', margin: '0 auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Capa/Banner placeholder */}
+          <div className="skeleton-pulse" style={{ width: '100%', height: '280px', borderRadius: '16px' }} />
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '32px' }} className="profile-cols">
+            {/* Left Column (Events/Calendar list) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div className="skeleton-pulse" style={{ height: '24px', width: '120px' }} />
+                <div className="skeleton-pulse" style={{ height: '34px', width: '150px' }} />
+              </div>
+              <div className="skeleton-pulse" style={{ height: '140px', width: '100%', borderRadius: '12px' }} />
+              <div className="skeleton-pulse" style={{ height: '140px', width: '100%', borderRadius: '12px' }} />
+              <div className="skeleton-pulse" style={{ height: '140px', width: '100%', borderRadius: '12px' }} />
+            </div>
+            
+            {/* Right Column (Sidebar details) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="skeleton-pulse" style={{ height: '80px', width: '80px', borderRadius: '50%' }} />
+              <div className="skeleton-pulse" style={{ height: '28px', width: '180px' }} />
+              <div className="skeleton-pulse" style={{ height: '16px', width: '120px' }} />
+              <div className="skeleton-pulse" style={{ height: '60px', width: '100%' }} />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
