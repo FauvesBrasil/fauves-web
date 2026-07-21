@@ -20,6 +20,7 @@ import {
   Sparkles,
   Trophy,
   Utensils,
+  Loader2,
 } from 'lucide-react';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import FooterV2 from '@/components/v2/FooterV2';
@@ -120,6 +121,7 @@ const DiscoverV2: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [selectedState, setSelectedState] = useState('');
   const [followingOrgIds, setFollowingOrgIds] = useState<Set<string>>(new Set());
+  const [followLoadingIds, setFollowLoadingIds] = useState<Set<string>>(new Set());
 
   // Load followed organizations
   useEffect(() => {
@@ -155,6 +157,12 @@ const DiscoverV2: React.FC = () => {
     const isFollowing = followingOrgIds.has(organizationId);
     const method = isFollowing ? 'DELETE' : 'POST';
 
+    setFollowLoadingIds((prev) => {
+      const next = new Set(prev);
+      next.add(organizationId);
+      return next;
+    });
+
     try {
       const response = await fetchApi(`/api/organization/${organizationId}/follow`, {
         method,
@@ -172,6 +180,12 @@ const DiscoverV2: React.FC = () => {
       }
     } catch (error) {
       console.error('Error toggling follow:', error);
+    } finally {
+      setFollowLoadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(organizationId);
+        return next;
+      });
     }
   };
 
@@ -340,8 +354,15 @@ const DiscoverV2: React.FC = () => {
                       type="button"
                       className={`discover-v2-open-pill ${isFollowing ? 'is-following' : ''}`}
                       onClick={(e) => handleFollowClick(e, organization.id)}
+                      disabled={followLoadingIds.has(organization.id)}
                     >
-                      {isFollowing ? 'Seguindo' : 'Seguir'}
+                      {followLoadingIds.has(organization.id) ? (
+                        <Loader2 className="w-4 h-4 animate-spin inline-block" />
+                      ) : isFollowing ? (
+                        'Seguindo'
+                      ) : (
+                        'Seguir'
+                      )}
                     </button>
                   </div>
                   <h3>{organizationName}</h3>
