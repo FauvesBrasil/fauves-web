@@ -118,8 +118,9 @@ const getAppleEmojiUrl = (emoji: string): string => {
 
 const EventPageV2: React.FC = () => {
   const { slugOrId } = useParams<{ slugOrId: string }>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [event, setEvent] = useState<any>(null);
+  const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -176,6 +177,44 @@ const EventPageV2: React.FC = () => {
       setCheckoutCpf(user.cpf || '');
     }
   }, [user]);
+
+  // Check if current user has management access to the event
+  useEffect(() => {
+    const userId = user?.id;
+    const eventId = event?.id;
+    if (!userId || !token || !eventId) {
+      setCanManage(false);
+      return;
+    }
+
+    if (user.isAdmin) {
+      setCanManage(true);
+      return;
+    }
+
+    let cancelled = false;
+    fetchApi(`/api/events/by-user?userId=${encodeURIComponent(userId)}`)
+      .then((response) => (response.ok ? response.json() : []))
+      .then((data) => {
+        if (cancelled) return;
+        const items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+        const eventIds = new Set(
+          items.map((item: any) => String(item?.id || item?.eventId || '')).filter(Boolean)
+        );
+        if (eventIds.has(String(eventId))) {
+          setCanManage(true);
+        } else {
+          setCanManage(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCanManage(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.isAdmin, token, event?.id]);
 
   // Referência para o canvas de confete do tema Confetti
   const confettiCanvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -2328,15 +2367,17 @@ const EventPageV2: React.FC = () => {
               </div>
             </div>
 
-            <div className="jsx-24d10356f2efd076 manage-card">
-              <div className="jsx-24d10356f2efd076">Você tem acesso de gerenciamento para este evento.</div>
-              <a href={`/event/manage/${event.id}`} target="_blank" className="btn lux-button small" style={{ background: 'var(--theme-accent, #bc3f57)', color: 'white', padding: '8px 16px', borderRadius: '30px', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                Gerenciar
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" style={{ width: '14px', height: '14px', display: 'inline-block', flexShrink: 0 }}>
-                  <path d="M7 17 17 7M7 7h10v10"></path>
-                </svg>
-              </a>
-            </div>
+            {canManage && (
+              <div className="jsx-24d10356f2efd076 manage-card">
+                <div className="jsx-24d10356f2efd076">Você tem acesso de gerenciamento para este evento.</div>
+                <a href={`/event/manage/${event.id}`} target="_blank" className="btn lux-button small" style={{ background: 'var(--theme-accent, #bc3f57)', color: 'white', padding: '8px 16px', borderRadius: '30px', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  Gerenciar
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" style={{ width: '14px', height: '14px', display: 'inline-block', flexShrink: 0 }}>
+                    <path d="M7 17 17 7M7 7h10v10"></path>
+                  </svg>
+                </a>
+              </div>
+            )}
 
             {/* Organizado por */}
             <div className="jsx-da66ad346e2cad37 flex-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
