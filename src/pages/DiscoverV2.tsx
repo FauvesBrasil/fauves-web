@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import {
   BrainCircuit,
   Baby,
@@ -107,6 +108,8 @@ const getInitials = (name: string) =>
 
 const DiscoverV2: React.FC = () => {
   const { isDark } = useTheme();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   useSEO({ title: 'Descobrir eventos · Fauves' });
 
   const [events, setEvents] = useState<any[]>([]);
@@ -116,6 +119,61 @@ const DiscoverV2: React.FC = () => {
   const [loadingOrgs, setLoadingOrgs] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [selectedState, setSelectedState] = useState('');
+  const [followingOrgIds, setFollowingOrgIds] = useState<Set<string>>(new Set());
+
+  // Load followed organizations
+  useEffect(() => {
+    if (!user) {
+      setFollowingOrgIds(new Set());
+      return;
+    }
+    const loadFollowing = async () => {
+      try {
+        const response = await fetchApi('/api/organization/following');
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data)) {
+            setFollowingOrgIds(new Set(data.map((org: any) => org.id)));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading following organizations:', error);
+      }
+    };
+    void loadFollowing();
+  }, [user]);
+
+  const handleFollowClick = async (e: React.MouseEvent, organizationId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (!user) {
+      navigate('/login?redirect=/discover');
+      return;
+    }
+
+    const isFollowing = followingOrgIds.has(organizationId);
+    const method = isFollowing ? 'DELETE' : 'POST';
+
+    try {
+      const response = await fetchApi(`/api/organization/${organizationId}/follow`, {
+        method,
+      });
+      if (response.ok) {
+        setFollowingOrgIds((prev) => {
+          const next = new Set(prev);
+          if (isFollowing) {
+            next.delete(organizationId);
+          } else {
+            next.add(organizationId);
+          }
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+    }
+  };
 
   useEffect(() => {
     document.documentElement.style.setProperty('--page-max-width', '840px');
@@ -262,6 +320,7 @@ const DiscoverV2: React.FC = () => {
             {featuredOrgs.slice(0, 9).map((organization, index) => {
               const logo = resolveImageUrl(organization.logoUrl);
               const organizationName = organization.name || 'Calendário Fauves';
+              const isFollowing = followingOrgIds.has(organization.id);
 
               return (
                 <Link
@@ -277,7 +336,13 @@ const DiscoverV2: React.FC = () => {
                         <span>{getInitials(organizationName)}</span>
                       )}
                     </span>
-                    <span className="discover-v2-open-pill">Seguir</span>
+                    <button
+                      type="button"
+                      className={`discover-v2-open-pill ${isFollowing ? 'is-following' : ''}`}
+                      onClick={(e) => handleFollowClick(e, organization.id)}
+                    >
+                      {isFollowing ? 'Seguindo' : 'Seguir'}
+                    </button>
                   </div>
                   <h3>{organizationName}</h3>
                   <p>{organization.bio || organization.description || 'Calendário de eventos na Fauves.'}</p>
@@ -534,6 +599,22 @@ const DiscoverV2: React.FC = () => {
         .discover-v2-open-pill:hover {
           color: #18191b;
           background: rgba(255, 255, 255, 0.78);
+        }
+
+        button.discover-v2-open-pill {
+          cursor: pointer;
+          outline: none;
+        }
+
+        .discover-v2-open-pill.is-following {
+          color: #fff !important;
+          background: #27993d !important;
+          border-color: transparent !important;
+        }
+
+        .discover-v2-open-pill.is-following:hover {
+          background: #208033 !important;
+          color: #fff !important;
         }
 
         .discover-v2-calendar-card h3 {
