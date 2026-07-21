@@ -7,6 +7,7 @@ import SubscribeControl from '@/components/v2/SubscribeControl';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useSEO } from '@/hooks/useSEO';
 import { useTheme } from '@/context/ThemeContext';
+import { EventSidePanel } from '@/components/v2/EventSidePanel';
 
 type CityEvent = {
   id: string;
@@ -83,6 +84,30 @@ const WhatToDoCity: React.FC = () => {
   const cityName = displayCity(citySlug);
   const [events, setEvents] = useState<CityEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  const handleEventClick = (event: any) => {
+    setSelectedEvent(event);
+    setIsPanelOpen(true);
+  };
+
+  const currentIndex = useMemo(() => {
+    if (!selectedEvent) return -1;
+    return events.findIndex((ev) => ev.id === selectedEvent.id);
+  }, [selectedEvent, events]);
+
+  const handleNext = () => {
+    if (currentIndex >= 0 && currentIndex < events.length - 1) {
+      setSelectedEvent(events[currentIndex + 1]);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setSelectedEvent(events[currentIndex - 1]);
+    }
+  };
 
   useSEO({
     title: `Eventos em ${cityName} · Fauves`,
@@ -156,7 +181,7 @@ const WhatToDoCity: React.FC = () => {
               <div className="city-event-cards">{group.map((event) => {
                 const image = resolveImageUrl(event.bannerUrl || event.banner || event.image);
                 const location = formatCompactLocation(event);
-                return <Link className="city-event-card" to={`/${event.slug || event.id}`} key={event.id}>
+                return <div className="city-event-card" onClick={() => handleEventClick(event)} key={event.id} style={{ cursor: 'pointer' }}>
                   <div className="city-event-copy">
                     <time>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(event.startDate))}</time>
                     <h3>{event.name}</h3>
@@ -165,7 +190,7 @@ const WhatToDoCity: React.FC = () => {
                     {event.price != null && event.price > 0 && <small>R$ {event.price.toLocaleString('pt-BR')}</small>}
                   </div>
                   <span className="city-event-image">{image ? <img src={image} alt="" /> : <Landmark size={28} />}</span>
-                </Link>;
+                </div>;
               })}</div>
             </section>;
           }) : <p className="city-events-empty">Nenhum evento próximo em {cityName}.</p>}
@@ -179,6 +204,16 @@ const WhatToDoCity: React.FC = () => {
           <div className="city-events-map"><MapPin size={27} /><strong>{cityName}</strong></div>
         </aside>
       </main>
+
+      <EventSidePanel
+        event={selectedEvent}
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        hasNext={currentIndex >= 0 && currentIndex < events.length - 1}
+        hasPrev={currentIndex > 0}
+      />
 
       <FooterV2 maxWidth="928px" />
       <style>{cityStyles}</style>
