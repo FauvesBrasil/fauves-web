@@ -55,19 +55,28 @@ function normalizeQrValue(value: string) {
 
   try {
     const parsed = JSON.parse(normalized);
-    return String(parsed.code || parsed.c || parsed.ticketCode || parsed.id || normalized).trim();
+    normalized = String(parsed.code || parsed.c || parsed.ticketCode || parsed.id || normalized).trim();
   } catch { /* QR simples ou URL */ }
 
   try {
     const url = new URL(normalized);
-    return String(
+    normalized = String(
       url.searchParams.get('code') ||
       url.searchParams.get('ticket') ||
       url.searchParams.get('ticketId') ||
       normalized,
     ).trim();
-  } catch { return normalized; }
+  } catch { /* Código simples */ }
+
+  const ticketCode = normalized.match(/TCK[\s-]*([A-Z0-9]+)/i);
+  return ticketCode ? `TCK-${ticketCode[1]}`.toUpperCase() : normalized.trim();
 }
+
+const normalizeManualSuffix = (value: string) => value
+  .toUpperCase()
+  .replace(/^TCK[\s-]*/i, '')
+  .replace(/[^A-Z0-9]/g, '')
+  .slice(0, 16);
 
 function EmptyGuests({ searching }: { searching: boolean }) {
   return (
@@ -235,15 +244,36 @@ export default function ParticipantesCheckin() {
 
     const scanner = new QrScanner(
       videoElement,
-      result => { void processScannedValue(result.data); },
+      result => {
+        const decodedValue = typeof result === 'string' ? result : result.data;
+        if (decodedValue) void processScannedValue(decodedValue);
+      },
       {
         preferredCamera: cameraFacing,
-        maxScansPerSecond: 8,
+        maxScansPerSecond: 10,
+        calculateScanRegion: (video) => {
+          const shortestSide = Math.min(video.videoWidth, video.videoHeight);
+          const regionSize = Math.max(1, Math.round(shortestSide * 0.92));
+          return {
+            x: Math.round((video.videoWidth - regionSize) / 2),
+            y: Math.round((video.videoHeight - regionSize) / 2),
+            width: regionSize,
+            height: regionSize,
+            downScaledWidth: 700,
+            downScaledHeight: 700,
+          };
+        },
+        onDecodeError: (decodeError) => {
+          if (String(decodeError) !== QrScanner.NO_QR_CODE_FOUND) {
+            console.warn('[check-in scanner] Falha ao analisar quadro:', decodeError);
+          }
+        },
         highlightScanRegion: false,
         highlightCodeOutline: false,
         returnDetailedScanResult: true,
       },
     );
+    scanner.setInversionMode('both');
     scannerRef.current = scanner;
 
     void (async () => {
@@ -330,8 +360,8 @@ export default function ParticipantesCheckin() {
   const progress = totalCount ? Math.round(checkedCount / totalCount * 100) : 0;
 
   return (
-    <div className="flex min-h-[100dvh] w-full flex-col bg-[#141515] font-sans text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/[.08] bg-[#141515]/95 backdrop-blur-xl">
+    <div className={`flex w-full flex-col bg-[#141515] font-sans text-zinc-100 ${scannerOpen ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
+      <header className="sticky top-0 z-40 shrink-0 border-b border-white/[.08] bg-[#141515]/95 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[64px] w-full max-w-[940px] items-center gap-3 px-4 sm:px-6">
           <button type="button" onClick={() => scannerOpen ? closeScanner() : navigate(-1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-zinc-500 transition hover:bg-white/[.07] hover:text-white" aria-label="Voltar">
             <ArrowLeft size={18} />
@@ -352,13 +382,13 @@ export default function ParticipantesCheckin() {
 
       <AnimatePresence mode="wait" initial={false}>
         {scannerOpen ? (
-          <motion.main key="scanner" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mx-auto w-full max-w-[940px] flex-1 px-3 py-4 sm:px-6 sm:py-5">
-            <div className="relative mx-auto aspect-[4/3] max-h-[min(70vh,690px)] w-full overflow-hidden rounded-2xl border border-white/[.1] bg-[#090a0a] shadow-2xl">
+          <motion.main key="scanner" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mx-auto flex min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-3 overflow-hidden px-3 py-3 sm:gap-4 sm:px-5 sm:py-4">
+            <div className="relative mx-auto min-h-0 w-full flex-1 overflow-hidden rounded-2xl border border-white/[.1] bg-[#090a0a] shadow-2xl">
               <video ref={setVideoElement} autoPlay muted playsInline disablePictureInPicture className={`h-full w-full object-cover transition-opacity duration-300 ${cameraState === 'active' ? 'opacity-100' : 'opacity-20'}`} />
 
               {cameraState === 'active' && (
                 <div className="pointer-events-none absolute inset-0">
-                  <div className="absolute left-1/2 top-1/2 aspect-square w-[min(58%,330px)] -translate-x-1/2 -translate-y-1/2">
+                  <div className="absolute left-1/2 top-1/2 aspect-square w-[min(66%,390px)] -translate-x-1/2 -translate-y-1/2">
                     <span className="absolute left-0 top-0 h-9 w-9 rounded-tl-xl border-l-2 border-t-2 border-white/90" />
                     <span className="absolute right-0 top-0 h-9 w-9 rounded-tr-xl border-r-2 border-t-2 border-white/90" />
                     <span className="absolute bottom-0 left-0 h-9 w-9 rounded-bl-xl border-b-2 border-l-2 border-white/90" />
@@ -417,13 +447,28 @@ export default function ParticipantesCheckin() {
               </AnimatePresence>
             </div>
 
-            <div className="mx-auto mt-4 rounded-2xl border border-white/[.08] bg-white/[.07] p-4">
+            <div className="mx-auto w-full shrink-0 rounded-2xl border border-white/[.08] bg-white/[.07] p-3 sm:p-4">
               <div className="flex items-center justify-between gap-4 text-sm"><strong className="font-semibold text-emerald-400">{checkedCount} check-in{checkedCount === 1 ? '' : 's'} realizado{checkedCount === 1 ? '' : 's'}</strong><span className="font-medium text-zinc-500">{totalCount} confirmado{totalCount === 1 ? '' : 's'}</span></div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[.09]"><motion.div animate={{ width: `${progress}%` }} className="h-full rounded-full bg-emerald-400" /></div>
+              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[.09]"><motion.div animate={{ width: `${progress}%` }} className="h-full rounded-full bg-emerald-400" /></div>
 
-              <form onSubmit={event => { event.preventDefault(); if (manualCode.trim()) void processScannedValue(manualCode).then(() => setManualCode('')); }} className="mt-4 flex gap-2 border-t border-white/[.08] pt-4">
-                <input value={manualCode} onChange={event => setManualCode(event.target.value)} placeholder="Código do ingresso" className="h-10 min-w-0 flex-1 rounded-xl border border-white/[.1] bg-black/20 px-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-white/[.3]" />
-                <button type="submit" disabled={!manualCode.trim() || processingScan} className="h-10 rounded-xl bg-white px-4 text-sm font-semibold text-zinc-950 disabled:opacity-40">Validar</button>
+              <form onSubmit={event => { event.preventDefault(); if (manualCode.trim()) void processScannedValue(`TCK-${manualCode}`).then(() => setManualCode('')); }} className="mt-3 flex gap-2 border-t border-white/[.08] pt-3">
+                <label className="flex h-12 min-w-0 flex-1 items-center overflow-hidden rounded-xl border border-white/[.12] bg-black/25 text-white transition focus-within:border-white/[.4] focus-within:ring-2 focus-within:ring-white/[.08]">
+                  <span className="select-none pl-3 font-mono text-[17px] font-bold tracking-wide text-zinc-300" aria-hidden="true">TCK-</span>
+                  <input
+                    value={manualCode}
+                    onChange={event => setManualCode(normalizeManualSuffix(event.target.value))}
+                    placeholder="A1B2C3D4"
+                    aria-label="Código do ingresso após TCK-"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    enterKeyHint="done"
+                    className="h-full min-w-0 flex-1 border-0 bg-transparent px-1.5 pr-3 font-mono text-base font-semibold uppercase tracking-wide text-white outline-none placeholder:text-zinc-600"
+                  />
+                </label>
+                <button type="submit" disabled={!manualCode.trim() || processingScan} className="h-12 min-w-[104px] rounded-xl bg-white px-4 text-base font-bold text-zinc-950 transition hover:bg-zinc-200 active:scale-[.98] disabled:opacity-40">{processingScan ? 'Validando…' : 'Validar'}</button>
               </form>
             </div>
           </motion.main>
