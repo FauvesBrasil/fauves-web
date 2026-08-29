@@ -16,7 +16,9 @@ import {
   ArrowRight,
   Users,
   Check,
-  Sparkles
+  Sparkles,
+  Ticket,
+  CheckCircle2
 } from 'lucide-react';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
@@ -29,6 +31,7 @@ import QRCode from 'qrcode';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useTicketRealtime, type TicketRealtimeUpdate } from '@/hooks/useTicketRealtime';
 
 const getGuestAvatars = (eventId: string) => {
   const images = [
@@ -143,6 +146,7 @@ const Events = () => {
     return () => { isMounted = false; };
   }, [selectedPanelEvent?.id]);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
+  const [selectedTicketGroup, setSelectedTicketGroup] = useState<any[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate('/login?redirect=/events');
@@ -192,6 +196,54 @@ const Events = () => {
     }
   }, [user]);
 
+  const refreshTickets = React.useCallback(async () => {
+    if (!user) return;
+    const q = user.id ? `userId=${user.id}` : `userEmail=${user.email}`;
+    const response = await fetchApi(`/api/my/tickets?${q}&include=event`);
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const nextTickets = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
+    setTickets(nextTickets);
+    setSelectedTicket(current => current
+      ? nextTickets.find((ticket: any) => ticket.id === current.id) || current
+      : current
+    );
+    setSelectedTicketGroup(current => current.length
+      ? current.map(ticket => nextTickets.find((next: any) => next.id === ticket.id) || ticket)
+      : current
+    );
+  }, [user]);
+
+  const handleTicketRealtimeUpdate = React.useCallback((update: TicketRealtimeUpdate) => {
+    const applyUpdate = (ticket: any) => {
+      if (ticket.id !== update.ticketId) return ticket;
+      return {
+        ...ticket,
+        used: update.used,
+        usedAt: update.usedAt,
+        status: update.status || ticket.status,
+      };
+    };
+
+    setTickets(current => current.map(applyUpdate));
+    setSelectedTicket(current => current ? applyUpdate(current) : current);
+    setSelectedTicketGroup(current => current.map(applyUpdate));
+
+    if (update.used) {
+      toast({
+        title: 'Check-in realizado',
+        description: 'O ingresso foi validado e atualizado nesta tela.',
+      });
+    }
+  }, [toast]);
+
+  useTicketRealtime({
+    enabled: Boolean(user),
+    onUpdate: handleTicketRealtimeUpdate,
+    onReconnect: refreshTickets,
+  });
+
   // Combine and sort events & tickets chronologically
   const getCombinedTimeline = () => {
     const list: any[] = [];
@@ -213,10 +265,23 @@ const Events = () => {
     });
 
     // 2. Add purchased tickets/events
+    const ticketsByEvent = new Map<string, any[]>();
     tickets.forEach(t => {
+      const key = String(t.eventId || `ticket-${t.id}`);
+      const group = ticketsByEvent.get(key) || [];
+      group.push(t);
+      ticketsByEvent.set(key, group);
+    });
+
+    ticketsByEvent.forEach(eventTickets => {
+      eventTickets.sort((left, right) =>
+        Number(Boolean(left.used || left.status === 'USED'))
+        - Number(Boolean(right.used || right.status === 'USED'))
+      );
+      const t = eventTickets[0];
       const e = t.event;
       list.push({
-        id: `purchased-${t.id}`,
+        id: `purchased-${t.eventId || t.id}`,
         eventId: t.eventId,
         name: t.eventName || e?.name || 'Evento',
         startDate: t.eventStartDate || e?.startDate,
@@ -225,7 +290,10 @@ const Events = () => {
         location: t.eventLocation || e?.location || '',
         organizerName: e?.organizationName || 'Organizador',
         type: 'purchased',
-        ticket: t
+        ticket: t,
+        tickets: eventTickets,
+        ticketCount: eventTickets.length,
+        checkedInCount: eventTickets.filter(ticket => Boolean(ticket.used || ticket.status === 'USED')).length,
       });
     });
 
@@ -288,18 +356,34 @@ const Events = () => {
   };
 
   // --- Ticket Modal (Premium V2 Style) ---
-  const TicketModal = ({ ticket, onClose }: { ticket: any; onClose: () => void }) => {
+  const TicketModal = ({
+    ticket,
+    ticketGroup,
+    onSelectTicket,
+    onClose,
+  }: {
+    ticket: any;
+    ticketGroup: any[];
+    onSelectTicket: (ticket: any) => void;
+    onClose: () => void;
+  }) => {
     const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const [showTransfer, setShowTransfer] = useState(false);
     const [transferEmail, setTransferEmail] = useState('');
     const [transferLoading, setTransferLoading] = useState(false);
+    const ticketIsUsed = Boolean(ticket.used || ticket.status === 'USED');
+    const ticketIndex = Math.max(0, ticketGroup.findIndex(item => item.id === ticket.id));
 
     useEffect(() => {
       return acquireDocumentScrollLock();
     }, []);
 
     useEffect(() => {
+      if (ticketIsUsed) {
+        setQrDataUrl(null);
+        return;
+      }
       const gen = () => {
         QRCode.toDataURL(JSON.stringify({ c: ticket.code, ts: Date.now() }), { margin: 1, width: 600 })
           .then(setQrDataUrl);
@@ -307,7 +391,7 @@ const Events = () => {
       gen();
       const interval = setInterval(() => { gen(); setRefreshKey(k => k + 1); }, 30000);
       return () => clearInterval(interval);
-    }, [ticket.code]);
+    }, [ticket.code, ticketIsUsed]);
 
     const handleTransfer = async () => {
       if (!transferEmail.includes('@')) return;
@@ -328,7 +412,8 @@ const Events = () => {
       } finally { setTransferLoading(false); }
     };
 
-    const startDate = ticket.eventStartDate ? new Date(ticket.eventStartDate) : null;
+    const startDateValue = ticket.eventStartDate || ticket.event?.startDate;
+    const startDate = startDateValue ? new Date(startDateValue) : null;
     const dateFormatted = startDate ? startDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : 'Data não informada';
     const timeFormatted = startDate ? startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) + 'h' : '—';
     const locationName = ticket.eventVenue || 'Local não definido';
@@ -347,7 +432,7 @@ const Events = () => {
           <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center">
             {!showTransfer ? (
               <Badge className="bg-[#131517] hover:bg-[#131517] text-white border-none px-3 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-full">
-                {ticket.ticketTypeName || 'Ingresso'}
+                {ticketIsUsed ? 'Check-in realizado' : ticket.ticketTypeName || 'Ingresso'}
               </Badge>
             ) : (
               <button
@@ -383,6 +468,31 @@ const Events = () => {
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: isDark ? '#ffffff' : '#131517', lineHeight: 1.3, marginBottom: '1.25rem' }}>
                     {ticket.eventName}
                   </h2>
+
+                  {ticketGroup.length > 1 && (
+                    <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-neutral-100 bg-neutral-50 p-2 dark:border-neutral-700 dark:bg-neutral-800">
+                      <button
+                        type="button"
+                        aria-label="Ingresso anterior"
+                        onClick={() => onSelectTicket(ticketGroup[(ticketIndex - 1 + ticketGroup.length) % ticketGroup.length])}
+                        className="grid h-8 w-8 place-items-center rounded-lg bg-white text-neutral-500 shadow-sm transition hover:text-neutral-900 dark:bg-neutral-700 dark:text-neutral-300"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <div className="min-w-0 text-center">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Stack de ingressos</p>
+                        <p className="truncate text-xs font-semibold text-neutral-800 dark:text-neutral-100">Ingresso {ticketIndex + 1} de {ticketGroup.length}</p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label="Próximo ingresso"
+                        onClick={() => onSelectTicket(ticketGroup[(ticketIndex + 1) % ticketGroup.length])}
+                        className="grid h-8 w-8 place-items-center rounded-lg bg-white text-neutral-500 shadow-sm transition hover:text-neutral-900 dark:bg-neutral-700 dark:text-neutral-300"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
 
                   <div className="space-y-4 mb-6">
                     <div className="flex items-start gap-3">
@@ -430,18 +540,31 @@ const Events = () => {
 
                   {/* QR Code and Actions */}
                   <div className="text-center mt-auto flex flex-col items-center">
-                    <div className="relative inline-block mb-4 p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700 shadow-sm">
-                      {qrDataUrl ? (
+                    <div className={`relative mb-4 inline-flex h-48 w-48 items-center justify-center rounded-2xl border p-4 shadow-sm ${ticketIsUsed ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40' : 'border-neutral-100 bg-white dark:border-neutral-700 dark:bg-neutral-800'}`}>
+                      {ticketIsUsed ? (
+                        <div className="flex flex-col items-center gap-3 text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="h-16 w-16" strokeWidth={1.5} />
+                          <div>
+                            <p className="text-sm font-bold">Check-in realizado</p>
+                            <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider opacity-70">
+                              {ticket.usedAt ? new Date(ticket.usedAt).toLocaleString('pt-BR') : 'Ingresso utilizado'}
+                            </p>
+                          </div>
+                        </div>
+                      ) : qrDataUrl ? (
                         <img src={qrDataUrl} className="w-40 h-40 dark:invert" key={refreshKey} alt="QR Code" />
                       ) : (
                         <div className="w-40 h-40 flex items-center justify-center"><Loader2 className="animate-spin text-neutral-300" /></div>
                       )}
-                      <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-neutral-900 dark:bg-neutral-700 text-white text-[9px] font-semibold px-4 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
-                        Seguro • Recarrega automaticamente
-                      </div>
+                      {!ticketIsUsed && (
+                        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-neutral-900 dark:bg-neutral-700 text-white text-[9px] font-semibold px-4 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
+                          Seguro • Recarrega automaticamente
+                        </div>
+                      )}
                     </div>
                     <p className="text-[10px] font-bold text-neutral-300 dark:text-neutral-500 uppercase tracking-widest mb-6">COD: {ticket.code}</p>
 
+                    {!ticketIsUsed ? (
                     <div className="grid grid-cols-2 gap-2.5 w-full">
                       <button
                         onClick={() => setShowTransfer(true)}
@@ -462,6 +585,11 @@ const Events = () => {
                         <Printer className="w-3.5 h-3.5" /> Imprimir
                       </button>
                     </div>
+                    ) : (
+                      <p className="rounded-xl bg-emerald-50 px-4 py-3 text-xs font-semibold leading-relaxed text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                        Este ingresso já foi validado na entrada e não pode ser transferido.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -783,8 +911,17 @@ const Events = () => {
                                     gap: '0.375rem',
                                     margin: 0
                                   }}>
-                                    <Users className="w-4 h-4" style={{ strokeWidth: 1.5, color: iconStrokeColor }} />
-                                    <span>{item.attendeesCount > 0 ? `${item.attendeesCount} ${item.attendeesCount === 1 ? 'convidado' : 'convidados'}` : 'Nenhum convidado'}</span>
+                                    {item.type === 'purchased' ? (
+                                      <>
+                                        <Ticket className="w-4 h-4" style={{ strokeWidth: 1.5, color: iconStrokeColor }} />
+                                        <span>{item.ticketCount} {item.ticketCount === 1 ? 'ingresso' : 'ingressos'} neste evento</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Users className="w-4 h-4" style={{ strokeWidth: 1.5, color: iconStrokeColor }} />
+                                        <span>{item.attendeesCount > 0 ? `${item.attendeesCount} ${item.attendeesCount === 1 ? 'convidado' : 'convidados'}` : 'Nenhum convidado'}</span>
+                                      </>
+                                    )}
                                   </p>
                               </div>
 
@@ -817,25 +954,34 @@ const Events = () => {
                                      display: 'inline-flex',
                                      alignItems: 'center',
                                      gap: '4px',
-                                     background: isDark ? 'rgba(5, 150, 105, 0.15)' : '#ecfdf5',
-                                     color: '#059669',
+                                     background: item.checkedInCount > 0
+                                       ? (isDark ? 'rgba(5, 150, 105, 0.15)' : '#ecfdf5')
+                                       : (isDark ? 'rgba(255,255,255,0.06)' : '#f5f5f5'),
+                                     color: item.checkedInCount > 0 ? '#059669' : mutedTextColor,
                                      fontSize: '0.75rem',
                                      fontWeight: 600,
                                      padding: '0.25rem 0.625rem',
                                      borderRadius: '100px',
-                                     border: isDark ? '1px solid rgba(5, 150, 105, 0.2)' : '1px solid #d1fae5'
+                                     border: item.checkedInCount > 0
+                                       ? (isDark ? '1px solid rgba(5, 150, 105, 0.2)' : '1px solid #d1fae5')
+                                       : (isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #ebebeb')
                                    }}>
-                                     <Check className="w-3.5 h-3.5" style={{ strokeWidth: 2.5 }} /> Confirmado
+                                     {item.checkedInCount > 0 ? (
+                                       <><CheckCircle2 className="w-3.5 h-3.5" style={{ strokeWidth: 2.5 }} />{item.checkedInCount === item.ticketCount ? 'Check-in realizado' : `${item.checkedInCount} de ${item.ticketCount} utilizados`}</>
+                                     ) : (
+                                       <><Check className="w-3.5 h-3.5" style={{ strokeWidth: 2.5 }} />Confirmado</>
+                                     )}
                                    </span>
                                    <button
                                      className="manage-event-btn v2-secondary-action"
                                      style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', borderRadius: '100px' }}
                                      onClick={(e) => {
                                        e.stopPropagation();
+                                       setSelectedTicketGroup(item.tickets || [item.ticket]);
                                        setSelectedTicket(item.ticket);
                                      }}
                                    >
-                                     Ver Ingresso
+                                     {item.ticketCount > 1 ? `Ver ${item.ticketCount} ingressos` : 'Ver ingresso'}
                                    </button>
                                  </div>
                                )}
@@ -860,8 +1006,14 @@ const Events = () => {
       {/* Ticket Modal */}
       {selectedTicket && (
         <TicketModal
+          key={selectedTicket.id}
           ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
+          ticketGroup={selectedTicketGroup.length ? selectedTicketGroup : [selectedTicket]}
+          onSelectTicket={setSelectedTicket}
+          onClose={() => {
+            setSelectedTicket(null);
+            setSelectedTicketGroup([]);
+          }}
         />
       )}
 
