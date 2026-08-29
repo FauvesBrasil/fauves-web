@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, Users } from 'lucide-react';
 import HelpHeader from '@/components/HelpHeader';
 import HelpCategoryCard from '@/components/HelpCategoryCard';
 import HelpSearchBar from '@/components/HelpSearchBar';
+import { fetchApi } from '@/lib/apiBase';
 
 interface Category {
     id: string;
@@ -37,8 +38,8 @@ const HelpOrganizer = () => {
     const loadData = async () => {
         try {
             const [categoriesRes, articlesRes] = await Promise.all([
-                fetch('http://localhost:4000/api/help/categories?audience=organizer'), // Filter organizer only
-                fetch('http://localhost:4000/api/help/popular?limit=6&audience=organizer'), // Filter organizer only
+                fetchApi('/api/help/categories?audience=organizer'),
+                fetchApi('/api/help/popular?limit=6&audience=organizer'),
             ]);
 
             const categoriesData = await categoriesRes.json();
@@ -55,7 +56,7 @@ const HelpOrganizer = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-white via-purple-50/30 to-indigo-50/30 dark:from-[#0b0b0b] dark:via-purple-950/10 dark:to-indigo-950/10">
+            <div className="dark min-h-screen bg-[#111315]">
                 <HelpHeader />
                 <div className="flex items-center justify-center h-96">
                     <div className="text-zinc-600 dark:text-zinc-400">Carregando...</div>
@@ -65,10 +66,10 @@ const HelpOrganizer = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-white via-purple-50/30 to-indigo-50/30 dark:from-[#0b0b0b] dark:via-purple-950/10 dark:to-indigo-950/10">
+        <div className="dark min-h-screen overflow-x-hidden bg-[#111315]">
             <HelpHeader />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12 sm:pb-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-32 pb-12 sm:pb-16">
                 {/* Hero Section */}
                 <div className="text-center mb-12">
                     {/* Organizer Badge */}
@@ -77,7 +78,7 @@ const HelpOrganizer = () => {
                         Central para Organizadores
                     </div>
 
-                    <h1 className="text-4xl sm:text-5xl font-bold text-zinc-900 dark:text-white mb-4">
+                    <h1 className="text-3xl sm:text-5xl font-bold text-zinc-900 dark:text-white mb-4">
                         Gerenciando seu evento?
                     </h1>
                     <p className="text-lg text-zinc-600 dark:text-zinc-400 mb-8 max-w-2xl mx-auto">
@@ -85,7 +86,7 @@ const HelpOrganizer = () => {
                     </p>
 
                     {/* Search Bar */}
-                    <HelpSearchBar />
+                    <div className="mx-auto max-w-2xl"><HelpSearchBar /></div>
 
                     {/* Quick links */}
                     <div className="mt-6 flex justify-center gap-4 flex-wrap">
@@ -140,10 +141,11 @@ const HelpOrganizer = () => {
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {popularArticles.map((article) => (
-                                <div
-                                    key={article.id}
-                                    onClick={() => navigate(`/ajuda/organizador/artigo/${article.slug}`)}
-                                    className="p-6 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-lg transition-all cursor-pointer group"
+                            <button
+                                type="button"
+                                key={article.id}
+                                onClick={() => navigate(`/ajuda/organizador/artigo/${article.slug}`)}
+                                className="block w-full p-5 sm:p-6 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-purple-300 dark:hover:border-purple-700 hover:shadow-lg transition-all cursor-pointer group text-left"
                                 >
                                     <div className="flex items-start gap-3 mb-3">
                                         <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
@@ -157,7 +159,7 @@ const HelpOrganizer = () => {
                                     <div className="mt-4 text-xs text-zinc-500 dark:text-zinc-500">
                                         {article.category.name}
                                     </div>
-                                </div>
+                                </button>
                             ))}
                         </div>
                     </div>

@@ -67,7 +67,7 @@ const ConnectionStatusToast: React.FC = () => {
     <div
       role="alert"
       aria-live="assertive"
-      className="fixed bottom-4 left-1/2 z-[10000] flex w-[calc(100%-2rem)] max-w-[430px] -translate-x-1/2 items-center gap-3 rounded-xl border border-border bg-popover px-3.5 py-3 text-popover-foreground shadow-[0_14px_40px_rgba(0,0,0,0.24)]"
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 z-[10000] flex w-[calc(100%_-_2rem)] max-w-[430px] -translate-x-1/2 items-center gap-3 rounded-xl border border-border bg-popover px-3.5 py-3 text-popover-foreground shadow-[0_14px_40px_rgba(0,0,0,0.24)]"
     >
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[#EF4118]/12 text-[#EF4118]">
         <WifiOff size={19} strokeWidth={2.2} />

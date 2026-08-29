@@ -4,6 +4,7 @@ import CheckoutHeader from '@/components/CheckoutHeader';
 import { Button } from '@/components/ui/button';
 import LottieReact from '@/components/LottieReact';
 import ticketQuery from '../assets/ticket-query-on.json';
+import { clearCheckoutSelection } from '@/lib/checkoutSelection';
 
 export default function CheckoutCanceled() {
   const [params] = useSearchParams();
@@ -16,6 +17,10 @@ export default function CheckoutCanceled() {
       localStorage.removeItem('checkoutSessionId');
       localStorage.removeItem('checkoutBuyer:v1');
       localStorage.removeItem('checkoutOrder');
+      sessionStorage.removeItem('checkoutSessionId');
+      sessionStorage.removeItem('checkoutBuyer:v1');
+      sessionStorage.removeItem('checkoutOrder');
+      clearCheckoutSelection();
       try {
         // clear the session-backed checkout timer so it stops counting elsewhere
         // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -26,11 +31,11 @@ export default function CheckoutCanceled() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden flex flex-col bg-white dark:bg-[#0b0b0b]">
       <CheckoutHeader />
-      <main className="flex-1 flex items-start justify-center bg-white">
-        <div className="w-full max-w-2xl mt-0 px-8">
-          <div className="bg-white p-10 rounded-lg text-center">
+      <main className="flex flex-1 items-center justify-center bg-white px-4 py-10 dark:bg-[#0b0b0b]">
+        <div className="w-full max-w-2xl">
+          <div className="rounded-2xl bg-white p-10 text-center dark:bg-[#0b0b0b] max-md:p-5">
             {/* smaller Lottie so it doesn't create excessive whitespace */}
             <div className="mx-auto w-24 h-24">
               <LottieReact animationData={ticketQuery} loop autoplay style={{ width: 96, height: 96 }} />
@@ -42,40 +47,38 @@ export default function CheckoutCanceled() {
 
             {(expired || reason === 'timeout') ? (
               <>
-                <h2 className="mt-4 text-2xl font-semibold">SESSÃO EXPIRADA</h2>
-                <p className="mt-2 text-sm text-gray-600">A reserva foi cancelada porque ultrapassou o limite de 10 minutos. Infelizmente, não podemos mantê-la por mais tempo. Por favor, volte para a página de Ingressos e tente de novo.</p>
+                <h1 className="mt-4 text-2xl font-semibold text-slate-900 dark:text-white">Sessão expirada</h1>
+                <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-slate-300">A reserva foi cancelada porque ultrapassou o limite de tempo. Volte aos ingressos e tente novamente.</p>
                 <div className="mt-6 flex justify-center">
-                  <Button onClick={() => {
+                  <Button className="min-h-11" onClick={() => {
                     try { localStorage.removeItem('checkoutSessionId'); } catch (e) { }
                     if (eventId) {
-                      // Assume eventId could be slug or UUID - use /event/ prefix for safety
-                      navigate(`/event/${encodeURIComponent(eventId)}`);
+                      navigate(`/select-tickets/${encodeURIComponent(eventId)}`);
                     } else {
-                      navigate('/select-tickets');
+                      navigate('/discover');
                     }
                   }}>
-                    ← VOLTAR AOS INGRESSOS
+                    Voltar aos ingressos
                   </Button>
                 </div>
               </>
             ) : (
               <>
-                <h2 className="mt-4 text-2xl font-semibold">Pedido cancelado</h2>
-                <p className="mt-2 text-sm text-gray-600">Seu pedido foi cancelado. Se quiser, você pode tentar comprar novamente ou procurar outros eventos.</p>
+                <h1 className="mt-4 text-2xl font-semibold text-slate-900 dark:text-white">Pedido cancelado</h1>
+                <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-slate-300">Seu pedido foi cancelado. Você pode tentar comprar novamente ou procurar outros eventos.</p>
 
-                <div className="mt-6 flex justify-center gap-4">
-                  <Button onClick={() => {
+                <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                  <Button className="min-h-11" onClick={() => {
                     try { localStorage.removeItem('checkoutSessionId'); } catch (e) { }
                     if (eventId) {
-                      // Assume eventId could be slug or UUID - use /event/ prefix for safety
-                      navigate(`/event/${encodeURIComponent(eventId)}`);
+                      navigate(`/select-tickets/${encodeURIComponent(eventId)}`);
                     }
-                    else navigate('/');
+                    else navigate('/discover');
                   }}>
                     Comprar novamente
                   </Button>
 
-                  <Button variant="outline" onClick={() => { try { localStorage.removeItem('checkoutSessionId'); } catch (e) { }; navigate('/'); }}>Encontrar outros eventos</Button>
+                  <Button className="min-h-11" variant="outline" onClick={() => { try { localStorage.removeItem('checkoutSessionId'); } catch (e) { }; navigate('/discover'); }}>Encontrar outros eventos</Button>
                 </div>
               </>
             )}

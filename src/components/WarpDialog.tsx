@@ -133,7 +133,7 @@ export function WarpDialog({
             {/* Content */}
             <Dialog.Content asChild>
               <motion.div
-                className="fixed left-[50%] top-[50%] z-50 w-full max-w-md"
+                className="fixed left-[50%] top-[50%] z-50 w-[calc(100%_-_2rem)] max-w-md"
                 initial={{ 
                   opacity: 0, 
                   scale: 0.8, 
@@ -162,7 +162,7 @@ export function WarpDialog({
                 style={{ perspective: 1000 }}
               >
                 <motion.div
-                  className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl p-6 relative border-2 border-red-500/20"
+                  className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl p-6 max-sm:p-5 relative border-2 border-red-500/20"
                   initial={{ boxShadow: '0 0 0 rgba(239, 68, 68, 0)' }}
                   animate={{ 
                     boxShadow: [
@@ -223,7 +223,7 @@ export function WarpDialog({
                   )}
 
                   {/* Actions */}
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 max-sm:flex-col-reverse">
                     <motion.button
                       onClick={handleCancel}
                       disabled={loading}

@@ -519,7 +519,7 @@ const OrganizationPublicProfile: React.FC = () => {
   }
 
   return (
-    <div style={{
+    <div className="calendar-public-profile" style={{
       background: isDark
         ? `radial-gradient(ellipse 105% 760px at 50% -150px, ${themeColor}30 0%, ${themeColor}12 42%, transparent 78%), ${pageBg}`
         : `radial-gradient(ellipse 105% 680px at 50% -150px, ${themeColor}18 0%, transparent 76%), ${pageBg}`,
@@ -539,7 +539,7 @@ const OrganizationPublicProfile: React.FC = () => {
       <main className="calendar-profile-shell" style={{ maxWidth: 1056, margin: '0 auto', padding: '24px 24px 0', position: 'relative', zIndex: 2 }}>
         
         {/* ── Banner/Cover Container ── */}
-        <div style={{
+        <div className="calendar-profile-cover" style={{
           width: '100%',
           aspectRatio: '3.5',
           borderRadius: 12,
@@ -550,7 +550,7 @@ const OrganizationPublicProfile: React.FC = () => {
           position: 'relative',
           border: `1px solid ${cardBorder}`
         }}>
-          <div style={{
+          <div className="calendar-profile-logo" style={{
             position: 'absolute',
             inset: 0,
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%)'
@@ -640,7 +640,7 @@ const OrganizationPublicProfile: React.FC = () => {
         </div>
 
         {/* ── Brand Header block ── */}
-        <div className="profile-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginTop: 12, padding: '0 35px' }}>
+        <div className="profile-inner calendar-profile-brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginTop: 12, padding: '0 35px' }}>
           <div>
             {/* Title */}
             <h1 style={{
@@ -1259,18 +1259,36 @@ const OrganizationPublicProfile: React.FC = () => {
         }
         @media (max-width: 768px) {
           .calendar-profile-shell {
-            padding-left: 16px !important;
-            padding-right: 16px !important;
+            padding: 14px 12px 0 !important;
           }
           .profile-inner {
-            padding-left: 4px !important;
-            padding-right: 4px !important;
+            padding-left: 2px !important;
+            padding-right: 2px !important;
           }
           .profile-cols {
             grid-template-columns: 1fr !important;
             gap: 24px !important;
           }
-          .profile-overlap-row { margin-top: -38px !important; }
+          .calendar-profile-cover { min-height: 132px; aspect-ratio: 16 / 7 !important; border-radius: 10px !important; }
+          .profile-overlap-row { margin-top: -40px !important; align-items: flex-end !important; }
+          .calendar-profile-logo { width: 82px !important; height: 82px !important; border-radius: 12px !important; }
+          .calendar-follow-button { min-height: 44px; margin-bottom: 0; padding: 10px 16px; }
+          .calendar-profile-brand { margin-top: 10px !important; }
+          .calendar-profile-brand h1 { max-width: 100%; overflow-wrap: anywhere; font-size: 1.65rem !important; }
+          .calendar-view-actions { width: 100%; justify-content: flex-end; }
+          .calendar-view-switch button { width: 40px; height: 38px; }
+          .calendar-view-switch:before { width: 40px; height: 38px; }
+          .calendar-view-switch[data-view='list']:before { transform: translateX(40px); }
+          .calendar-search-trigger, .calendar-ical-trigger { width: 44px; height: 44px; }
+          .calendar-location-tags { margin-top: -2px; }
+          .calendar-social-link { display: grid; width: 40px; height: 40px; place-items: center; margin: -8px 0; }
+          .calendar-tooltip:before, .calendar-tooltip:after { display: none; }
+        }
+        @media (max-width: 380px) {
+          .calendar-profile-shell { padding-left: 8px !important; padding-right: 8px !important; }
+          .calendar-profile-cover { min-height: 120px; }
+          .calendar-profile-logo { width: 76px !important; height: 76px !important; }
+          .profile-overlap-row { margin-top: -36px !important; }
         }
       ` }} />
     </div>

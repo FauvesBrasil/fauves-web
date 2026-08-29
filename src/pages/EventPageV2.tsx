@@ -2069,12 +2069,32 @@ const EventPageV2: React.FC = () => {
         }
 
         @media (max-width: 650px) {
+          .page-container { padding-top: 52px; }
           .event-page-content-wrapper {
             flex-direction: column;
+            gap: 1.75rem;
+            padding: 14px 16px 48px;
           }
           .event-page-left {
             width: 100%;
+            gap: 1.25rem;
           }
+          .event-page-right { gap: 1.25rem; }
+          .event-title { font-size: clamp(2rem, 10vw, 2.6rem); overflow-wrap: anywhere; }
+          .img-aspect-ratio { border-radius: min(var(--card-border-radius), 14px); }
+          .row-container { gap: .75rem; }
+          .row-title { max-width: 100%; }
+          .spark-content { overflow-wrap: anywhere; }
+          .spark-content img, .spark-content iframe, .spark-content video { max-width: 100% !important; height: auto !important; }
+          .lux-button.primary.solid { min-height: 44px; }
+          .count-button { width: 40px; height: 40px; }
+          .manage-card { gap: 10px; flex-wrap: wrap; }
+        }
+
+        @media (max-width: 360px) {
+          .event-page-content-wrapper { padding-left: 12px; padding-right: 12px; }
+          .event-title { font-size: 1.9rem; }
+          .row-desc { white-space: normal; overflow-wrap: anywhere; }
         }
         
         @keyframes fadeIn {
@@ -2249,7 +2269,7 @@ const EventPageV2: React.FC = () => {
 
         @media (max-width: 768px) {
           .lux-glass-overlay {
-            padding: 2rem 1rem 1rem 1rem;
+            padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
           }
           .registration-overlay.two-panels .panels {
             flex-direction: column-reverse;

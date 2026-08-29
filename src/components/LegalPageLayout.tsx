@@ -36,6 +36,7 @@ const LegalPageLayout = ({ title, updatedAt, description, sections }: LegalPageL
           --cta-gradient-start: #5c73ff;
           --cta-gradient-end: #ff6a3d;
           font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          overflow-x: hidden;
         }
         .legal-page-content {
           font-size: 16px;
@@ -70,9 +71,25 @@ const LegalPageLayout = ({ title, updatedAt, description, sections }: LegalPageL
           text-decoration: underline;
           text-underline-offset: 3px;
         }
+        .legal-page-title {
+          overflow-wrap: anywhere;
+        }
         @media (max-width: 640px) {
+          .legal-page-main {
+            padding-top: calc(108px + env(safe-area-inset-top)) !important;
+            padding-bottom: 44px !important;
+          }
+          .legal-page-title {
+            font-size: clamp(2rem, 10.5vw, 2.55rem) !important;
+            line-height: 1.08 !important;
+          }
+          .legal-page-divider {
+            margin-top: 36px !important;
+            margin-bottom: 36px !important;
+          }
           .legal-page-content {
             font-size: 15px;
+            line-height: 1.67;
           }
           .legal-page-content h2 {
             font-size: 1.2rem;
@@ -89,9 +106,9 @@ const LegalPageLayout = ({ title, updatedAt, description, sections }: LegalPageL
         explorarText="Descobrir eventos"
       />
 
-      <main className="mx-auto w-full max-w-[720px] px-5 pb-16 pt-36 sm:px-7 sm:pt-40">
+      <main className="legal-page-main mx-auto w-full max-w-[720px] px-5 pb-16 pt-36 sm:px-7 sm:pt-40">
         <header>
-          <h1 className="max-w-[680px] text-[clamp(2.3rem,4.4vw,3.25rem)] font-semibold leading-[1.12] tracking-[-0.045em] text-white">
+          <h1 className="legal-page-title max-w-[680px] text-[clamp(2.3rem,4.4vw,3.25rem)] font-semibold leading-[1.12] tracking-[-0.045em] text-white">
             {title}
           </h1>
           {updatedAt && (
@@ -99,7 +116,7 @@ const LegalPageLayout = ({ title, updatedAt, description, sections }: LegalPageL
           )}
         </header>
 
-        <div className="my-12 h-px w-full bg-white/[0.09] sm:my-14" />
+        <div className="legal-page-divider my-12 h-px w-full bg-white/[0.09] sm:my-14" />
 
         <article className="legal-page-content">
           {sections.map((section, index) => (

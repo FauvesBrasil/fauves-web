@@ -229,6 +229,7 @@ const AppInner = () => {
           <Route path="/u/:userId" element={<PublicUserProfile />} />
           <Route path="/user/:userId" element={<UserProfileRedirect />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/meus-ingressos" element={<Navigate to="/events" replace />} />
           <Route path="/embed/calendar/:calendarId/events" element={<CalendarEmbed />} />
           <Route path="/organizer-dashboard" element={<Navigate to="/organizer-events" replace />} />
           <Route path="/jornada-produtor" element={<ProtectedOrganizerRoute><ProducerJourneyPage /></ProtectedOrganizerRoute>} />
@@ -383,6 +384,13 @@ const AppInner = () => {
         !location.pathname.startsWith('/participantes') &&
         !location.pathname.startsWith('/gerenciar-equipe') &&
         !location.pathname.startsWith('/v2/create') &&
+        !location.pathname.startsWith('/checkout') &&
+        !location.pathname.startsWith('/select-tickets') &&
+        !location.pathname.startsWith('/profile') &&
+        !location.pathname.startsWith('/notifications') &&
+        !location.pathname.startsWith('/account-settings') &&
+        !location.pathname.startsWith('/v2/account-settings') &&
+        !location.pathname.startsWith('/reset-password') &&
         <ChatWidget />}
 
       <AuthModalWrapper />

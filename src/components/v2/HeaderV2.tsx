@@ -2,9 +2,10 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Bell, LogOut, Settings, User, Mail, Plus, Search, Home, Users, Compass, HelpCircle, Calendar, ChevronRight, Copy, Download, Check } from 'lucide-react';
+import { Bell, LogOut, Settings, User, Mail, Plus, Search, Home, Users, Compass, HelpCircle, Calendar, ChevronRight, Copy, Download, Check, Menu, X } from 'lucide-react';
 import { apiUrl, fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { getEventPath, getOrganizationPath } from '@/lib/eventUrl';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import fauvesBrandSvg from '@/assets/fauves-logotipo-brand.svg?raw';
 
 /* ─── LUMA DESIGN TOKENS ────────────────────────────────────────────────── */
@@ -22,11 +23,46 @@ const luma = {
 };
 
 /* ─── SVGS ORIGINAIS ────────────────────────────────────────────────────── */
-const FauvesLogo = () => (
-  <svg width="54" height="25" viewBox="0 0 54 25" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M49.3034 0L23.8588 4.80573L1.0173 2.59641L0 19.1231L8.20807 23.6367L33.9498 18.3538L50.9785 18.1225L53.2895 13.5894L49.3034 0Z" fill="currentColor" />
-  </svg>
-);
+const FauvesLogo = ({ isDark }: { isDark: boolean }) => {
+  const maskId = React.useId().replace(/:/g, '');
+
+  return (
+    <svg
+      className={`header-fauves-logo ${isDark ? 'is-dark' : 'is-light'}`}
+      width="54"
+      viewBox="60 280 480 250"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <mask id={maskId} x="50" y="275" width="500" height="260" maskUnits="userSpaceOnUse" style={{ maskType: 'luminance' }}>
+          <path fill="white" d="M502.9,313.4l-230.5,43.7-206.9-20.1-9.2,150.4,74.3,41.1,233.2-48.1,154.3-2.1,20.9-41.3-36.1-123.6Z" />
+
+          <g className="fauves-logo-cut fauves-logo-cut-f">
+            <path fill="black" d="M93.8,381.6c0-.3.1-.9,1.4-1,5.6-.7,25.8-3.4,33.2-4.4,9.6-1.3,38.2-5.1,38.2-5.1l1.6,20.8-71,14.5-3.4-24.8Z" />
+            <path fill="black" d="M138.5,474.1l-33,6.2c-1.7-14.7-4.1-37.9-6.3-59,0,0,57-8.3,64.9-9.9.9,4.4,1.2,12.5,1.2,12.5-15.8,3.9-16.6,4.2-29.3,6.4,1.8,15.1,2.6,26.1,4.4,41.3.1,1.2-.7,2.3-1.9,2.4Z" />
+          </g>
+          <path className="fauves-logo-cut fauves-logo-cut-a" fill="black" d="M219.1,476.9c-.9.1-1.8-.5-2-1.4-2.7-10.6-12.1-41-12.1-41-6.4-.1-10.7,0-17.3.1-1.2,7.1-3.5,20-5.4,30.3l-18.2,3.7c5.3-24.5,12.6-56.8,17.7-80.2.1-.5.8-2.1,3.9-2l29.8.7c3.3,10.1,6.5,20.2,9.8,30.2,4.8,14.6,14,40.3,18.8,54.9l-25,4.7Z" />
+          <path className="fauves-logo-cut fauves-logo-cut-u" fill="black" d="M282.2,460.9c-32.8,6.6-34.7-20.4-37.6-35.6-2-10.5-7.3-37.6-7.3-37.6,0,0,16.2.5,17.2.5,1,0,1.8.7,2,1.6.7,3.6,3.1,16.8,6,31.8,3.6,19.1,6.9,27.8,17.9,25.8,12.9-2.3,11.2-12.9,8.6-30-1.4-9-3.3-19.6-4.6-26.8l-1.5-8.3,15.5-4.4,13.2,68s-10.8,11.2-29.3,14.9Z" />
+          <path className="fauves-logo-cut fauves-logo-cut-v" fill="black" d="M351.4,457.3l-19.9,1.8s-17-76.2-19-85.3l10.4-3c.9,0,1.6.7,1.7,1.6.2,1.6,13.1,64.7,13.2,65.1,0-.4,11.1-63,11.3-64.6,0-.9.8-1.6,1.7-1.6l16.7-1.7c-1.6,9.2-16.2,87.8-16.2,87.8Z" />
+          <g className="fauves-logo-cut fauves-logo-cut-e">
+            <path fill="black" d="M377.9,368.2c15.6-1.1,36.6-3.6,52.8-4.8l-1.4,15c-.1.7-.7,1.8-2.7,2.3l-48.7,11.6c-.3-10.6,0-22.9,0-24.1Z" />
+            <path fill="black" d="M425,398.8l1.2,18.4-45,3-1.2-18.4,45-3Z" />
+            <path fill="black" d="M380.5,455s-.2-9.6-.5-24.1c0,0,45.6,2.3,53.3,1.5,1,0,1.8.8,2,2.1l1.8,14.9c-16.7,1.6-39.1,3.8-56.5,5.5Z" />
+          </g>
+          <path className="fauves-logo-cut fauves-logo-cut-s" fill="black" d="M474.7,461.5l-22.9-15.5c11-13.3,17-23.6,9.7-30.1-18.2-16.5-19.2-23.1-19.5-32.2-.6-20.6,17.5-35.3,17.5-35.3l21.2,8.1c.4.2,1.4.7.3,1.7h0c-23.6,21.1-10.8,34.6-10.8,34.6,13,14.4,20.6,14.1,20.6,29.1s-14.1,37-16.2,39.5Z" />
+        </mask>
+      </defs>
+
+      <path
+        className="fauves-logo-shape"
+        fill="currentColor"
+        mask={`url(#${maskId})`}
+        d="M502.9,313.4l-230.5,43.7-206.9-20.1-9.2,150.4,74.3,41.1,233.2-48.1,154.3-2.1,20.9-41.3-36.1-123.6Z"
+      />
+    </svg>
+  );
+};
 
 const LumaSparkle = () => (
   <svg width="24" height="24" viewBox="0 0 133 134" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -604,6 +640,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLogoMenuOpen, setIsLogoMenuOpen] = useState(false);
   const [logoCopyState, setLogoCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isScrolled, setIsScrolled] = useState(false);
@@ -634,6 +671,25 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   // apenas para casos em que o header precisa declarar a largura diretamente.
   const resolvedMaxWidth = contentMaxWidth || 'var(--page-max-width, 1200px)';
   const isLoggedIn = !!user;
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsNotificationsOpen(false);
+    setIsProfileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const releaseScrollLock = acquireDocumentScrollLock();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape);
+      releaseScrollLock();
+    };
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     if (!isLogoMenuOpen) setLogoCopyState('idle');
@@ -747,7 +803,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
 
   return (
     <>
-      <nav ref={navRef} className={`luma-nav-v2 ${transparent && !isScrolled ? 'transparent' : 'opaque'} ${isDarkTheme ? 'dark-mode-override' : ''}`} style={{
+      <nav ref={navRef} className={`luma-nav-v2 ${transparent && !isScrolled ? 'transparent' : 'opaque'} ${isDarkTheme ? 'dark-mode-override' : ''} ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`} style={{
         position: fixed ? 'fixed' : 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0.75rem 1rem',
@@ -759,10 +815,11 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             to="/"
             className="logo-wrapper"
             onContextMenu={handleLogoContextMenu}
+            aria-label="Fauves — página inicial"
             aria-haspopup="menu"
             aria-expanded={isLogoMenuOpen}
           >
-            <FauvesLogo />
+            <FauvesLogo isDark={isDarkTheme} />
           </Link>
 
           <AnimatePresence>
@@ -834,7 +891,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         )}
 
         {/* Extremidade Direita: Ícones e Ações */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexShrink: 0 }}>
+        <div className="header-desktop-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexShrink: 0 }}>
           {!isLoggedIn ? (
             <>
               <a href={explorarLink} className="luma-nav-link" style={{ color: contentColor }}>
@@ -901,7 +958,88 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             </>
           )}
         </div>
+
+        <button
+          type="button"
+          className="header-mobile-trigger"
+          onClick={() => setIsMobileMenuOpen((open) => !open)}
+          aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="fauves-mobile-menu"
+          style={{ color: contentColor }}
+        >
+          {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
       </nav>
+
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            id="fauves-mobile-menu"
+            className={`header-mobile-menu ${isDarkTheme ? 'is-dark' : 'is-light'}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu principal"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <div className="header-mobile-menu-inner">
+              <nav className="header-mobile-links" aria-label="Navegação mobile">
+                {isLoggedIn ? (
+                  <>
+                    <Link to="/events"><EventosIcon /><span>Eventos</span><ChevronRight size={18} /></Link>
+                    <Link to="/organizations"><OrganizacoesIcon /><span>Calendários</span><ChevronRight size={18} /></Link>
+                    <Link to="/discover"><DescobrirIcon /><span>Descobrir</span><ChevronRight size={18} /></Link>
+                    <Link to="/create"><Plus size={17} /><span>Criar evento</span><ChevronRight size={18} /></Link>
+                    <button type="button" onClick={() => { setIsMobileMenuOpen(false); setIsSearchOpen(true); }}>
+                      <Search size={17} /><span>Buscar</span><ChevronRight size={18} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link to={explorarLink}><Compass size={17} /><span>{explorarText}</span><ChevronRight size={18} /></Link>
+                    <Link to="/pricing"><Calendar size={17} /><span>Preços</span><ChevronRight size={18} /></Link>
+                    <Link to="/ajuda"><HelpCircle size={17} /><span>Central de Ajuda</span><ChevronRight size={18} /></Link>
+                  </>
+                )}
+              </nav>
+
+              {isLoggedIn ? (
+                <div className="header-mobile-account">
+                  <Link to={`/u/${user?.id}`} className="header-mobile-profile">
+                    <span className="header-mobile-avatar">
+                      {user?.photoUrl ? <img src={user.photoUrl} alt="" /> : (user?.name?.[0] || 'U')}
+                    </span>
+                    <span className="header-mobile-profile-copy">
+                      <strong>{user?.name || 'Minha conta'}</strong>
+                      <small>{user?.email}</small>
+                    </span>
+                    <ChevronRight size={18} />
+                  </Link>
+                  <div className="header-mobile-account-actions">
+                    <Link to="/v2/account-settings"><Settings size={16} /> Configurações</Link>
+                    <button type="button" onClick={() => { setIsMobileMenuOpen(false); logout(); }}><LogOut size={16} /> Sair</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="header-mobile-ctas">
+                  <Link to={actionButtonLink} className="header-mobile-login">{actionButtonText}</Link>
+                  <Link to="/create" className="header-mobile-create">Criar meu evento</Link>
+                </div>
+              )}
+
+              <nav className="header-mobile-legal" aria-label="Links institucionais">
+                <Link to="/termos-de-uso">Termos</Link>
+                <Link to="/politica-de-privacidade">Privacidade</Link>
+                <Link to="/seguranca">Segurança</Link>
+                <Link to="/dmca">DMCA</Link>
+              </nav>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <SearchModal isOpen={isSearchOpen} isDark={isDarkTheme} onClose={() => setIsSearchOpen(false)} />
 
@@ -947,6 +1085,184 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         .header-content-alignment.is-measured {
           padding-left: 0;
           padding-right: 0;
+        }
+
+        .header-mobile-trigger {
+          display: none;
+          width: 42px;
+          height: 42px;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          border: 1px solid transparent;
+          border-radius: 10px;
+          background: transparent;
+          cursor: pointer;
+        }
+
+        .header-mobile-menu {
+          position: fixed;
+          z-index: 999;
+          inset: 0;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          padding: calc(76px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+        }
+        .header-mobile-menu.is-dark {
+          color: #fff;
+          background: rgba(17, 20, 22, .98);
+        }
+        .header-mobile-menu.is-light {
+          color: #131517;
+          background: rgba(247, 248, 249, .98);
+        }
+        .header-mobile-menu-inner {
+          display: flex;
+          width: min(100%, 520px);
+          min-height: calc(100dvh - 116px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+          margin: 0 auto;
+          flex-direction: column;
+        }
+        .header-mobile-links {
+          display: flex;
+          flex-direction: column;
+        }
+        .header-mobile-links > a,
+        .header-mobile-links > button {
+          display: grid;
+          grid-template-columns: 22px minmax(0, 1fr) 18px;
+          min-height: 54px;
+          align-items: center;
+          gap: 10px;
+          padding: 0 4px;
+          border: 0;
+          border-bottom: 1px solid currentColor;
+          border-radius: 0;
+          background: transparent;
+          color: inherit;
+          cursor: pointer;
+          font: inherit;
+          font-size: 16px;
+          font-weight: 600;
+          text-align: left;
+          text-decoration: none;
+        }
+        .header-mobile-menu.is-dark .header-mobile-links > a,
+        .header-mobile-menu.is-dark .header-mobile-links > button { border-bottom-color: rgba(255,255,255,.09); }
+        .header-mobile-menu.is-light .header-mobile-links > a,
+        .header-mobile-menu.is-light .header-mobile-links > button { border-bottom-color: rgba(19,21,23,.1); }
+        .header-mobile-links > a > svg:last-child,
+        .header-mobile-links > button > svg:last-child { opacity: .4; }
+        .header-mobile-account {
+          margin-top: 22px;
+          padding: 14px;
+          border: 1px solid rgba(128,128,128,.16);
+          border-radius: 14px;
+          background: rgba(128,128,128,.06);
+        }
+        .header-mobile-profile {
+          display: flex;
+          min-width: 0;
+          align-items: center;
+          gap: 12px;
+          color: inherit;
+          text-decoration: none;
+        }
+        .header-mobile-avatar {
+          display: grid;
+          width: 42px;
+          height: 42px;
+          flex: 0 0 42px;
+          overflow: hidden;
+          place-items: center;
+          border-radius: 50%;
+          background: rgba(128,128,128,.16);
+          font-weight: 700;
+        }
+        .header-mobile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .header-mobile-profile-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+        .header-mobile-profile-copy strong,
+        .header-mobile-profile-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .header-mobile-profile-copy strong { font-size: 14px; }
+        .header-mobile-profile-copy small { margin-top: 2px; opacity: .5; font-size: 12px; }
+        .header-mobile-account-actions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-top: 14px;
+        }
+        .header-mobile-account-actions a,
+        .header-mobile-account-actions button {
+          display: flex;
+          min-height: 42px;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          padding: 0 10px;
+          border: 0;
+          border-radius: 9px;
+          background: rgba(128,128,128,.1);
+          color: inherit;
+          cursor: pointer;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .header-mobile-ctas {
+          display: grid;
+          grid-template-columns: .8fr 1.2fr;
+          gap: 10px;
+          margin-top: 24px;
+        }
+        .header-mobile-ctas a {
+          display: flex;
+          min-height: 48px;
+          align-items: center;
+          justify-content: center;
+          padding: 0 14px;
+          border-radius: 11px;
+          color: inherit;
+          font-size: 14px;
+          font-weight: 700;
+          text-decoration: none;
+        }
+        .header-mobile-login { border: 1px solid rgba(128,128,128,.24); }
+        .header-mobile-create { background: #2A2AD7; color: #fff !important; }
+        .header-mobile-legal {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px 18px;
+          margin-top: auto;
+          padding-top: 32px;
+        }
+        .header-mobile-legal a {
+          color: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          opacity: .45;
+          text-decoration: none;
+        }
+
+        @media (max-width: 767px) {
+          .luma-nav-v2 {
+            min-height: calc(64px + env(safe-area-inset-top));
+            padding-top: calc(.7rem + env(safe-area-inset-top)) !important;
+            padding-right: 14px !important;
+            padding-left: 14px !important;
+          }
+          .luma-nav-v2.mobile-menu-open {
+            background: transparent !important;
+            border-bottom-color: transparent !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+          .header-desktop-actions,
+          .header-content-alignment { display: none !important; }
+          .header-mobile-trigger { display: inline-flex; }
+          .luma-nav-v2.dark-mode-override .header-mobile-trigger { background: rgba(255,255,255,.07); }
+          .luma-nav-v2:not(.dark-mode-override) .header-mobile-trigger { background: rgba(19,21,23,.055); }
         }
 
         .luma-nav-v2.transparent {
@@ -998,7 +1314,9 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.2s cubic-bezier(.4, 0, .2, 1);
+          min-width: 44px;
+          min-height: 44px;
+          transition: transform 0.2s cubic-bezier(.4, 0, .2, 1), color 0.2s ease;
           text-decoration: none;
           cursor: pointer;
           color: rgba(19, 21, 23, 0.45) !important;
@@ -1014,6 +1332,67 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         }
         .logo-wrapper:active {
           transform: scale(0.96);
+        }
+
+        .header-fauves-logo {
+          display: block;
+          width: 54px;
+          height: auto;
+          overflow: visible;
+          transform-origin: center;
+          transition: transform 0.42s cubic-bezier(.2, .85, .25, 1);
+        }
+
+        .header-fauves-logo.is-light { color: #2a2ad7; }
+        .header-fauves-logo.is-dark { color: #ffffff; }
+
+        .fauves-logo-cut {
+          opacity: 0;
+          transform-box: fill-box;
+          transform-origin: center;
+          transition:
+            transform 0.58s cubic-bezier(.16, 1, .3, 1),
+            opacity 0.18s ease;
+          will-change: transform, opacity;
+        }
+
+        .fauves-logo-cut-f { transform: translate(-44px, -30px) rotate(-13deg) scale(.78); transition-delay: 0ms; }
+        .fauves-logo-cut-a { transform: translate(-15px, 42px) rotate(10deg) scale(.72); transition-delay: 35ms; }
+        .fauves-logo-cut-u { transform: translate(8px, -44px) rotate(-9deg) scale(.76); transition-delay: 70ms; }
+        .fauves-logo-cut-v { transform: translate(14px, 40px) rotate(8deg) scale(.74); transition-delay: 105ms; }
+        .fauves-logo-cut-e { transform: translate(34px, -32px) rotate(-11deg) scale(.8); transition-delay: 140ms; }
+        .fauves-logo-cut-s { transform: translate(48px, 24px) rotate(14deg) scale(.72); transition-delay: 175ms; }
+
+        .logo-wrapper:hover .header-fauves-logo,
+        .logo-wrapper:focus-visible .header-fauves-logo,
+        .logo-wrapper:focus-within .header-fauves-logo {
+          transform: none;
+        }
+
+        .logo-wrapper:hover .fauves-logo-cut,
+        .logo-wrapper:focus-visible .fauves-logo-cut,
+        .logo-wrapper:focus-within .fauves-logo-cut {
+          opacity: 1;
+          transform: translate(0, 0) rotate(0) scale(1);
+        }
+
+        @media (max-width: 767px), (hover: none), (pointer: coarse) {
+          .fauves-logo-cut {
+            opacity: 1;
+            transform: translate(0, 0) rotate(0) scale(1);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .header-fauves-logo,
+          .fauves-logo-cut {
+            transition: none;
+          }
+
+          .fauves-logo-cut {
+            opacity: 1;
+            transform: none;
+          }
         }
 
         .logo-context-dismiss {

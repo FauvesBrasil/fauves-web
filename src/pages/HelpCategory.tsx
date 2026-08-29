@@ -72,7 +72,7 @@ const HelpCategory = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 dark:from-[#0b0b0b] dark:via-indigo-950/10 dark:to-purple-950/10">
+            <div className="dark min-h-screen bg-[#111315]">
                 <HelpHeader />
                 <div className="flex items-center justify-center h-96">
                     <div className="text-zinc-600 dark:text-zinc-400">Carregando...</div>
@@ -83,7 +83,7 @@ const HelpCategory = () => {
 
     if (error || !category) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 dark:from-[#0b0b0b] dark:via-indigo-950/10 dark:to-purple-950/10">
+            <div className="dark min-h-screen bg-[#111315]">
                 <HelpHeader />
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
                     <div className="text-center">
@@ -104,10 +104,10 @@ const HelpCategory = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 dark:from-[#0b0b0b] dark:via-indigo-950/10 dark:to-purple-950/10">
+        <div className="dark min-h-screen overflow-x-hidden bg-[#111315]">
             <HelpHeader />
 
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-32 pb-12">
                 {/* Back button */}
                 <button
                     onClick={() => navigate('/ajuda')}
@@ -119,7 +119,7 @@ const HelpCategory = () => {
 
                 {/* Category Header */}
                 <div className="mb-8">
-                    <h1 className="text-4xl font-bold text-zinc-900 dark:text-white mb-3">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-white mb-3 break-words">
                         {category.name}
                     </h1>
                     <p className="text-lg text-zinc-600 dark:text-zinc-400">
@@ -138,14 +138,15 @@ const HelpCategory = () => {
                         </div>
                     ) : (
                         category.articles.map((article) => (
-                            <div
+                            <button
+                                type="button"
                                 key={article.id}
                                 onClick={() => navigate(`/ajuda/artigo/${article.slug}`)}
-                                className="group bg-white dark:bg-[#1a1a1a] rounded-xl p-5 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                className="group block w-full bg-white dark:bg-[#1a1a1a] rounded-xl p-4 sm:p-5 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md transition-all duration-200 cursor-pointer text-left"
                             >
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
+                                <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2 mb-2">
                                             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                                 {article.title}
                                             </h3>
@@ -159,11 +160,11 @@ const HelpCategory = () => {
                                             {article.summary}
                                         </p>
                                     </div>
-                                    <div className="text-sm text-zinc-500 dark:text-zinc-500">
-                                        {article.views} views
+                                    <div className="shrink-0 text-xs sm:text-sm text-zinc-500 dark:text-zinc-500">
+                                        {article.views} visualizações
                                     </div>
                                 </div>
-                            </div>
+                            </button>
                         ))
                     )}
                 </div>

@@ -90,7 +90,7 @@ const Profile = () => {
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) navigate('/');
+    if (!loading && !user) navigate('/signin?redirect=%2Fprofile', { replace: true });
   }, [loading, user, navigate]);
 
   const userName = getFirstName(user) || getDisplayName(user) || 'Perfil';
@@ -161,7 +161,14 @@ const Profile = () => {
     return (
       <Card 
         role="button"
+        tabIndex={0}
         onClick={() => setSelectedTicket(t)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setSelectedTicket(t);
+          }
+        }}
         className={`group relative flex items-center p-0 border-none bg-white dark:bg-[#0d0d0d] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-[28px] overflow-hidden mb-4 ${isInactive ? 'opacity-70 saturate-50' : ''}`}
       >
         <div className="w-24 h-24 sm:w-28 sm:h-28 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#151515] border-r border-dashed border-gray-100 dark:border-[#222] relative shrink-0">
@@ -200,7 +207,14 @@ const Profile = () => {
     return (
       <Card 
         role="button"
+        tabIndex={0}
         onClick={() => setSelectedOrder(order)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setSelectedOrder(order);
+          }
+        }}
         className="flex items-center p-4 bg-white dark:bg-[#0d0d0d] border-none shadow-sm hover:shadow-lg transition-all rounded-[24px] mb-3"
       >
         <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-[#151515] flex items-center justify-center shrink-0">
@@ -272,7 +286,7 @@ const Profile = () => {
 
     return (
       <div 
-        className="fixed inset-0 flex items-center justify-center p-4 sm:p-6 bg-[#091747]/90 backdrop-blur-2xl animate-in fade-in duration-500 overflow-hidden" 
+        className="fixed inset-0 flex items-center justify-center p-2 sm:p-6 bg-[#091747]/90 backdrop-blur-2xl animate-in fade-in duration-500 overflow-hidden"
         style={{ zIndex: 99999 }}
       >
         <div className="absolute inset-0" onClick={onClose} />
@@ -298,14 +312,15 @@ const Profile = () => {
         ` }} />
 
         {/* 👈 FIX: Added ticket-modal-container and overflow-y-auto HERE */}
-        <div className="ticket-modal-container w-full max-w-[440px] h-fit md:h-[780px] max-h-[90vh] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl overflow-y-auto overflow-x-hidden relative flex flex-col animate-in zoom-in-95 duration-300">
+        <div className="ticket-modal-container w-full max-w-[440px] h-fit md:h-[780px] max-h-[calc(100dvh-1rem)] bg-white dark:bg-[#0b0b0b] rounded-[32px] sm:rounded-[48px] shadow-2xl overflow-y-auto overflow-x-hidden relative flex flex-col animate-in zoom-in-95 duration-300">
            
            {/* Modal Header (Unified) */}
            <div className="p-8 pb-0 flex justify-between items-center absolute top-0 left-0 right-0 z-20">
               {showTransfer ? (
                 <button 
                   onClick={() => setShowTransfer(false)}
-                  className="w-10 h-10 bg-white/80 dark:bg-[#1A1A1A]/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-500 hover:bg-[#2A2AD7] hover:text-white transition-all shadow-sm"
+                  aria-label="Voltar aos detalhes do ingresso"
+                  className="w-11 h-11 bg-white/80 dark:bg-[#1A1A1A]/80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-500 hover:bg-[#2A2AD7] hover:text-white transition-all shadow-sm"
                 >
                   <ChevronLeft className="w-6 h-6" />
                 </button>
@@ -316,7 +331,8 @@ const Profile = () => {
               )}
               <button 
                 onClick={onClose} 
-                className="w-10 h-10 bg-white/20 dark:bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-[#091747] dark:text-white border border-white/20 hover:bg-white/40 transition-colors"
+                aria-label="Fechar ingresso"
+                className="w-11 h-11 bg-white/20 dark:bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-[#091747] dark:text-white border border-white/20 hover:bg-white/40 transition-colors"
                 style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
               >
                 <X className="w-5 h-5" />
@@ -332,6 +348,7 @@ const Profile = () => {
                   <div className="relative h-56 sm:h-64 shrink-0 overflow-hidden">
                     <img 
                       src={resolveImageUrl(ticket.eventBannerUrl || ticket.event?.image || ticket.event?.bannerUrl) || ''} 
+                      alt={`Imagem de ${ticket.eventName || 'evento'}`}
                       className="w-full h-full object-cover" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0b0b0b] via-transparent to-black/20" />
@@ -420,7 +437,7 @@ const Profile = () => {
                   </div>
                </div>
              ) : (
-               <div className="flex-1 flex flex-col p-10 pt-28 animate-in fade-in slide-in-from-left-4 duration-500 overflow-x-hidden">
+               <div className="flex-1 flex flex-col p-6 pt-24 sm:p-10 sm:pt-28 animate-in fade-in slide-in-from-left-4 duration-500 overflow-x-hidden">
                   <div className="w-16 h-16 rounded-[24px] bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7] mb-8">
                     <ArrowRightLeft className="w-8 h-8" />
                   </div>
@@ -487,12 +504,12 @@ const Profile = () => {
         style={{ zIndex: 99999 }}
       >
         <div className="absolute inset-0" onClick={onClose} />
-        <div className="relative w-full max-w-[480px] bg-white dark:bg-[#0b0b0b] rounded-[48px] shadow-2xl p-10 overflow-hidden animate-in zoom-in-95">
+        <div className="relative w-full max-w-[480px] max-h-[calc(100dvh-2rem)] bg-white dark:bg-[#0b0b0b] rounded-[28px] sm:rounded-[48px] shadow-2xl p-6 sm:p-10 overflow-y-auto overflow-x-hidden animate-in zoom-in-95">
            <div className="flex justify-between items-center mb-10">
              <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center text-[#2A2AD7]">
                 <ShoppingBag className="w-7 h-7" />
              </div>
-             <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-[#1A1A1A] rounded-full transition-colors"><X className="w-7 h-7" /></button>
+             <button onClick={onClose} aria-label="Fechar detalhes do pedido" className="min-h-11 min-w-11 p-2 hover:bg-gray-100 dark:hover:bg-[#1A1A1A] rounded-full transition-colors"><X className="w-7 h-7" /></button>
            </div>
            
            <h2 className="text-2xl font-black text-[#091747] dark:text-white mb-2 tracking-tight">Detalhes do Pedido</h2>
@@ -527,7 +544,7 @@ const Profile = () => {
   if (loading) return <ProfilePageSkeleton />;
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0b0b0b] text-[#091747] dark:text-gray-100">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden bg-[#FDFDFD] dark:bg-[#0b0b0b] text-[#091747] dark:text-gray-100">
       <Header />
       
       <div className="pt-[100px] sm:pt-[120px] pb-20">
@@ -544,6 +561,7 @@ const Profile = () => {
               </div>
               <button 
                 onClick={() => navigate('/account-settings')}
+                aria-label="Editar perfil"
                 className="absolute -bottom-2 -right-2 w-11 h-11 bg-white dark:bg-[#1A1A1A] rounded-2xl shadow-xl flex items-center justify-center text-[#2A2AD7] hover:scale-110 active:scale-95 transition-all ring-4 ring-[#FDFDFD] dark:ring-[#0b0b0b]"
               >
                 <Edit className="w-5 h-5" />
@@ -565,13 +583,13 @@ const Profile = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             <div className="lg:col-span-8">
-               <div className="flex gap-2 p-1.5 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[24px] mb-8 w-fit mx-auto sm:mx-0">
+               <div className="grid w-full grid-cols-3 gap-1 p-1.5 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[24px] mb-8 sm:flex sm:w-fit sm:gap-2 sm:mx-0">
                   {['tickets', 'orders', 'following'].map(tab => (
                     <button 
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={`
-                        px-8 py-3.5 rounded-[18px] text-xs font-black uppercase tracking-widest transition-all duration-300
+                        min-h-11 min-w-0 px-2 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-normal transition-all duration-300 sm:px-8 sm:py-3.5 sm:text-xs sm:tracking-widest
                         ${activeTab === tab 
                           ? 'bg-white dark:bg-[#1a1a1a] text-[#2A2AD7] shadow-sm scale-[1.02]' 
                           : 'text-gray-400 hover:text-[#091747] dark:hover:text-white'
@@ -607,7 +625,7 @@ const Profile = () => {
                             title="Nenhum ingresso ativo" 
                             description="Você ainda não possui ingressos para os próximos eventos."
                             actionLabel="Explorar eventos"
-                            onAction={() => navigate('/')}
+                            onAction={() => navigate('/discover')}
                           />
                         )
                       )}
@@ -626,7 +644,7 @@ const Profile = () => {
                             title="Lista de pedidos vazia" 
                             description="Seus pedidos realizados aparecerão listados aqui."
                             actionLabel="Explorar eventos"
-                            onAction={() => navigate('/')}
+                            onAction={() => navigate('/discover')}
                           />
                         )
                       )}
@@ -658,7 +676,7 @@ const Profile = () => {
                             title="Nenhum calendário" 
                             description="Os calendários que você assinar aparecerão aqui para acesso rápido."
                             actionLabel="Explorar Fauves"
-                            onAction={() => navigate('/')}
+                            onAction={() => navigate('/discover')}
                           />
                         )
                       )}
@@ -681,7 +699,7 @@ const Profile = () => {
                <div className="mt-8 p-10 bg-gray-100/50 dark:bg-[#0d0d0d] rounded-[48px] border border-gray-100 dark:border-transparent">
                   <h4 className="text-[#091747] dark:text-white font-black mb-4">Central de Ajuda</h4>
                   <p className="text-gray-400 text-xs font-medium mb-6 leading-relaxed">Precisa de assistência com seus ingressos ou pedidos? Nossa equipe está pronta para ajudar.</p>
-                  <button className="text-xs font-black text-[#2A2AD7] uppercase tracking-widest flex items-center gap-2 hover:translate-x-1 transition-transform">Suporte Fauves <ChevronRight className="w-4 h-4" /></button>
+                  <button onClick={() => navigate('/ajuda')} className="min-h-11 text-xs font-black text-[#2A2AD7] uppercase tracking-widest flex items-center gap-2 hover:translate-x-1 transition-transform">Suporte Fauves <ChevronRight className="w-4 h-4" /></button>
                </div>
             </div>
           </div>

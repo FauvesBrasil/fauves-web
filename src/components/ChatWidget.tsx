@@ -403,9 +403,10 @@ const ChatWidget = () => {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50"
+                aria-label="Abrir chat de suporte"
+                className="fixed bottom-6 right-6 w-14 h-14 max-md:bottom-3 max-md:right-3 max-md:w-12 max-md:h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-50"
             >
-                <MessageSquare className="w-6 h-6" />
+                <MessageSquare className="w-6 h-6 max-md:w-5 max-md:h-5" />
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                         {unreadCount}
@@ -417,13 +418,14 @@ const ChatWidget = () => {
 
     if (isMinimized) {
         return (
-            <div className="fixed bottom-6 right-6 z-50">
+            <div className="fixed bottom-6 right-6 max-md:bottom-3 max-md:right-3 z-50">
                 <button
                     onClick={() => setIsMinimized(false)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 transition-all"
+                    aria-label="Restaurar chat de suporte"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 max-md:w-12 max-md:h-12 max-md:p-0 max-md:rounded-full rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all"
                 >
                     <MessageSquare className="w-5 h-5" />
-                    <span className="font-medium">Chat de Suporte</span>
+                    <span className="font-medium max-md:hidden">Chat de Suporte</span>
                     {unreadCount > 0 && (
                         <span className="bg-white text-indigo-600 text-xs font-bold px-2 py-0.5 rounded-full">
                             {unreadCount}

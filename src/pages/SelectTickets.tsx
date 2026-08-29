@@ -440,19 +440,19 @@ const SelectTickets: React.FC = () => {
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0b0b0b] flex items-center justify-center">
+      <div className="min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex items-center justify-center px-4 text-center">
         <div className="text-lg text-red-600">Evento não encontrado</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0b0b0b]">
+    <div className="min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b]">
       {/* Header */}
       <CheckoutHeader />
 
       {/* Mobile Top Bar - Only visible on mobile */}
-      <div className="md:hidden w-full bg-white dark:bg-[#242424] border-b border-gray-200 dark:border-[#1F1F1F] sticky top-[60px] z-40">
+      <div className="md:hidden w-full bg-white dark:bg-[#242424] border-b border-gray-200 dark:border-[#1F1F1F] sticky top-[56px] z-40">
         <div className="px-4 py-3">
           <div className="flex items-center gap-3">
             {event.image && (
@@ -483,7 +483,7 @@ const SelectTickets: React.FC = () => {
               <Button
                 size="sm"
                 onClick={() => setShowCouponInput(true)}
-                className="gap-1 bg-[#EF4118] hover:bg-[#d63814] text-white h-6 px-2 text-[10px] font-medium flex-shrink-0 rounded-full"
+                className="gap-1 bg-[#EF4118] hover:bg-[#d63814] text-white h-11 px-3 text-[10px] font-medium flex-shrink-0 rounded-full"
               >
                 <Tag className="w-2.5 h-2.5" />
                 Liberar descontos
@@ -809,7 +809,7 @@ const SelectTickets: React.FC = () => {
                                           <Button
                                             size="icon"
                                             onClick={() => handleQuantityChange(ticket.id, 1)}
-                                            className="h-10 w-10 max-md:h-11 max-md:w-full max-md:rounded-xl rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-lg shadow-indigo-500/30 transition-all"
+                                              className="h-10 w-10 max-md:h-11 max-md:w-full max-md:rounded-xl rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-lg shadow-indigo-500/30 transition-all"
                                           >
                                             <Plus className="w-5 h-5" />
                                             <span className="md:hidden ml-2 font-bold">Adicionar</span>
@@ -946,7 +946,7 @@ const SelectTickets: React.FC = () => {
                                   <Button
                                     size="icon"
                                     onClick={() => handleQuantityChange(ticket.id, 1)}
-                                    className="h-10 w-10 max-md:h-11 max-md:w-full max-md:rounded-xl rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-lg shadow-indigo-500/30 transition-all"
+                                    className="h-10 w-10 max-md:h-11 max-md:w-full max-md:rounded-xl rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-lg shadow-indigo-500/30 transition-all"
                                   >
                                     <Plus className="w-5 h-5" />
                                     <span className="md:hidden ml-2 font-bold">Adicionar</span>
@@ -1140,7 +1140,7 @@ const SelectTickets: React.FC = () => {
               damping: 30,
               opacity: { duration: 0.2 }
             }}
-            className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#242424] border-t border-gray-200 dark:border-[#1F1F1F] py-4 max-md:py-3 px-6 max-md:px-4 shadow-2xl z-50"
+            className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#242424] border-t border-gray-200 dark:border-[#1F1F1F] px-6 max-md:px-4 py-4 max-md:pt-3 max-md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-2xl z-50"
           >
             <div className="w-full max-w-5xl mx-auto flex items-center justify-between max-md:flex-col max-md:gap-3">
               <div className="max-md:w-full max-md:flex max-md:justify-between max-md:items-center">
@@ -1179,7 +1179,7 @@ const SelectTickets: React.FC = () => {
               >
                 <Button
                   onClick={handleContinue}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 max-md:h-11 px-8 max-md:px-6 text-lg max-md:text-base max-md:w-full"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 max-md:h-12 px-8 max-md:px-6 text-lg max-md:text-base max-md:w-full"
                 >
                   Quero pagar
                 </Button>

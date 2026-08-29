@@ -294,6 +294,24 @@ export default function CheckoutPix() {
 
   const paid = order?.paymentStatus === 'PAID';
 
+  if (!orderLoading && !loading && error && !order) {
+    return (
+      <div className="flex min-h-[100dvh] w-full flex-col overflow-x-hidden bg-white dark:bg-[#0b0b0b]">
+        <CheckoutHeader expiresAt={expiresAt || undefined} onExpire={onExpire} />
+        <main className="flex flex-1 items-center justify-center px-4 py-10 text-center">
+          <div className="w-full max-w-md rounded-2xl border border-red-200 bg-red-50 p-6 dark:border-red-900/50 dark:bg-red-950/20">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Não foi possível carregar o Pix</h1>
+            <p className="mt-2 break-words text-sm text-slate-600 dark:text-slate-300" role="alert">{error}</p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button className="min-h-11" onClick={() => { setError(null); void fetchOrder(); void fetchIntent(); }}>Tentar novamente</Button>
+              <Button className="min-h-11" variant="outline" onClick={() => navigate('/events')}>Meus eventos</Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // New layout: keep the same header (logo, timer, help, gradient) used in `Review` and render the Pix modal
   // content inline so the page visually matches the checkout shell while showing the exact modal UI.
   const formatRemainingShort = (iso?: string) => {
@@ -305,7 +323,7 @@ export default function CheckoutPix() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-y-auto bg-white dark:bg-[#0b0b0b] flex-col">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col">
       <CheckoutHeader expiresAt={expiresAt || undefined} onExpire={onExpire} />
 
       {/* Show loading overlay while we fetch order/intent data. If user needs to fill details,
@@ -315,7 +333,7 @@ export default function CheckoutPix() {
       )}
 
       {/* Mobile Top Bar - Fixed below header */}
-      <div className="md:hidden sticky top-[60px] z-40 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-b border-indigo-100 dark:border-indigo-900/30 px-4 py-3 backdrop-blur-sm">
+      <div className="md:hidden sticky top-[56px] z-40 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-b border-indigo-100 dark:border-indigo-900/30 px-4 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -329,8 +347,20 @@ export default function CheckoutPix() {
 
       <main className="flex-1 flex items-start justify-center bg-white dark:bg-[#0b0b0b]">
         <div className="w-full max-w-2xl mt-0 px-8 max-md:px-4">
-          <div className="bg-white dark:bg-[#0b0b0b] p-10 max-md:p-6 rounded-lg max-md:pt-4">
+          <div className="bg-white dark:bg-[#0b0b0b] p-10 max-md:p-4 rounded-lg max-md:pt-4">
             {/* Use the modal's content here */}
+            {error && (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300" role="alert">
+                <p className="break-words">{error}</p>
+                <button
+                  type="button"
+                  className="mt-2 min-h-11 rounded-lg px-3 font-semibold underline underline-offset-2"
+                  onClick={() => { setError(null); void fetchOrder(); void fetchIntent(); }}
+                >
+                  Tentar gerar o Pix novamente
+                </button>
+              </div>
+            )}
                 <div className="mb-8 max-md:mb-4">
               <div className="flex items-center gap-3 mb-3 max-md:hidden">
                 <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
@@ -364,7 +394,8 @@ export default function CheckoutPix() {
                     <textarea
                       readOnly
                       value={intent?.code ?? ''}
-                      className="w-full resize-none bg-transparent text-sm max-md:text-xs outline-none font-mono"
+                      aria-label="Código Pix copia e cola"
+                      className="w-full resize-none break-all bg-transparent text-sm max-md:text-xs outline-none font-mono"
                       rows={6}
                     />
                     {intent && !intent.code && (
@@ -384,7 +415,7 @@ export default function CheckoutPix() {
                       } catch {}
                     }}
                     disabled={!intent?.code}
-                    className="flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 px-4 py-3 max-md:py-2.5 text-sm max-md:text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                    className="flex min-h-12 items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                   >
                     {copyOk ? '✓ Copiado!' : 'Copiar código Pix'}
                   </button>

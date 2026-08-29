@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { apiUrl } from '@/lib/apiBase';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import HeaderV2 from '../components/v2/HeaderV2';
+import FooterV2 from '../components/v2/FooterV2';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import LoginModal from '@/components/LoginModal';
@@ -164,11 +164,11 @@ const ArtistPage: React.FC = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-white dark:bg-[#0b0b0b]">
-                <Header />
-                <div className="flex items-center justify-center py-32">
+                <HeaderV2 transparent fixed={false} />
+                <div className="flex items-center justify-center py-32 px-4">
                     <div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
                 </div>
-                <Footer />
+                <FooterV2 maxWidth="1000px" />
             </div>
         );
     }
@@ -176,14 +176,14 @@ const ArtistPage: React.FC = () => {
     if (error || !artist) {
         return (
             <div className="min-h-screen bg-white dark:bg-[#0b0b0b]">
-                <Header />
-                <div className="flex-1 flex items-center justify-center py-32">
-                    <div className="flex flex-col items-center">
+                <HeaderV2 transparent fixed={false} />
+                <div className="flex-1 flex items-center justify-center py-32 px-4">
+                    <div className="flex flex-col items-center text-center">
                         <span className="text-lg font-bold text-red-600 mb-4">{error || 'Artista não encontrado.'}</span>
                         <a href="/" className="text-indigo-600 underline">Voltar para a página inicial</a>
                     </div>
                 </div>
-                <Footer />
+                <FooterV2 maxWidth="1000px" />
             </div>
         );
     }
@@ -211,13 +211,13 @@ const ArtistPage: React.FC = () => {
 
                 {/* Header - z-50 to stay on top */}
                 <div className="relative z-50">
-                    <Header />
+                    <HeaderV2 transparent fixed={false} theme="dark" blueGlow={false} />
                 </div>
 
-                <div className="relative z-10 max-w-[1000px] mx-auto px-4 pt-4 pb-12">
+                <div className="relative z-10 max-w-[1000px] mx-auto px-4 pt-4 pb-10 sm:pb-12">
                     <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8">
                         {/* Artist Image */}
-                        <div className="w-40 h-40 md:w-52 md:h-52 rounded-full overflow-hidden shadow-2xl border-4 border-white dark:border-[#242424]">
+                        <div className="w-36 h-36 sm:w-40 sm:h-40 md:w-52 md:h-52 shrink-0 rounded-full overflow-hidden shadow-2xl border-4 border-white dark:border-[#242424]">
                             {artist.imageUrl ? (
                                 <img src={artist.imageUrl} alt={artist.name} className="w-full h-full object-cover" />
                             ) : (
@@ -230,8 +230,8 @@ const ArtistPage: React.FC = () => {
                         {/* Artist Info */}
                         <div className="flex-1 text-center md:text-left">
                             <div className="text-xs uppercase tracking-wider mb-2" style={{ color: '#F9C900' }}>Artista</div>
-                            <div className="flex items-center gap-2 justify-center md:justify-start">
-                                <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">{artist.name}</h1>
+                            <div className="flex items-start gap-2 justify-center md:justify-start min-w-0">
+                                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3 break-words min-w-0">{artist.name}</h1>
                                 {artist.isVerified && (
                                     <BadgeCheck className="w-8 h-8 text-white fill-blue-500 mb-2" />
                                 )}
@@ -250,7 +250,7 @@ const ArtistPage: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="flex items-center gap-4 justify-center md:justify-start text-white/80 text-sm mb-4">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-center md:justify-start text-white/80 text-sm mb-4">
                                 <span className="flex items-center gap-1">
                                     <Users className="w-4 h-4" />
                                     {artist.followerCount || 0} seguidores
@@ -261,7 +261,7 @@ const ArtistPage: React.FC = () => {
                                 </span>
                             </div>
 
-                            <div className="flex gap-3 justify-center md:justify-start">
+                            <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                                 <Button
                                     onClick={handleFollow}
                                     disabled={followLoading}
@@ -296,7 +296,7 @@ const ArtistPage: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="max-w-[1000px] mx-auto px-4 py-8">
+            <div className="max-w-[1000px] mx-auto px-4 py-8 overflow-hidden">
                 {/* Upcoming Events */}
                 {upcomingEvents.length > 0 && (
                     <div className="mb-12">
@@ -328,9 +328,9 @@ const ArtistPage: React.FC = () => {
                                             {formatDate(event.startDate)}
                                         </div>
                                         {formatLocation(event) && (
-                                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                <MapPin className="w-4 h-4" />
-                                                {formatLocation(event)}
+                                            <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400 min-w-0">
+                                                <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+                                                <span className="break-words min-w-0">{formatLocation(event)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -391,7 +391,7 @@ const ArtistPage: React.FC = () => {
                 setShowLoginModal(false);
             }} />
 
-            <Footer />
+            <FooterV2 maxWidth="1000px" />
         </div>
     );
 };

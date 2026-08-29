@@ -161,6 +161,7 @@ export default function OrganizerSettingsV2() {
   const { calendarId } = useParams<{ calendarId?: string }>();
 
   const [activeTab, setActiveTab] = React.useState('eventos');
+  const primaryTabsRef = React.useRef<HTMLDivElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [extendedOrg, setExtendedOrg] = React.useState<any>(null);
   const [loadingFresh, setLoadingFresh] = React.useState(false);
@@ -172,6 +173,15 @@ export default function OrganizerSettingsV2() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  React.useEffect(() => {
+    const container = primaryTabsRef.current;
+    if (!container || window.innerWidth > 767) return;
+    const activeButton = container.querySelector<HTMLElement>(`[data-calendar-tab="${activeTab}"]`);
+    if (!activeButton) return;
+    const targetLeft = activeButton.offsetLeft - (container.clientWidth - activeButton.offsetWidth) / 2;
+    container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+  }, [activeTab]);
 
   // Sync route calendarId param with OrganizationContext selectedOrg ID
   React.useEffect(() => {
@@ -306,12 +316,22 @@ export default function OrganizerSettingsV2() {
   const [searchParams] = useSearchParams();
   const subTabParam = searchParams.get('subTab');
   const [settingsSubTab, setSettingsSubTab] = React.useState(subTabParam || 'exibicao');
+  const settingsSubTabsRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (subTabParam) {
       setSettingsSubTab(subTabParam);
     }
   }, [subTabParam]);
+
+  React.useEffect(() => {
+    const container = settingsSubTabsRef.current;
+    if (!container || activeTab !== 'configuracoes' || window.innerWidth > 767) return;
+    const activeButton = container.querySelector<HTMLElement>(`[data-settings-subtab="${settingsSubTab}"]`);
+    if (!activeButton) return;
+    const targetLeft = activeButton.offsetLeft - (container.clientWidth - activeButton.offsetWidth) / 2;
+    container.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' });
+  }, [activeTab, settingsSubTab]);
 
   const [isAddAdminOpen, setIsAddAdminOpen] = React.useState(false);
   const [admins, setAdmins] = React.useState<CalendarAdmin[]>([]);
@@ -1039,6 +1059,7 @@ export default function OrganizerSettingsV2() {
         
         {/* Sticky Header with Title and Tabs matching the requested settings style */}
         <div
+          className={`manage-sticky-tabs-header ${isHeaderScrolled ? 'is-scrolled' : ''}`}
           style={{
             position: 'sticky',
             top: 0,
@@ -1053,11 +1074,12 @@ export default function OrganizerSettingsV2() {
           }}
         >
           <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 1rem' }}>
-            <div style={{ padding: '20px 0 0 0' }}>
-              <div className="flex items-center justify-between mb-4">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="manage-sticky-tabs-title-shell" style={{ padding: '20px 0 0 0' }}>
+              <div className="manage-sticky-tabs-heading-row flex items-center justify-between mb-4">
+                <div className="manage-sticky-tabs-title-wrap" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {!isPersonalCalendar && (org?.logoUrl ? (
-                    <img 
+                    <img
+                      className="manage-sticky-tabs-avatar"
                       src={resolveImageUrl(org.logoUrl) || ''} 
                       alt={org.name}
                       style={{
@@ -1069,7 +1091,7 @@ export default function OrganizerSettingsV2() {
                       }}
                     />
                   ) : (
-                    <div style={{
+                    <div className="manage-sticky-tabs-avatar" style={{
                       width: '25px',
                       height: '25px',
                       borderRadius: '6px',
@@ -1084,7 +1106,7 @@ export default function OrganizerSettingsV2() {
                       {calendarDisplayName.charAt(0).toUpperCase()}
                     </div>
                   ))}
-                  <h1 style={{ 
+                  <h1 className="manage-sticky-tabs-title" style={{
                     fontSize: '28px', 
                     fontWeight: 600, 
                     color: isDark ? '#fff' : '#18181b',
@@ -1098,9 +1120,9 @@ export default function OrganizerSettingsV2() {
                 <button
                     type="button"
                     onClick={() => window.open(orgUrl, '_blank')}
-                    className={isDark
+                    className={`manage-sticky-tabs-external-action ${isDark
                       ? 'transition-all duration-300 text-[rgba(255,255,255,0.64)] hover:text-[rgb(19,21,23)] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.64)]'
-                      : 'transition-all duration-300 text-zinc-600 hover:text-zinc-950 bg-zinc-200/70 hover:bg-zinc-200'}
+                      : 'transition-all duration-300 text-zinc-600 hover:text-zinc-950 bg-zinc-200/70 hover:bg-zinc-200'}`}
                     style={{
                         borderColor: 'rgba(0, 0, 0, 0)',
                         border: '1px solid rgba(0, 0, 0, 0)',
@@ -1138,7 +1160,7 @@ export default function OrganizerSettingsV2() {
             </div>
 
             {/* Abas Premium horizontais idênticas ao AccountSettingsV2 */}
-            <div className="premium-tab-container !mb-0" style={{ display: 'flex', gap: '16px', marginBottom: '-1px' }}>
+            <div ref={primaryTabsRef} className="premium-tab-container !mb-0" style={{ display: 'flex', gap: '16px', marginBottom: '-1px' }}>
               {[
                 { id: 'eventos', label: 'Eventos' },
                 { id: 'pessoas', label: 'Pessoas' },
@@ -1149,6 +1171,7 @@ export default function OrganizerSettingsV2() {
               ].map(tab => (
                 <button
                   key={tab.id}
+                  data-calendar-tab={tab.id}
                   className={`premium-tab ${activeTab === tab.id ? 'active' : ''}`}
                   style={{
                     fontSize: '16px',
@@ -2720,14 +2743,17 @@ export default function OrganizerSettingsV2() {
             </TabsContent>
             )}
 
-            <TabsContent value="configuracoes" className="animate-in fade-in duration-200 text-left font-sans">
-              <div className="relative mt-4 flex flex-col items-start gap-5 md:flex-row">
+            <TabsContent value="configuracoes" className="calendar-settings-tab-content animate-in fade-in duration-200 text-left font-sans">
+              <div className="calendar-settings-layout relative mt-4 flex flex-col items-start gap-5 md:flex-row">
                 {/* Left Column: Sticky Sidebar Menu */}
-                <div className="w-full shrink-0 space-y-1 md:sticky md:top-[124px] md:w-44">
+                <div ref={settingsSubTabsRef} role="tablist" aria-label="Configurações do calendário" className="calendar-settings-subtabs w-full shrink-0 space-y-1 md:sticky md:top-[124px] md:w-44">
                   <button
                     type="button"
                     onClick={() => setSettingsSubTab('exibicao')}
-                    className={`flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'exibicao' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                    role="tab"
+                    aria-selected={settingsSubTab === 'exibicao'}
+                    data-settings-subtab="exibicao"
+                    className={`calendar-settings-subtab flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'exibicao' ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}`}
                   >
                     <Paintbrush size={14} className="opacity-80" />
                     <span>Exibição</span>
@@ -2735,7 +2761,10 @@ export default function OrganizerSettingsV2() {
                   <button
                     type="button"
                     onClick={() => setSettingsSubTab('opcoes')}
-                    className={`flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'opcoes' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                    role="tab"
+                    aria-selected={settingsSubTab === 'opcoes'}
+                    data-settings-subtab="opcoes"
+                    className={`calendar-settings-subtab flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'opcoes' ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}`}
                   >
                     <SlidersHorizontal size={14} className="opacity-80" />
                     <span>Opções</span>
@@ -2743,7 +2772,10 @@ export default function OrganizerSettingsV2() {
                   <button
                     type="button"
                     onClick={() => setSettingsSubTab('administradores')}
-                    className={`flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'administradores' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                    role="tab"
+                    aria-selected={settingsSubTab === 'administradores'}
+                    data-settings-subtab="administradores"
+                    className={`calendar-settings-subtab flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'administradores' ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}`}
                   >
                     <Users size={14} className="opacity-80" />
                     <span>Administradores</span>
@@ -2751,7 +2783,10 @@ export default function OrganizerSettingsV2() {
                   <button
                     type="button"
                     onClick={() => setSettingsSubTab('tags')}
-                    className={`flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'tags' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                    role="tab"
+                    aria-selected={settingsSubTab === 'tags'}
+                    data-settings-subtab="tags"
+                    className={`calendar-settings-subtab flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'tags' ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}`}
                   >
                     <Tag size={14} className="opacity-80" />
                     <span>Tags</span>
@@ -2759,7 +2794,10 @@ export default function OrganizerSettingsV2() {
                   <button
                     type="button"
                     onClick={() => setSettingsSubTab('incorporar')}
-                    className={`flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'incorporar' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                    role="tab"
+                    aria-selected={settingsSubTab === 'incorporar'}
+                    data-settings-subtab="incorporar"
+                    className={`calendar-settings-subtab flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'incorporar' ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}`}
                   >
                     <Globe size={14} className="opacity-80" />
                     <span>Incorporar</span>
@@ -2767,7 +2805,10 @@ export default function OrganizerSettingsV2() {
                   <button
                     type="button"
                     onClick={() => setSettingsSubTab('desenvolvedor')}
-                    className={`flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'desenvolvedor' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                    role="tab"
+                    aria-selected={settingsSubTab === 'desenvolvedor'}
+                    data-settings-subtab="desenvolvedor"
+                    className={`calendar-settings-subtab flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'desenvolvedor' ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}`}
                   >
                     <Code size={14} className="opacity-80" />
                     <span>Desenvolvedor</span>
@@ -2775,7 +2816,10 @@ export default function OrganizerSettingsV2() {
                   <button
                     type="button"
                     onClick={() => setSettingsSubTab('limite')}
-                    className={`flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'limite' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                    role="tab"
+                    aria-selected={settingsSubTab === 'limite'}
+                    data-settings-subtab="limite"
+                    className={`calendar-settings-subtab flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'limite' ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}`}
                   >
                     <Clock size={14} className="opacity-80" />
                     <span>Limite de Envio</span>
@@ -2783,7 +2827,10 @@ export default function OrganizerSettingsV2() {
                   <button
                     type="button"
                     onClick={() => setSettingsSubTab('plus')}
-                    className={`flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'plus' ? 'text-white' : 'text-zinc-500 hover:text-white'}`}
+                    role="tab"
+                    aria-selected={settingsSubTab === 'plus'}
+                    data-settings-subtab="plus"
+                    className={`calendar-settings-subtab flex w-full items-center gap-3 border-0 bg-transparent px-3 py-2 text-left text-[15px] font-semibold transition-colors ${settingsSubTab === 'plus' ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}`}
                   >
                     <Heart size={14} className="opacity-80" />
                     <span>Fauves Plus</span>
@@ -2791,7 +2838,7 @@ export default function OrganizerSettingsV2() {
                 </div>
 
                 {/* Right Column: Scrollable Settings Forms */}
-                <div className="min-w-0 flex-1 space-y-6">
+                <div className="calendar-settings-content min-w-0 flex-1 space-y-6">
                   {settingsSubTab === 'exibicao' && (
                     <CalendarDisplaySettingsPanel
                       calendar={org || {}}
@@ -3679,15 +3726,15 @@ export default function OrganizerSettingsV2() {
                   )}
 
                   {settingsSubTab === 'plus' && (
-                    <div className="animate-in fade-in duration-250 overflow-hidden rounded-[14px] border border-white/[0.1] bg-[#1c1e20] text-left">
+                    <div className="calendar-plus-panel animate-in fade-in duration-250 overflow-hidden rounded-[14px] border border-white/[0.1] bg-[#1c1e20] text-left">
                       <div className="p-5">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
+                        <div className="calendar-plus-header flex items-start justify-between gap-3">
+                          <div className="min-w-0">
                             <p className="text-[14px] font-semibold leading-5 text-zinc-500">Fazer upgrade para</p>
                             <h2 className="text-[22px] font-bold leading-7 text-[#EF4118]">Fauves Plus</h2>
                           </div>
 
-                          <div className="flex w-fit rounded-[10px] bg-white/[0.08] p-1" role="group" aria-label="Período de cobrança">
+                          <div className="calendar-plus-billing flex w-fit shrink-0 rounded-[10px] bg-white/[0.08] p-1" role="group" aria-label="Período de cobrança">
                             <button
                               type="button"
                               aria-pressed={plusBillingCycle === 'monthly'}
@@ -3707,7 +3754,7 @@ export default function OrganizerSettingsV2() {
                           </div>
                         </div>
 
-                        <div className="mt-5 flex flex-wrap items-end gap-x-3 gap-y-2">
+                        <div className="calendar-plus-price mt-5 flex flex-wrap items-end gap-x-3 gap-y-2">
                           <span className="text-[48px] font-medium leading-none tracking-[-0.04em] text-white sm:text-[54px]">R$ {plusBillingCycle === 'annual' ? '299' : '349'}</span>
                           {plusBillingCycle === 'annual' ? (
                             <div className="flex flex-col items-start gap-1 pb-0.5">
@@ -3719,7 +3766,7 @@ export default function OrganizerSettingsV2() {
                           )}
                         </div>
 
-                        <ul className="mt-6 space-y-2.5 text-[15px] font-semibold text-zinc-100">
+                        <ul className="calendar-plus-features mt-6 space-y-2.5 text-[15px] font-semibold text-zinc-100">
                           <li className="flex items-center gap-2.5"><Check size={17} strokeWidth={2.4} className="shrink-0 text-[#EF4118]" />Sem taxas de plataforma</li>
                           <li className="flex items-center gap-2.5"><Check size={17} strokeWidth={2.4} className="shrink-0 text-[#EF4118]" />Suporte prioritário</li>
                           <li className="flex items-center gap-2.5"><Check size={17} strokeWidth={2.4} className="shrink-0 text-[#EF4118]" />5 administradores incluídos</li>
@@ -3728,7 +3775,7 @@ export default function OrganizerSettingsV2() {
                         <button
                           type="button"
                           onClick={openPlusCheckout}
-                          className="mt-6 flex h-11 w-full items-center justify-center rounded-[10px] border-0 bg-[#EF4118] px-5 text-[15px] font-bold text-white transition-colors hover:bg-[#D63814]"
+                          className="calendar-plus-cta mt-6 flex h-11 w-full items-center justify-center rounded-[10px] border-0 bg-[#EF4118] px-5 text-[15px] font-bold text-white transition-colors hover:bg-[#D63814]"
                         >
                           Fazer upgrade para o Fauves Plus
                         </button>
@@ -3741,23 +3788,23 @@ export default function OrganizerSettingsV2() {
 
                       <div className="border-t border-white/[0.09] px-2 pb-2 pt-4">
                         <h3 className="px-3 pb-4 text-[16px] font-bold text-zinc-500">Benefícios do <span className="text-[#EF4118]">Fauves Plus</span></h3>
-                        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[10px] bg-white/[0.08] sm:grid-cols-2">
-                          <div className="relative flex min-h-[158px] flex-col justify-between overflow-hidden bg-[#222426] p-4">
+                        <div className="calendar-plus-benefits-grid grid grid-cols-2 gap-px overflow-hidden rounded-[10px] bg-white/[0.08]">
+                          <div className="calendar-plus-benefit relative flex min-h-[158px] flex-col justify-between overflow-hidden bg-[#222426] p-4">
                             <img src={plusZeroFeeIllustration} alt="" aria-hidden="true" className="h-[74px] w-[88px] max-w-none object-contain" />
                             <p className="mt-3 text-[14px] font-semibold leading-5 text-white"><span className="mr-1 text-zinc-600 line-through">5%</span> 0% de taxa de plataforma<sup className="ml-1 text-[9px] text-zinc-400">1</sup></p>
                           </div>
 
-                          <div className="relative flex min-h-[158px] flex-col justify-between overflow-hidden bg-[#222426] p-4">
+                          <div className="calendar-plus-benefit relative flex min-h-[158px] flex-col justify-between overflow-hidden bg-[#222426] p-4">
                             <img src={plusWeeklyInvitesIllustration} alt="" aria-hidden="true" className="h-[82px] w-[61px] max-w-none object-contain" />
                             <p className="mt-3 text-[14px] font-semibold leading-5 text-white"><span className="mr-1 text-zinc-600 line-through">500</span> 5.000 convites por semana<sup className="ml-1 text-[9px] text-zinc-400">2</sup></p>
                           </div>
 
-                          <div className="relative flex min-h-[158px] flex-col justify-between overflow-hidden bg-[#222426] p-4">
+                          <div className="calendar-plus-benefit relative flex min-h-[158px] flex-col justify-between overflow-hidden bg-[#222426] p-4">
                             <img src={plusPrioritySupportIllustration} alt="" aria-hidden="true" className="h-[80px] w-[87px] max-w-none object-contain" />
                             <p className="mt-3 text-[14px] font-semibold leading-5 text-white">Suporte prioritário</p>
                           </div>
 
-                          <div className="relative flex min-h-[158px] flex-col justify-between overflow-hidden bg-[#222426] p-4">
+                          <div className="calendar-plus-benefit relative flex min-h-[158px] flex-col justify-between overflow-hidden bg-[#222426] p-4">
                             <img src={plusApiAccessIllustration} alt="" aria-hidden="true" className="h-[78px] w-[78px] max-w-none object-contain" />
                             <p className="mt-3 text-[14px] font-semibold leading-5 text-white">Acesso à API + Zapier</p>
                           </div>
@@ -4510,6 +4557,137 @@ export default function OrganizerSettingsV2() {
         </div>
       </div>
       <style>{`
+        @media (max-width: 767px) {
+          .calendar-settings-tab-content {
+            margin-top: -24px !important;
+          }
+
+          .calendar-settings-layout {
+            width: 100%;
+            margin-top: 0 !important;
+            gap: 24px !important;
+          }
+
+          .calendar-settings-subtabs {
+            display: flex !important;
+            width: calc(100% + 2rem) !important;
+            max-width: none !important;
+            min-height: 44px;
+            margin: 0 -1rem !important;
+            padding: 0 1rem;
+            align-items: stretch;
+            gap: 24px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            border-top: 1px solid rgba(255,255,255,.035);
+            border-bottom: 1px solid rgba(255,255,255,.045);
+            background: #202224;
+            overscroll-behavior-x: contain;
+            scrollbar-width: none;
+            touch-action: pan-x;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .calendar-settings-subtabs::-webkit-scrollbar {
+            display: none;
+          }
+
+          .calendar-settings-subtabs > :not([hidden]) ~ :not([hidden]) {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+          }
+
+          .calendar-settings-subtab {
+            display: inline-flex !important;
+            width: auto !important;
+            min-width: max-content;
+            min-height: 44px;
+            flex: 0 0 auto;
+            align-items: center;
+            gap: 0 !important;
+            padding: 0 !important;
+            color: rgba(255,255,255,.5) !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            line-height: 20px;
+            white-space: nowrap;
+          }
+
+          .calendar-settings-subtab.is-active {
+            color: #fff !important;
+          }
+
+          .calendar-settings-subtab > svg {
+            display: none;
+          }
+
+          .calendar-settings-content {
+            width: 100%;
+          }
+
+          .calendar-plus-header {
+            flex-direction: row !important;
+            align-items: flex-start !important;
+            justify-content: space-between !important;
+          }
+
+          .calendar-plus-billing button {
+            min-height: 36px;
+          }
+
+          .calendar-plus-cta {
+            min-height: 44px;
+            height: auto !important;
+            padding-top: 11px !important;
+            padding-bottom: 11px !important;
+            line-height: 20px;
+            text-align: center;
+          }
+
+          .calendar-plus-benefits-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          .calendar-plus-benefit {
+            min-width: 0;
+          }
+
+          .calendar-plus-benefit p {
+            overflow-wrap: anywhere;
+          }
+
+          .organizer-settings-page.light .calendar-settings-subtabs {
+            border-color: rgba(24,24,27,.08);
+            background: #eceeef;
+          }
+
+          .organizer-settings-page.light .calendar-settings-subtab {
+            color: #71717a !important;
+          }
+
+          .organizer-settings-page.light .calendar-settings-subtab.is-active {
+            color: #18181b !important;
+          }
+        }
+
+        @media (max-width: 359px) {
+          .calendar-plus-header {
+            flex-direction: column !important;
+          }
+
+          .calendar-plus-billing {
+            width: 100% !important;
+          }
+
+          .calendar-plus-billing button {
+            flex: 1 1 50%;
+          }
+
+          .calendar-plus-price > span:first-child {
+            font-size: 42px !important;
+          }
+        }
+
         /* Fauves/Lux Button Switcher V2 styles */
         .lux-button-switcher {
           --border-radius: 0.75rem;

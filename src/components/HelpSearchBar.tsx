@@ -80,7 +80,7 @@ const HelpSearchBar = () => {
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Busque artigos, tutoriais e muito mais..."
+                    placeholder="Busque na Central de Ajuda..."
                 />
                 {query && (
                     <button

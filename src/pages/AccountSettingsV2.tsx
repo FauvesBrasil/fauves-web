@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import HeaderV2 from '../components/v2/HeaderV2';
 import { useAuth } from '@/context/AuthContext';
 import { fetchApi, apiUrl } from '@/lib/apiBase';
-import LoginModal from '@/components/LoginModal';
 import { useTheme } from '@/context/ThemeContext';
 
 import displaySystem from '@/assets/display-system.jpg';
@@ -136,7 +135,6 @@ const AccountSettingsV2: React.FC = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'conta' | 'preferencias' | 'pagamento'>('conta');
-  const [showLogin, setShowLogin] = useState(false);
 
   // Sync tab state with URL params
   useEffect(() => {
@@ -270,8 +268,11 @@ const AccountSettingsV2: React.FC = () => {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) setShowLogin(true);
-  }, [user, loading]);
+    if (!user) {
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      navigate(`/signin?redirect=${redirect}`, { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     if (!user || !token) return;
@@ -628,7 +629,7 @@ const AccountSettingsV2: React.FC = () => {
   );
 
   return (
-    <div className={`account-settings-page ${isDark ? 'is-dark' : 'is-light'}`} style={{ minHeight: '100vh', background: isDark ? '#131517' : '#f5f5f6', color: isDark ? '#fff' : '#18181b', fontFamily: 'Inter, -apple-system, sans-serif', transition: 'background-color .2s ease, color .2s ease' }}>
+    <div className={`account-settings-page ${isDark ? 'is-dark' : 'is-light'}`} style={{ minHeight: '100dvh', width: '100%', overflowX: 'clip', background: isDark ? '#131517' : '#f5f5f6', color: isDark ? '#fff' : '#18181b', fontFamily: 'Inter, -apple-system, sans-serif', transition: 'background-color .2s ease, color .2s ease' }}>
       <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
 
       {/* Main container with padding-top to compensate for absolute/transparent header */}
@@ -636,6 +637,7 @@ const AccountSettingsV2: React.FC = () => {
         
         {/* Sticky Header with Title and Tabs */}
         <div
+          className={`manage-sticky-tabs-header ${isScrolled ? 'is-scrolled' : ''}`}
           style={{
             position: 'sticky',
             top: 0,
@@ -648,9 +650,9 @@ const AccountSettingsV2: React.FC = () => {
           }}
         >
           <div className="account-settings-shell" style={{ maxWidth: '780px', margin: '0 auto', padding: '0 1.5rem' }}>
-            <div style={{ padding: isScrolled ? '12px 0 0 0' : '20px 0 0 0', transition: 'all 0.3s ease' }}>
+            <div className="manage-sticky-tabs-title-shell" style={{ padding: isScrolled ? '12px 0 0 0' : '20px 0 0 0', transition: 'all 0.3s ease' }}>
               {/* Title Header */}
-              <h1 style={{ 
+              <h1 className="manage-sticky-tabs-title" style={{
                 fontSize: isScrolled ? '20px' : '28px', 
                 fontWeight: 600, 
                 color: isDark ? '#fff' : '#18181b',
@@ -2885,6 +2887,42 @@ const AccountSettingsV2: React.FC = () => {
           --pref-surface: #fff;
           --pref-surface-raised: #f4f4f5;
         }
+        .account-settings-page.is-light .account-tab-content h2,
+        .account-settings-page.is-light .account-tab-content h3,
+        .account-settings-page.is-light .account-tab-content h4 {
+          color: #18181b !important;
+        }
+        .account-settings-page.is-light .account-tab-content label {
+          color: #52525b !important;
+        }
+        .account-settings-page.is-light .account-input,
+        .account-settings-page.is-light .account-textarea,
+        .account-settings-page.is-light .account-prefix-control,
+        .account-settings-page.is-light .account-social-input,
+        .account-settings-page.is-light .account-phone-control {
+          border-color: rgba(24,24,27,.14) !important;
+          background: #fff !important;
+          color: #18181b !important;
+        }
+        .account-settings-page.is-light .account-prefix-input,
+        .account-settings-page.is-light .account-phone-input,
+        .account-settings-page.is-light .account-social-input {
+          color: #18181b !important;
+        }
+        .account-settings-page.is-light .account-control-prefix,
+        .account-settings-page.is-light .account-social-prefix {
+          background: #e4e4e7 !important;
+          color: #52525b !important;
+        }
+        .account-settings-page.is-light .account-panel {
+          border-color: rgba(24,24,27,.1) !important;
+          background: #fff !important;
+        }
+        .account-settings-page.is-light .account-button-secondary {
+          border-color: rgba(24,24,27,.1) !important;
+          background: #fff !important;
+          color: #3f3f46 !important;
+        }
         .preferences-loading { min-height: 220px; display: grid; place-items: center; color: rgba(255,255,255,.45); font-size: 13px; }
         .account-settings-page.is-light .preferences-loading { color: #71717a; }
         .preferences-section h2 { margin: 0 0 16px; color: var(--pref-text); font-size: 17px; font-weight: 650; line-height: 1.25; }
@@ -2976,8 +3014,26 @@ const AccountSettingsV2: React.FC = () => {
           }
           .account-settings-content {
             padding-top: 24px !important;
-            padding-bottom: 64px !important;
+            padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important;
           }
+          .account-input,
+          .account-prefix-control,
+          .account-social-row,
+          .account-social-icon,
+          .account-social-prefix,
+          .account-social-input,
+          .account-phone-control,
+          .account-button,
+          .preferences-select-trigger,
+          .account-modal-action {
+            height: 44px !important;
+            min-height: 44px !important;
+          }
+          .account-button-compact,
+          .account-icon-button {
+            min-height: 44px !important;
+          }
+          .account-icon-button { width: 44px !important; height: 44px !important; }
           .account-profile-grid {
             grid-template-columns: minmax(0, 1fr) !important;
             row-gap: 24px !important;
@@ -3041,8 +3097,6 @@ const AccountSettingsV2: React.FC = () => {
           }
         }
       `}</style>
-
-      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
 
       {accountModal === '2fa' && (
         <AccountModalShell icon={<ShieldIcon />} title={twoFactorStep === 'done' ? '2FA ativada' : 'Confirmar Acesso'} onClose={() => setAccountModal(null)}>
@@ -3125,12 +3179,13 @@ const AccountSettingsV2: React.FC = () => {
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           zIndex: 99999,
+          padding: '16px',
         }}>
           <div style={{
             background: '#18191b',
             border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '1.25rem',
-            width: '380px',
+            width: 'min(380px, 100%)',
             padding: '1.75rem',
             boxSizing: 'border-box',
             position: 'relative',
@@ -3142,17 +3197,22 @@ const AccountSettingsV2: React.FC = () => {
             {/* Close Button */}
             <button
               onClick={() => setShowAddEmailModal(false)}
+              aria-label="Fechar formulário de e-mail"
               style={{
                 position: 'absolute',
-                top: '1.25rem',
-                right: '1.25rem',
+                top: '0.75rem',
+                right: '0.75rem',
+                width: '44px',
+                height: '44px',
                 background: 'transparent',
                 border: 'none',
                 color: 'rgba(255,255,255,0.4)',
                 cursor: 'pointer',
                 fontSize: '20px',
-                padding: '4px',
+                padding: 0,
                 lineHeight: 1,
+                display: 'grid',
+                placeItems: 'center',
               }}
             >
               ✕
@@ -3255,7 +3315,7 @@ const AccountModalShell: React.FC<{
 }> = ({ icon, title, onClose, iconTone = 'default', children }) => (
   <div role="dialog" aria-modal="true" aria-label={title} onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }} style={{ position: 'fixed', inset: 0, zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
     <div style={{ width: 'min(360px, 100%)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, background: 'linear-gradient(145deg, #1d1f21, #18191b)', boxShadow: '0 24px 70px rgba(0,0,0,.55)', padding: 22, boxSizing: 'border-box', position: 'relative', color: '#fff' }}>
-      <button aria-label="Fechar" onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, width: 30, height: 30, border: 0, borderRadius: '50%', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.65)', display: 'grid', placeItems: 'center', fontSize: 18, lineHeight: 1, cursor: 'pointer' }}>×</button>
+      <button className="account-modal-close" aria-label="Fechar" onClick={onClose} style={{ position: 'absolute', top: 10, right: 10, width: 44, height: 44, border: 0, borderRadius: '50%', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.65)', display: 'grid', placeItems: 'center', fontSize: 18, lineHeight: 1, cursor: 'pointer' }}>×</button>
       <div style={{ width: 50, height: 50, borderRadius: '50%', display: 'grid', placeItems: 'center', color: iconTone === 'danger' ? '#ff5d62' : 'rgba(255,255,255,.78)', background: iconTone === 'danger' ? 'rgba(239,62,66,.16)' : 'rgba(255,255,255,.08)', marginBottom: 18 }}>
         {React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, { width: 24, height: 24 }) : icon}
       </div>

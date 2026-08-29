@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { List, Map as MapIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { MapContainer, TileLayer, Marker, useMap, ZoomControl } from 'react-leaflet';
@@ -198,6 +199,32 @@ const LumaStyle = () => (
     .mapview { flex: 1; height: 100%; position: relative; }
     .map-inner { position: absolute; top: 0; left: 0; right: 0.75rem; bottom: 0.75rem; border-radius: 16px; overflow: hidden; background: #f9f5ed; border: 1px solid var(--divider-color); }
 
+    .map-view-switch {
+      display: none;
+      align-items: center;
+      gap: 2px;
+      padding: 2px;
+      border-radius: 10px;
+      background: rgba(19, 21, 23, 0.07);
+    }
+    .map-view-switch button {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      color: var(--secondary-color);
+      background: transparent;
+      cursor: pointer;
+    }
+    .map-view-switch button.is-active {
+      color: var(--primary-color);
+      background: var(--white);
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }
+
     .apple-marker {
       width: 12px;
       height: 12px;
@@ -357,6 +384,40 @@ const LumaStyle = () => (
 
     .card-label { font-size: 12px; font-weight: 600; color: #999; text-transform: uppercase; margin-bottom: 0.75rem; margin-top: 2rem; padding-bottom: 0.5rem; border-bottom: 1px solid #f0f0f0; }
     .spark-content { font-size: 15px; line-height: 1.6; color: #333; margin-top: 0.5rem; }
+
+    @media (max-width: 720px) {
+      .map-page { height: 100dvh; min-height: 100dvh; }
+      .map-header {
+        height: 60px !important;
+        min-height: 60px;
+        gap: 10px;
+        padding: 8px 12px !important;
+      }
+      .map-header-brand { min-width: 0; gap: 8px !important; }
+      .map-header-logo svg { width: 45px; height: auto; }
+      .map-calendar-link {
+        min-width: 0;
+        max-width: min(46vw, 190px);
+        height: 40px;
+        padding: 0 10px !important;
+      }
+      .map-calendar-link .fw-medium { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .map-view-switch { display: flex; flex-shrink: 0; }
+      .map-auth-action { display: none !important; }
+      .content { width: 100%; }
+      .events-panel,
+      .mapview { width: 100%; min-width: 0; height: 100%; flex: 1 1 100%; border: 0; }
+      .content[data-mobile-view='list'] .mapview,
+      .content[data-mobile-view='map'] .events-panel { display: none; }
+      .map-inner { inset: 0; border: 0; border-radius: 0; }
+      .event-row { min-height: 104px; padding: 12px 16px; gap: 12px; }
+      .cover-image { width: 72px; height: 72px; border-radius: 10px; }
+      .event-title h3 { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+      .info { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .date-header { min-height: 44px; padding: 8px 16px; }
+      .left-content { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+      .leaflet-bottom { bottom: max(10px, env(safe-area-inset-bottom)); }
+    }
   ` }} />
 );
 
@@ -402,7 +463,7 @@ const StickyDateHeader = ({ children, className }: { children: React.ReactNode, 
   );
 };
 
-const MapController = ({ markers, selectedId }: { markers: any[], selectedId: string | null }) => {
+const MapController = ({ markers, selectedId, viewKey }: { markers: any[], selectedId: string | null, viewKey: string }) => {
   const map = useMap();
   useEffect(() => {
     map.invalidateSize();
@@ -419,7 +480,7 @@ const MapController = ({ markers, selectedId }: { markers: any[], selectedId: st
     }
     
     return () => clearTimeout(timer);
-  }, [markers, selectedId, map]);
+  }, [markers, selectedId, viewKey, map]);
   return null;
 };
 
@@ -433,6 +494,7 @@ const FullMapPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [viewingEventId, setViewingEventId] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
   const [geoCache, setGeoCache] = useState<Record<string, { lat: number, lng: number }>>(() => {
     const saved = localStorage.getItem('fauves_geo_cache_v1');
     return saved ? JSON.parse(saved) : {};
@@ -537,18 +599,23 @@ const FullMapPage: React.FC = () => {
       <LumaStyle />
 
       <div className="map-page">
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.25rem', borderBottom: '1px solid #f0f0f0', background: '#fff', position: 'relative', zIndex: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <Link to="/" className="flex-center" style={{ textDecoration: 'none', color: '#131517' }}>
+        <header className="map-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.875rem 1.25rem', borderBottom: '1px solid #f0f0f0', background: '#fff', position: 'relative', zIndex: 10 }}>
+          <div className="map-header-brand" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <Link to="/" className="flex-center map-header-logo" aria-label="Fauves — página inicial" style={{ textDecoration: 'none', color: '#131517' }}>
               {FAUVES_LOGO_SVG}
             </Link>
-            <Link className="flex-center gap-2" to={calendarSlug ? `/${calendarSlug}` : '/discover'} style={{ color: '#131517', textDecoration: 'none', background: '#f5f5f5', padding: '6px 12px', borderRadius: '8px' }}>
+            <Link className="flex-center gap-2 map-calendar-link" to={calendarSlug ? `/${calendarSlug}` : '/discover'} style={{ color: '#131517', textDecoration: 'none', background: '#f5f5f5', padding: '6px 12px', borderRadius: '8px' }}>
               {calendar?.logoUrl && <img alt="" style={{ width: 16, height: 16, borderRadius: 4, objectFit: 'cover' }} src={resolveImageUrl(calendar.logoUrl) || ''} />}
               <div className="fw-medium" style={{ fontSize: '13px' }}>{calendar?.name || 'Mapa de Eventos'}</div>
             </Link>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="map-view-switch" role="group" aria-label="Visualização do mapa">
+            <button type="button" className={mobileView === 'list' ? 'is-active' : ''} onClick={() => setMobileView('list')} aria-label="Ver lista" aria-pressed={mobileView === 'list'}><List size={18} /></button>
+            <button type="button" className={mobileView === 'map' ? 'is-active' : ''} onClick={() => setMobileView('map')} aria-label="Ver mapa" aria-pressed={mobileView === 'map'}><MapIcon size={18} /></button>
+          </div>
+
+          <div className="map-auth-action" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {!user ? (
               <Link to="/signin" className="btn lux-button flex-center small light solid round" style={{ textDecoration: 'none' }}>
                 <div className="label">Entrar</div>
@@ -606,7 +673,7 @@ const FullMapPage: React.FC = () => {
           </div>
         </header>
 
-        <div className="content">
+        <div className="content" data-mobile-view={mobileView}>
           <div className="events-panel">
             <div className="left-content">
               {groupedEvents.map(([dateKey, items]) => {
@@ -624,6 +691,14 @@ const FullMapPage: React.FC = () => {
                         className={`event-row ${selectedEventId === event.id ? 'active' : ''}`}
                         onClick={() => setViewingEventId(event.id)}
                         onMouseEnter={() => setSelectedEventId(event.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(keyboardEvent) => {
+                          if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+                            keyboardEvent.preventDefault();
+                            setViewingEventId(event.id);
+                          }
+                        }}
                       >
                         <div className="cover-image">
                           <img src={resolveImageUrl(event.displayImage) || 'https://via.placeholder.com/80x80'} alt={event.name} />
@@ -682,10 +757,16 @@ const FullMapPage: React.FC = () => {
                     key={event.id}
                     position={[event.lat, event.lng]}
                     icon={selectedEventId === event.id ? ACTIVE_ICON : BLUE_ICON}
-                    eventHandlers={{ click: () => setSelectedEventId(event.id) }}
+                    eventHandlers={{
+                      click: () => {
+                        setSelectedEventId(event.id);
+                        setViewingEventId(event.id);
+                        setMobileView('list');
+                      }
+                    }}
                   />
                 ))}
-                <MapController markers={mappedEvents} selectedId={selectedEventId} />
+                <MapController markers={mappedEvents} selectedId={selectedEventId} viewKey={mobileView} />
               </MapContainer>
             </div>
           </div>

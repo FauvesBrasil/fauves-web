@@ -11,7 +11,6 @@ interface LogoFauvesProps {
 
 // Using SVGR (?react) so we can control fills via class.
 export const LogoFauves: React.FC<LogoFauvesProps> = ({ variant = 'brand', className = '', width = 120, height, title }) => {
-  const style: React.CSSProperties = {};
   let extraClass = '';
   if (variant === 'white') {
     // Use inversion via CSS filters for quick recolor; TODO: provide dedicated white asset if needed.
@@ -28,7 +27,10 @@ export const LogoFauves: React.FC<LogoFauvesProps> = ({ variant = 'brand', class
   const aria = title || 'Fauves';
   return (
     <span className={`block leading-none ${className} ${extraClass}`} aria-label={aria} role="img">
-      <RawLogo {...sizeProps} />
+      <RawLogo
+        {...sizeProps}
+        style={{ display: 'block', width: clampedWidth, height: numericHeight ?? 'auto' }}
+      />
     </span>
   );
 };

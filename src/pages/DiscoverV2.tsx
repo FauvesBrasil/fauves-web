@@ -607,6 +607,7 @@ const DiscoverV2: React.FC = () => {
         }
 
         .discover-v2-open-pill {
+          min-height: 38px;
           padding: 7px 12px;
           color: rgba(255, 255, 255, 0.66);
           background: rgba(255, 255, 255, 0.09);
@@ -671,6 +672,8 @@ const DiscoverV2: React.FC = () => {
           padding-bottom: 2px;
           overflow-x: auto;
           scrollbar-width: none;
+          overscroll-behavior-x: contain;
+          scroll-padding-inline: 8px;
         }
 
         .discover-v2-tabs::-webkit-scrollbar {
@@ -679,6 +682,7 @@ const DiscoverV2: React.FC = () => {
 
         .discover-v2-tabs button {
           flex: 0 0 auto;
+          min-height: 40px;
           padding: 7px 11px;
           color: rgba(255, 255, 255, 0.43);
           background: transparent;
@@ -871,6 +875,18 @@ const DiscoverV2: React.FC = () => {
             min-height: 146px;
           }
 
+          .discover-v2-section {
+            margin-bottom: 48px;
+          }
+
+          .discover-v2-section-divided {
+            padding-top: 28px;
+          }
+
+          .discover-v2-category-card {
+            min-height: 72px;
+          }
+
           .discover-v2-city-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
@@ -879,10 +895,6 @@ const DiscoverV2: React.FC = () => {
             align-items: center;
           }
 
-          .discover-v2-page footer > div:first-of-type {
-            align-items: flex-start !important;
-            gap: 18px;
-          }
         }
 
         @media (max-width: 390px) {

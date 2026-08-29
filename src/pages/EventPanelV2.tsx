@@ -704,8 +704,8 @@ const EventPanelV2: React.FC = () => {
 
         const isPaid = ticketKind === 'paid';
         const priceNum = isPaid ? parseFloat(ticketPrice.replace(',', '.')) : 0;
-        if (isPaid && (isNaN(priceNum) || priceNum < 30)) {
-            const message = "O preço mínimo para ingressos pagos é R$ 30,00.";
+        if (isPaid && (isNaN(priceNum) || priceNum < 0)) {
+            const message = "Por favor, informe um preço válido para o ingresso.";
             setTicketSubmitError(message);
             toast({
                 title: "Preço inválido",
@@ -4099,7 +4099,48 @@ const EventPanelV2: React.FC = () => {
                  }
                  @media (max-width: 768px) {
                      .quick-actions {
-                         grid-template-columns: 1fr;
+                         display: flex !important;
+                         grid-template-columns: none !important;
+                         gap: 0.625rem;
+                         margin: 0 -1rem 1.5rem;
+                         padding: 0 1rem 0.25rem;
+                         overflow-x: auto;
+                         overflow-y: hidden;
+                         scroll-padding-inline: 1rem;
+                         scroll-snap-type: x proximity;
+                         overscroll-behavior-x: contain;
+                         scrollbar-width: none;
+                         -webkit-overflow-scrolling: touch;
+                     }
+                     .quick-actions::-webkit-scrollbar {
+                         display: none;
+                     }
+                     .quick-actions .rich-button {
+                         flex: 0 0 clamp(204px, 55vw, 224px) !important;
+                         width: auto;
+                         min-height: 56px;
+                         scroll-snap-align: start;
+                     }
+                     .quick-actions .rich-button .name {
+                         font-size: 14px;
+                         white-space: nowrap;
+                     }
+                     .quick-actions.event-guests-actions .rich-button,
+                     .quick-actions.event-registration-actions .rich-button {
+                         flex-basis: clamp(240px, 68vw, 264px) !important;
+                         min-height: 64px;
+                     }
+                     .quick-actions.event-guests-actions {
+                         margin-top: 20px !important;
+                     }
+                     .quick-actions.event-guests-actions .rich-button .name,
+                     .quick-actions.event-registration-actions .rich-button .name {
+                         display: -webkit-box;
+                         overflow: hidden;
+                         line-height: 1.2;
+                         white-space: normal;
+                         -webkit-box-orient: vertical;
+                         -webkit-line-clamp: 2;
                      }
                  }
                     .dark .rich-button {
@@ -4529,7 +4570,111 @@ const EventPanelV2: React.FC = () => {
                           align-self: stretch !important;
                           height: auto !important;
                       }
+
+                      .event-overview-card {
+                          padding: 0.75rem;
+                          margin-bottom: 0;
+                          border: 1px solid rgba(255, 255, 255, 0.07) !important;
+                          border-radius: 1rem;
+                      }
+                      .event-overview-card-inner {
+                          gap: 1.5rem;
+                      }
+                      .event-overview-preview-column,
+                      .event-overview-details {
+                          width: 100%;
+                          max-width: none !important;
+                          padding-left: 0 !important;
+                      }
+                      .event-overview-preview-column {
+                          align-items: stretch !important;
+                          container-type: inline-size;
+                      }
+                      .event-overview-preview-column .luma-left-preview-scale-wrapper {
+                          aspect-ratio: 37 / 28;
+                          min-height: 0;
+                      }
+                      @supports (zoom: calc(100cqw / 700px)) {
+                          .event-overview-preview-column .luma-left-preview-actual {
+                              zoom: min(0.5286, calc(100cqw / 700px));
+                          }
+                      }
+                      .event-overview-share-row {
+                          width: 100% !important;
+                          min-height: 36px;
+                      }
+                      .event-overview-details > h3 {
+                          margin-top: 0 !important;
+                          margin-bottom: 1.125rem !important;
+                          font-size: 20px !important;
+                      }
+                      .event-overview-details button,
+                      .event-overview-footer-actions button {
+                          min-height: 44px;
+                      }
+                      .event-overview-footer-actions {
+                          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                      }
+                      .event-overview-invitations {
+                          margin-top: 2.5rem !important;
+                      }
+                      .event-overview-invitations-heading {
+                          align-items: center !important;
+                      }
+                      .event-registration-questions-heading {
+                          margin-bottom: 0 !important;
+                      }
+                      .event-registration-questions-description {
+                          margin-top: 10px !important;
+                          margin-bottom: 24px !important;
+                          line-height: 1.5;
+                      }
+                      .event-registration-question-grid {
+                          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                          gap: 12px !important;
+                      }
+                      .event-registration-question-card {
+                          min-width: 0;
+                      }
+                      .event-registration-question-card:not(.event-registration-question-card-static) > div:first-child,
+                      .event-registration-question-card-static {
+                          height: 44px !important;
+                          min-height: 44px;
+                          padding: 8px 10px !important;
+                          gap: 6px !important;
+                      }
+                      .event-registration-custom-section,
+                      .event-registration-web3-section {
+                          padding-top: 28px !important;
+                      }
+                      .event-registration-add-question,
+                      .event-registration-email-button {
+                          min-height: 44px;
+                          height: 44px !important;
+                      }
+                      .event-registration-email-copy {
+                          line-height: 1.5 !important;
+                      }
                   }
+
+                 @media (max-width: 399px) {
+                      .event-registration-question-grid {
+                          grid-template-columns: 1fr !important;
+                      }
+                 }
+
+                 @media (max-width: 359px) {
+                      .quick-actions .rich-button {
+                          flex-basis: 196px !important;
+                      }
+                      .event-overview-footer-actions {
+                          grid-template-columns: 1fr !important;
+                      }
+                      .event-overview-invitations-heading {
+                          align-items: flex-start !important;
+                          flex-direction: column;
+                      }
+                 }
 
                  /* Scaled Mockup Wrapper for high-fidelity event page replica */
                   .luma-left-preview-scale-wrapper {
@@ -6283,7 +6428,7 @@ const EventPanelV2: React.FC = () => {
             <main className="w-full pb-20 relative pt-12 transition-all duration-300">
                 {/* Sticky/Transforming Glassmorphism Header */}
                 <div
-                    className={`sticky top-0 z-[50] w-full transition-all duration-300 ${isScrolled ? 'bg-white/75 dark:bg-[#131517]/90' : 'bg-transparent'} pt-2 pb-0`}
+                    className={`manage-sticky-tabs-header event-manage-sticky-header ${isScrolled ? 'is-scrolled' : ''} sticky top-0 z-[50] w-full transition-all duration-300 ${isScrolled ? 'bg-white/75 dark:bg-[#131517]/90' : 'bg-transparent'} pt-2 pb-0`}
                     style={{
                         backdropFilter: isScrolled ? 'blur(16px)' : 'none',
                         WebkitBackdropFilter: isScrolled ? 'blur(16px)' : 'none'
@@ -6291,9 +6436,9 @@ const EventPanelV2: React.FC = () => {
                 >
                     {/* Row 1: Title Header */}
                     <div className={`${getTabMaxWidthClass(activeTab)} w-full mx-auto px-4 transition-all duration-300`}>
-                        <div className={`transition-all duration-300 ${isScrolled ? 'py-1 mb-1' : 'pt-2 mb-1'}`}>
+                        <div className={`manage-sticky-tabs-title-shell transition-all duration-300 ${isScrolled ? 'py-1 mb-1' : 'pt-2 mb-1'}`}>
                             {/* Breadcrumbs (collapses on scroll) */}
-                            <div className={`transition-all duration-300 ${isScrolled ? 'max-h-0 opacity-0 overflow-hidden mb-0' : 'max-h-10 opacity-100 mb-1'}`}>
+                            <div className={`manage-sticky-tabs-breadcrumbs transition-all duration-300 ${isScrolled ? 'max-h-0 opacity-0 overflow-hidden mb-0' : 'max-h-10 opacity-100 mb-1'}`}>
                                 <div style={{ alignItems: 'center', display: 'flex', boxSizing: 'border-box', fontSize: '14px', flexWrap: 'wrap', marginBottom: '4px' }}>
                                     <div style={{ alignItems: 'center', display: 'flex', boxSizing: 'border-box' }}>
                                         <a
@@ -6319,9 +6464,10 @@ const EventPanelV2: React.FC = () => {
                                 </div>
                             </div>
                             {/* Title & Button Row */}
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div style={{ gap: '8px', marginBottom: isScrolled ? '4px' : '8px', alignItems: 'center', display: 'flex', boxSizing: 'border-box', flex: '1 1 0%', minWidth: '0px' }}>
+                            <div className="manage-sticky-tabs-heading-row flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="manage-sticky-tabs-title-wrap" style={{ gap: '8px', marginBottom: isScrolled ? '4px' : '8px', alignItems: 'center', display: 'flex', boxSizing: 'border-box', flex: '1 1 0%', minWidth: '0px' }}>
                                     <h1
+                                        className="manage-sticky-tabs-title"
                                         style={{
                                             flex: '1 1 0%',
                                             minWidth: '0px',
@@ -6388,7 +6534,7 @@ const EventPanelV2: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={() => window.open(getEventPath({ id: event?.id, slug: event?.slug }), '_blank')}
-                                    className="transition-all duration-300 text-[rgba(255,255,255,0.64)] hover:text-[rgb(19,21,23)] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.64)]"
+                                    className="manage-sticky-tabs-external-action transition-all duration-300 text-[rgba(255,255,255,0.64)] hover:text-[rgb(19,21,23)] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.64)]"
                                     style={{
                                         borderColor: 'rgba(0, 0, 0, 0)',
                                         border: '1px solid rgba(0, 0, 0, 0)',
@@ -6427,7 +6573,7 @@ const EventPanelV2: React.FC = () => {
                     </div>
 
                     {/* Row 2: Navigation Tabs Menu (Full Width Divisor Line) */}
-                    <div className={`w-full border-b border-zinc-200/60 dark:border-white/[0.07] transition-all duration-300 ${isScrolled ? 'mb-0' : 'mb-8'}`}>
+                    <div className={`event-manage-tabs-shell w-full border-b border-zinc-200/60 dark:border-white/[0.07] transition-all duration-300 ${isScrolled ? 'mb-0' : 'mb-8'}`}>
                         <div className={`${getTabMaxWidthClass(activeTab)} w-full mx-auto px-4 transition-all duration-300`}>
                             <div className="premium-tab-container !mb-0">
 
@@ -6566,7 +6712,7 @@ const EventPanelV2: React.FC = () => {
                                 {!isEventEnded && (
                                 <>
                                 {/* Quick Actions Row */}
-                                <div className="quick-actions mb-8">
+                                <div className="quick-actions event-overview-quick-actions mb-8" aria-label="Ações rápidas do evento">
                                     <button
                                         type="button"
                                         className="rich-button flex variant-color-blue"
@@ -6661,10 +6807,10 @@ const EventPanelV2: React.FC = () => {
                                     </button>
                                 </div>
 
-                                <div className="luma-unified-card">
-                                    <div className="luma-unified-card-inner flex flex-col lg:flex-row gap-6 justify-center" style={{ alignItems: 'stretch' }}>
+                                <div className="luma-unified-card event-overview-card">
+                                    <div className="luma-unified-card-inner event-overview-card-inner flex flex-col lg:flex-row gap-6 justify-center" style={{ alignItems: 'stretch' }}>
                                         {/* Coluna Esquerda: Preview Luma Premium Exact Event Page Replica */}
-                                        <div className="flex-1 min-w-0 flex flex-col items-center relative max-lg:mx-auto" style={{ maxWidth: '370px' }}>
+                                        <div className="event-overview-preview-column flex-1 min-w-0 flex flex-col items-center relative max-lg:mx-auto" style={{ maxWidth: '370px' }}>
                                             <div 
                                                 className={`luma-left-preview luma-left-preview-scale-wrapper ${previewIsDark ? 'dark dark-mode' : 'light'}`}
                                                 style={{
@@ -6942,7 +7088,7 @@ const EventPanelV2: React.FC = () => {
                                                 </div>
                                             </div> {/* fecha luma-left-preview-scale-wrapper */}
                                             {/* Compartilhar Evento */}
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', width: '370px' }}>
+                                            <div className="event-overview-share-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', width: '370px' }}>
                                                 <span style={{ fontSize: '12px' }} className="text-zinc-500 dark:text-zinc-300 font-medium">Compartilhar Evento</span>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                     <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventLink)}`} target="_blank" rel="noopener noreferrer" style={{ opacity: 0.75, transition: 'opacity 0.2s' }} className="text-zinc-600 dark:text-zinc-300 hover:opacity-100 hover:text-zinc-900 dark:hover:text-white">
@@ -6962,7 +7108,7 @@ const EventPanelV2: React.FC = () => {
                                         </div> {/* fecha a Coluna Esquerda do Preview */}
 
                                         {/* Coluna Direita: Quando & Onde — estilo Luma */}
-                                        <div style={{ gap: '4px', flexDirection: 'column', display: 'flex', boxSizing: 'border-box', flex: '1 1 0%', minWidth: 0, paddingLeft: '8px', maxWidth: '370px' }}>
+                                        <div className="event-overview-details" style={{ gap: '4px', flexDirection: 'column', display: 'flex', boxSizing: 'border-box', flex: '1 1 0%', minWidth: 0, paddingLeft: '8px', maxWidth: '370px' }}>
                                             <h3 style={{ marginTop: '8px', fontSize: '18px', lineHeight: '21.6px', fontWeight: 600, marginBottom: '16px', boxSizing: 'border-box', color: 'rgb(255, 255, 255)' }}>Quando &amp; Onde</h3>
 
                                             <div style={{ gap: '16px', flexDirection: 'column', display: 'flex', boxSizing: 'border-box' }}>
@@ -7064,7 +7210,7 @@ const EventPanelV2: React.FC = () => {
                                             <div style={{ flex: '1 1 0%', minWidth: '0px', minHeight: '0px', boxSizing: 'border-box' }}></div>
 
                                             {/* Botões rodapé: Editar + Alterar Foto em grid */}
-                                            <div style={{ boxSizing: 'border-box', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', display: 'grid' }}>
+                                            <div className="event-overview-footer-actions" style={{ boxSizing: 'border-box', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', display: 'grid' }}>
                                                 <button
                                                     type="button"
                                                     onClick={handleOpenEditEventModal}
@@ -7139,11 +7285,11 @@ const EventPanelV2: React.FC = () => {
                                 )}
 
                                 {/* Seções Inferiores */}
-                                <div className="space-y-10 mt-10">
+                                <div className="event-overview-invitations space-y-10 mt-10">
                                     {/* Seção 1: Convites */}
                                     <div style={{ boxSizing: 'border-box' }}>
                                         <div style={{ boxSizing: 'border-box' }}>
-                                            <div style={{ marginBottom: '20px', gap: '8px', justifyContent: 'space-between', display: 'flex', alignItems: 'center', boxSizing: 'border-box' }}>
+                                            <div className="event-overview-invitations-heading" style={{ marginBottom: '20px', gap: '8px', justifyContent: 'space-between', display: 'flex', alignItems: 'center', boxSizing: 'border-box' }}>
                                                 <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'rgb(255, 255, 255)', marginBottom: '0px', lineHeight: '24px', marginTop: '0px', boxSizing: 'border-box' }}>Convites</h2>
                                                 <div style={{ margin: '-4px 0px', boxSizing: 'border-box' }}>
                                                     <button
@@ -8093,7 +8239,7 @@ const EventPanelV2: React.FC = () => {
 
                                         {/* 3 botões de ação premium */}
                                         <div style={{ marginTop: '16px', boxSizing: 'border-box' }}>
-                                            <div className="quick-actions" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                                            <div className="quick-actions event-guests-actions" aria-label="Ações rápidas dos convidados" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
 
                                                 {/* Botão: Convidar Convidados (azul) */}
                                                 <button
@@ -8336,7 +8482,7 @@ const EventPanelV2: React.FC = () => {
                             >
                                 <div style={{ paddingBottom: '48px', paddingTop: '0px', boxSizing: 'border-box' }}>
                                     <div style={{ paddingBottom: '0px', boxSizing: 'border-box' }}>
-                                        <div className="quick-actions" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                                        <div className="quick-actions event-registration-actions" aria-label="Ações rápidas de cadastro" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                                             
                                             {/* Botão: Inscrição */}
                                             <button
@@ -8722,13 +8868,13 @@ const EventPanelV2: React.FC = () => {
                                      </div>
 
                                     {/* Seção: Perguntas de Cadastro */}
-                                    <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '32px', paddingTop: '32px', boxSizing: 'border-box' }}>
+                                    <div className="event-registration-questions-section" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '32px', paddingTop: '32px', boxSizing: 'border-box' }}>
                                         <div style={{ boxSizing: 'border-box' }}>
-                                            <div style={{ marginBottom: '20px', gap: '8px', justifyContent: 'space-between', display: 'flex', alignItems: 'center', boxSizing: 'border-box' }}>
+                                            <div className="event-registration-questions-heading" style={{ marginBottom: '20px', gap: '8px', justifyContent: 'space-between', display: 'flex', alignItems: 'center', boxSizing: 'border-box' }}>
                                                 <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'rgb(255, 255, 255)', marginBottom: '0px', lineHeight: '24px', marginTop: '0px', boxSizing: 'border-box' }}>Perguntas de Cadastro</h2>
                                                 <div style={{ margin: '-4px 0px', boxSizing: 'border-box' }}></div>
                                             </div>
-                                            <div style={{ color: 'rgb(210, 212, 215)', fontSize: '16px', marginTop: '-14px', marginBottom: '20px', boxSizing: 'border-box' }}>Faremos as seguintes perguntas aos convidados quando eles se inscreverem no evento.</div>
+                                            <div className="event-registration-questions-description" style={{ color: 'rgb(210, 212, 215)', fontSize: '16px', marginTop: '-14px', marginBottom: '20px', boxSizing: 'border-box' }}>Faremos as seguintes perguntas aos convidados quando eles se inscreverem no evento.</div>
                                         </div>
                                         <div style={{ boxSizing: 'border-box' }}>
                                             <div style={{ boxSizing: 'border-box' }}>
@@ -8738,9 +8884,9 @@ const EventPanelV2: React.FC = () => {
                                                         </svg></div>
                                                     <div style={{ fontWeight: 600, boxSizing: 'border-box', color: '#ffffff' }}>Informações Pessoais</div>
                                                 </div>
-                                                <div style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', display: 'grid', boxSizing: 'border-box' }}>
+                                                <div className="event-registration-question-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', display: 'grid', boxSizing: 'border-box' }}>
                                                     {/* Nome */}
-                                                    <div tabIndex={0} onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'name' ? null : 'name'); }} style={{ outline: 'none', minWidth: '0px', scrollMarginTop: '64px', display: 'flex', width: '100%', cursor: 'pointer', boxSizing: 'border-box', position: 'relative' }}>
+                                                    <div className="event-registration-question-card" tabIndex={0} onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'name' ? null : 'name'); }} style={{ outline: 'none', minWidth: '0px', scrollMarginTop: '64px', display: 'flex', width: '100%', cursor: 'pointer', boxSizing: 'border-box', position: 'relative' }}>
                                                         <div style={{ 
                                                             borderRadius: '12px', 
                                                             backgroundColor: 'rgba(255, 255, 255, 0.04)', 
@@ -8840,7 +8986,7 @@ const EventPanelV2: React.FC = () => {
                                                         )}
                                                     </div>
                                                     {/* Email */}
-                                                    <div style={{ borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: 'rgba(255, 255, 255, 0.04)', width: '100%', backdropFilter: 'none', boxShadow: 'none', padding: '8px 14px', position: 'relative', transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)', gap: '8px', alignItems: 'center', display: 'flex', boxSizing: 'border-box', justifyContent: 'space-between' }}>
+                                                    <div className="event-registration-question-card event-registration-question-card-static" style={{ borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.08)', backgroundColor: 'rgba(255, 255, 255, 0.04)', width: '100%', backdropFilter: 'none', boxShadow: 'none', padding: '8px 14px', position: 'relative', transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)', gap: '8px', alignItems: 'center', display: 'flex', boxSizing: 'border-box', justifyContent: 'space-between' }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '0px', flex: '1 1 0%' }}>
                                                             <div style={{ color: 'rgba(255, 255, 255, 0.32)', boxSizing: 'border-box' }}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" style={{ display: 'block', width: '1rem', height: '16px', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                                                                     <path fill="currentColor" d="M9.13 1.7c1.182 0 2.128-.001 2.882.083.768.086 1.423.27 1.984.696q.411.313.726.726c.426.561.61 1.216.695 1.984.084.752.083 1.7.083 2.882s.001 2.13-.083 2.884c-.086.766-.27 1.42-.696 1.981a3.8 3.8 0 0 1-.726.727c-.561.427-1.216.61-1.984.696-.752.084-1.7.083-2.882.083H6.871c-1.183 0-2.13.001-2.883-.083-.767-.086-1.423-.269-1.984-.696a3.8 3.8 0 0 1-.726-.726c-.426-.56-.61-1.216-.695-1.983C.5 10.2.5 9.254.5 8.07S.499 5.94.583 5.188c.086-.767.27-1.423.696-1.984a3.8 3.8 0 0 1 .726-.726c.561-.426 1.215-.61 1.984-.695.753-.084 1.7-.083 2.882-.083zm2.533 3.432a.85.85 0 0 0-1.188-.15L8.225 6.73a.36.36 0 0 1-.431 0L5.523 4.981l-.072-.05a.847.847 0 0 0-1.027 1.335l.065.056 2.277 1.753.005.005a2.06 2.06 0 0 0 2.477 0l.008-.006 2.257-1.755a.85.85 0 0 0 .149-1.188Z" style={{ boxSizing: 'border-box' }}></path>
@@ -8850,7 +8996,7 @@ const EventPanelV2: React.FC = () => {
                                                         <div style={{ color: 'rgba(255, 255, 255, 0.5)', transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)', whiteSpace: 'nowrap', boxSizing: 'border-box', fontSize: '15px' }}>Obrigatório</div>
                                                     </div>
                                                     {/* Celular */}
-                                                    <div tabIndex={0} onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'phone' ? null : 'phone'); }} style={{ outline: 'none', minWidth: '0px', scrollMarginTop: '64px', display: 'flex', width: '100%', cursor: 'pointer', boxSizing: 'border-box', position: 'relative' }}>
+                                                    <div className="event-registration-question-card" tabIndex={0} onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'phone' ? null : 'phone'); }} style={{ outline: 'none', minWidth: '0px', scrollMarginTop: '64px', display: 'flex', width: '100%', cursor: 'pointer', boxSizing: 'border-box', position: 'relative' }}>
                                                         <div style={{ 
                                                             borderRadius: '12px', 
                                                             backgroundColor: 'rgba(255, 255, 255, 0.04)', 
@@ -8941,16 +9087,16 @@ const EventPanelV2: React.FC = () => {
                                                 </div>
                                             </div>
                                             {/* Identidade Web3 */}
-                                            <div style={{ paddingTop: '24px', boxSizing: 'border-box' }}>
+                                            <div className="event-registration-web3-section" style={{ paddingTop: '24px', boxSizing: 'border-box' }}>
                                                 <div style={{ gap: '10px', marginBottom: '16px', alignItems: 'center', display: 'flex', boxSizing: 'border-box' }}>
                                                     <div style={{ color: 'rgb(123, 73, 255)', flexShrink: 0, justifyContent: 'center', alignItems: 'center', display: 'flex', boxSizing: 'border-box', '--variant-color': '#b596ff', '--variant-color-content': '#7b49ff', '--variant-color-pale': 'rgba(104,47,255,.133)', '--variant-color-faint': 'rgba(104,47,255,.067)', '--variant-color-active': '#7b49ff', '--variant-color-bg': '#682fff', '--variant-color-bg-active': '#5b29df' } as any}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style={{ width: '1.125rem', height: '18px', display: 'block', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                                                             <path fill="currentColor" fillRule="evenodd" d="M14.058 3.75c1.097 0 1.428.01 1.672.083a2 2 0 0 1 1.348 1.348c.043.145.064.321.074.672H3.8a1.051 1.051 0 0 1 0-2.103zM.75 4.801A3.05 3.05 0 0 1 3.801 1.75H14.21c.878 0 1.53 0 2.09.166a4 4 0 0 1 2.696 2.696c.117.394.151.834.161 1.365.495.076.948.202 1.377.42a5 5 0 0 1 2.185 2.186c.302.592.427 1.232.487 1.961q.025.312.037.668h-2.005a2.82 2.82 0 1 0 0 5.64h2.005q-.012.357-.037.668c-.06.73-.185 1.37-.487 1.962a5 5 0 0 1-2.185 2.185c-.592.301-1.233.427-1.962.487-.707.058-1.581.058-2.665.058h-7.8c-1.084 0-1.958 0-2.666-.058-.728-.06-1.369-.186-1.961-.487a5 5 0 0 1-2.185-2.185c-.302-.593-.428-1.233-.487-1.962C.75 16.812.75 15.938.75 14.854zm22.513 7.95v2.564h-2.026a1.282 1.282 0 1 1 0-2.565z" style={{ boxSizing: 'border-box' }}></path>
                                                         </svg></div>
                                                     <div style={{ fontWeight: 600, boxSizing: 'border-box', color: '#ffffff' }}>Identidade Web3</div>
                                                 </div>
-                                                <div style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', display: 'grid', boxSizing: 'border-box' }}>
+                                                <div className="event-registration-question-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', display: 'grid', boxSizing: 'border-box' }}>
                                                     {/* Endereço ETH */}
-                                                    <div tabIndex={0} onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'eth' ? null : 'eth'); }} style={{ outline: 'none', minWidth: '0px', scrollMarginTop: '64px', display: 'flex', width: '100%', cursor: 'pointer', boxSizing: 'border-box', position: 'relative' }}>
+                                                    <div className="event-registration-question-card" tabIndex={0} onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'eth' ? null : 'eth'); }} style={{ outline: 'none', minWidth: '0px', scrollMarginTop: '64px', display: 'flex', width: '100%', cursor: 'pointer', boxSizing: 'border-box', position: 'relative' }}>
                                                         <div style={{ 
                                                             borderRadius: '12px', 
                                                             backgroundColor: 'rgba(255, 255, 255, 0.04)', 
@@ -9042,7 +9188,7 @@ const EventPanelV2: React.FC = () => {
                                                         )}
                                                     </div>
                                                     {/* Endereço SOL */}
-                                                    <div tabIndex={0} onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'sol' ? null : 'sol'); }} style={{ outline: 'none', minWidth: '0px', scrollMarginTop: '64px', display: 'flex', width: '100%', cursor: 'pointer', boxSizing: 'border-box', position: 'relative' }}>
+                                                    <div className="event-registration-question-card" tabIndex={0} onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === 'sol' ? null : 'sol'); }} style={{ outline: 'none', minWidth: '0px', scrollMarginTop: '64px', display: 'flex', width: '100%', cursor: 'pointer', boxSizing: 'border-box', position: 'relative' }}>
                                                         <div style={{ 
                                                             borderRadius: '12px', 
                                                             backgroundColor: 'rgba(255, 255, 255, 0.04)', 
@@ -9136,7 +9282,7 @@ const EventPanelV2: React.FC = () => {
                                                 </div>
                                             </div>
                                             {/* Perguntas Personalizadas */}
-                                            <div style={{ paddingTop: '24px', boxSizing: 'border-box' }}>
+                                            <div className="event-registration-custom-section" style={{ paddingTop: '24px', boxSizing: 'border-box' }}>
                                                 <div style={{ gap: '10px', marginBottom: '16px', alignItems: 'center', display: 'flex', boxSizing: 'border-box' }}>
                                                     <div style={{ color: 'rgb(249, 131, 70)', flexShrink: 0, justifyContent: 'center', alignItems: 'center', display: 'flex', boxSizing: 'border-box', '--variant-color': '#fba67a', '--variant-color-content': '#f98346', '--variant-color-pale': 'rgba(217,99,38,.133)', '--variant-color-faint': 'rgba(217,99,38,.067)', '--variant-color-active': '#f98346', '--variant-color-bg': '#f8712b', '--variant-color-bg-active': '#d96326' } as any}><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" style={{ width: '1.125rem', height: '18px', display: 'block', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                                                             <path fill="currentColor" fillRule="evenodd" d="M6.414 0c-1.17 0-2.293.465-3.121 1.293a1 1 0 1 0 1.414 1.414A2.4 2.4 0 0 1 6.414 2h11.172c.64 0 1.254.254 1.707.707a1 1 0 1 0 1.414-1.414A4.4 4.4 0 0 0 17.586 0zM0 13c0-3.75 0-5.625.955-6.939A5 5 0 0 1 2.06 4.955C3.375 4 5.251 4 9 4h6c3.75 0 5.625 0 6.939.955a5 5 0 0 1 1.106 1.106C24 7.375 24 9.251 24 13s0 5.625-.955 6.939a5 5 0 0 1-1.106 1.106C20.625 22 18.749 22 15 22H9c-3.75 0-5.625 0-6.939-.955A5 5 0 0 1 .955 19.94C0 18.625 0 16.749 0 13m10.84-2.943c0-.476.183-.689.376-.82C11.46 9.066 11.79 9 12 9s.539.068.784.236c.193.132.376.345.376.821 0 .285-.104.401-.73.938-.583.499-1.43 1.27-1.43 2.765a1 1 0 1 0 2 0c0-.563.233-.82.73-1.246l.111-.093c.484-.406 1.319-1.105 1.319-2.364 0-1.17-.537-1.985-1.245-2.47A3.5 3.5 0 0 0 12 7c-.51 0-1.261.138-1.916.587-.707.485-1.244 1.3-1.244 2.47a1 1 0 1 0 2 0M12 18.75a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5" clipRule="evenodd" style={{ boxSizing: 'border-box' }}></path>
@@ -9164,7 +9310,7 @@ const EventPanelV2: React.FC = () => {
                                                         ))}
                                                     </div>
                                                 )}
-                                                <div style={{ gap: '16px', flexDirection: 'column', display: 'flex', boxSizing: 'border-box' }}><button type="button" onClick={() => setIsAddQuestionModalOpen(true)} style={{ borderColor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(0, 0, 0, 0)', fontSize: '16px', padding: '10px 14px', height: '38px', width: 'fit-content', fontWeight: 500, borderRadius: '8px', whiteSpace: 'nowrap', outlineOffset: '2px', outline: 'rgba(0, 0, 0, 0) solid 2px', justifyContent: 'center', minWidth: '0px', maxWidth: '100%', position: 'relative', alignItems: 'center', display: 'flex', cursor: 'pointer', margin: '0px', fontFamily: "-apple-system, BlinkMacSystemFont, 'Apple Color Emoji', Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif", lineHeight: '24px', boxSizing: 'border-box' }} className="transition-all duration-300 text-[rgba(255,255,255,0.64)] hover:text-[rgb(19,21,23)] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.64)]"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" style={{ marginRight: '8px', strokeWidth: '2.5px', width: '1rem', height: '16px', flexShrink: 0, display: 'block', verticalAlign: 'middle', boxSizing: 'border-box' }}>
+                                                <div style={{ gap: '16px', flexDirection: 'column', display: 'flex', boxSizing: 'border-box' }}><button type="button" onClick={() => setIsAddQuestionModalOpen(true)} style={{ borderColor: 'rgba(0, 0, 0, 0)', border: '1px solid rgba(0, 0, 0, 0)', fontSize: '16px', padding: '10px 14px', height: '38px', width: 'fit-content', fontWeight: 500, borderRadius: '8px', whiteSpace: 'nowrap', outlineOffset: '2px', outline: 'rgba(0, 0, 0, 0) solid 2px', justifyContent: 'center', minWidth: '0px', maxWidth: '100%', position: 'relative', alignItems: 'center', display: 'flex', cursor: 'pointer', margin: '0px', fontFamily: "-apple-system, BlinkMacSystemFont, 'Apple Color Emoji', Inter, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif", lineHeight: '24px', boxSizing: 'border-box' }} className="event-registration-add-question transition-all duration-300 text-[rgba(255,255,255,0.64)] hover:text-[rgb(19,21,23)] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.64)]"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" style={{ marginRight: '8px', strokeWidth: '2.5px', width: '1rem', height: '16px', flexShrink: 0, display: 'block', verticalAlign: 'middle', boxSizing: 'border-box' }}>
                                                             <path fill="currentColor" fillRule="evenodd" d="M8.722 2.222a.722.722 0 0 0-1.444 0v5.056H2.222a.722.722 0 0 0 0 1.444h5.056v5.056a.722.722 0 0 0 1.444 0V8.722h5.056a.722.722 0 0 0 0-1.444H8.722z" style={{ boxSizing: 'border-box' }}></path>
                                                         </svg>
                                                         <div style={{ textOverflow: 'ellipsis', margin: '-4px 0px', padding: '4px 0px', lineHeight: '16px', overflow: 'hidden', boxSizing: 'border-box' }}>Adicionar Pergunta</div>
@@ -9174,13 +9320,12 @@ const EventPanelV2: React.FC = () => {
                                     </div>
 
                                     {/* Seção: E-mail de Cadastro */}
-                                    <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '32px', paddingTop: '30px', boxSizing: 'border-box' }}>
+                                    <div className="event-registration-email-section" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '32px', paddingTop: '30px', boxSizing: 'border-box' }}>
                                         <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#ffffff', lineHeight: '24px', margin: 0, boxSizing: 'border-box' }}>
                                             E-mail de Cadastro
                                         </h2>
-                                        <div style={{ color: 'rgb(210, 212, 215)', fontSize: '16px', lineHeight: '24px', marginTop: '8px', boxSizing: 'border-box' }}>
-                                            <div>Ao se cadastrar, enviamos aos convidados um e-mail de confirmação que inclui um convite de calendário.</div>
-                                            <div>Você pode adicionar uma mensagem personalizada ao e-mail.</div>
+                                        <div className="event-registration-email-copy" style={{ color: 'rgb(210, 212, 215)', fontSize: '16px', lineHeight: '24px', marginTop: '8px', boxSizing: 'border-box' }}>
+                                            Ao se cadastrar, enviamos aos convidados um e-mail de confirmação que inclui um convite de calendário. Você pode adicionar uma mensagem personalizada ao e-mail.
                                         </div>
                                         <button
                                             type="button"
@@ -9205,7 +9350,7 @@ const EventPanelV2: React.FC = () => {
                                                 boxSizing: 'border-box',
                                                 transition: 'background-color 0.2s ease, transform 0.2s ease'
                                             }}
-                                            className="hover:bg-zinc-100 active:translate-y-px"
+                                            className="event-registration-email-button hover:bg-zinc-100 active:translate-y-px"
                                         >
                                             <Mail size={16} strokeWidth={2} />
                                             <span>Personalizar E-mail</span>
@@ -13171,7 +13316,7 @@ const EventPanelV2: React.FC = () => {
                                                         <div className="flex h-[38px] w-[159px] overflow-hidden rounded-lg border border-white/10 bg-[#151617]">
                                                             <input
                                                                 type="number"
-                                                                min="30"
+                                                                min="0"
                                                                 step="0.01"
                                                                 value={ticketPrice}
                                                                 onChange={(e) => setTicketPrice(e.target.value)}

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/Header';
+import { fetchApi } from '@/lib/apiBase';
 
 interface Notification {
     id: string;
@@ -14,46 +15,44 @@ interface Notification {
 
 const Notifications: React.FC = () => {
     const navigate = useNavigate();
-    const { user, token } = useAuth();
+    const { user, token, loading: authLoading } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadNotifications = useCallback(async () => {
+        if (!token) return;
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetchApi('/api/notifications', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!res.ok) throw new Error('Não foi possível carregar suas notificações.');
+            const data = await res.json();
+            setNotifications(data.notifications || []);
+        } catch {
+            setError('Não foi possível carregar suas notificações.');
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
 
     useEffect(() => {
-        const loadNotifications = async () => {
-            try {
-                if (!token) {
-                    setLoading(false);
-                    return;
-                }
-
-                const res = await fetch('/api/notifications', {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setNotifications(data.notifications || []);
-                }
-            } catch (e) {
-                // no-op
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (!user?.id) {
-            setLoading(false);
+        if (authLoading) return;
+        if (!user?.id || !token) {
+            navigate('/signin?redirect=%2Fnotifications', { replace: true });
             return;
         }
-
-        loadNotifications();
-    }, [user?.id, token]);
+        void loadNotifications();
+    }, [authLoading, user?.id, token, navigate, loadNotifications]);
 
     const markAsRead = async (notifId: string) => {
         try {
             if (!token) return;
 
-            await fetch(`/api/notifications/${notifId}/read`, {
+            await fetchApi(`/api/notifications/${notifId}/read`, {
                 method: 'PUT',
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -72,7 +71,7 @@ const Notifications: React.FC = () => {
 
             await Promise.all(
                 unreadIds.map(id =>
-                    fetch(`/api/notifications/${id}/read`, {
+                    fetchApi(`/api/notifications/${id}/read`, {
                         method: 'PUT',
                         headers: { Authorization: `Bearer ${token}` },
                     })
@@ -104,13 +103,13 @@ const Notifications: React.FC = () => {
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0b0b0b]">
+        <div className="min-h-[100dvh] w-full overflow-x-hidden bg-gray-50 dark:bg-[#0b0b0b]">
             <Header />
 
             <div className="pt-20 pb-10 px-4 max-w-4xl mx-auto">
                 <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-sm border border-gray-200 dark:border-[#2a2a2a]">
                     {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-200 dark:border-[#2a2a2a] flex items-center justify-between">
+                    <div className="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-[#2a2a2a] flex items-center justify-between gap-3">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notificações</h1>
                             {unreadCount > 0 && (
@@ -122,18 +121,24 @@ const Notifications: React.FC = () => {
                         {unreadCount > 0 && (
                             <button
                                 onClick={markAllAsRead}
-                                className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                className="min-h-11 shrink-0 px-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
                             >
-                                Marcar todas como lidas
+                                <span className="sm:hidden">Marcar lidas</span>
+                                <span className="hidden sm:inline">Marcar todas como lidas</span>
                             </button>
                         )}
                     </div>
 
                     {/* Content */}
                     <div className="divide-y divide-gray-200 dark:divide-[#2a2a2a]">
-                        {loading ? (
+                        {authLoading || loading ? (
                             <div className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                 Carregando notificações...
+                            </div>
+                        ) : error ? (
+                            <div className="px-5 py-12 text-center">
+                                <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
+                                <button type="button" onClick={() => void loadNotifications()} className="mt-4 min-h-11 rounded-lg bg-indigo-600 px-5 text-sm font-semibold text-white">Tentar novamente</button>
                             </div>
                         ) : notifications.length === 0 ? (
                             <div className="px-6 py-12 text-center">
@@ -157,9 +162,10 @@ const Notifications: React.FC = () => {
                             </div>
                         ) : (
                             notifications.map((notification) => (
-                                <div
+                                <button
+                                    type="button"
                                     key={notification.id}
-                                    className={`px-6 py-4 cursor-pointer transition-colors ${!notification.isRead
+                                    className={`w-full min-h-11 px-4 py-4 text-left sm:px-6 cursor-pointer transition-colors ${!notification.isRead
                                         ? 'bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
                                         : 'hover:bg-gray-50 dark:hover:bg-[#222]'
                                         }`}
@@ -201,7 +207,7 @@ const Notifications: React.FC = () => {
                                             </svg>
                                         )}
                                     </div>
-                                </div>
+                                </button>
                             ))
                         )}
                     </div>

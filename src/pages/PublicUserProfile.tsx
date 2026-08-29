@@ -361,6 +361,9 @@ const PublicUserProfile = () => {
             margin-bottom: 2rem;
         }
         @media (max-width: 640px) {
+            .profile-content-container {
+                padding: 28px 16px 20px;
+            }
             .profile-top-section {
                 flex-direction: column;
                 align-items: center;
@@ -406,6 +409,7 @@ const PublicUserProfile = () => {
             .profile-info-block {
                 align-items: center;
             }
+            .profile-stats-container { justify-content: center; flex-wrap: wrap; row-gap: 6px; }
         }
 
         .profile-name {
@@ -695,6 +699,14 @@ const PublicUserProfile = () => {
         @media (max-width: 640px) {
             .profile-events-panel { inset: 0; width: 100%; border: 0; border-radius: 0; }
             .profile-events-panel-scroll { padding: 22px 18px 30px; }
+            .profile-events-panel-toolbar { min-height: 60px; padding-top: max(8px, env(safe-area-inset-top)); }
+            .profile-events-panel-close { width: 44px; height: 44px; }
+            .profile-event-row { min-height: 96px; }
+            .profile-see-all { min-height: 44px; padding: 8px 0; }
+        }
+        @media (max-width: 380px) {
+            .profile-event-cover-wrapper { width: 76px; height: 76px; }
+            .profile-event-title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
         }
       `}</style>
 

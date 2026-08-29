@@ -290,7 +290,7 @@ const EventsByCategory: React.FC = () => {
         <section className="category-section category-main-events" aria-labelledby="main-events-heading">
           <h2 id="main-events-heading">Próximos Eventos Principais</h2>
 
-          {monthGroups.length > 0 && (
+          {monthGroups.length > 0 ? (
             <div className="category-events-list">
               {monthGroups.map((group, groupIndex) => (
                 <section className="category-month-group" key={group.key}>
@@ -319,6 +319,8 @@ const EventsByCategory: React.FC = () => {
                 </section>
               ))}
             </div>
+          ) : (
+            <p className="category-empty-state">Ainda não há eventos publicados nesta categoria.</p>
           )}
         </section>
 
@@ -340,6 +342,7 @@ const EventsByCategory: React.FC = () => {
                 </Link>
               );
             })}
+            {organizations.length === 0 && <p className="category-empty-state">Nenhum calendário encontrado nesta categoria.</p>}
           </div>
         </section>
 
@@ -411,6 +414,9 @@ const categoryStyles = `
     letter-spacing: -0.04em;
     line-height: 1.1;
   }
+
+  .category-hero-copy { min-width: 0; }
+  .category-hero-copy .subscribe-control { margin-top: 32px; }
 
   .category-stats {
     display: flex;
@@ -537,6 +543,17 @@ const categoryStyles = `
     background: rgba(255, 255, 255, 0.055);
     border: 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 13px;
+  }
+
+  .category-empty-state {
+    margin: 0;
+    padding: 22px;
+    color: rgba(255,255,255,.48);
+    background: rgba(255,255,255,.035);
+    border: 1px dashed rgba(255,255,255,.1);
+    border-radius: 12px;
+    font-size: .875rem;
+    line-height: 1.5;
   }
 
   .category-month-group { position: relative; }
@@ -730,6 +747,7 @@ const categoryStyles = `
   .category-page.light .category-map-empty-copy a { color:#fff; background:#27272a; }
   .category-page.light .category-world-map path { fill:rgba(24,24,27,.13); }
   .category-page.light .category-loader { border-color:rgba(24,24,27,.12); border-top-color:#27272a; }
+  .category-page.light .category-empty-state { color:#71717a; border-color:rgba(24,24,27,.12); background:rgba(24,24,27,.025); }
   @keyframes category-spin { to { transform: rotate(360deg); } }
 
   .category-page footer { margin-top: 0 !important; }
@@ -755,13 +773,25 @@ const categoryStyles = `
     .category-nearby { grid-template-columns: 1fr; }
     .category-map-empty-copy { right: 50%; width: min(90%, 330px); transform: translateX(50%); }
     .category-subscribe-aside { max-width: 360px; }
+    .category-subscribe-form input, .category-subscribe-form button { min-height: 44px; }
+    .category-hero-copy .subscribe-control { max-width: 100%; }
+    .category-hero-copy .subscribe-control form { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+    .category-hero-copy .subscribe-control input { min-width: 0; }
+    .category-calendar-card { min-height: 150px; }
+    .category-follow-button { min-height: 40px; display: inline-flex; align-items: center; }
+    .category-nearby-heading button { width: 44px; height: 44px; }
   }
 
   @media (max-width: 430px) {
     .category-stats { align-items: flex-start; flex-direction: column; gap: 8px; }
     .category-subscribe-form { display: grid; grid-template-columns: 1fr; }
     .category-subscribe-form button { width: 100%; }
+    .category-hero-copy .subscribe-control form { grid-template-columns: 1fr; }
+    .category-hero-copy .subscribe-control-action { width: 100%; min-height: 44px; }
     .category-month-heading { top: 48px; }
+    .category-event-row { min-height: 92px; padding: 12px; }
+    .category-map-empty { min-height: 280px; }
+    .category-map-empty-copy { bottom: 0; }
   }
 
   @media (prefers-reduced-motion: reduce) {

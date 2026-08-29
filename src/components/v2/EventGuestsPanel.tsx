@@ -296,7 +296,7 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onCheck
           <motion.span animate={{ width: `${invitedWidth}%` }} className="h-full bg-[#347bf4]" transition={{ duration: .35 }} />
         </div>
 
-        <div className="quick-actions mt-4" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+        <div className="quick-actions event-guests-actions mt-4" aria-label="Ações rápidas dos convidados" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           <ActionCard variant="blue" icon={<Mail size={22} />} title="Convidar Convidados" onClick={onInvite} />
           <ActionCard variant="emerald" icon={<QrCode size={22} />} title="Fazer Check-in dos Convidados" onClick={onCheckin} />
           <ActionCard variant="amber" icon={<UsersRound size={22} />} title="Lista de Convidados" description="Exibido para os convidados" onClick={onGuestListSettings} />

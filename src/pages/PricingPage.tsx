@@ -33,8 +33,6 @@ const PricingPage: React.FC = () => {
   return (
     <div className={`theme-root ${isDark ? 'dark dark-mode' : 'light'} pricing-page`} style={{ backgroundColor: isDark ? '#121417' : luma.gray10, minHeight: '100vh' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
         .pricing-page, .pricing-page * {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
@@ -54,6 +52,25 @@ const PricingPage: React.FC = () => {
           max-width: ${luma.maxWidth};
           margin: 0 auto;
           padding: 0 1rem;
+        }
+
+        .pricing-hero {
+          text-align: center;
+          margin-bottom: 3rem;
+        }
+        .pricing-title {
+          margin: 0 0 .75rem;
+          font-size: clamp(2.5rem, 7vw, 3.75rem);
+          font-weight: 600;
+          line-height: 1.05;
+          letter-spacing: -.04em;
+        }
+        .pricing-subtitle {
+          max-width: 600px;
+          margin: 0 auto;
+          font-size: 1.25rem;
+          font-weight: 300;
+          line-height: 1.5;
         }
 
         /* Toggle Switcher */
@@ -77,6 +94,10 @@ const PricingPage: React.FC = () => {
           transition: color 0.2s;
           text-align: center;
           min-width: 100px;
+          border: 0;
+          background: transparent;
+          cursor: pointer;
+          font-family: inherit;
         }
         .switcher-segment.active {
           color: ${luma.black};
@@ -180,7 +201,7 @@ const PricingPage: React.FC = () => {
         .complementos-card .icon { color: ${luma.gray60}; width: 24px; height: 24px; flex-shrink: 0; margin-top: 16px; }
         .complementos-card .icon svg { width: 24px; height: 24px; }
         .complementos-card .title { font-size: 20px; font-weight: 500; color: ${luma.black}; margin-bottom: 0.25rem; }
-        .complementos-card .desc { font-size: 16; color: ${luma.gray60}; line-height: 1.5; maxWidth: 360px; }
+        .complementos-card .desc { font-size: 16px; color: ${luma.gray60}; line-height: 1.5; max-width: 360px; }
         .complementos-card .footnote { font-size: 12px; color: ${luma.gray60}; margin-top: 2rem; opacity: 0.8; }
         
         .complementos-card .right-panel { 
@@ -260,7 +281,6 @@ const PricingPage: React.FC = () => {
         @media (max-width: 1000px) {
           .enterprise-header { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
           .enterprise-header .btn { width: 100%; }
-          .enterprise-card { padding: 2rem; }
         }
 
         @media (max-width: 1000px) {
@@ -268,6 +288,34 @@ const PricingPage: React.FC = () => {
           .complementos-card { flex-direction: column; }
           .complementos-card .right-panel { width: 100%; border-left: none; border-top: 1px solid ${luma.gray20}; }
           .complementos-card .footnote { margin-top: 2rem; }
+        }
+
+        @media (max-width: 640px) {
+          .pricing-main {
+            padding-top: calc(var(--page-top-spacing-mobile) + env(safe-area-inset-top)) !important;
+            padding-bottom: 44px !important;
+          }
+          .zm-container { padding: 0 16px; }
+          .pricing-hero { margin-bottom: 34px; }
+          .pricing-title { font-size: 2.65rem; }
+          .pricing-subtitle { font-size: 1.05rem; line-height: 1.48; }
+          .lux-button-switcher { width: min(100%, 260px); margin-top: 24px; }
+          .switcher-segment { min-width: 0; padding: 10px 0; font-size: 15px; }
+          .plans { gap: 16px; margin-top: 0; }
+          .content-card { padding: 18px; }
+          .plan-header .price { font-size: 34px; }
+          .plan-price-row { align-items: flex-start !important; flex-direction: column; gap: 8px !important; }
+          .feature-row { gap: 10px; font-size: 15px; }
+          .complementos-card { margin-top: 42px; border-radius: 12px; }
+          .complementos-card .left-panel,
+          .complementos-card .right-panel { padding: 18px; }
+          .complementos-card .left-top { gap: 12px; }
+          .complementos-card .title { font-size: 18px; }
+          .complementos-card .desc { font-size: 14px; }
+          .complementos-card .table-row { font-size: 14px; }
+          .enterprise-header-container { padding: 18px; }
+          .enterprise-info { gap: 12px; }
+          .enterprise-info .desc { line-height: 1.45; }
         }
 
         /* Dark Theme Overrides */
@@ -372,15 +420,15 @@ const PricingPage: React.FC = () => {
 
       <HeaderV2 transparent />
 
-      <main style={{ paddingTop: 'var(--page-top-spacing)', paddingBottom: '100px' }}>
+      <main className="pricing-main" style={{ paddingTop: 'var(--page-top-spacing)', paddingBottom: '100px' }}>
         <div className="zm-container">
-          <header style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <h1 style={{ fontSize: '3.75rem', fontWeight: 600, marginBottom: '0.75rem' }}>Preços</h1>
-            <p style={{ fontSize: '1.25rem', fontWeight: 300, color: isDark ? 'rgba(255,255,255,0.6)' : luma.gray60, maxWidth: '600px', margin: '0 auto' }}>
+          <header className="pricing-hero">
+            <h1 className="pricing-title">Preços</h1>
+            <p className="pricing-subtitle" style={{ color: isDark ? 'rgba(255,255,255,0.6)' : luma.gray60 }}>
               Use a Fauves gratuitamente com eventos e convidados ilimitados. Faça um upgrade para mais convites, 0% de taxa de plataforma e mais.
             </p>
 
-            <div className="lux-button-switcher" onClick={() => setIsAnnual(!isAnnual)}>
+            <div className="lux-button-switcher" role="group" aria-label="Período de cobrança">
               <div
                 className="switcher-slider"
                 style={{
@@ -389,8 +437,8 @@ const PricingPage: React.FC = () => {
                   transform: isAnnual ? 'translateX(100%)' : 'translateX(0)'
                 }}
               />
-              <div className={`switcher-segment ${!isAnnual ? 'active' : ''}`}>Mensal</div>
-              <div className={`switcher-segment ${isAnnual ? 'active' : ''}`}>Anual</div>
+              <button type="button" className={`switcher-segment ${!isAnnual ? 'active' : ''}`} aria-pressed={!isAnnual} onClick={() => setIsAnnual(false)}>Mensal</button>
+              <button type="button" className={`switcher-segment ${isAnnual ? 'active' : ''}`} aria-pressed={isAnnual} onClick={() => setIsAnnual(true)}>Anual</button>
             </div>
           </header>
 
@@ -429,14 +477,14 @@ const PricingPage: React.FC = () => {
               <div className="plan-header">
                 <div className="title" style={{ color: luma.cranberry }}>Fauves Plus</div>
                 <div className="price">
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <div className="plan-price-row" style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                     <span className="mono-number" style={{ fontFamily: 'monospace' }}>R$ {isAnnual ? '299' : '349'}</span>
                     {isAnnual && <div className="pill variant-color-cranberry">Economize 14%</div>}
                   </div>
                 </div>
                 <div className="price-info">{isAnnual ? 'Por mês, cobrado anualmente' : 'Por mês'}</div>
                 <div className="cta" style={{ marginTop: '1.5rem' }}>
-                  <Link to="/checkout/plus" className="btn brand">Obtenha o Fauves Plus</Link>
+                  <a href="mailto:contato@fauves.com.br?subject=Quero%20conhecer%20o%20Fauves%20Plus" className="btn brand">Falar sobre o Fauves Plus</a>
                 </div>
               </div>
               <div className="plan-details-header">Tudo no plano gratuito, mais:</div>
@@ -522,7 +570,7 @@ const PricingPage: React.FC = () => {
                     <div className="desc">Precisa de algo mais? Entre em contato para solicitar um plano empresarial.</div>
                   </div>
                 </div>
-                <Link to="/enterprise" className="btn primary" style={{ width: 'auto', padding: '12px 28px' }}>Contate-Nos</Link>
+                <a href="mailto:contato@fauves.com.br?subject=Plano%20empresarial%20Fauves" className="btn primary" style={{ width: 'auto', padding: '12px 28px' }}>Fale conosco</a>
               </div>
             </div>
 

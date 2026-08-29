@@ -349,6 +349,16 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
         .erc-access-submit:disabled { opacity:.45; cursor:default; }
         .event-registration-card.is-compact .erc-body { padding:11px 12px 12px; }
         .event-registration-card.is-compact .erc-header { padding-left:12px; padding-right:12px; }
+        @media (max-width: 650px) {
+          .event-registration-card.is-event-page .erc-user { align-items:flex-start; }
+          .event-registration-card.is-event-page .erc-user-text { overflow:visible; white-space:normal; line-height:1.4; overflow-wrap:anywhere; }
+          .event-registration-card.is-event-page .erc-ticket { min-height:68px; }
+          .event-registration-card.is-event-page .erc-counter { gap:8px; }
+          .event-registration-card.is-event-page .erc-counter button { width:40px; height:40px; border-radius:8px; }
+          .event-registration-card.is-event-page .erc-counter button svg { width:16px; height:16px; }
+          .event-registration-card.is-event-page .erc-access-input,
+          .event-registration-card.is-event-page .erc-access-submit { height:44px; }
+        }
       `}</style>
 
       <div className="erc-header">{header}</div>

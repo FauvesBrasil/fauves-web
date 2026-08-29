@@ -846,6 +846,144 @@ All colors MUST be HSL.
   color-scheme: light;
 }
 
+/* Shared title + tabs header used by account, calendar and event management.
+   Keep this structural rule outside page-specific styles so mobile Safari and
+   Chromium resolve the sticky containing block consistently. */
+.manage-sticky-tabs-header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  align-self: flex-start;
+  isolation: isolate;
+}
+
+@media (max-width: 767px) {
+  .manage-sticky-tabs-header {
+    top: env(safe-area-inset-top, 0px) !important;
+    z-index: 900 !important;
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  .manage-sticky-tabs-header .premium-tab-container {
+    display: flex;
+    max-width: 100%;
+    min-height: 44px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .manage-sticky-tabs-header .premium-tab-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .manage-sticky-tabs-header .premium-tab {
+    display: inline-flex !important;
+    min-height: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .manage-sticky-tabs-header.is-scrolled .manage-sticky-tabs-title-shell {
+    padding-top: 8px !important;
+  }
+
+  .manage-sticky-tabs-header.is-scrolled .manage-sticky-tabs-heading-row {
+    min-height: 32px;
+    margin-bottom: 2px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .manage-sticky-tabs-header.is-scrolled .manage-sticky-tabs-title-wrap {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 8px !important;
+  }
+
+  .manage-sticky-tabs-header.is-scrolled .manage-sticky-tabs-title {
+    min-width: 0;
+    margin: 0 0 4px !important;
+    overflow: hidden;
+    font-size: 18px !important;
+    line-height: 24px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .manage-sticky-tabs-header.is-scrolled .manage-sticky-tabs-avatar {
+    width: 22px !important;
+    height: 22px !important;
+    flex: 0 0 22px;
+  }
+
+  .manage-sticky-tabs-header.is-scrolled .manage-sticky-tabs-breadcrumbs,
+  .manage-sticky-tabs-header.is-scrolled .manage-sticky-tabs-external-action {
+    display: none !important;
+  }
+
+  /* Event management keeps the event shortcut beside the title, matching the
+     information hierarchy of the overview instead of treating it as metadata. */
+  .event-manage-sticky-header .manage-sticky-tabs-breadcrumbs {
+    display: none !important;
+  }
+
+  .event-manage-sticky-header .manage-sticky-tabs-title-shell {
+    padding-top: 8px !important;
+  }
+
+  .event-manage-sticky-header .manage-sticky-tabs-heading-row {
+    min-height: 40px;
+    margin-bottom: 4px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .event-manage-sticky-header .manage-sticky-tabs-title-wrap {
+    min-width: 0;
+    margin-bottom: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .event-manage-sticky-header .manage-sticky-tabs-title {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 22px !important;
+    line-height: 28px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .event-manage-sticky-header .manage-sticky-tabs-external-action,
+  .event-manage-sticky-header.is-scrolled .manage-sticky-tabs-external-action {
+    display: flex !important;
+    max-width: 52%;
+    min-height: 36px;
+    height: 36px !important;
+    padding: 7px 10px !important;
+    flex: 0 0 auto;
+    font-size: 13px !important;
+  }
+
+  .event-manage-sticky-header.is-scrolled .manage-sticky-tabs-title {
+    font-size: 18px !important;
+    line-height: 24px !important;
+  }
+
+  .event-manage-tabs-shell {
+    margin-bottom: 16px !important;
+  }
+}
+
 .manage-theme-surface.dark {
   --manage-page-bg: #131517;
   --manage-surface: #181a1c;

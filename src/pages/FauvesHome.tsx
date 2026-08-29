@@ -75,10 +75,34 @@ const FauvesHome = () => {
           margin-top: 0 !important;
         }
         @media (max-width: 767px) {
+          .fauves-home-shell {
+            padding-top: calc(64px + env(safe-area-inset-top));
+          }
+          .fauves-home-main {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 16px;
+            padding-top: 28px;
+          }
+          .fauves-home-main > * { min-width: 0; }
+          .fauves-home-copy {
+            min-width: 0;
+            max-width: 520px;
+          }
           .fauves-home-video {
+            width: min(112vw, 560px);
+            max-width: 560px;
             -webkit-mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 52%, transparent 100%);
             mask-image: radial-gradient(ellipse 74% 74% at 50% 50%, #000 52%, transparent 100%);
           }
+        }
+        @media (max-width: 420px) {
+          .fauves-home-copy h1 br { display: none; }
+          .fauves-home-primary {
+            width: 100%;
+            min-height: 48px;
+            justify-content: center;
+          }
+          .fauves-home-visual { min-height: 300px !important; }
         }
         @media (prefers-reduced-motion: reduce) {
           .fauves-home *, .fauves-home *::before, .fauves-home *::after {
@@ -98,13 +122,13 @@ const FauvesHome = () => {
         explorarText="Descobrir eventos"
       />
 
-      <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-5 pt-[70px] sm:px-8 lg:px-10">
-        <main className="grid flex-1 items-center gap-6 pb-10 pt-8 md:grid-cols-[minmax(360px,.88fr)_minmax(420px,1.12fr)] md:gap-2 md:pb-6 md:pt-0 lg:min-h-[650px]">
+      <div className="fauves-home-shell mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-5 pt-[70px] sm:px-8 lg:px-10">
+        <main className="fauves-home-main grid flex-1 items-center gap-6 pb-10 pt-8 md:grid-cols-[minmax(360px,.88fr)_minmax(420px,1.12fr)] md:gap-2 md:pb-6 md:pt-0 lg:min-h-[650px]">
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            className="relative z-10 mx-auto w-full max-w-[470px] md:mx-0 md:pl-5 lg:pl-14"
+            className="fauves-home-copy relative z-10 mx-auto w-full max-w-[470px] md:mx-0 md:pl-5 lg:pl-14"
           >
             <img src={fauvesLogo} alt="Fauves" className="fauves-home-wordmark mb-6 h-auto w-[92px] object-contain" />
             <h1 className="text-[clamp(2.1rem,3.3vw,2.8rem)] font-medium leading-[1.04] tracking-[-0.045em]">
@@ -127,7 +151,7 @@ const FauvesHome = () => {
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-            className="relative -mx-10 flex min-h-[360px] items-center justify-center sm:mx-0 md:min-h-[560px] lg:min-h-[650px]"
+            className="fauves-home-visual relative -mx-5 flex min-h-[340px] items-center justify-center sm:mx-0 md:min-h-[560px] lg:min-h-[650px]"
             aria-label="Demonstração da experiência Fauves"
           >
             <div className="pointer-events-none absolute left-1/2 top-1/2 h-[58%] w-[64%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(42,42,215,.2),rgba(239,65,24,.08)_48%,transparent_72%)] blur-2xl" />

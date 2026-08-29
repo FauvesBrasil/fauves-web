@@ -80,13 +80,16 @@ export default function CheckoutSuccess() {
 
   // No need to poll - payment is already confirmed when user reaches this page
 
+  const isPaid = order?.paymentStatus === 'PAID';
+  const statusIcon = loading ? '⏳' : error ? '⚠️' : isPaid ? '🎉' : '⏳';
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white flex-col">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col">
       <CheckoutHeader />
 
-      <main className="flex-1 flex items-start justify-center bg-white">
-        <div className="w-full max-w-2xl mt-12 px-8">
-          <div className="bg-white p-10 rounded-lg text-center">
+      <main className="flex flex-1 items-center justify-center bg-white px-4 py-10 dark:bg-[#0b0b0b]">
+        <div className="w-full max-w-2xl">
+          <div className="rounded-2xl bg-white p-10 text-center dark:bg-[#0b0b0b] max-md:p-5">
             {/* Inline small CSS for emoji animation (simple, no external assets) */}
             <style>{`
               @keyframes noto-pop { 0% { transform: translateY(0) scale(0.9) rotate(0deg); opacity: 0; }
@@ -97,24 +100,47 @@ export default function CheckoutSuccess() {
               .noto-emoji-anim { animation: noto-pop 1100ms ease-in-out both infinite; display:inline-block; }
             `}</style>
 
-            <div className="mb-6">
+            <div className="mb-6" aria-hidden>
               <div className="inline-flex items-center justify-center rounded-full bg-transparent">
-                <div style={{ fontSize: 72, lineHeight: 1 }} className="noto-emoji-anim" aria-hidden>
-                  🎉
+                <div
+                  style={{ fontSize: 72, lineHeight: 1 }}
+                  className={isPaid ? 'noto-emoji-anim' : 'inline-block'}
+                  aria-hidden
+                >
+                  {statusIcon}
                 </div>
               </div>
             </div>
 
-            <h1 className="text-2xl font-bold text-indigo-900 mb-4">Pagamento concluído</h1>
+            {loading ? (
+              <>
+                <h1 className="mb-3 text-2xl font-bold text-indigo-900 dark:text-white">Confirmando pagamento</h1>
+                <p className="text-sm text-gray-600 dark:text-slate-300" aria-live="polite">Aguarde enquanto verificamos seu pedido.</p>
+              </>
+            ) : error ? (
+              <>
+                <h1 className="mb-3 text-2xl font-bold text-indigo-900 dark:text-white">Não foi possível carregar o pedido</h1>
+                <p className="break-words text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
+              </>
+            ) : (
+              <>
+                <h1 className="mb-4 text-2xl font-bold text-indigo-900 dark:text-white">{isPaid ? 'Pagamento concluído' : 'Pagamento em processamento'}</h1>
 
-            <p className="text-sm text-gray-600 mb-8">
-              Seus ingressos foram liberados e em breve você receberá uma confirmação por e-mail.
-            </p>
+                <p className="mb-8 text-sm text-gray-600 dark:text-slate-300">
+                  {isPaid
+                    ? `Seus ingressos foram liberados${order?.purchaserEmail ? ` e serão enviados para ${order.purchaserEmail}` : ''}.`
+                    : 'Seu pagamento ainda está sendo confirmado. Você pode acompanhar seus ingressos pela sua conta.'}
+                </p>
+              </>
+            )}
 
-            <div className="mt-6 flex justify-center gap-3">
-              <Button onClick={() => navigate('/')} variant="outline">Voltar ao início</Button>
-              <Button onClick={() => navigate('/profile')}>Ir para meus pedidos</Button>
-            </div>
+            {!loading && (
+              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                {error && <Button className="min-h-11" onClick={() => void fetchOrder()}>Tentar novamente</Button>}
+                <Button className="min-h-11" onClick={() => navigate('/')} variant="outline">Voltar ao início</Button>
+                <Button className="min-h-11" onClick={() => navigate('/events')}>Ver meus ingressos</Button>
+              </div>
+            )}
 
           </div>
         </div>

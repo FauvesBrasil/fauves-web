@@ -123,7 +123,7 @@ function Checkout() {
       const sessionId = sessionStorage.getItem('checkoutSessionId');
       if (!sessionId) {
         // Redireciona para seleção de ingressos se não houver sessionId
-        try { navigate('/select-tickets'); } catch (e) { }
+        try { navigate('/discover'); } catch (e) { }
         setSelection(null);
         setLoadingSession(false);
         setLoadingProfile(false);
@@ -322,7 +322,7 @@ function Checkout() {
   // show the immersive loading overlay to avoid displaying an empty form.
   if (loadingProfile || loadingSession) {
     return (
-      <div className="flex h-screen w-screen overflow-hidden bg-white flex-col">
+      <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col">
         <CheckoutHeader />
         <LoadingOverlay title="Carregando seus dados" subtitle="Aguarde enquanto preparamos o checkout" />
       </div>
@@ -439,13 +439,13 @@ function Checkout() {
 
 
   return (
-    <div className="flex h-screen w-screen overflow-y-auto bg-white dark:bg-[#0b0b0b] flex-col">
+    <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col">
       <CheckoutHeader />
 
       {/* Centered form com scroll */}
       <main className="flex-1 flex items-start justify-center bg-white dark:bg-[#0b0b0b]">
         <div className="w-full max-w-2xl mt-0 px-8 max-md:px-4">
-          <div className="bg-white dark:bg-[#0b0b0b] p-10 max-md:p-6 rounded-lg max-md:pt-4">
+          <div className="bg-white dark:bg-[#0b0b0b] p-10 max-md:p-4 rounded-lg max-md:pt-4">
             <h1 className="text-3xl max-md:text-2xl font-bold text-indigo-950 dark:text-white mb-2 max-md:mb-3"><span role="img" aria-label="acenar" className="wave-emoji">👋</span> Vamos nos conhecer antes de finalizar o pedido</h1>
             <p className="text-indigo-800/80 dark:text-slate-300 mb-6 max-md:mb-4 max-md:text-sm">Alguns detalhes a mais e estamos prontos:</p>
 
@@ -482,13 +482,13 @@ function Checkout() {
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     {cpf ? (cpfError ? <X className="w-4 h-4 text-red-600" /> : <Check className="w-4 h-4 text-emerald-500" />) : null}
                   </div>
-                  {cpfError && <div className="text-xs text-red-600 mt-1 max-md:hidden">{cpfError}</div>}
+                  {cpfError && <div className="text-xs text-red-600 mt-1" role="alert">{cpfError}</div>}
                 </div>
               </div>
             )}
 
             <div className="mt-6 max-md:mt-5">
-              <div className="text-sm max-md:text-xs text-indigo-800/70 dark:text-slate-400 mb-4 max-md:mb-3 flex items-center max-md:flex-wrap">Quer fazer a compra com outra conta?
+              {user && <div className="text-sm max-md:text-xs text-indigo-800/70 dark:text-slate-400 mb-4 max-md:mb-3 flex items-center max-md:flex-wrap">Quer fazer a compra com outra conta?
                 <button
                   type="button"
                   className="relative inline-flex items-center font-semibold text-indigo-600 group focus:outline-none transition-transform duration-200 hover:-translate-y-0.5 text-base ml-1"
@@ -498,7 +498,7 @@ function Checkout() {
                   <span className="absolute left-0 bottom-0 h-0.5 w-full origin-left transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600"></span>
                   <span className="absolute left-0 bottom-0.5 h-2 w-full opacity-0 rounded-full bg-indigo-200 blur-md transition-opacity duration-300 group-hover:opacity-60"></span>
                 </button>
-              </div>
+              </div>}
               {/* Modal de confirmação de logout */}
               {showLogoutModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60">
@@ -526,7 +526,7 @@ function Checkout() {
                   </div>
                 </div>
               )}
-              <p className="text-xs max-md:text-[10px] text-indigo-700/60 dark:text-slate-500 mb-4 max-md:mb-3 max-md:leading-relaxed">Ao continuar você concorda com os <a className="underline" href="#">termos de uso</a> e <a className="underline" href="#">política de privacidade</a> da Fauves.</p>
+              <p className="text-xs max-md:text-[11px] text-indigo-700/60 dark:text-slate-500 mb-4 max-md:mb-3 max-md:leading-relaxed">Ao continuar você concorda com os <a className="underline" href="/termos-de-uso">termos de uso</a> e a <a className="underline" href="/politica-de-privacidade">política de privacidade</a> da Fauves.</p>
 
               <div className="pt-2">
                 <button

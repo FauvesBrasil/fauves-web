@@ -303,7 +303,7 @@ function Review() {
 
   if (loadingData) {
     return (
-      <div className="flex h-screen w-screen overflow-hidden bg-white dark:bg-[#0b0b0b] flex-col">
+      <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col">
         <CheckoutHeader />
         <LoadingOverlay title="Carregando resumo" subtitle="Aguarde um momento..." />
       </div>
@@ -312,10 +312,10 @@ function Review() {
 
   if (!selection) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-white dark:bg-[#0b0b0b] flex-col gap-4 p-8">
+      <div className="flex min-h-[100dvh] w-full items-center justify-center overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col gap-4 p-6 text-center">
         <p className="text-indigo-950 dark:text-white text-lg font-semibold">Nenhuma seleção encontrada.</p>
         <p className="text-slate-500 text-sm">Volte para a página do evento e escolha seus ingressos.</p>
-        <button onClick={() => navigate('/')} className="mt-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold">Voltar ao início</button>
+        <button onClick={() => navigate('/discover')} className="mt-2 min-h-11 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold">Encontrar eventos</button>
       </div>
     );
   }
@@ -484,13 +484,13 @@ function Review() {
   return (
     <form 
       onSubmit={e => { e.preventDefault(); handlePay(); }}
-      className="flex h-screen w-screen overflow-y-auto bg-white dark:bg-[#0b0b0b] flex-col"
+      className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col"
     >
       <CheckoutHeader />
 
       <main className="flex-1 flex items-start justify-center bg-white dark:bg-[#0b0b0b]">
         <div className="w-full max-w-2xl mt-0 px-8 max-md:px-4">
-          <div className="bg-white dark:bg-[#0b0b0b] p-10 max-md:p-6 rounded-lg max-md:pt-4">
+          <div className="bg-white dark:bg-[#0b0b0b] p-10 max-md:p-4 rounded-lg max-md:pt-4">
             <h2 className="text-2xl max-md:text-xl font-bold mb-4 max-md:mb-3 text-indigo-950 dark:text-white">Revisar e pagar</h2>
 
             {/* ─── Resumo do pedido ─────────────────────────────────────── */}
@@ -505,19 +505,19 @@ function Review() {
                   <div className="font-semibold text-indigo-950 dark:text-white max-md:text-sm truncate">{selection.eventName || selection.eventSlug}</div>
                   <div className="text-sm max-md:text-xs text-slate-500 dark:text-slate-400">{items.reduce((acc: number, it: any) => acc + it.quantity, 0)} ingressos</div>
                 </div>
-                <button onClick={() => setExpanded(e => !e)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0">
+                <button type="button" onClick={() => setExpanded(e => !e)} aria-label={expanded ? 'Ocultar detalhes do pedido' : 'Mostrar detalhes do pedido'} className="grid h-11 w-11 place-items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0">
                   {expanded ? <ChevronUp className="w-5 h-5 max-md:w-4 max-md:h-4" /> : <ChevronDown className="w-5 h-5 max-md:w-4 max-md:h-4" />}
                 </button>
               </div>
               {expanded && (
                 <div className="mt-4 max-md:mt-3 border-t border-gray-200 dark:border-[#1F1F1F] pt-3 max-md:pt-2 space-y-2 max-md:space-y-1.5">
                   {items.map((it: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 max-md:gap-2">
+                    <div key={idx} className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-4 max-md:gap-2">
                         <div className="font-semibold text-indigo-600 dark:text-indigo-400 max-md:text-sm">{it.quantity}×</div>
-                        <div className="text-indigo-950 dark:text-white max-md:text-sm">{it.name}</div>
+                        <div className="min-w-0 break-words text-indigo-950 dark:text-white max-md:text-sm">{it.name}</div>
                       </div>
-                      <div className="font-medium text-indigo-950 dark:text-white max-md:text-sm">{formatPrice(it.price)}</div>
+                      <div className="flex-shrink-0 font-medium text-indigo-950 dark:text-white max-md:text-sm">{formatPrice(it.price)}</div>
                     </div>
                   ))}
                   <div className="mt-3 max-md:mt-2 text-[11px] max-md:text-[10px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#1a1a1a] p-2 rounded-lg">
@@ -634,7 +634,7 @@ function Review() {
                           const d = e.target.value.replace(/\D/g, '').slice(0, 11);
                           setHolderCPF(d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"));
                         }}
-                        className="h-11 max-md:h-10 rounded-xl text-sm"
+                        className="h-11 rounded-xl text-sm"
                         inputMode="numeric"
                       />
                     </div>
@@ -643,7 +643,7 @@ function Review() {
                       <Input
                         placeholder="Nome como no cartão"
                         value={cardHolderName}
-                        className="h-11 max-md:h-10 rounded-xl text-sm uppercase"
+                        className="h-11 rounded-xl text-sm uppercase"
                         onChange={e => setCardHolderName(e.target.value.toUpperCase())}
                       />
                     </div>
@@ -782,13 +782,13 @@ function Review() {
             </div>
 
             {/* Spacer for mobile bottom bar */}
-            <div className="h-[100px] md:hidden" />
+            <div className="h-[140px] md:hidden" />
           </div>
         </div>
       </main>
 
       {/* ─── Mobile Bottom Bar ──────────────────────────────────────────── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#242424] border-t border-gray-200 dark:border-[#1F1F1F] py-3 px-4 shadow-2xl z-50">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#242424] border-t border-gray-200 dark:border-[#1F1F1F] pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] px-4 shadow-2xl z-50">
         <div className="space-y-1 mb-2">
           {discount > 0 && (
             <div className="flex items-center justify-between text-xs text-green-600 dark:text-green-400">

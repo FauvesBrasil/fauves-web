@@ -15,7 +15,7 @@ const HelpHeader: React.FC = () => {
                 aria-label="Página inicial da Central de Ajuda"
             >
                 <LogoFauves variant="white" width={57} />
-                <span aria-hidden="true" />
+                <span className="help-site-divider" aria-hidden="true" />
                 <strong>Central de Ajuda</strong>
             </button>
 
@@ -56,7 +56,7 @@ const HelpHeader: React.FC = () => {
                     background: transparent;
                 }
 
-                .help-site-brand > span {
+                .help-site-divider {
                     width: 1px;
                     height: 25px;
                     background: rgba(255, 255, 255, .19);

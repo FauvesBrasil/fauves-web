@@ -16,7 +16,7 @@ const FooterV2: React.FC<FooterV2Props> = ({ maxWidth = '1100px', variant = 'def
   const isHome = variant === 'home';
 
   return (
-    <footer style={{ maxWidth: maxWidth, margin: '5rem auto 0', padding: '0 1rem 3rem', width: '100%', fontFamily: 'Inter, sans-serif' }}>
+    <footer className={`footer-v2 ${isHome ? 'footer-v2-home' : 'footer-v2-default'}`} style={{ maxWidth: maxWidth, margin: '5rem auto 0', padding: '0 1rem 3rem', width: '100%', fontFamily: 'Inter, sans-serif' }}>
       <style>{`
         :root {
           --footer-text-color: rgba(19, 21, 23, 0.45);
@@ -77,15 +77,47 @@ const FooterV2: React.FC<FooterV2Props> = ({ maxWidth = '1100px', variant = 'def
           margin-top: 1.1rem;
         }
 
+        .footer-v2 a:focus-visible {
+          outline: 2px solid var(--footer-hover-color);
+          outline-offset: 4px;
+          border-radius: 3px;
+        }
+
         @media (max-width: 640px) {
-          .footer-home-main {
-            align-items: flex-start !important;
-            gap: 1.5rem;
+          .footer-v2 {
+            margin-top: 3.5rem !important;
+            padding-right: 20px !important;
+            padding-bottom: calc(28px + env(safe-area-inset-bottom)) !important;
+            padding-left: 20px !important;
           }
-          .footer-home-navigation,
+          .footer-v2-main {
+            align-items: flex-start !important;
+            flex-direction: column;
+            gap: 24px;
+          }
+          .footer-v2-brand-nav {
+            width: 100%;
+            align-items: flex-start !important;
+            flex-direction: column;
+            gap: 18px !important;
+          }
+          .footer-v2-navigation {
+            display: grid !important;
+            width: 100%;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 13px 22px !important;
+          }
+          .footer-v2-socials {
+            gap: 18px !important;
+          }
           .footer-home-legal {
             flex-wrap: wrap;
-            row-gap: .75rem;
+            gap: 10px 20px;
+            margin-top: 24px;
+          }
+          .footer-v2-cta {
+            justify-content: flex-start !important;
+            margin-top: 22px !important;
           }
         }
 
@@ -107,43 +139,24 @@ const FooterV2: React.FC<FooterV2Props> = ({ maxWidth = '1100px', variant = 'def
         }
       `}</style>
       
-      <div className={isHome ? 'footer-home-main' : undefined} style={{ borderTop: `1px solid var(--footer-border-color)`, paddingTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className={`footer-v2-main ${isHome ? 'footer-home-main' : ''}`} style={{ borderTop: `1px solid var(--footer-border-color)`, paddingTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Left */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="footer-v2-brand-nav" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <FauvesLogoColor />
-          <nav className={isHome ? 'footer-home-navigation' : undefined} style={{ display: 'flex', gap: isHome ? '1.5rem' : '1rem' }}>
+          <nav className={`footer-v2-navigation ${isHome ? 'footer-home-navigation' : ''}`} aria-label="Links do rodapé" style={{ display: 'flex', gap: isHome ? '1.5rem' : '1rem' }}>
             <Link to="/discover" className="footer-nav-link">Descobrir</Link>
             {!isHome && <Link to="/organizations" className="footer-nav-link">Calendários</Link>}
             <Link to="/pricing" className="footer-nav-link">Preços</Link>
-            {isHome && <a href="#app" className="footer-nav-link">App</a>}
             <Link to="/ajuda" className="footer-nav-link">Ajuda</Link>
           </nav>
         </div>
         
         {/* Right: social icons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div className="footer-v2-socials" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           {/* Email */}
-          <a href="mailto:contato@fauves.com.br" className="footer-social-link">
+          <a href="mailto:contato@fauves.com.br" className="footer-social-link" aria-label="Enviar e-mail para a Fauves">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 7 10-7" />
-            </svg>
-          </a>
-          {/* App/Phone */}
-          <a href="#" className="footer-social-link">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" /><line x1="12" y1="18" x2="12.01" y2="18" />
-            </svg>
-          </a>
-          {/* X / Twitter */}
-          <a href="#" className="footer-social-link">
-            <svg width="14" height="14" viewBox="0 0 1200 1227" fill="currentColor">
-              <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.163 519.284ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.828Z" />
-            </svg>
-          </a>
-          {/* Instagram */}
-          <a href="#" className="footer-social-link">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="2" width="20" height="20" rx="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
             </svg>
           </a>
         </div>
@@ -158,8 +171,8 @@ const FooterV2: React.FC<FooterV2Props> = ({ maxWidth = '1100px', variant = 'def
         </nav>
       ) : (
         /* CTA row */
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.25rem' }}>
-          <a href="#" className="footer-cta-gradient-link">
+        <div className="footer-v2-cta" style={{ display: 'flex', justifyContent: 'center', marginTop: '1.25rem' }}>
+          <Link to="/create" className="footer-cta-gradient-link">
             Hospede seu evento com a Fauves
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <g clipPath="url(#faux-arrow)">
@@ -173,7 +186,7 @@ const FooterV2: React.FC<FooterV2Props> = ({ maxWidth = '1100px', variant = 'def
                 <clipPath id="faux-arrow"><rect width="10" height="10" fill="white" transform="matrix(-1 0 0 1 10 0)" /></clipPath>
               </defs>
             </svg>
-          </a>
+          </Link>
         </div>
       )}
     </footer>

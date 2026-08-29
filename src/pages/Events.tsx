@@ -535,7 +535,7 @@ const Events = () => {
       }}>
 
         {/* Page Title & Toggle */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <div className="events-page-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
           <h1 style={{
             fontSize: '1.75rem',
             fontWeight: 600,
@@ -703,6 +703,14 @@ const Events = () => {
                             key={item.id}
                             onClick={() => openPanelAtIndex(combinedTimeline.indexOf(item))}
                             className="event-card-v2"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(keyboardEvent) => {
+                              if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+                                keyboardEvent.preventDefault();
+                                openPanelAtIndex(combinedTimeline.indexOf(item));
+                              }
+                            }}
                           >
                             {/* Top Row: Info (Left) & Cover (Right) */}
                             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
@@ -1209,6 +1217,40 @@ const Events = () => {
             height: 80px;
             border-radius: 0.375rem;
           }
+        }
+
+        @media (max-width: 600px) {
+          .events-page-v3 .zm-container { padding-top: var(--page-top-spacing-mobile) !important; }
+          .events-page-heading { align-items: flex-start !important; gap: 14px; margin-bottom: 2rem !important; }
+          .events-page-heading h1 { font-size: 1.5rem !important; padding-top: 7px; }
+          .lux-button-switcher { flex-shrink: 0; }
+          .lux-button-switcher .segment { min-height: 40px; padding: .5rem .75rem; }
+          .events-list { --timeline-title-width: 100%; --timeline-column-gap: 0; }
+          .events-list::before, .timeline-dot { display: none; }
+          .events-group-row { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 2rem; }
+          .date-col {
+            position: static;
+            width: auto;
+            padding: 0 2px;
+            flex-direction: row;
+            align-items: baseline;
+            gap: 6px;
+          }
+          .date-main { font-size: 14px; }
+          .date-sub { font-size: 13px; margin-top: 0; }
+          .event-card-v2 { padding: 12px !important; }
+          .event-card-v2 > div:first-child { gap: 12px !important; }
+          .event-card-cover { width: 72px; height: 72px; }
+          .event-card-v2 h3 { font-size: 1rem !important; }
+          .event-card-v2 > div:last-child { flex-wrap: wrap; gap: 8px; }
+          .manage-event-btn { min-height: 40px !important; padding: 8px 10px !important; }
+        }
+
+        @media (max-width: 360px) {
+          .events-page-heading { flex-direction: column; }
+          .events-page-heading .lux-button-switcher { width: 100%; }
+          .events-page-heading .segments { width: 100%; }
+          .event-card-cover { width: 64px; height: 64px; }
         }
 
         /* Dark Theme Overrides at the bottom of stylesheet to ensure priority */

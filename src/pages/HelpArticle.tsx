@@ -91,7 +91,7 @@ const HelpArticle = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 dark:from-[#0b0b0b] dark:via-indigo-950/10 dark:to-purple-950/10">
+            <div className="dark min-h-screen bg-[#111315]">
                 <HelpHeader />
                 <div className="flex items-center justify-center h-96">
                     <div className="text-zinc-600 dark:text-zinc-400">Carregando...</div>
@@ -102,7 +102,7 @@ const HelpArticle = () => {
 
     if (error || !article) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 dark:from-[#0b0b0b] dark:via-indigo-950/10 dark:to-purple-950/10">
+            <div className="dark min-h-screen bg-[#111315]">
                 <HelpHeader />
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
                     <div className="text-center">
@@ -123,12 +123,12 @@ const HelpArticle = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 dark:from-[#0b0b0b] dark:via-indigo-950/10 dark:to-purple-950/10">
+        <div className="dark min-h-screen overflow-x-hidden bg-[#111315]">
             <HelpHeader />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-32 pb-8">
                 {/* Breadcrumb */}
-                <nav className="flex items-center gap-2 text-sm mb-8">
+                <nav className="flex min-w-0 items-center gap-2 overflow-hidden text-sm mb-6 sm:mb-8" aria-label="Navegação estrutural">
                     <button
                         onClick={() => navigate('/ajuda')}
                         className="text-zinc-600 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
@@ -143,7 +143,7 @@ const HelpArticle = () => {
                         {article.category.name}
                     </button>
                     <ChevronRight className="w-4 h-4 text-zinc-400" />
-                    <span className="text-zinc-900 dark:text-white font-medium">
+                    <span className="hidden min-w-0 truncate text-zinc-900 dark:text-white font-medium sm:inline">
                         {article.title}
                     </span>
                 </nav>
@@ -179,7 +179,7 @@ const HelpArticle = () => {
                         </div>
 
                         {/* Article Content */}
-                        <div className="prose prose-zinc dark:prose-invert max-w-none prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-h2:mt-8 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-3 prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-li:text-zinc-700 dark:prose-li:text-zinc-300 prose-strong:text-zinc-900 dark:prose-strong:text-white prose-code:text-indigo-600 dark:prose-code:text-indigo-400 prose-code:bg-zinc-100 dark:prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-[''] prose-code:after:content-['']">
+                        <div className="help-article-content prose prose-zinc dark:prose-invert max-w-none prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-h2:mt-8 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-3 prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-p:leading-relaxed prose-li:text-zinc-700 dark:prose-li:text-zinc-300 prose-strong:text-zinc-900 dark:prose-strong:text-white prose-code:text-indigo-600 dark:prose-code:text-indigo-400 prose-code:bg-zinc-100 dark:prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-[''] prose-code:after:content-['']">
                             <ReactMarkdown>{article.content}</ReactMarkdown>
                         </div>
 
@@ -190,17 +190,17 @@ const HelpArticle = () => {
                             </h3>
 
                             {feedback === null ? (
-                                <div className="flex gap-3">
+                                <div className="flex flex-col sm:flex-row gap-3">
                                     <button
                                         onClick={() => handleFeedback('helpful')}
-                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 hover:bg-green-50 dark:hover:bg-green-950/20 hover:border-green-300 dark:hover:border-green-700 text-zinc-700 dark:text-zinc-300 hover:text-green-700 dark:hover:text-green-400 transition-colors"
+                                        className="inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 hover:bg-green-50 dark:hover:bg-green-950/20 hover:border-green-300 dark:hover:border-green-700 text-zinc-700 dark:text-zinc-300 hover:text-green-700 dark:hover:text-green-400 transition-colors"
                                     >
                                         <ThumbsUp className="w-4 h-4" />
                                         Sim, ajudou ({article.helpful})
                                     </button>
                                     <button
                                         onClick={() => handleFeedback('not-helpful')}
-                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-300 dark:hover:border-red-700 text-zinc-700 dark:text-zinc-300 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                                        className="inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-300 dark:hover:border-red-700 text-zinc-700 dark:text-zinc-300 hover:text-red-700 dark:hover:text-red-400 transition-colors"
                                     >
                                         <ThumbsDown className="w-4 h-4" />
                                         Não ajudou ({article.notHelpful})
@@ -246,6 +246,17 @@ const HelpArticle = () => {
                     </div>
                 </div>
             </div>
+
+            <style>{`
+                .help-article-content { overflow-wrap: anywhere; }
+                .help-article-content :where(img, video, iframe) { max-width: 100%; height: auto; }
+                .help-article-content pre { max-width: calc(100vw - 32px); overflow-x: auto; }
+                .help-article-content table { display: block; max-width: 100%; overflow-x: auto; }
+                @media (max-width: 640px) {
+                    .help-article-content h2 { font-size: 1.35rem; }
+                    .help-article-content h3 { font-size: 1.15rem; }
+                }
+            `}</style>
         </div>
     );
 };
