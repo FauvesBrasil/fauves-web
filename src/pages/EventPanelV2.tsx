@@ -8190,7 +8190,6 @@ const EventPanelV2: React.FC = () => {
                                     eventId={id || ''}
                                     eventName={event?.name}
                                     onInvite={() => setIsInviteModalOpen(true)}
-                                    onCheckin={() => setIsCheckinModalOpen(true)}
                                     onGuestListSettings={() => {
                                         setTempShowGuestsList(Boolean(event?.showGuestsList));
                                         setIsGuestListModalOpen(true);

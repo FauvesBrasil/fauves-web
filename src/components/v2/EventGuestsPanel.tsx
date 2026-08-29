@@ -1,7 +1,9 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
+  Apple,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -15,7 +17,9 @@ import {
   Pencil,
   QrCode,
   Search,
+  ScanLine,
   SlidersHorizontal,
+  Smartphone,
   Sparkles,
   Ticket,
   UserRoundPen,
@@ -61,7 +65,6 @@ type Props = {
   eventId: string;
   eventName?: string;
   onInvite: () => void;
-  onCheckin: () => void;
   onGuestListSettings: () => void;
 };
 
@@ -150,7 +153,8 @@ function ActionCard({ variant, icon, title, description, onClick }: { variant: '
   );
 }
 
-export default function EventGuestsPanel({ eventId, eventName, onInvite, onCheckin, onGuestListSettings }: Props) {
+export default function EventGuestsPanel({ eventId, eventName, onInvite, onGuestListSettings }: Props) {
+  const navigate = useNavigate();
   const { token } = useAuth();
   const { toast } = useToast();
   const [guests, setGuests] = React.useState<Guest[]>([]);
@@ -172,6 +176,7 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onCheck
   const [bulkStatus, setBulkStatus] = React.useState<Exclude<GuestStatus, 'checkedin'>>('confirmed');
   const [timelineMenuId, setTimelineMenuId] = React.useState<string | null>(null);
   const [emailPreview, setEmailPreview] = React.useState<GuestHistoryEvent | null>(null);
+  const [checkinPickerOpen, setCheckinPickerOpen] = React.useState(false);
 
   const loadGuests = React.useCallback(async () => {
     if (!eventId) return;
@@ -298,7 +303,7 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onCheck
 
         <div className="quick-actions event-guests-actions mt-4" aria-label="Ações rápidas dos convidados" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           <ActionCard variant="blue" icon={<Mail size={22} />} title="Convidar Convidados" onClick={onInvite} />
-          <ActionCard variant="emerald" icon={<QrCode size={22} />} title="Fazer Check-in dos Convidados" onClick={onCheckin} />
+          <ActionCard variant="emerald" icon={<QrCode size={22} />} title="Fazer Check-in dos Convidados" onClick={() => setCheckinPickerOpen(true)} />
           <ActionCard variant="amber" icon={<UsersRound size={22} />} title="Lista de Convidados" description="Exibido para os convidados" onClick={onGuestListSettings} />
         </div>
       </section>
@@ -423,6 +428,42 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onCheck
         <select value={bulkStatus} onChange={event => setBulkStatus(event.target.value as any)} className="mt-3 h-11 w-full rounded-xl border border-white/[.12] bg-[#171919] px-3 text-[15px] text-white/[.9] outline-none"><option value="confirmed">Confirmado</option><option value="invited">Convidado</option><option value="declined">Não vai</option><option value="pending">Pendente</option><option value="waitlist">Lista de espera</option></select>
         <button type="button" disabled={savingStatus} onClick={saveBulkStatus} className="mt-5 h-11 w-full rounded-xl bg-white text-[15px] font-semibold text-[#171919] disabled:opacity-50">{savingStatus ? 'Atualizando…' : 'Atualizar Status'}</button>
       </ModalShell>}</AnimatePresence></Portal>
+
+      <Portal><AnimatePresence>{checkinPickerOpen && (
+        <ModalShell onClose={() => setCheckinPickerOpen(false)} maxWidth={500}>
+          <div className="grid h-16 w-16 place-items-center rounded-full bg-white/[.1] text-white/[.78]">
+            <ScanLine size={32} strokeWidth={1.8} />
+          </div>
+          <h3 className="mt-6 pr-8 text-[25px] font-semibold leading-8 text-white/[.96]">Fazer Check-in dos Convidados</h3>
+          <p className="mt-3 max-w-[420px] text-[15px] font-medium leading-6 text-white/[.62]">
+            Use o scanner web para validar os ingressos pela câmera deste dispositivo. Os aplicativos para iOS e Android chegarão em breve.
+          </p>
+
+          <div className="mt-6 space-y-3">
+            <button
+              type="button"
+              onClick={() => {
+                setCheckinPickerOpen(false);
+                navigate(`/participantes/checkin/${encodeURIComponent(eventId)}`);
+              }}
+              className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-white px-4 text-[15px] font-bold text-[#171919] transition hover:bg-white/[.9] active:scale-[.99]"
+            >
+              <ScanLine size={19} />
+              Abrir Scanner Web
+            </button>
+
+            <button type="button" disabled className="flex min-h-12 w-full cursor-not-allowed items-center justify-between rounded-xl bg-white/[.08] px-4 text-[15px] font-semibold text-white/[.36]">
+              <span className="flex items-center gap-2.5"><Apple size={19} />Baixar para iOS</span>
+              <span className="rounded-full bg-white/[.08] px-2 py-1 text-[10px] font-bold uppercase tracking-[.08em] text-white/[.4]">Em breve</span>
+            </button>
+
+            <button type="button" disabled className="flex min-h-12 w-full cursor-not-allowed items-center justify-between rounded-xl bg-white/[.08] px-4 text-[15px] font-semibold text-white/[.36]">
+              <span className="flex items-center gap-2.5"><Smartphone size={19} />Baixar para Android</span>
+              <span className="rounded-full bg-white/[.08] px-2 py-1 text-[10px] font-bold uppercase tracking-[.08em] text-white/[.4]">Em breve</span>
+            </button>
+          </div>
+        </ModalShell>
+      )}</AnimatePresence></Portal>
     </div>
   );
 }

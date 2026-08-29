@@ -14,6 +14,8 @@ import PixIcon from '../assets/pix.svg';
 import CardIcon from '../assets/card.svg';
 import { ArrowRight, ChevronDown, ChevronUp, ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { AnimatePresence, motion } from 'framer-motion';
+import PaymentStatusAnimation from '@/components/PaymentStatusAnimation';
 
 // ── Constantes Efí Bank ────────────────────────────────────────────────
 const EFI_PAYEE_CODE = import.meta.env.VITE_EFI_PAYEE_CODE || '';
@@ -73,6 +75,7 @@ function Review() {
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentStage, setPaymentStage] = useState<'form' | 'processing' | 'declined'>('form');
 
   // Timer countdown
   const [secondsLeft, setSecondsLeft] = useState<number>(600);
@@ -332,23 +335,29 @@ function Review() {
 
   // ── handlePay ─────────────────────────────────────────────────────────
   async function handlePay() {
-    setSubmitting(true);
     setError(null);
 
-    try {
-      if (paymentMethod === 'pix' && !(buyer?.buyerEmail || user?.email)) {
-        setError('Por favor informe um e-mail para prosseguir com o pagamento por PIX');
-        setSubmitting(false);
+    if (paymentMethod === 'pix' && !(buyer?.buyerEmail || user?.email)) {
+      setError('Por favor informe um e-mail para prosseguir com o pagamento por PIX');
+      return;
+    }
+
+    if (paymentMethod === 'card') {
+      if (!cardNumber || !cardExpiry || !cardCvc || !cardHolderName || !holderCPF) {
+        setError('Preencha todos os dados do cartão e o CPF do titular');
         return;
       }
+    }
 
-      if (paymentMethod === 'card') {
-        if (!cardNumber || !cardExpiry || !cardCvc || !cardHolderName || !holderCPF) {
-          setError('Preencha todos os dados do cartão e o CPF do titular');
-          setSubmitting(false);
-          return;
-        }
-      }
+    setSubmitting(true);
+    setPaymentStage('processing');
+
+    const showFailure = (message: string) => {
+      setError(message);
+      setPaymentStage('declined');
+    };
+
+    try {
 
       // 1. Cria pedido
       const body: any = {
@@ -370,8 +379,7 @@ function Review() {
       const orderJson = await orderRes.json().catch(() => null);
 
       if (!orderRes.ok || orderJson?.error) {
-        setError(orderJson?.error || `Falha ao criar pedido (HTTP ${orderRes.status})`);
-        setSubmitting(false);
+        showFailure(orderJson?.error || `Falha ao criar pedido (HTTP ${orderRes.status})`);
         return;
       }
 
@@ -429,7 +437,7 @@ function Review() {
       } catch (tokenErr: any) {
         console.error('[Tokenização] erro:', tokenErr);
         const msg = tokenErr?.error_description || tokenErr?.message || 'verifique os dados e tente novamente';
-        setError(`Erro ao processar dados do cartão: ${msg}`);
+        showFailure(`Erro ao processar dados do cartão: ${msg}`);
         return;
       } finally {
         setTokenizing(false);
@@ -466,15 +474,15 @@ function Review() {
       }
 
       if (chargeJson?.status === 'failed') {
-        setError(chargeJson.message || 'Cartão recusado. Verifique o limite ou dados digitados.');
+        showFailure(chargeJson.message || 'Cartão recusado. Verifique o limite ou dados digitados.');
         return;
       }
 
-      setError(chargeJson?.error || `Falha no pagamento (HTTP ${chargeRes.status}). Tente novamente.`);
+      showFailure(chargeJson?.error || `Falha no pagamento (HTTP ${chargeRes.status}). Tente novamente.`);
 
     } catch (e: any) {
       console.error('[handlePay] Erro inesperado:', e);
-      setError(e?.message || 'Falha inesperada ao processar pagamento');
+      showFailure(e?.message || 'Falha inesperada ao processar pagamento');
     } finally {
       setSubmitting(false);
     }
@@ -482,12 +490,20 @@ function Review() {
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <form 
-      onSubmit={e => { e.preventDefault(); handlePay(); }}
-      className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col"
-    >
+    <div className="flex min-h-[100dvh] w-full flex-col overflow-x-hidden bg-white dark:bg-[#0b0b0b]">
       <CheckoutHeader />
 
+      <AnimatePresence mode="wait" initial={false}>
+        {paymentStage === 'form' ? (
+          <motion.form
+            key="payment-form"
+            onSubmit={e => { e.preventDefault(); void handlePay(); }}
+            className="flex flex-1 flex-col"
+            initial={{ opacity: 0, x: -18 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -32, filter: 'blur(4px)' }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+          >
       <main className="flex-1 flex items-start justify-center bg-white dark:bg-[#0b0b0b]">
         <div className="w-full max-w-2xl mt-0 px-8 max-md:px-4">
           <div className="bg-white dark:bg-[#0b0b0b] p-10 max-md:p-4 rounded-lg max-md:pt-4">
@@ -836,7 +852,73 @@ function Review() {
           </div>
         )}
       </div>
-    </form>
+          </motion.form>
+        ) : paymentStage === 'processing' ? (
+          <motion.main
+            key="payment-processing"
+            className="flex flex-1 items-center justify-center bg-white px-4 py-12 dark:bg-[#0b0b0b]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+          >
+            <PaymentStatusAnimation
+              status="processing"
+              method={paymentMethod}
+              title={tokenizing ? 'Protegendo seus dados' : paymentMethod === 'pix' ? 'Preparando seu Pix' : 'Processando pagamento'}
+              description={tokenizing
+                ? 'Criptografando os dados do cartão antes de enviar ao banco.'
+                : paymentMethod === 'pix'
+                  ? 'Estamos reservando seus ingressos e gerando o QR Code.'
+                  : 'Estamos confirmando a compra com o banco. Não feche esta página.'}
+            />
+          </motion.main>
+        ) : (
+          <motion.main
+            key="payment-declined"
+            className="flex flex-1 items-center justify-center bg-white px-4 py-12 dark:bg-[#0b0b0b]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="w-full max-w-md text-center">
+              <PaymentStatusAnimation
+                status="declined"
+                method={paymentMethod}
+                title={paymentMethod === 'card' ? 'Pagamento não aprovado' : 'Não foi possível gerar o Pix'}
+                description={error || undefined}
+              />
+              <div className="mt-1 flex flex-col justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  className="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                  onClick={() => {
+                    setPaymentStage('form');
+                    setSubmitting(false);
+                  }}
+                >
+                  Revisar e tentar novamente
+                </button>
+                {paymentMethod === 'card' && (
+                  <button
+                    type="button"
+                    className="min-h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-indigo-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-[#171717] dark:text-indigo-300 dark:hover:bg-[#202020]"
+                    onClick={() => {
+                      setPaymentMethod('pix');
+                      setPaymentStage('form');
+                      setSubmitting(false);
+                      setError(null);
+                    }}
+                  >
+                    Pagar com Pix
+                  </button>
+                )}
+              </div>
+              <p className="mt-5 text-xs text-slate-400">Revise os dados e o status no app do banco antes de tentar novamente.</p>
+            </div>
+          </motion.main>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

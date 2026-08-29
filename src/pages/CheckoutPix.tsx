@@ -2,16 +2,15 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import CheckoutHeader from '@/components/CheckoutHeader';
-import QRCode from 'qrcode';
-import { Loader2 } from 'lucide-react';
-import LogoFauves from '@/components/LogoFauves';
 import { useAuth } from '@/context/AuthContext';
-import LoadingOverlay from '@/components/LoadingOverlay';
 import { WarpDialog } from '@/components/WarpDialog';
 import SmartphoneIcon from '../assets/smartphone.svg';
 import QrCodeIcon from '../assets/qr-code.svg';
 import DoubleCheckIcon from '../assets/double-check.svg';
 import { fetchApi } from '@/lib/apiBase';
+import { QRCodeSVG } from 'qrcode.react';
+import { AnimatePresence, motion } from 'framer-motion';
+import PaymentStatusAnimation from '@/components/PaymentStatusAnimation';
 
 interface PixIntent {
   id: string;
@@ -36,27 +35,6 @@ interface OrderSummary {
 
 const formatBRL = (n: number) => `R$${n.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
-function Countdown({ expiresAt, onExpire, disabled }: { expiresAt: string; onExpire: () => void; disabled?: boolean }) {
-  const [remaining, setRemaining] = useState(() => new Date(expiresAt).getTime() - Date.now());
-  useEffect(() => {
-    if (disabled) return; // Stop countdown if payment confirmed
-    const id = setInterval(() => {
-      const r = new Date(expiresAt).getTime() - Date.now();
-      setRemaining(r);
-      if (r <= 0) {
-        clearInterval(id);
-        onExpire();
-      }
-    }, 1000);
-    return () => clearInterval(id);
-  }, [expiresAt, onExpire, disabled]);
-  if (remaining <= 0) return <span>00:00</span>;
-  const totalSec = Math.floor(remaining / 1000);
-  const m = String(Math.floor(totalSec / 60)).padStart(2,'0');
-  const s = String(totalSec % 60).padStart(2,'0');
-  return <span>{m}:{s}</span>;
-}
-
 export default function CheckoutPix() {
   const [params] = useSearchParams();
   const orderId = params.get('orderId') || '';
@@ -66,7 +44,6 @@ export default function CheckoutPix() {
   const { user } = useAuth();
   const [orderLoading, setOrderLoading] = useState<boolean>(true);
   const [intent, setIntent] = useState<PixIntent | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copyOk, setCopyOk] = useState(false);
   const [expired, setExpired] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string | null>(expParam || null);
@@ -141,11 +118,6 @@ export default function CheckoutPix() {
         setIntent(json);
         // We have a valid code now; start payment status polling.
         setPolling(true);
-        try {
-          const url = await QRCode.toDataURL(json.code, { margin: 0, width: 240 });
-          setQrDataUrl(url);
-        } catch (e) {
-        }
       } else {
         // No code yet: keep polling enabled so the GET poll can pick up updates.
         setIntent(null);
@@ -208,11 +180,6 @@ export default function CheckoutPix() {
             // Update intent state if changed
             if (intent?.status?.toUpperCase() !== newStatus || intent?.code !== intentData.intent.code) {
               setIntent(intentData.intent);
-              if (intentData.intent.code) {
-                QRCode.toDataURL(intentData.intent.code, { margin: 0, width: 240 })
-                  .then(u => setQrDataUrl(u))
-                  .catch(()=>{});
-              }
             }
           }
         }
@@ -283,15 +250,6 @@ export default function CheckoutPix() {
     })();
   }, [paymentConfirmed, cancelOrderAndRedirect]);
 
-  const copyCode = async () => {
-    if (!intent) return;
-    try {
-      await navigator.clipboard.writeText(intent.code);
-      setCopyOk(true);
-      setTimeout(() => setCopyOk(false), 2000);
-    } catch {}
-  };
-
   const paid = order?.paymentStatus === 'PAID';
 
   if (!orderLoading && !loading && error && !order) {
@@ -314,41 +272,39 @@ export default function CheckoutPix() {
 
   // New layout: keep the same header (logo, timer, help, gradient) used in `Review` and render the Pix modal
   // content inline so the page visually matches the checkout shell while showing the exact modal UI.
-  const formatRemainingShort = (iso?: string) => {
-    if (!iso) return '00:00';
-    const diff = Math.max(0, new Date(iso).getTime() - Date.now());
-    const mins = Math.floor(diff / 60000).toString().padStart(2,'0');
-    const secs = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
-    return `${mins}:${secs}`;
-  };
-
   return (
     <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col">
       <CheckoutHeader expiresAt={expiresAt || undefined} onExpire={onExpire} />
 
-      {/* Show loading overlay while we fetch order/intent data. If user needs to fill details,
-          the normal form will appear after loading completes. */}
-      {(orderLoading || loading) && !expired && (
-        <LoadingOverlay animName="wired-outline-1335-qr-code-hover-pinch.json" title="Gerando o código Pix..." subtitle="Aguarde enquanto geramos o código Pix" />
-      )}
-
-      {/* Mobile Top Bar - Fixed below header */}
-      <div className="md:hidden sticky top-[56px] z-40 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-b border-indigo-100 dark:border-indigo-900/30 px-4 py-3 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-5 h-5 animate-spin text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-300">Aguardando pagamento...</p>
-            <p className="text-[10px] text-indigo-700 dark:text-indigo-400 mt-0.5">
-              {order && order.totalAmount != null ? formatBRL(order.totalAmount) : intent && intent.amount != null ? formatBRL(intent.amount) : (orderLoading ? 'calculando...' : '—')}
-            </p>
-          </div>
-        </div>
-      </div>
-
+      <AnimatePresence mode="wait" initial={false}>
+      {(orderLoading || loading) && !expired ? (
+        <motion.main
+          key="pix-processing"
+          className="flex flex-1 items-center justify-center px-4 py-12"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, x: -24, filter: 'blur(4px)' }}
+          transition={{ duration: 0.32 }}
+        >
+          <PaymentStatusAnimation
+            status="processing"
+            method="pix"
+            title="Gerando seu QR Code"
+            description="Estamos reservando os ingressos e preparando os dados do Pix."
+          />
+        </motion.main>
+      ) : (
+      <motion.div
+        key="pix-ready"
+        className="flex flex-1 flex-col"
+        initial={{ opacity: 0, x: 30 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+      >
       <main className="flex-1 flex items-start justify-center bg-white dark:bg-[#0b0b0b]">
         <div className="w-full max-w-2xl mt-0 px-8 max-md:px-4">
           <div className="bg-white dark:bg-[#0b0b0b] p-10 max-md:p-4 rounded-lg max-md:pt-4">
-            {/* Use the modal's content here */}
             {error && (
               <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300" role="alert">
                 <p className="break-words">{error}</p>
@@ -361,11 +317,13 @@ export default function CheckoutPix() {
                 </button>
               </div>
             )}
-                <div className="mb-8 max-md:mb-4">
-              <div className="flex items-center gap-3 mb-3 max-md:hidden">
-                <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
-                <span className="text-sm text-gray-600 dark:text-slate-400">Aguardando pagamento...</span>
-              </div>
+            <div className="mb-8 max-md:mb-4">
+              <PaymentStatusAnimation
+                status="pix-waiting"
+                method="pix"
+                compact
+                className="mb-4"
+              />
               <h3 className="text-[26px] max-md:text-lg max-md:leading-snug">
                 <span className="text-[#EF4118] font-semibold">Falta só mais um pouco.</span>{' '}
                 <span className="font-semibold text-slate-800 dark:text-white">Realize o pagamento de {order && order.totalAmount != null ? formatBRL(order.totalAmount) : intent && intent.amount != null ? formatBRL(intent.amount) : (orderLoading ? 'calculando...' : '—')} para finalizar sua compra e receber seus ingressos.</span>
@@ -374,17 +332,29 @@ export default function CheckoutPix() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 max-md:gap-3">
-              {/* QR Code - Hidden on mobile */}
-              <div className="flex flex-col items-center gap-4 max-md:hidden">
-                <div className="flex items-center justify-center rounded-xl border border-gray-200 dark:border-[#1F1F1F] p-4 shadow-sm bg-white dark:bg-[#242424]">
-                  <div className="relative flex h-48 w-48 items-center justify-center rounded-lg bg-gray-50 dark:bg-[#1a1a1a] p-3">
-                    {qrDataUrl ? (
-                      <img src={qrDataUrl} alt="QR Code Pix" className="max-h-full max-w-full" />
+              {/* O QR permanece visível também no mobile para permitir pagamento por outra pessoa. */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center justify-center rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-[#1F1F1F]">
+                  <div className="relative flex h-44 w-44 items-center justify-center rounded-xl bg-white p-2 md:h-48 md:w-48">
+                    {intent?.code ? (
+                      <QRCodeSVG
+                        value={intent.code}
+                        size={176}
+                        level="M"
+                        marginSize={1}
+                        bgColor="#ffffff"
+                        fgColor="#111827"
+                        title="QR Code para pagamento via Pix"
+                        className="h-full w-full"
+                      />
                     ) : (
-                      <div className="text-center text-sm text-gray-400 dark:text-slate-500">QR não disponível</div>
+                      <div className="text-center text-sm text-gray-400">Gerando QR Code...</div>
                     )}
                   </div>
                 </div>
+                <p className="text-center text-[11px] leading-4 text-slate-500 dark:text-slate-400 md:hidden">
+                  Outra pessoa pode escanear este código para pagar.
+                </p>
               </div>
 
               {/* Code section - Full width on mobile */}
@@ -464,6 +434,9 @@ export default function CheckoutPix() {
           </div>
         </div>
       </main>
+      </motion.div>
+      )}
+      </AnimatePresence>
 
       <WarpDialog
         open={showCancelConfirm}

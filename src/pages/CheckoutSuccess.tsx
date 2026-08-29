@@ -4,6 +4,8 @@ import CheckoutHeader from '@/components/CheckoutHeader';
 import { Button } from '@/components/ui/button';
 import { useTrackingPixels } from '@/hooks/useTrackingPixels';
 import { fetchApi } from '@/lib/apiBase';
+import { AnimatePresence, motion } from 'framer-motion';
+import PaymentStatusAnimation from '@/components/PaymentStatusAnimation';
 
 interface OrderSummary {
   id: string;
@@ -81,7 +83,6 @@ export default function CheckoutSuccess() {
   // No need to poll - payment is already confirmed when user reaches this page
 
   const isPaid = order?.paymentStatus === 'PAID';
-  const statusIcon = loading ? '⏳' : error ? '⚠️' : isPaid ? '🎉' : '⏳';
 
   return (
     <div className="flex min-h-[100dvh] w-full overflow-x-hidden bg-white dark:bg-[#0b0b0b] flex-col">
@@ -90,49 +91,40 @@ export default function CheckoutSuccess() {
       <main className="flex flex-1 items-center justify-center bg-white px-4 py-10 dark:bg-[#0b0b0b]">
         <div className="w-full max-w-2xl">
           <div className="rounded-2xl bg-white p-10 text-center dark:bg-[#0b0b0b] max-md:p-5">
-            {/* Inline small CSS for emoji animation (simple, no external assets) */}
-            <style>{`
-              @keyframes noto-pop { 0% { transform: translateY(0) scale(0.9) rotate(0deg); opacity: 0; }
-                                  40% { transform: translateY(-6px) scale(1.16) rotate(-8deg); opacity: 1; }
-                                  70% { transform: translateY(0) scale(1.05) rotate(4deg); }
-                                  100% { transform: translateY(0) scale(1) rotate(0deg); }
-              }
-              .noto-emoji-anim { animation: noto-pop 1100ms ease-in-out both infinite; display:inline-block; }
-            `}</style>
-
-            <div className="mb-6" aria-hidden>
-              <div className="inline-flex items-center justify-center rounded-full bg-transparent">
-                <div
-                  style={{ fontSize: 72, lineHeight: 1 }}
-                  className={isPaid ? 'noto-emoji-anim' : 'inline-block'}
-                  aria-hidden
-                >
-                  {statusIcon}
-                </div>
-              </div>
-            </div>
-
-            {loading ? (
-              <>
-                <h1 className="mb-3 text-2xl font-bold text-indigo-900 dark:text-white">Confirmando pagamento</h1>
-                <p className="text-sm text-gray-600 dark:text-slate-300" aria-live="polite">Aguarde enquanto verificamos seu pedido.</p>
-              </>
-            ) : error ? (
-              <>
-                <h1 className="mb-3 text-2xl font-bold text-indigo-900 dark:text-white">Não foi possível carregar o pedido</h1>
-                <p className="break-words text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-              </>
-            ) : (
-              <>
-                <h1 className="mb-4 text-2xl font-bold text-indigo-900 dark:text-white">{isPaid ? 'Pagamento concluído' : 'Pagamento em processamento'}</h1>
-
-                <p className="mb-8 text-sm text-gray-600 dark:text-slate-300">
-                  {isPaid
-                    ? `Seus ingressos foram liberados${order?.purchaserEmail ? ` e serão enviados para ${order.purchaserEmail}` : ''}.`
-                    : 'Seu pagamento ainda está sendo confirmado. Você pode acompanhar seus ingressos pela sua conta.'}
-                </p>
-              </>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={loading ? 'loading' : error ? 'error' : isPaid ? 'paid' : 'pending'}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+              >
+                {loading ? (
+                  <PaymentStatusAnimation
+                    status="processing"
+                    title="Confirmando pagamento"
+                    description="Aguarde enquanto verificamos seu pedido."
+                  />
+                ) : error ? (
+                  <PaymentStatusAnimation
+                    status="declined"
+                    title="Não foi possível carregar o pedido"
+                    description={error}
+                  />
+                ) : isPaid ? (
+                  <PaymentStatusAnimation
+                    status="success"
+                    title="Pagamento aprovado!"
+                    description={`Seus ingressos foram liberados${order?.purchaserEmail ? ` e serão enviados para ${order.purchaserEmail}` : ''}.`}
+                  />
+                ) : (
+                  <PaymentStatusAnimation
+                    status="processing"
+                    title="Pagamento em processamento"
+                    description="A confirmação ainda está a caminho. Você pode acompanhar os ingressos pela sua conta."
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
 
             {!loading && (
               <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
