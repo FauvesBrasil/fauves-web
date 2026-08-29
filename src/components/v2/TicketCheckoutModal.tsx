@@ -11,9 +11,12 @@ import {
   QrCode,
   X,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useTheme } from '@/context/ThemeContext';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
+import PaymentStatusAnimation from '@/components/PaymentStatusAnimation';
 
 declare global {
   interface Window {
@@ -125,6 +128,7 @@ export default function TicketCheckoutModal({
   const [pixIntent, setPixIntent] = useState<any>(null);
   const [success, setSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [declinedMessage, setDeclinedMessage] = useState('');
 
   useEffect(() => acquireDocumentScrollLock(), []);
 
@@ -268,6 +272,7 @@ export default function TicketCheckoutModal({
 
     setSubmitting(true);
     setError('');
+    setDeclinedMessage('');
     try {
       const items = Object.entries(ticketCounts)
         .filter(([, quantity]) => quantity > 0)
@@ -355,7 +360,9 @@ export default function TicketCheckoutModal({
       }
       setSuccess(true);
     } catch (submitFailure: any) {
-      setError(submitFailure?.error_description || submitFailure?.message || 'Não foi possível concluir o pedido.');
+      const message = submitFailure?.error_description || submitFailure?.message || 'Não foi possível concluir o pedido.';
+      setError(message);
+      setDeclinedMessage(message);
     } finally {
       setSubmitting(false);
     }
@@ -399,32 +406,77 @@ export default function TicketCheckoutModal({
   }
 
   return (
-    <div className={`ticket-checkout ${isDark ? 'is-dark' : 'is-light'}`} role="dialog" aria-modal="true" aria-label="Comprar ingresso">
+    <motion.div
+      className={`ticket-checkout ${isDark ? 'is-dark' : 'is-light'}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Comprar ingresso"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.24 }}
+    >
       <style>{styles}</style>
-      <button className="tc-close" type="button" onClick={onClose} aria-label="Fechar checkout"><X size={18} /></button>
-      <form className="tc-shell" onSubmit={submit}>
+      <button className="tc-close" type="button" onClick={onClose} disabled={submitting} aria-label="Fechar checkout"><X size={18} /></button>
+      <motion.form
+        className="tc-shell"
+        onSubmit={submit}
+        initial={{ opacity: 0, y: 26, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 18, scale: 0.985 }}
+        transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <AnimatePresence mode="wait" initial={false}>
         {success ? (
-          <section className="tc-success">
-            <span className="tc-success-icon"><Check size={30} /></span>
-            <h2>Inscrição confirmada</h2>
-            <p>Seu ingresso para <strong>{event.name}</strong> foi emitido e enviado para <strong>{email}</strong>.</p>
+          <motion.section key="success" className="tc-state-screen" initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, y: -18 }}>
+            <PaymentStatusAnimation status="success" title="Pagamento aprovado!" description={`Seus ingressos para ${event.name} já estão sendo preparados.`} />
+            <p>Enviaremos os ingressos e os detalhes da compra para <strong>{email}</strong>.</p>
             <button type="button" className="tc-primary" onClick={onClose}>Concluído</button>
-          </section>
+          </motion.section>
+        ) : declinedMessage ? (
+          <motion.section key="declined" className="tc-state-screen" initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, y: -18 }}>
+            <PaymentStatusAnimation status="declined" description={declinedMessage} />
+            <div className="tc-state-actions">
+              <button type="button" className="tc-primary" onClick={() => { setDeclinedMessage(''); setError(''); }}>Tentar novamente</button>
+              {paymentMethod === 'card' && <button type="button" className="tc-secondary" onClick={() => { setPaymentMethod('pix'); setDeclinedMessage(''); setError(''); }}>Pagar com Pix</button>}
+            </div>
+          </motion.section>
+        ) : submitting ? (
+          <motion.section key="processing" className="tc-state-screen" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }}>
+            <PaymentStatusAnimation
+              status="processing"
+              method={paymentMethod}
+              title={paymentMethod === 'pix' ? 'Gerando seu Pix' : 'Processando pagamento'}
+              description={paymentMethod === 'pix' ? 'Estamos reservando seus ingressos e preparando o QR Code.' : undefined}
+            />
+          </motion.section>
         ) : pixIntent ? (
-          <section className="tc-pix-screen">
-            <h2>Finalize o pagamento via Pix</h2>
-            <p>Escaneie o QR Code ou copie o código. A confirmação acontece automaticamente.</p>
-            {pixIntent.qrBase64 && <img src={`data:image/png;base64,${pixIntent.qrBase64}`} alt="QR Code Pix" />}
+          <motion.section key="pix" className="tc-pix-screen tc-state-screen" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}>
+            <PaymentStatusAnimation status="pix-waiting" method="pix" compact />
+            <div className="tc-qr-card">
+              {pixIntent.code ? (
+                <QRCodeSVG
+                  value={String(pixIntent.code)}
+                  size={210}
+                  level="M"
+                  marginSize={2}
+                  bgColor="#ffffff"
+                  fgColor="#111827"
+                  title="QR Code para pagamento via Pix"
+                />
+              ) : <span>Gerando QR Code…</span>}
+            </div>
+            <p className="tc-pix-hint">Escaneie o QR Code ou use o Pix Copia e Cola. A confirmação acontece automaticamente.</p>
             <div className="tc-copy-row">
-              <input readOnly value={pixIntent.code || ''} />
-              <button type="button" onClick={async () => { await navigator.clipboard.writeText(pixIntent.code || ''); setCopied(true); }}>
+              <input readOnly value={pixIntent.code || ''} aria-label="Código Pix copia e cola" />
+              <button type="button" disabled={!pixIntent.code} onClick={async () => { await navigator.clipboard.writeText(pixIntent.code || ''); setCopied(true); window.setTimeout(() => setCopied(false), 2000); }}>
                 {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copiado' : 'Copiar'}
               </button>
             </div>
-            <span className="tc-waiting"><Loader2 size={15} /> Aguardando confirmação</span>
-          </section>
+            <span className="tc-waiting"><Loader2 size={15} /> Aguardando reconhecimento do pagamento</span>
+          </motion.section>
         ) : (
-          <>
+          <motion.div key="form" className="tc-form-state" initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -28, filter: 'blur(3px)' }} transition={{ duration: .3 }}>
             <main className="tc-form-column">
               <section>
                 <h2>Suas informações</h2>
@@ -504,10 +556,11 @@ export default function TicketCheckoutModal({
               {discount > 0 && <div className="tc-discount"><span>Desconto</span><strong>- {formatMoney(discount)}</strong></div>}
               <div className="tc-total"><span>Total</span><strong>{total <= 0 ? 'Grátis' : formatMoney(total)}</strong></div>
             </aside>
-          </>
+          </motion.div>
         )}
-      </form>
-    </div>
+        </AnimatePresence>
+      </motion.form>
+    </motion.div>
   );
 }
 
@@ -515,7 +568,7 @@ const styles = `
   .ticket-checkout{position:fixed;inset:0;z-index:12000;overflow-y:auto;background:rgba(19,21,23,.94);backdrop-filter:blur(24px);color:#f7f7f8;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--tc-bg:#191b1d;--tc-surface:#202224;--tc-field:#303234;--tc-border:rgba(255,255,255,.10);--tc-text:#f7f7f8;--tc-muted:#9b9da1;--tc-hover:#292b2e}
   .ticket-checkout.is-light{background:rgba(244,245,247,.94);--tc-bg:#fff;--tc-surface:#f7f7f8;--tc-field:#eff0f2;--tc-border:rgba(19,21,23,.12);--tc-text:#17181a;--tc-muted:#74777b;--tc-hover:#f0f1f3;color:var(--tc-text)}
   .tc-close{position:fixed;top:18px;right:22px;z-index:2;width:32px;height:32px;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.15);color:#d2d3d5;cursor:pointer}.is-light .tc-close{background:rgba(19,21,23,.08);color:#55585c}.tc-close:hover{transform:scale(1.04);background:rgba(255,255,255,.22)}
-  .tc-shell{width:min(900px,calc(100% - 40px));min-height:100%;margin:0 auto;padding:clamp(86px,13vh,150px) 0 60px;display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:56px;align-items:start;box-sizing:border-box}
+  .tc-shell{width:min(900px,calc(100% - 40px));min-height:100%;margin:0 auto;padding:clamp(86px,13vh,150px) 0 60px;box-sizing:border-box}.tc-form-state{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:56px;align-items:start}
   .tc-form-column{min-width:0}.tc-form-column section+section{margin-top:30px}.tc-form-column h2,.tc-pix-screen h2,.tc-success h2{font-size:22px;line-height:1.2;margin:0 0 18px;color:var(--tc-text);font-weight:720;letter-spacing:-.02em}
   .tc-identity{display:flex;align-items:center;gap:12px;margin-bottom:22px}.tc-identity img{width:42px;height:42px;border-radius:50%;object-fit:cover;background:var(--tc-field)}.tc-identity div{display:flex;flex-direction:column;min-width:0}.tc-identity strong{font-size:15px}.tc-identity span{font-size:13px;color:var(--tc-muted);margin-top:3px}.tc-identity button{border:0;background:transparent;color:var(--tc-muted);cursor:pointer;padding:4px}
   .tc-grid-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tc-field{display:flex;flex-direction:column;gap:7px;margin-bottom:17px;font-size:13px;font-weight:650;color:var(--tc-text)}.tc-field>input,.tc-field>select,.tc-field>textarea{width:100%;height:42px;border:1px solid transparent;border-radius:8px;background:var(--tc-field);color:var(--tc-text);padding:0 12px;font-family:inherit;font-size:14px;font-weight:500;outline:none;box-sizing:border-box}.tc-field>textarea{height:86px;padding:10px 12px;resize:vertical}.tc-field>input:focus,.tc-field>select:focus,.tc-field>textarea:focus{border-color:#2A2AD7;box-shadow:0 0 0 2px rgba(42,42,215,.18)}.tc-field input::placeholder{color:var(--tc-muted)}
@@ -525,7 +578,7 @@ const styles = `
   .tc-primary{width:100%;height:44px;border:0;border-radius:8px;background:#EF4118;color:#fff;font-size:14px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-top:8px}.tc-primary:hover{background:#d93612}.tc-primary:disabled{opacity:.55;cursor:not-allowed}.tc-primary svg,.tc-waiting svg{animation:tc-spin 1s linear infinite}
   .tc-summary{position:sticky;top:90px;border:1px solid var(--tc-border);border-radius:14px;background:var(--tc-bg);overflow:visible;color:var(--tc-text);box-shadow:0 18px 48px rgba(0,0,0,.12)}.tc-event-head{display:flex;gap:12px;align-items:center;padding:16px}.tc-event-head img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:var(--tc-field)}.tc-event-head div{display:flex;flex-direction:column;min-width:0}.tc-event-head strong{font-size:14px;line-height:1.25}.tc-event-head span{font-size:12px;color:var(--tc-muted);margin-top:5px}.tc-ticket-trigger{width:100%;min-height:50px;padding:0 16px;border:0;border-top:1px solid var(--tc-border);border-bottom:1px solid var(--tc-border);background:transparent;color:inherit;display:flex;align-items:center;justify-content:space-between;cursor:pointer}.tc-ticket-trigger>span{font-size:13px;color:var(--tc-muted);font-weight:600}.tc-ticket-trigger>strong{font-size:13px;display:flex;align-items:center;gap:6px;max-width:65%;text-align:right}
   .tc-ticket-menu{border-bottom:1px solid var(--tc-border);background:var(--tc-surface);padding:7px}.tc-ticket-menu>div{display:flex;align-items:center;border-radius:8px;padding:2px}.tc-ticket-menu>div.selected{background:var(--tc-hover)}.tc-ticket-menu>div>button{flex:1;min-width:0;border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:8px;text-align:left;padding:8px;cursor:pointer}.tc-ticket-menu span{display:flex;flex-direction:column}.tc-ticket-menu strong{font-size:13px}.tc-ticket-menu small{color:var(--tc-muted);font-size:11px;margin-top:2px}.tc-stepper{display:flex;align-items:center;gap:7px}.tc-stepper button{width:28px;height:28px;border:0;border-radius:7px;background:var(--tc-hover);color:var(--tc-text);display:grid;place-items:center;cursor:pointer}.tc-stepper button:disabled{opacity:.35}.tc-stepper b{font-size:13px;min-width:14px;text-align:center}.tc-inline-quantity,.tc-subtotal,.tc-discount,.tc-total{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:13px}.tc-inline-quantity,.tc-subtotal{border-bottom:1px solid var(--tc-border)}.tc-inline-quantity>span,.tc-subtotal>span,.tc-discount>span,.tc-total>span{color:var(--tc-muted);font-weight:600}.tc-discount strong{color:#2a9d58}.tc-total{padding-top:10px}.tc-total strong{font-size:22px;letter-spacing:-.02em}.tc-coupon{padding:14px 16px 2px}.tc-coupon>button{border:0;background:transparent;color:#ff7655;padding:0;font-size:13px;font-weight:700;cursor:pointer}.tc-coupon>div{display:flex;gap:6px}.tc-coupon input{height:34px;min-width:0;flex:1;border:1px solid var(--tc-border);border-radius:7px;background:var(--tc-field);color:var(--tc-text);padding:0 9px;outline:0;font-size:12px}.tc-coupon>div button{border:0;border-radius:7px;background:#EF4118;color:#fff;padding:0 10px;font-size:12px;font-weight:700}.tc-coupon small{display:block;color:#ff7554;margin-top:6px;font-size:11px}
-  .tc-pix-screen,.tc-success{grid-column:1/-1;width:min(430px,100%);margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center}.tc-pix-screen>p,.tc-success>p{color:var(--tc-muted);font-size:14px;line-height:1.55;margin:-8px 0 20px}.tc-pix-screen>img{width:210px;height:210px;background:white;border-radius:10px;padding:10px;object-fit:contain}.tc-copy-row{display:flex;width:100%;gap:8px;margin-top:16px}.tc-copy-row input{height:40px;min-width:0;flex:1;background:var(--tc-field);border:1px solid var(--tc-border);border-radius:8px;color:var(--tc-muted);padding:0 10px}.tc-copy-row button{border:0;border-radius:8px;background:#2A2AD7;color:#fff;padding:0 13px;font-weight:700;display:flex;align-items:center;gap:6px}.tc-waiting{display:flex;align-items:center;gap:7px;margin-top:18px;color:var(--tc-muted);font-size:12px}.tc-success-icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:#35b653;color:white;margin-bottom:18px}.tc-success .tc-primary{max-width:280px}
+  .tc-state-screen{width:min(460px,100%);margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center}.tc-state-screen>p{color:var(--tc-muted);font-size:14px;line-height:1.55;margin:-4px 0 20px}.tc-state-screen>.tc-primary{max-width:280px}.tc-state-actions{display:flex;width:100%;max-width:360px;flex-direction:column;gap:9px}.tc-state-actions .tc-primary{margin-top:0}.tc-secondary{width:100%;height:44px;border:1px solid var(--tc-border);border-radius:8px;background:var(--tc-surface);color:var(--tc-text);font-size:14px;font-weight:700;cursor:pointer}.tc-pix-screen{width:min(500px,100%);text-align:left;align-items:stretch}.tc-qr-card{width:234px;height:234px;margin:22px auto 12px;padding:12px;border-radius:18px;background:#fff;display:grid;place-items:center;box-shadow:0 18px 46px rgba(0,0,0,.16);color:#9ca3af;font-size:13px}.tc-qr-card svg{width:100%;height:100%;display:block}.tc-pix-screen>.tc-pix-hint{margin:0 auto 2px;max-width:390px;text-align:center}.tc-copy-row{display:flex;width:100%;gap:8px;margin-top:16px}.tc-copy-row input{height:44px;min-width:0;flex:1;background:var(--tc-field);border:1px solid var(--tc-border);border-radius:8px;color:var(--tc-muted);padding:0 10px}.tc-copy-row button{border:0;border-radius:8px;background:#2A2AD7;color:#fff;padding:0 13px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer}.tc-copy-row button:disabled{opacity:.45;cursor:not-allowed}.tc-waiting{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:18px;color:var(--tc-muted);font-size:12px}
   @keyframes tc-spin{to{transform:rotate(360deg)}}
-  @media(max-width:760px){.tc-close{top:12px;right:12px}.tc-shell{width:100%;padding:64px 18px 34px;grid-template-columns:1fr;gap:22px}.tc-summary{position:static;grid-row:1}.tc-form-column{grid-row:2}.tc-grid-two{grid-template-columns:1fr}.tc-form-column h2{font-size:20px}.tc-card-number>div{flex-wrap:wrap;height:auto;min-height:44px;padding:9px 12px}.tc-card-number>div>input:first-of-type{flex-basis:65%}}
+  @media(max-width:760px){.tc-close{top:12px;right:12px}.tc-shell{width:100%;padding:64px 18px 34px}.tc-form-state{grid-template-columns:1fr;gap:22px}.tc-summary{position:static;grid-row:1}.tc-form-column{grid-row:2}.tc-grid-two{grid-template-columns:1fr}.tc-form-column h2{font-size:20px}.tc-card-number>div{flex-wrap:wrap;height:auto;min-height:44px;padding:9px 12px}.tc-card-number>div>input:first-of-type{flex-basis:65%}.tc-qr-card{width:min(220px,74vw);height:min(220px,74vw)}.tc-copy-row{flex-direction:column}.tc-copy-row button{height:44px;justify-content:center}}
 `;

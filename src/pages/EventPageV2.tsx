@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 import EventRegistrationCard from '@/components/v2/EventRegistrationCard';
 import TicketCheckoutModal from '@/components/v2/TicketCheckoutModal';
+import { AnimatePresence } from 'framer-motion';
 
 /* ─── HELPERS E CONFIGURAÇÕES DE TEMA ────────────────── */
 const THEMES = [
@@ -2610,16 +2611,18 @@ const EventPageV2: React.FC = () => {
       </div>
 
       {/* Checkout de ingressos em tela cheia */}
-      {isCheckoutModalOpen && (
-        <TicketCheckoutModal
-          event={event}
-          user={user}
-          ticketCounts={ticketCounts}
-          setTicketCounts={setTicketCounts}
-          initialCouponCode={couponCode}
-          onClose={() => setIsCheckoutModalOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isCheckoutModalOpen && (
+          <TicketCheckoutModal
+            event={event}
+            user={user}
+            ticketCounts={ticketCounts}
+            setTicketCounts={setTicketCounts}
+            initialCouponCode={couponCode}
+            onClose={() => setIsCheckoutModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Implementação anterior mantida temporariamente como referência, sem renderização. */}
       {false && isCheckoutModalOpen && (() => {
