@@ -18,6 +18,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import QrScanner from 'qr-scanner';
 import { toast } from 'sonner';
 import { fetchApi } from '@/lib/apiBase';
+import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 
 type Participant = {
   id: string;
@@ -68,9 +69,14 @@ function normalizeQrValue(value: string) {
     ).trim();
   } catch { /* Código simples */ }
 
-  const ticketCode = normalized.match(/TCK[\s-]*([A-Z0-9]+)/i);
-  return ticketCode ? `TCK-${ticketCode[1]}`.toUpperCase() : normalized.trim();
+  const ticketCode = normalized.match(/TCK[\s-]*([A-Z0-9][A-Z0-9\s-]*)/i);
+  return ticketCode ? `TCK-${ticketCode[1].replace(/[^A-Z0-9]/gi, '')}`.toUpperCase() : normalized.trim();
 }
+
+const comparableTicketCode = (value: string) => normalizeQrValue(value)
+  .toUpperCase()
+  .replace(/^TCK[\s-]*/i, '')
+  .replace(/[^A-Z0-9]/g, '');
 
 const normalizeManualSuffix = (value: string) => value
   .toUpperCase()
@@ -124,6 +130,11 @@ export default function ParticipantesCheckin() {
   const lastScanRef = useRef({ value: '', at: 0 });
 
   useEffect(() => { participantsRef.current = participants; }, [participants]);
+
+  useEffect(() => {
+    if (!scannerOpen) return;
+    return acquireDocumentScrollLock();
+  }, [scannerOpen]);
 
   useEffect(() => {
     let mounted = true;
@@ -185,7 +196,7 @@ export default function ParticipantesCheckin() {
 
   const processScannedValue = useCallback(async (rawValue: string) => {
     if (processingRef.current) return;
-    const code = normalizeQrValue(rawValue).toLocaleLowerCase('pt-BR');
+    const code = comparableTicketCode(rawValue);
     if (!code) return;
 
     const now = Date.now();
@@ -195,7 +206,7 @@ export default function ParticipantesCheckin() {
     setProcessingScan(true);
 
     const participant = participantsRef.current.find(item =>
-      item.code.toLocaleLowerCase('pt-BR') === code || item.id.toLocaleLowerCase('pt-BR') === code,
+      comparableTicketCode(item.code) === code || comparableTicketCode(item.id) === code,
     );
 
     if (!participant) {
@@ -360,7 +371,7 @@ export default function ParticipantesCheckin() {
   const progress = totalCount ? Math.round(checkedCount / totalCount * 100) : 0;
 
   return (
-    <div className={`flex w-full flex-col bg-[#141515] font-sans text-zinc-100 ${scannerOpen ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
+    <div className={`flex w-full flex-col bg-[#141515] font-sans text-zinc-100 ${scannerOpen ? 'fixed inset-0 z-[9999] h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none' : 'min-h-[100dvh]'}`}>
       <header className="sticky top-0 z-40 shrink-0 border-b border-white/[.08] bg-[#141515]/95 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[64px] w-full max-w-[940px] items-center gap-3 px-4 sm:px-6">
           <button type="button" onClick={() => scannerOpen ? closeScanner() : navigate(-1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-zinc-500 transition hover:bg-white/[.07] hover:text-white" aria-label="Voltar">
@@ -382,7 +393,7 @@ export default function ParticipantesCheckin() {
 
       <AnimatePresence mode="wait" initial={false}>
         {scannerOpen ? (
-          <motion.main key="scanner" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mx-auto flex min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-3 overflow-hidden px-3 py-3 sm:gap-4 sm:px-5 sm:py-4">
+          <motion.main key="scanner" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mx-auto flex h-0 min-h-0 w-full max-w-[1100px] flex-1 flex-col gap-2 overflow-hidden px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 sm:gap-3 sm:px-5 sm:py-3">
             <div className="relative mx-auto min-h-0 w-full flex-1 overflow-hidden rounded-2xl border border-white/[.1] bg-[#090a0a] shadow-2xl">
               <video ref={setVideoElement} autoPlay muted playsInline disablePictureInPicture className={`h-full w-full object-cover transition-opacity duration-300 ${cameraState === 'active' ? 'opacity-100' : 'opacity-20'}`} />
 

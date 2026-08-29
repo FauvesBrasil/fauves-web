@@ -2765,11 +2765,18 @@ const EventPanelV2: React.FC = () => {
                 if (cancelled) return;
                 setEvent(evt);
                 if (evt.acceptingRegistrations !== undefined) {
-                    setAcceptingRegistrations(evt.acceptingRegistrations);
+                    setAcceptingRegistrations(!!evt.acceptingRegistrations);
                 }
 
                 if (evt.registrationForm) {
                     const form = typeof evt.registrationForm === 'string' ? JSON.parse(evt.registrationForm) : evt.registrationForm;
+                    if (form.acceptingRegistrations !== undefined) {
+                        setAcceptingRegistrations(!!form.acceptingRegistrations);
+                    }
+                    if (form.capacity !== undefined && Number(form.capacity) > 0) {
+                        setLimitCapacity(true);
+                        setMaxCapacityValue(String(form.capacity));
+                    }
                     if (form.nameType) setNameQuestionType(form.nameType);
                     if (form.phoneType) setPhoneQuestionType(form.phoneType);
                     if (form.ethType) setEthQuestionType(form.ethType);
@@ -8525,10 +8532,10 @@ const EventPanelV2: React.FC = () => {
                                                 type="button"
                                                 className="rich-button flex variant-color-amber"
                                                 onClick={() => {
-                                                    const currentCapacity = event?.capacity || 0;
+                                                    const form = event?.registrationForm ? (typeof event.registrationForm === 'string' ? JSON.parse(event.registrationForm) : event.registrationForm) : {};
+                                                    const currentCapacity = Number(event?.capacity || form.capacity || 0);
                                                     setLimitCapacity(currentCapacity > 0);
                                                     setMaxCapacityValue(currentCapacity > 0 ? String(currentCapacity) : '50');
-                                                    const form = event?.registrationForm ? (typeof event.registrationForm === 'string' ? JSON.parse(event.registrationForm) : event.registrationForm) : {};
                                                     setWaitingListEnabled(!!form.waitingListEnabled);
                                                     setIsCapacityModalOpen(true);
                                                 }}
@@ -8557,7 +8564,11 @@ const EventPanelV2: React.FC = () => {
                                                     <div className="flex-1 reduced-line-height text-left">
                                                         <div className="name animated text-ellipses">Capacidade do Evento</div>
                                                         <div className="desc text-ellipses">
-                                                            {event?.capacity > 0 ? `${event.capacity} Vagas` : 'Ilimitado'}
+                                                            {(() => {
+                                                                const regForm = event?.registrationForm ? (typeof event.registrationForm === 'string' ? JSON.parse(event.registrationForm) : event.registrationForm) : {};
+                                                                const cap = Number(event?.capacity || regForm.capacity || 0);
+                                                                return cap > 0 ? `${cap} Vagas` : 'Ilimitado';
+                                                            })()}
                                                         </div>
                                                     </div>
                                                 </div>

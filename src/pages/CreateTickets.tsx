@@ -135,6 +135,21 @@ const CreateTickets: React.FC = () => {
       return;
     }
 
+    if (eventCapacity > 0 && remainingCapacityForTicket !== null) {
+      const enteredQty = parseInt(maxTickets);
+      if (enteredQty > remainingCapacityForTicket) {
+        const msg = `A capacidade máxima geral do evento é de ${eventCapacity} ingressos. Restam apenas ${remainingCapacityForTicket} disponíveis. Reduza a quantidade de outros ingressos para liberar mais espaço.`;
+        setError(msg);
+        toast?.({
+          title: 'Capacidade máxima excedida',
+          description: `Você só pode definir até ${remainingCapacityForTicket} ingressos com a capacidade atual.`,
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+    }
+
     let salesStartVal = null;
     if (salesStartDate && salesStartTime) {
       salesStartVal = `${salesStartDate}T${salesStartTime}:00`;
@@ -314,6 +329,7 @@ const CreateTickets: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [ticketTypes, setTicketTypes] = useState<any[]>([]);
   const [eventId, setEventId] = useState<string>("");
+  const [eventCapacity, setEventCapacity] = useState<number>(0);
   useEffect(() => {
     // Tenta pegar eventId da query string
     const params = new URLSearchParams(location.search);
@@ -340,6 +356,14 @@ const CreateTickets: React.FC = () => {
           if (data.startDate) {
             setEventStart(new Date(data.startDate).toLocaleDateString('pt-BR'));
           }
+          const regForm = data.registrationForm
+            ? (typeof data.registrationForm === 'string'
+                ? JSON.parse(data.registrationForm)
+                : data.registrationForm)
+            : {};
+          const parsedCap = Number(data.capacity || regForm.capacity || 0);
+          setEventCapacity(parsedCap);
+
           // Set status based on event's published state
           if (data.published === true || data.status === 'PUBLISHED' || data.status === 'Publicado') {
             setEventStatus('Publicado');
@@ -402,6 +426,17 @@ const CreateTickets: React.FC = () => {
   const [reopenPendingId, setReopenPendingId] = useState<string | null>(null);
   const [reopenValue, setReopenValue] = useState<string>("");
   const [markSoldPendingId, setMarkSoldPendingId] = useState<string | null>(null);
+
+  const otherAllocatedCapacity = useMemo(() => {
+    return ticketTypes
+      .filter((t: any) => t.id !== editingId && t.parentId !== editingId)
+      .reduce((sum: number, t: any) => sum + (Number(t.maxQuantity) || 0), 0);
+  }, [ticketTypes, editingId]);
+
+  const remainingCapacityForTicket = useMemo(() => {
+    if (!eventCapacity || eventCapacity <= 0) return null;
+    return Math.max(0, eventCapacity - otherAllocatedCapacity);
+  }, [eventCapacity, otherAllocatedCapacity]);
 
   // Função para buscar categorias do backend
   const fetchCategories = async () => {
@@ -2037,8 +2072,32 @@ const CreateTickets: React.FC = () => {
                           Já existe um ingresso com esse nome para este evento
                         </p>
                       )}
-                      <Label>Quantidade máxima de ingressos</Label>
-                      <Input placeholder="Quantidade máxima de ingressos" type="number" min={1} value={maxTickets} onChange={e => setMaxTickets(e.target.value)} className="dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white" />
+                      <div className="flex items-center justify-between">
+                        <Label>Quantidade máxima de ingressos</Label>
+                        {eventCapacity > 0 && remainingCapacityForTicket !== null && (
+                          <span className={`text-[11px] font-medium ${Number(maxTickets) > remainingCapacityForTicket ? 'text-red-500 font-semibold' : 'text-emerald-400'}`}>
+                            Disponível: {remainingCapacityForTicket} de {eventCapacity}
+                          </span>
+                        )}
+                      </div>
+                      <Input
+                        placeholder="Quantidade máxima de ingressos"
+                        type="number"
+                        min={1}
+                        value={maxTickets}
+                        onChange={e => setMaxTickets(e.target.value)}
+                        className={`dark:bg-[#121212] dark:border-transparent dark:placeholder:text-slate-400 dark:text-white ${
+                          eventCapacity > 0 && remainingCapacityForTicket !== null && Number(maxTickets) > remainingCapacityForTicket
+                            ? 'border-red-500 focus-visible:ring-red-500'
+                            : ''
+                        }`}
+                      />
+                      {eventCapacity > 0 && remainingCapacityForTicket !== null && Number(maxTickets) > remainingCapacityForTicket && (
+                        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                          <Info className="h-3.5 w-3.5 shrink-0" />
+                          A quantidade não pode exceder {remainingCapacityForTicket} (capacidade máxima do evento: {eventCapacity}). Ajuste outros ingressos para liberar mais espaço.
+                        </p>
+                      )}
                       {!isFree && (
                         <>
                           <Label>Preço</Label>

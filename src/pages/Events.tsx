@@ -23,10 +23,11 @@ import {
 import HeaderV2 from '@/components/v2/HeaderV2';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import FooterV2 from '@/components/v2/FooterV2';
+import { UserTicketModal } from '@/components/v2/UserTicketModal';
 import { useAuth } from '@/context/AuthContext';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { useTheme } from '@/context/ThemeContext';
-import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { apiUrl, fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import QRCode from 'qrcode';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -1005,11 +1006,11 @@ const Events = () => {
 
       {/* Ticket Modal */}
       {selectedTicket && (
-        <TicketModal
-          key={selectedTicket.id}
-          ticket={selectedTicket}
-          ticketGroup={selectedTicketGroup.length ? selectedTicketGroup : [selectedTicket]}
-          onSelectTicket={setSelectedTicket}
+        <UserTicketModal
+          tickets={selectedTicketGroup.length ? selectedTicketGroup : [selectedTicket]}
+          initialTicketId={selectedTicket.id}
+          toast={toast}
+          onTransferred={loadData}
           onClose={() => {
             setSelectedTicket(null);
             setSelectedTicketGroup([]);
