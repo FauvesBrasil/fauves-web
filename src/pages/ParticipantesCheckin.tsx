@@ -45,7 +45,9 @@ type ScanFeedback = {
   description: string;
 };
 
-type CameraState = 'idle' | 'starting' | 'active' | 'denied' | 'unavailable' | 'error';
+type CameraState = 'idle' | 'starting' | 'active' | 'denied' | 'unavailable' | 'insecure' | 'timeout' | 'error';
+
+const CAMERA_START_TIMEOUT_MS = 12000;
 
 function normalizeQrValue(value: string) {
   let normalized = value.trim();
@@ -105,7 +107,9 @@ export default function ParticipantesCheckin() {
   const [manualCode, setManualCode] = useState('');
   const [scanFeedback, setScanFeedback] = useState<ScanFeedback | null>(null);
   const [processingScan, setProcessingScan] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
+  const [cameraErrorDetail, setCameraErrorDetail] = useState('');
   const scannerRef = useRef<QrScanner | null>(null);
   const processingRef = useRef(false);
   const lastScanRef = useRef({ value: '', at: 0 });
@@ -211,13 +215,26 @@ export default function ParticipantesCheckin() {
   }, [setTicketCheckin]);
 
   useEffect(() => {
-    if (!scannerOpen || !videoRef.current) return;
+    if (!scannerOpen || !videoElement) return;
     let disposed = false;
+    let startTimeout: number | undefined;
     setCameraState('starting');
+    setCameraCount(0);
+    setCameraErrorDetail('');
     setScanFeedback(null);
 
+    if (!window.isSecureContext) {
+      setCameraState('insecure');
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraState('unavailable');
+      setCameraErrorDetail('Este navegador não oferece acesso à câmera.');
+      return;
+    }
+
     const scanner = new QrScanner(
-      videoRef.current,
+      videoElement,
       result => { void processScannedValue(result.data); },
       {
         preferredCamera: cameraFacing,
@@ -231,12 +248,16 @@ export default function ParticipantesCheckin() {
 
     void (async () => {
       try {
-        const hasCamera = await QrScanner.hasCamera();
-        if (!hasCamera) {
-          if (!disposed) setCameraState('unavailable');
-          return;
-        }
-        await scanner.start();
+        await Promise.race([
+          scanner.start(),
+          new Promise<never>((_, reject) => {
+            startTimeout = window.setTimeout(() => {
+              const timeoutError = new Error('Tempo limite ao iniciar a câmera');
+              timeoutError.name = 'TimeoutError';
+              reject(timeoutError);
+            }, CAMERA_START_TIMEOUT_MS);
+          }),
+        ]);
         if (disposed) return;
         setCameraState('active');
         const cameras = await QrScanner.listCameras(true).catch(() => []);
@@ -244,24 +265,51 @@ export default function ParticipantesCheckin() {
       } catch (error: unknown) {
         if (disposed) return;
         const cameraError = error as { name?: string; message?: string };
-        const denied = cameraError?.name === 'NotAllowedError' || /permission|denied|permissão/i.test(String(cameraError?.message || error));
-        setCameraState(denied ? 'denied' : 'error');
+        const detail = String(cameraError?.message || error || '');
+        const denied = cameraError?.name === 'NotAllowedError' || cameraError?.name === 'SecurityError' || /permission|denied|permissão|allowed/i.test(detail);
+        const notFound = cameraError?.name === 'NotFoundError' || cameraError?.name === 'DevicesNotFoundError' || /not found|não encontrada|device not found/i.test(detail);
+        const timedOut = cameraError?.name === 'TimeoutError';
+        const busy = cameraError?.name === 'NotReadableError' || cameraError?.name === 'TrackStartError' || /could not start|in use|ocupada|não pôde iniciar/i.test(detail);
+        setCameraErrorDetail(busy ? 'A câmera pode estar sendo usada por outro aplicativo ou aba.' : detail);
+        setCameraState(timedOut ? 'timeout' : denied ? 'denied' : notFound ? 'unavailable' : 'error');
+        try {
+          scanner.stop();
+          scanner.destroy();
+        } catch {}
+      } finally {
+        if (startTimeout !== undefined) window.clearTimeout(startTimeout);
       }
     })();
 
     return () => {
       disposed = true;
-      scanner.stop();
-      scanner.destroy();
+      if (startTimeout !== undefined) window.clearTimeout(startTimeout);
+      try {
+        scanner.stop();
+        scanner.destroy();
+      } catch {}
       if (scannerRef.current === scanner) scannerRef.current = null;
     };
-  }, [cameraFacing, processScannedValue, scannerOpen]);
+  }, [cameraFacing, processScannedValue, scannerOpen, videoElement, retryTrigger]);
 
   const closeScanner = () => {
     setScannerOpen(false);
     setCameraState('idle');
     setScanFeedback(null);
     setManualCode('');
+    setCameraErrorDetail('');
+  };
+
+  const openScanner = () => {
+    setCameraState('starting');
+    setCameraErrorDetail('');
+    setScannerOpen(true);
+  };
+
+  const retryCamera = () => {
+    setCameraState('starting');
+    setCameraErrorDetail('');
+    setRetryTrigger(current => current + 1);
   };
 
   const switchCamera = () => {
@@ -294,7 +342,7 @@ export default function ParticipantesCheckin() {
           </div>
           <button
             type="button"
-            onClick={() => scannerOpen ? closeScanner() : setScannerOpen(true)}
+            onClick={() => scannerOpen ? closeScanner() : openScanner()}
             className="flex h-9 items-center gap-2 rounded-xl bg-white/[.08] px-3.5 text-[13px] font-semibold text-zinc-300 transition hover:bg-white/[.12] hover:text-white"
           >
             {scannerOpen ? <><List size={16} />Lista</> : <><ScanLine size={16} />Escanear</>}
@@ -306,7 +354,7 @@ export default function ParticipantesCheckin() {
         {scannerOpen ? (
           <motion.main key="scanner" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mx-auto w-full max-w-[940px] flex-1 px-3 py-4 sm:px-6 sm:py-5">
             <div className="relative mx-auto aspect-[4/3] max-h-[min(70vh,690px)] w-full overflow-hidden rounded-2xl border border-white/[.1] bg-[#090a0a] shadow-2xl">
-              <video ref={videoRef} muted playsInline className={`h-full w-full object-cover transition-opacity duration-300 ${cameraState === 'active' ? 'opacity-100' : 'opacity-20'}`} />
+              <video ref={setVideoElement} autoPlay muted playsInline disablePictureInPicture className={`h-full w-full object-cover transition-opacity duration-300 ${cameraState === 'active' ? 'opacity-100' : 'opacity-20'}`} />
 
               {cameraState === 'active' && (
                 <div className="pointer-events-none absolute inset-0">
@@ -325,12 +373,27 @@ export default function ParticipantesCheckin() {
                 <div className="absolute inset-0 grid place-items-center"><div className="text-center"><Loader2 className="mx-auto animate-spin text-zinc-400" size={32} /><p className="mt-3 text-sm font-medium text-zinc-500">Iniciando câmera…</p></div></div>
               )}
 
-              {['denied', 'unavailable', 'error'].includes(cameraState) && (
+              {['denied', 'unavailable', 'insecure', 'timeout', 'error'].includes(cameraState) && (
                 <div className="absolute inset-0 grid place-items-center p-6 text-center">
                   <div className="max-w-sm">
                     <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white/[.08] text-zinc-400"><Camera size={25} /></div>
-                    <h2 className="mt-4 text-lg font-semibold">{cameraState === 'denied' ? 'Permissão da câmera bloqueada' : cameraState === 'unavailable' ? 'Câmera não encontrada' : 'Não foi possível abrir a câmera'}</h2>
-                    <p className="mt-2 text-sm leading-6 text-zinc-500">{cameraState === 'denied' ? 'Libere o acesso à câmera nas configurações do navegador e recarregue a página.' : 'Você ainda pode informar o código do ingresso manualmente abaixo.'}</p>
+                    <h2 className="mt-4 text-lg font-semibold">{cameraState === 'denied' ? 'Permissão da câmera bloqueada' : cameraState === 'unavailable' ? 'Câmera não encontrada' : cameraState === 'insecure' ? 'Conexão segura necessária' : cameraState === 'timeout' ? 'A câmera demorou para responder' : 'Não foi possível abrir a câmera'}</h2>
+                    <p className="mt-2 text-sm leading-6 text-zinc-500">
+                      {cameraState === 'denied'
+                        ? 'Libere o acesso à câmera nas configurações do navegador e tente novamente.'
+                        : cameraState === 'insecure'
+                          ? 'Abra esta página por HTTPS. Navegadores bloqueiam a câmera em conexões não seguras.'
+                          : cameraState === 'timeout'
+                            ? 'Confirme a permissão solicitada pelo navegador ou feche outro aplicativo que esteja usando a câmera.'
+                            : cameraErrorDetail || 'Você ainda pode informar o código do ingresso manualmente abaixo.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={retryCamera}
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/[.12] hover:bg-white/[.2] px-4 py-2 text-sm font-semibold text-white transition"
+                    >
+                      Tentar novamente
+                    </button>
                   </div>
                 </div>
               )}
@@ -409,7 +472,7 @@ export default function ParticipantesCheckin() {
       </AnimatePresence>
 
       {!scannerOpen && totalCount > 0 && (
-        <button type="button" onClick={() => setScannerOpen(true)} className="fixed bottom-[max(18px,env(safe-area-inset-bottom))] right-4 flex h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-zinc-950 shadow-[0_14px_40px_rgba(0,0,0,.5)] transition hover:scale-[1.02] sm:hidden"><TicketCheck size={18} />Escanear</button>
+        <button type="button" onClick={openScanner} className="fixed bottom-[max(18px,env(safe-area-inset-bottom))] right-4 flex h-12 items-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-zinc-950 shadow-[0_14px_40px_rgba(0,0,0,.5)] transition hover:scale-[1.02] sm:hidden"><TicketCheck size={18} />Escanear</button>
       )}
     </div>
   );

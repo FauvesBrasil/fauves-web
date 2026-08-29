@@ -10,7 +10,7 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useTheme } from '@/context/ThemeContext';
@@ -95,6 +95,7 @@ export default function TicketCheckoutModal({
   onClose,
 }: TicketCheckoutModalProps) {
   const { isDark } = useTheme();
+  const reduceMotion = Boolean(useReducedMotion());
   const registrationForm = useMemo(() => {
     if (!event?.registrationForm) return {};
     if (typeof event.registrationForm === 'object') return event.registrationForm;
@@ -111,6 +112,7 @@ export default function TicketCheckoutModal({
   const allowGroupRegistration = registrationForm.allowGroupRegistration !== false && event?.allowGroupRegistration !== false;
   const acceptingRegistrations = event?.acceptingRegistrations ?? registrationForm.acceptingRegistrations ?? true;
   const efiSdkRef = useRef<any>(null);
+  const processingStartedAtRef = useRef(0);
 
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -151,19 +153,24 @@ export default function TicketCheckoutModal({
   }, [paymentMethod]);
 
   useEffect(() => {
-    if (!pixIntent || !order?.id) return;
+    if (!pixIntent || !order?.id || success) return;
     const interval = window.setInterval(async () => {
+      if (document.visibilityState !== 'visible') return;
       try {
         const response = await fetchApi(`/api/orders/${order.id}`);
         if (!response.ok) return;
         const data = await response.json();
         if (data.paymentStatus === 'PAID') setSuccess(true);
+        if (data.paymentStatus === 'CANCELED') {
+          setDeclinedMessage('O Pix foi cancelado ou expirou. Gere um novo pagamento para continuar.');
+          setPixIntent(null);
+        }
       } catch {
         // A tela continua disponível para uma nova tentativa manual.
       }
-    }, 5000);
+    }, 2500);
     return () => window.clearInterval(interval);
-  }, [pixIntent, order?.id]);
+  }, [pixIntent, order?.id, success]);
 
   const feePercent = Number(event?.organization?.platformFeePercent || 15);
   const pricedTickets = useMemo(() => ticketTypes.map((ticket: any) => ({
@@ -281,6 +288,13 @@ export default function TicketCheckoutModal({
     return '';
   }
 
+  async function keepProcessingStateVisible(minimumMs = 850) {
+    if (reduceMotion) return;
+    const elapsed = Date.now() - processingStartedAtRef.current;
+    const remaining = minimumMs - elapsed;
+    if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
+  }
+
   async function submit(eventSubmit: React.FormEvent) {
     eventSubmit.preventDefault();
     const validationError = validateForm();
@@ -289,6 +303,7 @@ export default function TicketCheckoutModal({
       return;
     }
 
+    processingStartedAtRef.current = Date.now();
     setSubmitting(true);
     setError('');
     setDeclinedMessage('');
@@ -317,6 +332,7 @@ export default function TicketCheckoutModal({
       setOrder(orderData);
 
       if (Number(orderData.totalAmount) <= 0) {
+        await keepProcessingStateVisible();
         setSuccess(true);
         return;
       }
@@ -334,6 +350,7 @@ export default function TicketCheckoutModal({
         });
         const pixData = await pixResponse.json().catch(() => ({}));
         if (!pixResponse.ok) throw new Error(pixData.message || 'Não foi possível gerar o Pix.');
+        await keepProcessingStateVisible();
         setPixIntent(pixData);
         return;
       }
@@ -377,9 +394,11 @@ export default function TicketCheckoutModal({
       if (!chargeResponse.ok || !['paid', 'already_paid'].includes(charge.status)) {
         throw new Error(charge.message || 'O cartão não foi aprovado. Você pode tentar via Pix.');
       }
+      await keepProcessingStateVisible();
       setSuccess(true);
     } catch (submitFailure: any) {
       const message = submitFailure?.error_description || submitFailure?.message || 'Não foi possível concluir o pedido.';
+      await keepProcessingStateVisible();
       setError(message);
       setDeclinedMessage(message);
     } finally {
@@ -447,32 +466,33 @@ export default function TicketCheckoutModal({
       >
         <AnimatePresence mode="wait" initial={false}>
         {success ? (
-          <motion.section key="success" className="tc-state-screen" initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, y: -18 }}>
-            <PaymentStatusAnimation status="success" title="Pagamento aprovado!" description={`Seus ingressos para ${event.name} já estão sendo preparados.`} />
+          <motion.section key="success" className="tc-state-screen" initial={reduceMotion ? false : { opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -18 }}>
+            <PaymentStatusAnimation status="success" />
             <p>Enviaremos os ingressos e os detalhes da compra para <strong>{email}</strong>.</p>
             <button type="button" className="tc-primary" onClick={onClose}>Concluído</button>
           </motion.section>
         ) : declinedMessage ? (
-          <motion.section key="declined" className="tc-state-screen" initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, y: -18 }}>
-            <PaymentStatusAnimation status="declined" description={declinedMessage} />
+          <motion.section key="declined" className="tc-state-screen" initial={reduceMotion ? false : { opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -18 }}>
+            <PaymentStatusAnimation status="declined" />
+            <p className="tc-decline-reason" role="alert">{declinedMessage}</p>
             <div className="tc-state-actions">
               <button type="button" className="tc-primary" onClick={() => { setDeclinedMessage(''); setError(''); }}>Tentar novamente</button>
               {paymentMethod === 'card' && <button type="button" className="tc-secondary" onClick={() => { setPaymentMethod('pix'); setDeclinedMessage(''); setError(''); }}>Pagar com Pix</button>}
             </div>
           </motion.section>
         ) : submitting ? (
-          <motion.section key="processing" className="tc-state-screen" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }}>
+          <motion.section key="processing" className="tc-state-screen" initial={reduceMotion ? false : { opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -18 }}>
             <PaymentStatusAnimation
               status="processing"
               method={paymentMethod}
-              title={paymentMethod === 'pix' ? 'Gerando seu Pix' : 'Processando pagamento'}
+              title={paymentMethod === 'pix' ? 'Gerando seu Pix...' : undefined}
               description={paymentMethod === 'pix' ? 'Estamos reservando seus ingressos e preparando o QR Code.' : undefined}
             />
           </motion.section>
         ) : pixIntent ? (
-          <motion.section key="pix" className="tc-pix-screen tc-state-screen" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}>
-            <PaymentStatusAnimation status="pix-waiting" method="pix" compact />
-            <div className="tc-qr-card">
+          <motion.section key="pix" className="tc-pix-screen tc-state-screen" initial={reduceMotion ? false : { opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -24 }}>
+            <PaymentStatusAnimation status="pix-waiting" method="pix" />
+            <motion.div className="tc-qr-card" initial={reduceMotion ? false : { opacity: 0, y: 12, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: reduceMotion ? 0 : .34, duration: reduceMotion ? 0 : .3 }}>
               {pixIntent.code ? (
                 <QRCodeSVG
                   value={String(pixIntent.code)}
@@ -484,15 +504,15 @@ export default function TicketCheckoutModal({
                   title="QR Code para pagamento via Pix"
                 />
               ) : <span>Gerando QR Code…</span>}
-            </div>
-            <p className="tc-pix-hint">Escaneie o QR Code ou use o Pix Copia e Cola. A confirmação acontece automaticamente.</p>
-            <div className="tc-copy-row">
+            </motion.div>
+            <motion.p className="tc-pix-hint" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : .45 }}>A confirmação acontece automaticamente.</motion.p>
+            <motion.div className="tc-copy-row" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reduceMotion ? 0 : .54 }}>
               <input readOnly value={pixIntent.code || ''} aria-label="Código Pix copia e cola" />
               <button type="button" disabled={!pixIntent.code} onClick={async () => { await navigator.clipboard.writeText(pixIntent.code || ''); setCopied(true); window.setTimeout(() => setCopied(false), 2000); }}>
                 {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copiado' : 'Copiar'}
               </button>
-            </div>
-            <span className="tc-waiting"><Loader2 size={15} /> Aguardando reconhecimento do pagamento</span>
+            </motion.div>
+            <motion.span className="tc-waiting" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduceMotion ? 0 : .64 }}><Loader2 size={15} /> Aguardando reconhecimento do pagamento</motion.span>
           </motion.section>
         ) : (
           <motion.div key="form" className="tc-form-state" initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -28, filter: 'blur(3px)' }} transition={{ duration: .3 }}>
@@ -635,7 +655,7 @@ const styles = `
   .tc-primary{width:100%;height:44px;border:0;border-radius:8px;background:#EF4118;color:#fff;font-size:14px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-top:8px}.tc-primary:hover{background:#d93612}.tc-primary:disabled{opacity:.55;cursor:not-allowed}.tc-primary svg,.tc-waiting svg{animation:tc-spin 1s linear infinite}
   .tc-summary{position:sticky;top:90px;border:1px solid var(--tc-border);border-radius:14px;background:var(--tc-bg);overflow:hidden;color:var(--tc-text);box-shadow:0 18px 48px rgba(0,0,0,.12)}.tc-event-head{display:flex;gap:12px;align-items:center;padding:16px}.tc-event-head img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:var(--tc-field)}.tc-event-head div{display:flex;flex-direction:column;min-width:0}.tc-event-head strong{font-size:14px;line-height:1.25}.tc-event-head span{font-size:12px;color:var(--tc-muted);margin-top:5px}.tc-ticket-trigger{width:100%;min-height:50px;padding:0 16px;border:0;border-top:1px solid var(--tc-border);border-bottom:1px solid var(--tc-border);background:transparent;color:inherit;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .2s ease}.tc-ticket-trigger:hover{background:var(--tc-hover)}.tc-ticket-trigger>span{font-size:13px;color:var(--tc-muted);font-weight:600}.tc-ticket-trigger>strong{font-size:13px;display:flex;align-items:center;justify-content:flex-end;gap:6px;max-width:65%;text-align:right}.tc-ticket-chevron{display:inline-grid;place-items:center;flex:0 0 auto;color:var(--tc-muted)}
   .tc-ticket-menu-motion{overflow:hidden}.tc-ticket-menu{border-bottom:1px solid var(--tc-border);background:var(--tc-surface);padding:7px}.tc-ticket-menu>div{display:flex;align-items:center;border-radius:8px;padding:2px;transition:background .18s ease}.tc-ticket-menu>div.selected{background:var(--tc-hover)}.tc-ticket-menu>div>button{flex:1;min-width:0;border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:8px;text-align:left;padding:8px;cursor:pointer}.tc-ticket-menu span{display:flex;flex-direction:column}.tc-ticket-menu .tc-ticket-check{width:18px;height:18px;flex:0 0 18px;display:grid;place-items:center;border:1px solid var(--tc-border);border-radius:50%;color:#fff;transition:background .18s ease,border-color .18s ease,transform .18s ease}.tc-ticket-menu .tc-ticket-check.is-selected{border-color:#2A2AD7;background:#2A2AD7;transform:scale(1.04)}.tc-ticket-menu strong{font-size:13px}.tc-ticket-menu small{color:var(--tc-muted);font-size:11px;margin-top:2px}.tc-stepper{display:flex;align-items:center;gap:7px}.tc-stepper button{width:28px;height:28px;border:0;border-radius:7px;background:var(--tc-hover);color:var(--tc-text);display:grid;place-items:center;cursor:pointer}.tc-stepper button:disabled{opacity:.35}.tc-stepper b{font-size:13px;min-width:14px;text-align:center}.tc-inline-quantity,.tc-subtotal,.tc-discount,.tc-total{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:13px}.tc-inline-quantity,.tc-subtotal{border-bottom:1px solid var(--tc-border)}.tc-inline-quantity>span,.tc-subtotal>span,.tc-discount>span,.tc-total>span{color:var(--tc-muted);font-weight:600}.tc-discount strong{color:#2a9d58}.tc-total{padding-top:10px}.tc-total strong{font-size:22px;letter-spacing:-.02em}.tc-coupon{padding:14px 16px 2px}.tc-coupon>button{border:0;background:transparent;color:#ff7655;padding:0;font-size:13px;font-weight:700;cursor:pointer}.tc-coupon>div{display:flex;gap:6px}.tc-coupon input{height:34px;min-width:0;flex:1;border:1px solid var(--tc-border);border-radius:7px;background:var(--tc-field);color:var(--tc-text);padding:0 9px;outline:0;font-size:12px}.tc-coupon>div button{border:0;border-radius:7px;background:#EF4118;color:#fff;padding:0 10px;font-size:12px;font-weight:700}.tc-coupon small{display:block;color:#ff7554;margin-top:6px;font-size:11px}
-  .tc-state-screen{width:min(460px,100%);margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center}.tc-state-screen>p{color:var(--tc-muted);font-size:14px;line-height:1.55;margin:-4px 0 20px}.tc-state-screen>.tc-primary{max-width:280px}.tc-state-actions{display:flex;width:100%;max-width:360px;flex-direction:column;gap:9px}.tc-state-actions .tc-primary{margin-top:0}.tc-secondary{width:100%;height:44px;border:1px solid var(--tc-border);border-radius:8px;background:var(--tc-surface);color:var(--tc-text);font-size:14px;font-weight:700;cursor:pointer}.tc-pix-screen{width:min(500px,100%);text-align:left;align-items:stretch}.tc-qr-card{width:234px;height:234px;margin:22px auto 12px;padding:12px;border-radius:18px;background:#fff;display:grid;place-items:center;box-shadow:0 18px 46px rgba(0,0,0,.16);color:#9ca3af;font-size:13px}.tc-qr-card svg{width:100%;height:100%;display:block}.tc-pix-screen>.tc-pix-hint{margin:0 auto 2px;max-width:390px;text-align:center}.tc-copy-row{display:flex;width:100%;gap:8px;margin-top:16px}.tc-copy-row input{height:44px;min-width:0;flex:1;background:var(--tc-field);border:1px solid var(--tc-border);border-radius:8px;color:var(--tc-muted);padding:0 10px}.tc-copy-row button{border:0;border-radius:8px;background:#2A2AD7;color:#fff;padding:0 13px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer}.tc-copy-row button:disabled{opacity:.45;cursor:not-allowed}.tc-waiting{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:18px;color:var(--tc-muted);font-size:12px}
+  .tc-state-screen{width:min(520px,100%);margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center}.tc-state-screen>p{color:var(--tc-muted);font-size:14px;line-height:1.55;margin:-4px 0 20px}.tc-state-screen>.tc-primary{max-width:280px}.tc-state-screen>.tc-decline-reason{max-width:420px;margin:-4px 0 20px;padding:10px 12px;border-radius:9px;background:rgba(239,65,24,.1);color:#ff7554;font-size:12px}.tc-state-actions{display:flex;width:100%;max-width:360px;flex-direction:column;gap:9px}.tc-state-actions .tc-primary{margin-top:0}.tc-secondary{width:100%;height:44px;border:1px solid var(--tc-border);border-radius:8px;background:var(--tc-surface);color:var(--tc-text);font-size:14px;font-weight:700;cursor:pointer}.tc-pix-screen{width:min(520px,100%);text-align:left;align-items:stretch}.tc-qr-card{width:228px;height:228px;margin:4px auto 12px;padding:10px;border-radius:20px;background:#fff;display:grid;place-items:center;box-shadow:0 18px 46px rgba(0,0,0,.16);color:#9ca3af;font-size:13px}.tc-qr-card svg{width:100%;height:100%;display:block}.tc-pix-screen>.tc-pix-hint{margin:0 auto 2px;max-width:390px;text-align:center}.tc-copy-row{display:flex;width:100%;gap:8px;margin-top:16px}.tc-copy-row input{height:50px;min-width:0;flex:1;background:var(--tc-field);border:1px solid var(--tc-border);border-radius:10px;color:var(--tc-muted);padding:0 14px}.tc-copy-row button{border:0;border-radius:10px;background:#19191a;color:#fff;padding:0 18px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer}.is-light .tc-copy-row button{background:#2A2AD7}.tc-copy-row button:disabled{opacity:.45;cursor:not-allowed}.tc-waiting{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:18px;color:var(--tc-muted);font-size:12px}
   @keyframes tc-spin{to{transform:rotate(360deg)}}
   @media(max-width:760px){.tc-close{top:12px;right:12px}.tc-shell{width:100%;padding:64px 18px 34px}.tc-form-state{grid-template-columns:1fr;gap:22px}.tc-summary{position:static;grid-row:1}.tc-form-column{grid-row:2}.tc-grid-two{grid-template-columns:1fr}.tc-form-column h2{font-size:20px}.tc-card-number>div{flex-wrap:wrap;height:auto;min-height:44px;padding:9px 12px}.tc-card-number>div>input:first-of-type{flex-basis:65%}.tc-qr-card{width:min(220px,74vw);height:min(220px,74vw)}.tc-copy-row{flex-direction:column}.tc-copy-row button{height:44px;justify-content:center}}
 `;
