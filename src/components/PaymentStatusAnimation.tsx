@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { FaPix } from 'react-icons/fa6';
 import { cn } from '@/lib/utils';
+import pixPaymentStatus from '@/assets/pix-payment-status.svg';
 
 export type PaymentAnimationStatus = 'processing' | 'pix-waiting' | 'success' | 'declined';
 
@@ -11,6 +11,7 @@ interface PaymentStatusAnimationProps {
   title?: string;
   description?: string;
   compact?: boolean;
+  darkSurface?: boolean;
   className?: string;
 }
 
@@ -47,12 +48,12 @@ const CONFETTI = [
 
 function ProcessingDots({ reducedMotion }: { reducedMotion: boolean }) {
   return (
-    <span className="flex items-center gap-1.5" aria-hidden="true">
+    <span className="flex h-2 items-center gap-[5px]" aria-hidden="true">
       {[0, 1, 2].map((dot) => (
         <motion.span
           key={dot}
-          className="h-1.5 w-1.5 rounded-full bg-white"
-          animate={reducedMotion ? undefined : { y: [0, -5, 0], opacity: [0.65, 1, 0.65] }}
+          className="h-2 w-2 rounded-full bg-white"
+          animate={reducedMotion ? undefined : { y: [0, -4, 0], opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 0.72, repeat: Infinity, delay: dot * 0.14, ease: 'easeInOut' }}
         />
       ))}
@@ -62,96 +63,94 @@ function ProcessingDots({ reducedMotion }: { reducedMotion: boolean }) {
 
 function StatusVisual({ status, compact }: Pick<PaymentStatusAnimationProps, 'status' | 'compact'>) {
   const reducedMotion = Boolean(useReducedMotion());
-  const frameSize = compact ? 58 : 82;
-  const orbSize = compact ? 44 : 70;
-  const iconSize = compact ? 20 : 30;
   const isPix = status === 'pix-waiting';
+  const designSize = isPix ? 81 : 70;
+  const scale = compact ? 0.7 : 1;
+  const renderedSize = designSize * scale;
+  const glassColor = status === 'success'
+    ? 'rgba(74,189,61,.20)'
+    : status === 'declined'
+      ? 'rgba(211,31,31,.20)'
+      : 'rgba(255,255,255,.10)';
 
   return (
-    <div className="relative shrink-0" style={{ width: frameSize, height: frameSize }} aria-hidden="true">
-      {isPix && (
-        <motion.span
-          className="absolute inset-0 rounded-full border-2 border-transparent border-r-[#2a2ad7] border-t-[#2a2ad7]"
-          animate={reducedMotion ? undefined : { rotate: 360 }}
-          transition={{ duration: 1.15, repeat: Infinity, ease: 'linear' }}
-        />
-      )}
-
-      {status === 'success' && CONFETTI.map((piece, index) => (
-        <motion.span
-          key={`${piece.x}-${piece.y}`}
-          className="absolute left-1/2 top-1/2 rounded-full"
-          style={{ width: piece.size, height: piece.size, backgroundColor: piece.color }}
-          initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
-          animate={reducedMotion
-            ? { opacity: 0 }
-            : { x: piece.x, y: piece.y, scale: [0, 1, 0.8], opacity: [0, 1, 1, 0] }}
-          transition={{ delay: 0.34 + index * 0.025, duration: 0.82, ease: 'easeOut' }}
-        />
-      ))}
-
-      <motion.div
-        className={cn(
-          'absolute left-1/2 top-1/2 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border text-white',
-          (status === 'processing' || isPix) && 'border-white/25 bg-[#2a2c2e]',
-          status === 'declined' && 'border-red-300/25 bg-[#3b2020] text-[#ff2929]',
-        )}
-        style={{ width: orbSize, height: orbSize }}
-        initial={reducedMotion ? false : {
-          scale: 0.72,
-          opacity: 0,
-          backgroundColor: status === 'success' ? '#2a2c2e' : undefined,
-        }}
-        animate={status === 'success'
-          ? { scale: 1, opacity: 1, backgroundColor: '#183d21', borderColor: 'rgba(126,255,116,.28)' }
-          : status === 'declined' && !reducedMotion
-            ? { scale: 1, opacity: 1, x: [0, -4, 4, -2, 2, 0] }
-            : { scale: 1, opacity: 1 }}
-        transition={status === 'success'
-          ? { duration: reducedMotion ? 0 : 0.42, ease: [0.22, 1, 0.36, 1] }
-          : { type: 'spring', stiffness: 310, damping: 22 }}
-      >
-        {status === 'processing' && <ProcessingDots reducedMotion={reducedMotion} />}
-
-        {isPix && (
+    <div className="relative shrink-0" style={{ width: renderedSize, height: renderedSize }} aria-hidden="true">
+      <div className="absolute left-0 top-0" style={{ width: designSize, height: designSize, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+        {status === 'success' && CONFETTI.map((piece, index) => (
           <motion.span
-            initial={reducedMotion ? false : { opacity: 0, scale: 0.7, rotate: -18 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ delay: reducedMotion ? 0 : 0.12, type: 'spring', stiffness: 300, damping: 20 }}
+            key={`${piece.x}-${piece.y}`}
+            className="absolute left-[35px] top-[35px] rounded-full"
+            style={{ width: piece.size, height: piece.size, backgroundColor: piece.color }}
+            initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+            animate={reducedMotion ? { opacity: 0 } : { x: piece.x, y: piece.y, scale: [0, 1, 0.8], opacity: [0, 1, 1, 0] }}
+            transition={{ delay: 0.34 + index * 0.025, duration: 0.82, ease: 'easeOut' }}
+          />
+        ))}
+
+        {isPix ? (
+          <>
+            <motion.div
+              className="absolute left-0 top-[11px] h-[70px] w-[70px] rounded-full border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,.14),0_12px_28px_rgba(0,0,0,.18)] backdrop-blur-[18px]"
+              initial={reducedMotion ? false : { opacity: 0, scale: 0.78 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+            />
+            <motion.img
+              src={pixPaymentStatus}
+              alt=""
+              className="absolute inset-0 h-[81px] w-[81px]"
+              style={{ clipPath: 'circle(35px at 35px 46px)', transformOrigin: '35px 46px' }}
+              initial={reducedMotion ? false : { opacity: 0, scale: 0.78 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+            />
+            <motion.img
+              src={pixPaymentStatus}
+              alt=""
+              className="absolute inset-0 h-[81px] w-[81px]"
+              style={{
+                transformOrigin: '35px 46px',
+                maskImage: 'radial-gradient(circle at 35px 46px, transparent 0 36px, #000 37px 49px, transparent 50px)',
+                WebkitMaskImage: 'radial-gradient(circle at 35px 46px, transparent 0 36px, #000 37px 49px, transparent 50px)',
+              }}
+              animate={reducedMotion ? undefined : { rotate: 360 }}
+              transition={{ duration: 1.55, repeat: Infinity, ease: 'linear' }}
+            />
+          </>
+        ) : (
+          <motion.div
+            className="absolute inset-0 grid h-[70px] w-[70px] place-items-center rounded-full border border-white/[.14] shadow-[inset_0_1px_0_rgba(255,255,255,.12),0_12px_28px_rgba(0,0,0,.16)] backdrop-blur-[18px]"
+            style={{ backgroundColor: glassColor }}
+            initial={reducedMotion ? false : { opacity: 0, scale: 0.74 }}
+            animate={status === 'declined' && !reducedMotion
+              ? { opacity: 1, scale: 1, x: [0, -4, 4, -2, 2, 0] }
+              : { opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 310, damping: 22 }}
           >
-            <FaPix size={iconSize} />
-          </motion.span>
+            {status === 'processing' && <ProcessingDots reducedMotion={reducedMotion} />}
+            {status === 'success' && (
+              <svg viewBox="0 0 35.5 25.5" width="35.5" height="25.5" fill="none">
+                <motion.path
+                  d="M3 12.5004L13 22.5L32.5 3"
+                  stroke="#37FF00"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={reducedMotion ? false : { pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ delay: reducedMotion ? 0 : 0.18, duration: reducedMotion ? 0 : 0.48, ease: 'easeOut' }}
+                />
+              </svg>
+            )}
+            {status === 'declined' && (
+              <svg viewBox="0 0 25.5 25.5" width="25.5" height="25.5" fill="none">
+                <motion.path d="M3 22.5L22.5 3" stroke="#FF0000" strokeWidth="6" strokeLinecap="round" initial={reducedMotion ? false : { pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ delay: reducedMotion ? 0 : 0.12, duration: reducedMotion ? 0 : 0.34 }} />
+                <motion.path d="M3 3L22.5 22.5" stroke="#FF0000" strokeWidth="6" strokeLinecap="round" initial={reducedMotion ? false : { pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ delay: reducedMotion ? 0 : 0.2, duration: reducedMotion ? 0 : 0.34 }} />
+              </svg>
+            )}
+          </motion.div>
         )}
-
-        {status === 'success' && (
-          <svg viewBox="0 0 52 52" width={iconSize + 10} height={iconSize + 10} fill="none">
-            <motion.path
-              d="M13 27.5 21.5 36 39 17"
-              stroke="#50f126"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={reducedMotion ? false : { pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ delay: reducedMotion ? 0 : 0.18, duration: reducedMotion ? 0 : 0.48, ease: 'easeOut' }}
-            />
-          </svg>
-        )}
-
-        {status === 'declined' && (
-          <svg viewBox="0 0 52 52" width={iconSize + 9} height={iconSize + 9} fill="none">
-            <motion.path
-              d="m17 17 18 18M35 17 17 35"
-              stroke="currentColor"
-              strokeWidth="4.5"
-              strokeLinecap="round"
-              initial={reducedMotion ? false : { pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ delay: reducedMotion ? 0 : 0.16, duration: reducedMotion ? 0 : 0.38 }}
-            />
-          </svg>
-        )}
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -161,6 +160,7 @@ export default function PaymentStatusAnimation({
   title,
   description,
   compact = false,
+  darkSurface = false,
   className,
 }: PaymentStatusAnimationProps) {
   const content = COPY[status];
@@ -172,7 +172,7 @@ export default function PaymentStatusAnimation({
       className={cn(
         compact
           ? 'flex items-center gap-3 text-left'
-          : 'mx-auto flex w-full max-w-xl flex-col items-center px-4 py-7 text-center',
+          : 'mx-auto flex w-full max-w-xl flex-col items-center text-center',
         className,
       )}
       initial={reducedMotion ? false : { opacity: 0, y: 16, scale: 0.985 }}
@@ -183,10 +183,11 @@ export default function PaymentStatusAnimation({
       aria-busy={status === 'processing' || isPix}
     >
       <StatusVisual status={status} compact={compact} />
-      <div className={compact ? 'min-w-0' : 'mt-3.5'}>
+      <div className={compact ? 'min-w-0' : 'mt-6'}>
         <motion.h2
           className={cn(
-            'font-semibold tracking-[-0.025em] text-slate-950 dark:text-white',
+            'font-semibold tracking-[-0.025em]',
+            darkSurface ? 'text-white' : 'text-slate-950 dark:text-white',
             compact ? 'text-sm' : 'text-[26px] leading-tight max-sm:text-[22px]',
           )}
           initial={reducedMotion ? false : { opacity: 0, y: 8 }}
@@ -197,8 +198,9 @@ export default function PaymentStatusAnimation({
         </motion.h2>
         <motion.p
           className={cn(
-            'font-normal text-slate-500 dark:text-slate-300',
-            compact ? 'mt-0.5 text-xs leading-5' : 'mt-3 text-base leading-6 max-sm:text-sm',
+            'font-normal',
+            darkSurface ? 'text-[#d0d2d7]' : 'text-slate-500 dark:text-slate-300',
+            compact ? 'mt-0.5 text-xs leading-5' : 'mt-5 text-base leading-6 max-sm:text-sm',
           )}
           initial={reducedMotion ? false : { opacity: 0, y: 7 }}
           animate={{ opacity: 1, y: 0 }}
