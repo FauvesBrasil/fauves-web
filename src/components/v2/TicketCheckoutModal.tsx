@@ -8,7 +8,6 @@ import {
   Minus,
   Pencil,
   Plus,
-  QrCode,
   X,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -96,12 +95,21 @@ export default function TicketCheckoutModal({
   onClose,
 }: TicketCheckoutModalProps) {
   const { isDark } = useTheme();
-  const registrationForm = event?.registrationForm || {};
+  const registrationForm = useMemo(() => {
+    if (!event?.registrationForm) return {};
+    if (typeof event.registrationForm === 'object') return event.registrationForm;
+    try {
+      return JSON.parse(event.registrationForm);
+    } catch {
+      return {};
+    }
+  }, [event?.registrationForm]);
   const ticketTypes = useMemo(
     () => (event?.ticketTypes || []).filter((ticket: any) => !ticket.isPrivate),
     [event?.ticketTypes],
   );
-  const allowGroupRegistration = registrationForm.allowGroupRegistration !== false;
+  const allowGroupRegistration = registrationForm.allowGroupRegistration !== false && event?.allowGroupRegistration !== false;
+  const acceptingRegistrations = event?.acceptingRegistrations ?? registrationForm.acceptingRegistrations ?? true;
   const efiSdkRef = useRef<any>(null);
 
   const [name, setName] = useState(user?.name || '');
@@ -200,15 +208,24 @@ export default function TicketCheckoutModal({
     return '';
   })();
 
+  useEffect(() => {
+    if (!allowGroupRegistration) {
+      const selected = Object.entries(ticketCounts).filter(([_, q]) => q > 0);
+      if (selected.length > 1 || (selected.length === 1 && selected[0][1] > 1)) {
+        setTicketCounts({ [selected[0][0]]: 1 });
+      }
+    }
+  }, [allowGroupRegistration, ticketCounts, setTicketCounts]);
+
   function changeQuantity(ticketId: string, delta: number) {
     setTicketCounts((current) => {
+      if (!allowGroupRegistration) {
+        return { [ticketId]: 1 };
+      }
       const ticket = pricedTickets.find((item: any) => item.id === ticketId);
       const currentQuantity = current[ticketId] || 0;
       const limit = Math.min(Number(ticket?.perUserLimit || 25), Number(ticket?.available ?? 25));
       const nextQuantity = Math.max(0, Math.min(limit, currentQuantity + delta));
-      if (!allowGroupRegistration && delta > 0) {
-        return Object.fromEntries(pricedTickets.map((item: any) => [item.id, item.id === ticketId ? 1 : 0]));
-      }
       return { ...current, [ticketId]: nextQuantity };
     });
   }
@@ -238,6 +255,8 @@ export default function TicketCheckoutModal({
   }
 
   function validateForm() {
+    if (!acceptingRegistrations) return 'As inscrições e vendas de ingressos para este evento estão encerradas pelo organizador.';
+    if (!allowGroupRegistration && selectedCount > 1) return 'Inscrição em grupo desativada. Escolha apenas 1 ingresso.';
     if (!name.trim()) return 'Informe seu nome completo.';
     if (!email.trim()) return 'Informe seu endereço de e-mail.';
     if (registrationForm.phoneType === 'required' && !phone.trim()) return 'Informe seu número de celular.';
@@ -506,25 +525,49 @@ export default function TicketCheckoutModal({
               </section>
 
               {total > 0 && (
-                <section className="tc-payment">
+                <motion.section className="tc-payment" layout transition={{ layout: { duration: 0.28, ease: [0.22, 1, 0.36, 1] } }}>
                   <h2>Pagamento</h2>
-                  <div className="tc-methods">
-                    <button type="button" className={paymentMethod === 'card' ? 'active' : ''} onClick={() => setPaymentMethod('card')}><CreditCard size={16} /> Cartão</button>
-                    <button type="button" className={paymentMethod === 'pix' ? 'active' : ''} onClick={() => setPaymentMethod('pix')}><QrCode size={16} /> Pix</button>
+                  <div className="tc-methods" role="tablist" aria-label="Forma de pagamento">
+                    <motion.span
+                      className="tc-method-slider"
+                      aria-hidden="true"
+                      animate={{ x: paymentMethod === 'card' ? '0%' : '100%' }}
+                      transition={{ type: 'spring', stiffness: 430, damping: 38, mass: 0.7 }}
+                    />
+                    <button type="button" role="tab" aria-selected={paymentMethod === 'card'} className={paymentMethod === 'card' ? 'active' : ''} onClick={() => setPaymentMethod('card')}>Cartão</button>
+                    <button type="button" role="tab" aria-selected={paymentMethod === 'pix'} className={paymentMethod === 'pix' ? 'active' : ''} onClick={() => setPaymentMethod('pix')}>Pix</button>
                   </div>
-                  {paymentMethod === 'card' ? (
-                    <div className="tc-card-fields">
-                      <label className="tc-field tc-card-number"><span>Cartão de crédito ou débito *</span><div><CreditCard size={17} /><input inputMode="numeric" placeholder="Número do cartão" value={cardNumber} onChange={(change) => setCardNumber(formatCardNumber(change.target.value))} /><input className="tc-expiry" inputMode="numeric" placeholder="MM / AA" value={cardExpiry} onChange={(change) => setCardExpiry(formatExpiry(change.target.value))} /><input className="tc-cvc" inputMode="numeric" placeholder="CVC" value={cardCvc} onChange={(change) => setCardCvc(change.target.value.replace(/\D/g, '').slice(0, 4))} /></div></label>
-                      <div className="tc-grid-two"><label className="tc-field"><span>Nome no cartão *</span><input value={cardHolder} onChange={(change) => setCardHolder(change.target.value.toUpperCase())} /></label><label className="tc-field"><span>CPF do titular *</span><input inputMode="numeric" value={holderCpf} onChange={(change) => setHolderCpf(change.target.value)} placeholder="000.000.000-00" /></label></div>
-                    </div>
-                  ) : (
-                    <label className="tc-field"><span>CPF para gerar o Pix *</span><input inputMode="numeric" value={holderCpf} onChange={(change) => setHolderCpf(change.target.value)} placeholder="000.000.000-00" /></label>
-                  )}
-                </section>
+                  <AnimatePresence mode="wait" initial={false}>
+                    {paymentMethod === 'card' ? (
+                      <motion.div
+                        key="card-fields"
+                        className="tc-payment-fields tc-card-fields"
+                        initial={{ opacity: 0, y: 10, filter: 'blur(3px)' }}
+                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, y: -8, filter: 'blur(3px)' }}
+                        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <label className="tc-field tc-card-number"><span>Cartão de crédito ou débito *</span><div><CreditCard size={17} /><input inputMode="numeric" placeholder="Número do cartão" value={cardNumber} onChange={(change) => setCardNumber(formatCardNumber(change.target.value))} /><input className="tc-expiry" inputMode="numeric" placeholder="MM / AA" value={cardExpiry} onChange={(change) => setCardExpiry(formatExpiry(change.target.value))} /><input className="tc-cvc" inputMode="numeric" placeholder="CVC" value={cardCvc} onChange={(change) => setCardCvc(change.target.value.replace(/\D/g, '').slice(0, 4))} /></div></label>
+                        <div className="tc-grid-two"><label className="tc-field"><span>Nome no cartão *</span><input value={cardHolder} onChange={(change) => setCardHolder(change.target.value.toUpperCase())} /></label><label className="tc-field"><span>CPF do titular *</span><input inputMode="numeric" value={holderCpf} onChange={(change) => setHolderCpf(change.target.value)} placeholder="000.000.000-00" /></label></div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="pix-fields"
+                        className="tc-payment-fields"
+                        initial={{ opacity: 0, y: 10, filter: 'blur(3px)' }}
+                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, y: -8, filter: 'blur(3px)' }}
+                        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <label className="tc-field"><span>CPF para gerar o Pix *</span><input inputMode="numeric" value={holderCpf} onChange={(change) => setHolderCpf(change.target.value)} placeholder="000.000.000-00" /></label>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.section>
               )}
               {error && <div className="tc-error">{error}</div>}
-              <button type="submit" className="tc-primary" disabled={submitting}>
-                {submitting ? <><Loader2 size={17} /> Processando…</> : total <= 0 ? 'Confirmar inscrição' : paymentMethod === 'card' ? `Pagar ${formatMoney(total)} com cartão` : `Gerar Pix de ${formatMoney(total)}`}
+              <button type="submit" className="tc-primary" disabled={submitting || !acceptingRegistrations}>
+                {!acceptingRegistrations ? 'Inscrições encerradas' : submitting ? <><Loader2 size={17} /> Processando…</> : total <= 0 ? 'Confirmar inscrição' : paymentMethod === 'card' ? `Pagar ${formatMoney(total)} com cartão` : `Gerar Pix de ${formatMoney(total)}`}
               </button>
             </main>
 
@@ -533,18 +576,32 @@ export default function TicketCheckoutModal({
                 <img src={resolveImageUrl(event.image || event.bannerUrl || '')} alt="" />
                 <div><strong>{event.name}</strong><span>{eventDate}</span></div>
               </div>
-              <button type="button" className="tc-ticket-trigger" onClick={() => setTicketMenuOpen((open) => !open)}>
-                <span>{pricedTickets.length > 1 ? 'Ingresso' : 'Ingressos'}</span>
-                <strong>{selectedNames || 'Selecionar'}{!allowGroupRegistration && <ChevronDown size={14} />}</strong>
+              <button type="button" className="tc-ticket-trigger" aria-expanded={ticketMenuOpen} aria-controls="checkout-ticket-menu" onClick={() => setTicketMenuOpen((open) => !open)}>
+                <span>{pricedTickets.length > 1 ? 'Ingressos' : 'Ingresso'}</span>
+                <strong>
+                  {selectedNames || 'Selecionar'}
+                  <motion.span className="tc-ticket-chevron" animate={{ rotate: ticketMenuOpen ? 180 : 0 }} transition={{ duration: 0.22 }}><ChevronDown size={14} /></motion.span>
+                </strong>
               </button>
-              {ticketMenuOpen && (
-                <div className="tc-ticket-menu">
-                  {pricedTickets.map((ticket: any) => {
-                    const quantity = ticketCounts[ticket.id] || 0;
-                    return <div className={quantity ? 'selected' : ''} key={ticket.id}><button type="button" onClick={() => changeQuantity(ticket.id, allowGroupRegistration ? -1 : 1)}>{quantity > 0 && !allowGroupRegistration && <Check size={15} />}<span><strong>{ticket.name}</strong><small>{formatMoney(ticket.checkoutPrice)}</small></span></button>{allowGroupRegistration && <div className="tc-stepper"><button type="button" onClick={() => changeQuantity(ticket.id, -1)} disabled={!quantity}><Minus size={14} /></button><b>{quantity}</b><button type="button" onClick={() => changeQuantity(ticket.id, 1)}><Plus size={14} /></button></div>}</div>;
-                  })}
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {ticketMenuOpen && (
+                  <motion.div
+                    key="ticket-menu"
+                    className="tc-ticket-menu-motion"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ height: { duration: 0.34, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.2 } }}
+                  >
+                    <motion.div id="checkout-ticket-menu" className="tc-ticket-menu" initial={{ y: -8 }} animate={{ y: 0 }} exit={{ y: -6 }} transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}>
+                      {pricedTickets.map((ticket: any) => {
+                        const quantity = ticketCounts[ticket.id] || 0;
+                        return <div className={quantity ? 'selected' : ''} key={ticket.id}><button type="button" aria-pressed={!allowGroupRegistration ? quantity > 0 : undefined} onClick={() => changeQuantity(ticket.id, allowGroupRegistration ? -1 : 1)}>{!allowGroupRegistration && <span className={`tc-ticket-check ${quantity ? 'is-selected' : ''}`}>{quantity > 0 && <Check size={12} />}</span>}<span><strong>{ticket.name}</strong><small>{formatMoney(ticket.checkoutPrice)}</small></span></button>{allowGroupRegistration && <div className="tc-stepper"><button type="button" onClick={() => changeQuantity(ticket.id, -1)} disabled={!quantity}><Minus size={14} /></button><b>{quantity}</b><button type="button" onClick={() => changeQuantity(ticket.id, 1)}><Plus size={14} /></button></div>}</div>;
+                      })}
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               {allowGroupRegistration && pricedTickets.length === 1 && (
                 <div className="tc-inline-quantity"><span>Quantidade</span><div className="tc-stepper"><button type="button" onClick={() => changeQuantity(pricedTickets[0].id, -1)} disabled={selectedCount <= 1}><Minus size={14} /></button><b>{selectedCount}</b><button type="button" onClick={() => changeQuantity(pricedTickets[0].id, 1)}><Plus size={14} /></button></div></div>
               )}
@@ -573,11 +630,11 @@ const styles = `
   .tc-identity{display:flex;align-items:center;gap:12px;margin-bottom:22px}.tc-identity img{width:42px;height:42px;border-radius:50%;object-fit:cover;background:var(--tc-field)}.tc-identity div{display:flex;flex-direction:column;min-width:0}.tc-identity strong{font-size:15px}.tc-identity span{font-size:13px;color:var(--tc-muted);margin-top:3px}.tc-identity button{border:0;background:transparent;color:var(--tc-muted);cursor:pointer;padding:4px}
   .tc-grid-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tc-field{display:flex;flex-direction:column;gap:7px;margin-bottom:17px;font-size:13px;font-weight:650;color:var(--tc-text)}.tc-field>input,.tc-field>select,.tc-field>textarea{width:100%;height:42px;border:1px solid transparent;border-radius:8px;background:var(--tc-field);color:var(--tc-text);padding:0 12px;font-family:inherit;font-size:14px;font-weight:500;outline:none;box-sizing:border-box}.tc-field>textarea{height:86px;padding:10px 12px;resize:vertical}.tc-field>input:focus,.tc-field>select:focus,.tc-field>textarea:focus{border-color:#2A2AD7;box-shadow:0 0 0 2px rgba(42,42,215,.18)}.tc-field input::placeholder{color:var(--tc-muted)}
   .tc-check-row{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.45;color:var(--tc-text);cursor:pointer;margin:4px 0 18px}.tc-check-row input{appearance:none;width:17px;height:17px;flex:0 0 17px;border:1px solid var(--tc-border);border-radius:5px;background:var(--tc-field);margin:1px 0 0;display:grid;place-items:center}.tc-check-row input:checked{background:#2A2AD7;border-color:#2A2AD7}.tc-check-row input:checked:after{content:'✓';font-size:12px;font-weight:800;color:#fff}.tc-terms{color:var(--tc-muted);font-size:12px}
-  .tc-methods{display:flex;gap:8px;margin-bottom:16px}.tc-methods button{height:36px;border:1px solid var(--tc-border);border-radius:8px;background:var(--tc-surface);color:var(--tc-muted);padding:0 14px;display:flex;align-items:center;gap:7px;font-size:13px;font-weight:650;cursor:pointer}.tc-methods button.active{border-color:#2A2AD7;background:rgba(42,42,215,.12);color:var(--tc-text)}
+  .tc-methods{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(230px,100%);padding:3px;margin-bottom:18px;border-radius:10px;background:var(--tc-field);overflow:hidden}.tc-method-slider{position:absolute;left:3px;top:3px;bottom:3px;width:calc((100% - 6px)/2);border-radius:7px;background:rgba(255,255,255,.11);box-shadow:0 1px 2px rgba(0,0,0,.15);pointer-events:none}.is-light .tc-method-slider{background:#fff;box-shadow:0 1px 3px rgba(19,21,23,.12)}.tc-methods button{position:relative;z-index:1;height:36px;border:0;border-radius:7px;background:transparent;color:var(--tc-muted);padding:0 16px;font:inherit;font-size:13px;font-weight:680;cursor:pointer;transition:color .2s ease}.tc-methods button.active{color:var(--tc-text)}.tc-methods button:focus-visible{outline:2px solid #2A2AD7;outline-offset:-2px}.tc-payment-fields{min-width:0;transform-origin:top}
   .tc-card-number>div{height:44px;border:1px solid transparent;border-radius:8px;background:var(--tc-field);display:flex;align-items:center;padding:0 12px;gap:9px}.tc-card-number>div:focus-within{border-color:#2A2AD7;box-shadow:0 0 0 2px rgba(42,42,215,.18)}.tc-card-number>div svg{color:var(--tc-muted);flex:0 0 auto}.tc-card-number>div input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--tc-text);font-family:inherit;font-size:14px;font-weight:500}.tc-card-number .tc-expiry{max-width:72px}.tc-card-number .tc-cvc{max-width:42px}.tc-error{padding:10px 12px;border-radius:8px;background:rgba(239,65,24,.12);color:#ff7554;font-size:13px;font-weight:600;margin:10px 0}
   .tc-primary{width:100%;height:44px;border:0;border-radius:8px;background:#EF4118;color:#fff;font-size:14px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-top:8px}.tc-primary:hover{background:#d93612}.tc-primary:disabled{opacity:.55;cursor:not-allowed}.tc-primary svg,.tc-waiting svg{animation:tc-spin 1s linear infinite}
-  .tc-summary{position:sticky;top:90px;border:1px solid var(--tc-border);border-radius:14px;background:var(--tc-bg);overflow:visible;color:var(--tc-text);box-shadow:0 18px 48px rgba(0,0,0,.12)}.tc-event-head{display:flex;gap:12px;align-items:center;padding:16px}.tc-event-head img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:var(--tc-field)}.tc-event-head div{display:flex;flex-direction:column;min-width:0}.tc-event-head strong{font-size:14px;line-height:1.25}.tc-event-head span{font-size:12px;color:var(--tc-muted);margin-top:5px}.tc-ticket-trigger{width:100%;min-height:50px;padding:0 16px;border:0;border-top:1px solid var(--tc-border);border-bottom:1px solid var(--tc-border);background:transparent;color:inherit;display:flex;align-items:center;justify-content:space-between;cursor:pointer}.tc-ticket-trigger>span{font-size:13px;color:var(--tc-muted);font-weight:600}.tc-ticket-trigger>strong{font-size:13px;display:flex;align-items:center;gap:6px;max-width:65%;text-align:right}
-  .tc-ticket-menu{border-bottom:1px solid var(--tc-border);background:var(--tc-surface);padding:7px}.tc-ticket-menu>div{display:flex;align-items:center;border-radius:8px;padding:2px}.tc-ticket-menu>div.selected{background:var(--tc-hover)}.tc-ticket-menu>div>button{flex:1;min-width:0;border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:8px;text-align:left;padding:8px;cursor:pointer}.tc-ticket-menu span{display:flex;flex-direction:column}.tc-ticket-menu strong{font-size:13px}.tc-ticket-menu small{color:var(--tc-muted);font-size:11px;margin-top:2px}.tc-stepper{display:flex;align-items:center;gap:7px}.tc-stepper button{width:28px;height:28px;border:0;border-radius:7px;background:var(--tc-hover);color:var(--tc-text);display:grid;place-items:center;cursor:pointer}.tc-stepper button:disabled{opacity:.35}.tc-stepper b{font-size:13px;min-width:14px;text-align:center}.tc-inline-quantity,.tc-subtotal,.tc-discount,.tc-total{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:13px}.tc-inline-quantity,.tc-subtotal{border-bottom:1px solid var(--tc-border)}.tc-inline-quantity>span,.tc-subtotal>span,.tc-discount>span,.tc-total>span{color:var(--tc-muted);font-weight:600}.tc-discount strong{color:#2a9d58}.tc-total{padding-top:10px}.tc-total strong{font-size:22px;letter-spacing:-.02em}.tc-coupon{padding:14px 16px 2px}.tc-coupon>button{border:0;background:transparent;color:#ff7655;padding:0;font-size:13px;font-weight:700;cursor:pointer}.tc-coupon>div{display:flex;gap:6px}.tc-coupon input{height:34px;min-width:0;flex:1;border:1px solid var(--tc-border);border-radius:7px;background:var(--tc-field);color:var(--tc-text);padding:0 9px;outline:0;font-size:12px}.tc-coupon>div button{border:0;border-radius:7px;background:#EF4118;color:#fff;padding:0 10px;font-size:12px;font-weight:700}.tc-coupon small{display:block;color:#ff7554;margin-top:6px;font-size:11px}
+  .tc-summary{position:sticky;top:90px;border:1px solid var(--tc-border);border-radius:14px;background:var(--tc-bg);overflow:hidden;color:var(--tc-text);box-shadow:0 18px 48px rgba(0,0,0,.12)}.tc-event-head{display:flex;gap:12px;align-items:center;padding:16px}.tc-event-head img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:var(--tc-field)}.tc-event-head div{display:flex;flex-direction:column;min-width:0}.tc-event-head strong{font-size:14px;line-height:1.25}.tc-event-head span{font-size:12px;color:var(--tc-muted);margin-top:5px}.tc-ticket-trigger{width:100%;min-height:50px;padding:0 16px;border:0;border-top:1px solid var(--tc-border);border-bottom:1px solid var(--tc-border);background:transparent;color:inherit;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .2s ease}.tc-ticket-trigger:hover{background:var(--tc-hover)}.tc-ticket-trigger>span{font-size:13px;color:var(--tc-muted);font-weight:600}.tc-ticket-trigger>strong{font-size:13px;display:flex;align-items:center;justify-content:flex-end;gap:6px;max-width:65%;text-align:right}.tc-ticket-chevron{display:inline-grid;place-items:center;flex:0 0 auto;color:var(--tc-muted)}
+  .tc-ticket-menu-motion{overflow:hidden}.tc-ticket-menu{border-bottom:1px solid var(--tc-border);background:var(--tc-surface);padding:7px}.tc-ticket-menu>div{display:flex;align-items:center;border-radius:8px;padding:2px;transition:background .18s ease}.tc-ticket-menu>div.selected{background:var(--tc-hover)}.tc-ticket-menu>div>button{flex:1;min-width:0;border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:8px;text-align:left;padding:8px;cursor:pointer}.tc-ticket-menu span{display:flex;flex-direction:column}.tc-ticket-menu .tc-ticket-check{width:18px;height:18px;flex:0 0 18px;display:grid;place-items:center;border:1px solid var(--tc-border);border-radius:50%;color:#fff;transition:background .18s ease,border-color .18s ease,transform .18s ease}.tc-ticket-menu .tc-ticket-check.is-selected{border-color:#2A2AD7;background:#2A2AD7;transform:scale(1.04)}.tc-ticket-menu strong{font-size:13px}.tc-ticket-menu small{color:var(--tc-muted);font-size:11px;margin-top:2px}.tc-stepper{display:flex;align-items:center;gap:7px}.tc-stepper button{width:28px;height:28px;border:0;border-radius:7px;background:var(--tc-hover);color:var(--tc-text);display:grid;place-items:center;cursor:pointer}.tc-stepper button:disabled{opacity:.35}.tc-stepper b{font-size:13px;min-width:14px;text-align:center}.tc-inline-quantity,.tc-subtotal,.tc-discount,.tc-total{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:13px}.tc-inline-quantity,.tc-subtotal{border-bottom:1px solid var(--tc-border)}.tc-inline-quantity>span,.tc-subtotal>span,.tc-discount>span,.tc-total>span{color:var(--tc-muted);font-weight:600}.tc-discount strong{color:#2a9d58}.tc-total{padding-top:10px}.tc-total strong{font-size:22px;letter-spacing:-.02em}.tc-coupon{padding:14px 16px 2px}.tc-coupon>button{border:0;background:transparent;color:#ff7655;padding:0;font-size:13px;font-weight:700;cursor:pointer}.tc-coupon>div{display:flex;gap:6px}.tc-coupon input{height:34px;min-width:0;flex:1;border:1px solid var(--tc-border);border-radius:7px;background:var(--tc-field);color:var(--tc-text);padding:0 9px;outline:0;font-size:12px}.tc-coupon>div button{border:0;border-radius:7px;background:#EF4118;color:#fff;padding:0 10px;font-size:12px;font-weight:700}.tc-coupon small{display:block;color:#ff7554;margin-top:6px;font-size:11px}
   .tc-state-screen{width:min(460px,100%);margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center}.tc-state-screen>p{color:var(--tc-muted);font-size:14px;line-height:1.55;margin:-4px 0 20px}.tc-state-screen>.tc-primary{max-width:280px}.tc-state-actions{display:flex;width:100%;max-width:360px;flex-direction:column;gap:9px}.tc-state-actions .tc-primary{margin-top:0}.tc-secondary{width:100%;height:44px;border:1px solid var(--tc-border);border-radius:8px;background:var(--tc-surface);color:var(--tc-text);font-size:14px;font-weight:700;cursor:pointer}.tc-pix-screen{width:min(500px,100%);text-align:left;align-items:stretch}.tc-qr-card{width:234px;height:234px;margin:22px auto 12px;padding:12px;border-radius:18px;background:#fff;display:grid;place-items:center;box-shadow:0 18px 46px rgba(0,0,0,.16);color:#9ca3af;font-size:13px}.tc-qr-card svg{width:100%;height:100%;display:block}.tc-pix-screen>.tc-pix-hint{margin:0 auto 2px;max-width:390px;text-align:center}.tc-copy-row{display:flex;width:100%;gap:8px;margin-top:16px}.tc-copy-row input{height:44px;min-width:0;flex:1;background:var(--tc-field);border:1px solid var(--tc-border);border-radius:8px;color:var(--tc-muted);padding:0 10px}.tc-copy-row button{border:0;border-radius:8px;background:#2A2AD7;color:#fff;padding:0 13px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer}.tc-copy-row button:disabled{opacity:.45;cursor:not-allowed}.tc-waiting{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:18px;color:var(--tc-muted);font-size:12px}
   @keyframes tc-spin{to{transform:rotate(360deg)}}
   @media(max-width:760px){.tc-close{top:12px;right:12px}.tc-shell{width:100%;padding:64px 18px 34px}.tc-form-state{grid-template-columns:1fr;gap:22px}.tc-summary{position:static;grid-row:1}.tc-form-column{grid-row:2}.tc-grid-two{grid-template-columns:1fr}.tc-form-column h2{font-size:20px}.tc-card-number>div{flex-wrap:wrap;height:auto;min-height:44px;padding:9px 12px}.tc-card-number>div>input:first-of-type{flex-basis:65%}.tc-qr-card{width:min(220px,74vw);height:min(220px,74vw)}.tc-copy-row{flex-direction:column}.tc-copy-row button{height:44px;justify-content:center}}

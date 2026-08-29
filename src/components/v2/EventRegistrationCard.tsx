@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock3, Hourglass, LockKeyhole, Minus, Plus, UserRoundCheck } from 'lucide-react';
+import { Check, Clock3, Hourglass, LockKeyhole, Minus, Plus, UserRoundCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
@@ -131,6 +131,7 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
 
   const event = resolvedEvent || initialEvent || {};
   const form = React.useMemo(() => parseForm(event.registrationForm), [event.registrationForm]);
+  const allowGroupRegistration = form.allowGroupRegistration !== false && event.allowGroupRegistration !== false;
   const allTickets = loadedTicketTypes.length ? loadedTicketTypes : (providedTicketTypes || event.ticketTypes || []);
   const hiddenTickets = React.useMemo(
     () => allTickets.filter((ticket: any) => ticket.isPrivate && !grantedTicketIds.includes(ticket.id)),
@@ -143,16 +144,42 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
   const currentQuantities = quantities ?? internalQuantities;
 
   React.useEffect(() => {
-    if (!visibleTickets.length || Object.values(currentQuantities).some((quantity) => quantity > 0)) return;
+    if (!visibleTickets.length) return;
+
+    if (!allowGroupRegistration) {
+      // Inscrição em grupo desativada: garante no máximo 1 ingresso total
+      const selected = Object.entries(currentQuantities).filter(([_, q]) => q > 0);
+      if (selected.length === 0) {
+        const first = visibleTickets[0];
+        const next = { [first.id]: 1 };
+        if (onQuantitiesChange) onQuantitiesChange(next);
+        else setInternalQuantities(next);
+      } else if (selected.length > 1 || (selected.length === 1 && selected[0][1] > 1)) {
+        const next = { [selected[0][0]]: 1 };
+        if (onQuantitiesChange) onQuantitiesChange(next);
+        else setInternalQuantities(next);
+      }
+      return;
+    }
+
+    if (Object.values(currentQuantities).some((quantity) => quantity > 0)) return;
     const first = visibleTickets[0];
     const next = { [first.id]: 1 };
     if (onQuantitiesChange) onQuantitiesChange(next);
     else setInternalQuantities(next);
     // Selection is intentionally reset only when the event/ticket collection changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event.id, visibleTickets.map((ticket: any) => ticket.id).join('|')]);
+  }, [event.id, allowGroupRegistration, visibleTickets.map((ticket: any) => ticket.id).join('|')]);
 
   const updateQuantity = (ticket: any, delta: number) => {
+    if (!allowGroupRegistration) {
+      // Sem inscrição em grupo, a escolha funciona como radio: exatamente um tipo por vez.
+      const next: Record<string, number> = { [ticket.id]: 1 };
+      if (onQuantitiesChange) onQuantitiesChange(next);
+      else setInternalQuantities(next);
+      return;
+    }
+
     const current = currentQuantities[ticket.id] || 0;
     const perUserLimit = Math.max(1, asNumber(ticket.perUserLimit, ticket.maxPerUser, form.perUserLimit) || 10);
     const available = availableFor(ticket);
@@ -339,6 +366,8 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
         .erc-counter button { width:23px; height:23px; display:grid; place-items:center; padding:0; border:0; border-radius:5px; background:rgba(128,128,128,.14); color:var(--erc-text); cursor:pointer; }
         .erc-counter button:disabled { opacity:.3; cursor:default; }
         .erc-counter span { min-width:12px; text-align:center; font-size:12px; font-weight:600; }
+        .erc-single-check { width:22px; height:22px; flex:0 0 22px; display:grid; place-items:center; border:1px solid var(--erc-border); border-radius:50%; color:var(--erc-button-text); transition:background .2s ease,border-color .2s ease,transform .2s cubic-bezier(.22,1,.36,1); }
+        .erc-single-check.is-selected { border-color:var(--erc-button); background:var(--erc-button); transform:scale(1.05); }
         .erc-access { display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10px; }
         .erc-access-box { margin-top:11px; padding-top:11px; border-top:1px solid var(--erc-border); }
         .erc-access-label { display:flex; align-items:center; gap:6px; margin-bottom:7px; color:var(--erc-muted); font-size:11px; font-weight:600; }
@@ -464,7 +493,7 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
                       <div className="erc-price-label">Preço do Ingresso</div>
                       <div className="erc-price">
                         {formatMoney(asNumber(firstTicket.price))}
-                        {asNumber(firstTicket.perUserLimit, firstTicket.maxPerUser, form.perUserLimit) > 1 && <small>Por ingresso</small>}
+                        {allowGroupRegistration && asNumber(firstTicket.perUserLimit, firstTicket.maxPerUser, form.perUserLimit) > 1 && <small>Por ingresso</small>}
                       </div>
                       <div className="erc-divider" />
                     </div>
@@ -487,7 +516,20 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
                         const ticketLow = capacity > 0 && available > 0 && available <= getLowAvailabilityThreshold(capacity);
                         const maxPerUser = Math.max(1, asNumber(ticket.perUserLimit, ticket.maxPerUser, form.perUserLimit) || 10);
                         return (
-                          <button key={ticket.id} type="button" className={`erc-ticket ${count > 0 ? 'is-selected' : ''}`} onClick={() => updateQuantity(ticket, count > 0 ? -count : 1)}>
+                          <div
+                            key={ticket.id}
+                            role="button"
+                            tabIndex={0}
+                            aria-pressed={!allowGroupRegistration ? count > 0 : undefined}
+                            className={`erc-ticket ${count > 0 ? 'is-selected' : ''}`}
+                            onClick={() => updateQuantity(ticket, count > 0 ? -count : 1)}
+                            onKeyDown={(keyboardEvent) => {
+                              if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+                                keyboardEvent.preventDefault();
+                                updateQuantity(ticket, count > 0 ? -count : 1);
+                              }
+                            }}
+                          >
                             <div className="erc-ticket-main">
                               <div className="erc-ticket-top">
                                 <span>{ticket.name}</span>
@@ -500,20 +542,25 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
                                 {ticket.salesEnd && <><span className="erc-availability-dot" /><span>Disponível até {new Date(ticket.salesEnd).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span></>}
                               </div>
                             </div>
-                            {maxPerUser > 1 && (
+                            {allowGroupRegistration && maxPerUser > 1 && (
                               <div className="erc-counter" onClick={(clickEvent) => clickEvent.stopPropagation()}>
                                 <button type="button" disabled={count <= 0} onClick={() => updateQuantity(ticket, -1)} aria-label={`Remover ${ticket.name}`}><Minus size={12} /></button>
                                 {count > 0 && <span>{count}</span>}
                                 <button type="button" disabled={count >= Math.min(maxPerUser, available || maxPerUser)} onClick={() => updateQuantity(ticket, 1)} aria-label={`Adicionar ${ticket.name}`}><Plus size={12} /></button>
                               </div>
                             )}
-                          </button>
+                            {!allowGroupRegistration && (
+                              <span className={`erc-single-check ${count > 0 ? 'is-selected' : ''}`} aria-hidden="true">
+                                {count > 0 && <Check size={13} strokeWidth={3} />}
+                              </span>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
                   )}
 
-                  {isSingleTicket && asNumber(firstTicket?.perUserLimit, firstTicket?.maxPerUser, form.perUserLimit) > 1 && (
+                  {allowGroupRegistration && isSingleTicket && asNumber(firstTicket?.perUserLimit, firstTicket?.maxPerUser, form.perUserLimit) > 1 && (
                     <div className="erc-ticket" style={{ cursor: 'default' }}>
                       <div className="erc-ticket-main"><div className="erc-ticket-top"><span>Ingressos</span></div></div>
                       <div className="erc-counter">

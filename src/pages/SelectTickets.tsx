@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchApi, resolveImageUrl } from '../lib/apiBase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { MapPin, ExternalLink, Share2, Tag, Plus, Minus, Ticket, Map, X, ChevronLeft } from 'lucide-react';
+import { MapPin, ExternalLink, Share2, Tag, Plus, Minus, Ticket, Map, X, ChevronLeft, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CheckoutHeader from '@/components/CheckoutHeader';
 import LoadingOverlay from '@/components/LoadingOverlay';
@@ -42,6 +42,9 @@ interface Event {
   };
   isExternal?: boolean;
   externalUrl?: string;
+  registrationForm?: Record<string, any> | string;
+  allowGroupRegistration?: boolean;
+  acceptingRegistrations?: boolean;
 }
 
 const SelectTickets: React.FC = () => {
@@ -62,6 +65,15 @@ const SelectTickets: React.FC = () => {
   const [eligibleTicketIds, setEligibleTicketIds] = useState<string[] | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [showMapModal, setShowMapModal] = useState(false);
+
+  const regForm = useMemo(() => {
+    if (!event?.registrationForm) return {};
+    if (typeof event.registrationForm === 'object') return event.registrationForm;
+    try { return JSON.parse(event.registrationForm); } catch { return {}; }
+  }, [event?.registrationForm]);
+
+  const allowGroupRegistration = regForm.allowGroupRegistration !== false && (event as any)?.allowGroupRegistration !== false;
+  const acceptingRegistrations = (event as any)?.acceptingRegistrations ?? regForm.acceptingRegistrations ?? true;
 
   // Tracking pixels integration
   const { trackAddToCart, trackBeginCheckout } = useTrackingPixels(eventId);
@@ -136,7 +148,29 @@ const SelectTickets: React.FC = () => {
   }, [eventId, toast]);
 
   const handleQuantityChange = (ticketId: string, delta: number) => {
+    if (!acceptingRegistrations) {
+      toast({
+        title: 'Vendas pausadas',
+        description: 'As inscrições e vendas de ingressos para este evento estão temporariamente pausadas.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setSelectedTickets(prev => {
+      if (!allowGroupRegistration) {
+        const ticket = ticketTypes.find(t => t.id === ticketId);
+        if (ticket && ticket.available < 1) {
+          toast({
+            title: 'Ingresso esgotado',
+            description: 'Este ingresso não possui vagas disponíveis.',
+            variant: 'destructive'
+          });
+          return prev;
+        }
+        return { [ticketId]: 1 };
+      }
+
       const current = prev[ticketId] || 0;
       const newValue = Math.max(0, current + delta);
       const ticket = ticketTypes.find(t => t.id === ticketId);
@@ -304,12 +338,30 @@ const SelectTickets: React.FC = () => {
   };
 
   const handleContinue = async () => {
+    if (!acceptingRegistrations) {
+      toast({
+        title: 'Vendas pausadas',
+        description: 'As inscrições e vendas de ingressos para este evento estão temporariamente pausadas.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const totalTickets = getTotalTickets();
     if (totalTickets === 0) {
       toast({
         title: 'Selecione ingressos',
         description: 'Você precisa selecionar pelo menos um ingresso',
         variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!allowGroupRegistration && totalTickets > 1) {
+      toast({
+        title: 'Inscrição individual',
+        description: 'Inscrição em grupo desativada. É permitido apenas 1 ingresso por pedido.',
+        variant: 'destructive',
       });
       return;
     }
@@ -522,8 +574,8 @@ const SelectTickets: React.FC = () => {
       {/* Main content */}
       <div className="w-full max-w-5xl mt-10 max-md:mt-4 px-8 max-md:px-4 mx-auto">
         <div className="flex flex-col gap-2 mb-6 max-md:mb-4">
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 transition-colors w-fit group"
           >
             <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
@@ -662,6 +714,12 @@ const SelectTickets: React.FC = () => {
           }`}>
           {/* Tickets list */}
           <div className={`space-y-4 max-md:space-y-3 ${event.map ? 'lg:col-span-2' : ''} ${event.map && activeTab === 'map' ? 'max-md:hidden' : ''}`}>
+            {!acceptingRegistrations && (
+              <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0 text-amber-400" />
+                <span>As inscrições e vendas de ingressos para este evento estão temporariamente pausadas pelo organizador.</span>
+              </div>
+            )}
             {ticketTypes.length === 0 ? (
               <div className="bg-white dark:bg-[#242424] rounded-xl border border-gray-200 dark:border-[#1F1F1F] p-8 max-md:p-6 text-center">
                 <p className="text-lg max-md:text-base font-semibold text-slate-600 dark:text-slate-300 mb-2">
@@ -777,46 +835,56 @@ const SelectTickets: React.FC = () => {
                                       )}
                                     </div>
 
-                                    {/* Quantity controls */}
-                                    {ticket.isOnSale && ticket.available > 0 && (
-                                      <div className="flex items-center gap-2.5 max-md:w-full max-md:justify-between max-md:bg-white/50 dark:max-md:bg-[#1a1a1a]/50 max-md:rounded-xl max-md:p-2.5 max-md:border max-md:border-gray-200 dark:max-md:border-[#1F1F1F]">
-                                        {quantity > 0 ? (
-                                          <>
-                                            <Button
-                                              variant="outline"
-                                              size="icon"
-                                              onClick={() => handleQuantityChange(ticket.id, -1)}
-                                              className="h-10 w-10 max-md:h-11 max-md:w-11 rounded-xl border-2 hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-950 dark:hover:border-red-700 transition-all"
-                                            >
-                                              <Minus className="w-4 h-4" />
-                                            </Button>
-                                            <div className="flex flex-col items-center max-md:flex-1">
-                                              <span className="font-black text-2xl max-md:text-3xl text-indigo-600 dark:text-indigo-400 leading-none">
-                                                <AnimatedCounter value={quantity} />
-                                              </span>
-                                              <span className="text-[9px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-0.5 max-md:hidden">selecionado{quantity > 1 ? 's' : ''}</span>
-                                            </div>
-                                            <Button
-                                              size="icon"
-                                              onClick={() => handleQuantityChange(ticket.id, 1)}
-                                              disabled={quantity >= ticket.available}
-                                              className="h-10 w-10 max-md:h-11 max-md:w-11 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:shadow-none transition-all"
-                                            >
-                                              <Plus className="w-5 h-5" />
-                                            </Button>
-                                          </>
-                                        ) : (
-                                          <Button
-                                            size="icon"
-                                            onClick={() => handleQuantityChange(ticket.id, 1)}
-                                              className="h-10 w-10 max-md:h-11 max-md:w-full max-md:rounded-xl rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-lg shadow-indigo-500/30 transition-all"
-                                          >
-                                            <Plus className="w-5 h-5" />
-                                            <span className="md:hidden ml-2 font-bold">Adicionar</span>
-                                          </Button>
-                                        )}
-                                      </div>
-                                    )}
+                                    {ticket.isOnSale && ticket.available > 0 && acceptingRegistrations && (
+                                       <div className="flex items-center gap-2.5 max-md:w-full max-md:justify-between max-md:bg-white/50 dark:max-md:bg-[#1a1a1a]/50 max-md:rounded-xl max-md:p-2.5 max-md:border max-md:border-gray-200 dark:max-md:border-[#1F1F1F]">
+                                         {!allowGroupRegistration ? (
+                                           <Button
+                                             onClick={() => handleQuantityChange(ticket.id, 1)}
+                                             className={`h-10 px-4 rounded-xl font-bold transition-all max-md:w-full ${
+                                               quantity > 0
+                                                 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
+                                                 : 'border border-indigo-600/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 bg-transparent'
+                                             }`}
+                                           >
+                                             {quantity > 0 ? '✓ Selecionado' : 'Selecionar'}
+                                           </Button>
+                                         ) : quantity > 0 ? (
+                                           <>
+                                             <Button
+                                               variant="outline"
+                                               size="icon"
+                                               onClick={() => handleQuantityChange(ticket.id, -1)}
+                                               className="h-10 w-10 max-md:h-11 max-md:w-11 rounded-xl border-2 hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-950 dark:hover:border-red-700 transition-all"
+                                             >
+                                               <Minus className="w-4 h-4" />
+                                             </Button>
+                                             <div className="flex flex-col items-center max-md:flex-1">
+                                               <span className="font-black text-2xl max-md:text-3xl text-indigo-600 dark:text-indigo-400 leading-none">
+                                                 <AnimatedCounter value={quantity} />
+                                               </span>
+                                               <span className="text-[9px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider mt-0.5 max-md:hidden">selecionado{quantity > 1 ? 's' : ''}</span>
+                                             </div>
+                                             <Button
+                                               size="icon"
+                                               onClick={() => handleQuantityChange(ticket.id, 1)}
+                                               disabled={quantity >= ticket.available}
+                                               className="h-10 w-10 max-md:h-11 max-md:w-11 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:shadow-none transition-all"
+                                             >
+                                               <Plus className="w-5 h-5" />
+                                             </Button>
+                                           </>
+                                         ) : (
+                                           <Button
+                                             size="icon"
+                                             onClick={() => handleQuantityChange(ticket.id, 1)}
+                                             className="h-10 w-10 max-md:h-11 max-md:w-full max-md:rounded-xl rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white shadow-lg shadow-indigo-500/30 transition-all"
+                                           >
+                                             <Plus className="w-5 h-5" />
+                                             <span className="md:hidden ml-2 font-bold">Adicionar</span>
+                                           </Button>
+                                         )}
+                                       </div>
+                                     )}
                                   </div>
                                 </div>
                               );
@@ -915,9 +983,20 @@ const SelectTickets: React.FC = () => {
                             </div>
 
                             {/* Quantity controls */}
-                            {ticket.isOnSale && ticket.available > 0 && (
+                            {ticket.isOnSale && ticket.available > 0 && acceptingRegistrations && (
                               <div className="flex items-center gap-2.5 max-md:w-full max-md:justify-between max-md:bg-white/50 dark:max-md:bg-[#1a1a1a]/50 max-md:rounded-xl max-md:p-2.5 max-md:border max-md:border-gray-200 dark:max-md:border-[#1F1F1F]">
-                                {quantity > 0 ? (
+                                {!allowGroupRegistration ? (
+                                  <Button
+                                  onClick={() => handleQuantityChange(ticket.id, 1)}
+                                    className={`h-10 px-4 rounded-xl font-bold transition-all max-md:w-full ${
+                                      quantity > 0
+                                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
+                                        : 'border border-indigo-600/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 bg-transparent'
+                                    }`}
+                                  >
+                                    {quantity > 0 ? '✓ Selecionado' : 'Selecionar'}
+                                  </Button>
+                                ) : quantity > 0 ? (
                                   <>
                                     <Button
                                       variant="outline"
