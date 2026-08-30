@@ -578,21 +578,88 @@ export async function retryApiConnection(options: { showChecking?: boolean } = {
  * @returns URL completa ou original
  */
 export function resolveImageUrl(imagePath: string | null | undefined): string | null {
-  if (!imagePath) return null;
-  const bundledCoverUrl = resolveBundledCoverUrl(imagePath);
+  if (!imagePath || typeof imagePath !== 'string') return null;
+  let path = imagePath.trim();
+  if (!path) return null;
+
+  // Capas predefinidas podem voltar do banco como caminho Vite puro, sem a
+  // barra inicial, ou como uma URL local completa salva durante o desenvolvimento.
+  const sourceAssetPath = (() => {
+    if (path.startsWith('src/')) return `/${path}`;
+    if (path.startsWith('/src/')) return path;
+    try {
+      const parsed = new URL(path);
+      return parsed.pathname.startsWith('/src/') ? parsed.pathname : path;
+    } catch {
+      return path;
+    }
+  })();
+  const bundledCoverUrl = resolveBundledCoverUrl(sourceAssetPath);
   if (bundledCoverUrl) return bundledCoverUrl;
 
-  let path = imagePath;
   // Se estivermos em produção e o caminho apontar para localhost/127.0.0.1, reescreve para o backend de produção.
   if (isProd && (path.includes('localhost') || path.includes('127.0.0.1'))) {
     path = path.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, DEFAULT_PROD_BACKEND);
   }
 
-  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:') || path.startsWith('/src/')) {
+  if (path.startsWith('//')) return `https:${path}`;
+
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
     return path;
   }
+
+  // URLs emitidas pelo Vite e arquivos da pasta public pertencem ao frontend.
+  // Mantê-las relativas torna a função idempotente: chamar resolveImageUrl duas
+  // vezes não transforma /assets/imagem.avif em uma URL inválida do backend.
+  const frontendPath = path.startsWith('/') ? path : `/${path}`;
+  const isFrontendAsset = frontendPath.startsWith('/assets/')
+    || frontendPath.startsWith('/src/')
+    || frontendPath.startsWith('/avatars/')
+    || ['/fallback-event-banner.svg', '/no-image.svg', '/placeholder.svg', '/favicon.jpg'].includes(frontendPath)
+    || /^\/fauves-email-[^/]+\.(?:png|svg)$/i.test(frontendPath);
+  if (isFrontendAsset) return frontendPath;
+
   const base = resolvedBase || (isProd ? DEFAULT_PROD_BACKEND : 'http://localhost:4000');
   return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+/**
+ * Resolve os diferentes formatos de imagem usados nas respostas de evento.
+ * Centralizar essa ordem evita que cada tela escolha um campo diferente.
+ */
+export function resolveEventImageCandidates(eventOrImage: any): string[] {
+  const event = typeof eventOrImage === 'string' ? { image: eventOrImage } : (eventOrImage || {});
+  const nestedEvent = event.event || {};
+  const rawCandidates = [
+    event.eventBannerUrl,
+    event.bannerUrl,
+    event.banner,
+    event.bannerImage,
+    event.coverUrl,
+    event.imageUrl,
+    event.image,
+    event.img,
+    event.eventImage,
+    nestedEvent.eventBannerUrl,
+    nestedEvent.bannerUrl,
+    nestedEvent.banner,
+    nestedEvent.bannerImage,
+    nestedEvent.coverUrl,
+    nestedEvent.imageUrl,
+    nestedEvent.image,
+    nestedEvent.img,
+  ];
+
+  return Array.from(new Set(
+    rawCandidates
+      .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.trim().length > 0)
+      .map(candidate => resolveImageUrl(candidate))
+      .filter((candidate): candidate is string => Boolean(candidate)),
+  ));
+}
+
+export function resolveEventImageUrl(eventOrImage: any, fallback: string | null = null): string | null {
+  return resolveEventImageCandidates(eventOrImage)[0] || resolveImageUrl(fallback);
 }
 
 // Chamar cedo (ex.: em App.tsx) para já resolver a base antes dos primeiros hooks.

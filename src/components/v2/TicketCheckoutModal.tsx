@@ -15,6 +15,7 @@ import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useTheme } from '@/context/ThemeContext';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import PaymentStatusAnimation from '@/components/PaymentStatusAnimation';
+import EventImage from '@/components/EventImage';
 
 declare global {
   interface Window {
@@ -591,7 +592,7 @@ export default function TicketCheckoutModal({
 
             <aside className="tc-summary">
               <div className="tc-event-head">
-                <img src={resolveImageUrl(event.image || event.bannerUrl || '')} alt="" />
+                <EventImage event={event} alt={`Imagem de ${event.name || 'evento'}`} />
                 <div><strong>{event.name}</strong><span>{eventDate}</span></div>
               </div>
               <button type="button" className="tc-ticket-trigger" aria-expanded={ticketMenuOpen} aria-controls="checkout-ticket-menu" onClick={() => setTicketMenuOpen((open) => !open)}>

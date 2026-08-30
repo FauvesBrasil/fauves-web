@@ -25,8 +25,8 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
-import { resolveImageUrl } from '@/lib/apiBase';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
+import EventImage from '@/components/EventImage';
 
 type CalendarMember = {
   id?: string;
@@ -316,7 +316,7 @@ const PersonDetailsPanel = ({ member, tags, availableTags, onToggleTag, onCreate
                 <div key={event.id || index} className="border-b border-white/10 px-4 py-2 last:border-b-0">
                   <div className="flex min-h-[50px] items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                      {event.image ? <img src={resolveImageUrl(event.image) || ''} alt="" className="h-10 w-10 rounded-lg object-cover" /> : <span className="h-10 w-10 rounded-lg bg-zinc-700" />}
+                      {event.image || event.bannerUrl ? <EventImage event={event} alt="" className="h-10 w-10 rounded-lg object-cover" /> : <span className="h-10 w-10 rounded-lg bg-zinc-700" />}
                       <div className="min-w-0"><p className="truncate text-base font-bold">{event.name || 'Evento'}</p><p className="text-sm font-semibold text-zinc-500">{event.startDate ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(event.startDate)) : ''}</p></div>
                     </div>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${statusLabel(event.status) === 'Confirmado' ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-zinc-400'}`}>{statusLabel(event.status)}</span>

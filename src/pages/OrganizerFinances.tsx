@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckCircle2, Lock, ArrowRight, Info } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import EventImage from '@/components/EventImage';
 
 interface EventRow {
   id: string;
@@ -375,7 +376,7 @@ export default function OrganizerFinances() {
                       aria-label={`Abrir finanças de ${ev.name}`}
                     >
                       <div className="w-56 h-40 bg-zinc-200 dark:bg-[#1f1f1f] flex-shrink-0">
-                        {ev.image ? <img src={ev.image} alt={ev.name} className="w-full h-full object-cover" /> : null}
+                        {ev.image ? <EventImage event={ev} alt={ev.name} className="w-full h-full object-cover" /> : null}
                       </div>
                       <div className="flex-1 p-5 grid grid-cols-5 gap-4 items-center">
                         <div className="col-span-2">
@@ -420,7 +421,7 @@ export default function OrganizerFinances() {
                     >
                       {/* Imagem */}
                       <div className="w-full h-32 bg-zinc-200 dark:bg-[#1f1f1f]">
-                        {ev.image ? <img src={ev.image} alt={ev.name} className="w-full h-full object-cover" /> : null}
+                        {ev.image ? <EventImage event={ev} alt={ev.name} className="w-full h-full object-cover" /> : null}
                       </div>
 
                       {/* Conteúdo */}

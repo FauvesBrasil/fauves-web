@@ -110,9 +110,11 @@ const EventMorePanel: React.FC<EventMorePanelProps> = ({ event, onEventChange })
   src="${publicUrl}?embed=1"
   title="${String(event?.name || 'Evento').replace(/"/g, '&quot;')}"
   width="100%"
-  height="720"
+  height="560"
   loading="lazy"
-  allow="payment"
+  allow="payment; fullscreen"
+  aria-hidden="false"
+  tabindex="0"
   style="border:0;border-radius:12px"
 ></iframe>`;
   const embedCode = embedType === 'button' ? buttonCode : pageCode;
@@ -367,16 +369,35 @@ const EventMorePanel: React.FC<EventMorePanelProps> = ({ event, onEventChange })
           </>
         ) : (
           <div className="mt-4">
-            <p className="text-[16px] font-semibold leading-6 text-zinc-800 dark:text-zinc-100">Prévia da página incorporada</p>
-            <div className="mt-4 flex min-h-[106px] items-center justify-center rounded-lg border border-zinc-300 dark:border-white/10">
-              <button
-                type="button"
-                onClick={() => window.open(`${publicUrl}?embed=1`, '_blank', 'noopener,noreferrer')}
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-[15px] font-semibold text-zinc-950"
-              >
-                <ExternalLink size={16} /> Abrir prévia
-              </button>
+            <p className="text-[16px] font-semibold leading-6 text-zinc-800 dark:text-zinc-100">
+              Você pode ajustar os atributos <code className="font-mono text-[14px]">width</code> e <code className="font-mono text-[14px]">height</code> para adequar a integração ao seu site. Esta é a prévia real:
+            </p>
+            <div className="mt-4 overflow-hidden rounded-xl border border-zinc-300 bg-zinc-100 shadow-sm dark:border-white/10 dark:bg-[#151617]">
+              <div className="flex h-11 items-center justify-between border-b border-zinc-300 bg-white/70 px-3.5 dark:border-white/10 dark:bg-white/[.04]">
+                <div className="flex items-center gap-2 text-[12px] font-semibold text-zinc-500 dark:text-zinc-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,.12)]" />
+                  Prévia incorporada
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.open(`${publicUrl}?embed=1`, '_blank', 'noopener,noreferrer')}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] font-semibold text-zinc-600 transition hover:bg-zinc-200 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  Abrir <ExternalLink size={13} />
+                </button>
+              </div>
+              <iframe
+                key={publicUrl}
+                src={`${publicUrl}?embed=1`}
+                title={`Prévia incorporada de ${event?.name || 'evento'}`}
+                className="block h-[560px] w-full bg-white"
+                loading="lazy"
+                allow="payment; fullscreen"
+              />
             </div>
+            <p className="mt-3 text-[13px] font-medium leading-5 text-zinc-500 dark:text-zinc-400">
+              O atributo <code className="font-mono text-[12px]">allow=&quot;payment&quot;</code> é necessário para processar pagamentos dentro da página incorporada.
+            </p>
           </div>
         )}
       </section>

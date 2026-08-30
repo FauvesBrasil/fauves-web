@@ -9,6 +9,7 @@ import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 import EventRegistrationCard from '@/components/v2/EventRegistrationCard';
 import TicketCheckoutModal from '@/components/v2/TicketCheckoutModal';
 import { AnimatePresence } from 'framer-motion';
+import EventImage from '@/components/EventImage';
 
 /* ─── HELPERS E CONFIGURAÇÕES DE TEMA ────────────────── */
 const THEMES = [
@@ -120,6 +121,7 @@ const getAppleEmojiUrl = (emoji: string): string => {
 const EventPageV2: React.FC = () => {
   const { slugOrId } = useParams<{ slugOrId: string }>();
   const { user, token } = useAuth();
+  const isEmbedded = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === '1';
   const [event, setEvent] = useState<any>(null);
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -181,6 +183,11 @@ const EventPageV2: React.FC = () => {
 
   // Check if current user has management access to the event
   useEffect(() => {
+    if (isEmbedded) {
+      setCanManage(false);
+      return;
+    }
+
     const userId = user?.id;
     const eventId = event?.id;
     if (!userId || !token || !eventId) {
@@ -215,7 +222,7 @@ const EventPageV2: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, user?.isAdmin, token, event?.id]);
+  }, [isEmbedded, user?.id, user?.isAdmin, token, event?.id]);
 
   // Referência para o canvas de confete do tema Confetti
   const confettiCanvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -1463,6 +1470,141 @@ const EventPageV2: React.FC = () => {
     </div>
   );
 
+  if (isEmbedded) return (
+    <div
+      className={`theme-root fauves-embed-root ${pageIsDark ? 'dark dark-mode' : 'light'}`}
+      style={{
+        ['--theme-bg' as any]: pageBgColor,
+        ['--theme-text' as any]: pageTextColor,
+        ['--theme-muted' as any]: pageMutedColor,
+        ['--theme-accent' as any]: pageAccentColor,
+        ['--theme-font' as any]: pageFontFamily,
+        minHeight: '100dvh',
+        background: pageBgColor,
+        color: pageTextColor,
+        fontFamily: pageFontFamily,
+      }}
+    >
+      <style>{`
+        .fauves-embed-root { overflow-x: hidden; }
+        .fauves-embed-shell {
+          box-sizing: border-box;
+          min-height: 100dvh;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          background:
+            radial-gradient(circle at 8% 8%, color-mix(in srgb, var(--theme-accent) 18%, transparent), transparent 36%),
+            radial-gradient(circle at 92% 92%, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 34%);
+        }
+        .fauves-embed-card {
+          box-sizing: border-box;
+          width: min(100%, 880px);
+          display: grid;
+          grid-template-columns: minmax(220px, .78fr) minmax(340px, 1fr);
+          gap: 20px;
+          padding: 20px;
+          overflow: hidden;
+          border: 1px solid color-mix(in srgb, var(--theme-text) 11%, transparent);
+          border-radius: 20px;
+          background: color-mix(in srgb, var(--theme-text) 6%, transparent);
+          box-shadow: 0 24px 70px rgba(0,0,0,.14), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 7%, transparent);
+          backdrop-filter: blur(24px) saturate(1.08);
+          -webkit-backdrop-filter: blur(24px) saturate(1.08);
+        }
+        .fauves-embed-cover {
+          width: 100%;
+          height: 100%;
+          min-height: 360px;
+          object-fit: cover;
+          border-radius: 14px;
+          background: color-mix(in srgb, var(--theme-text) 8%, transparent);
+        }
+        .fauves-embed-content { min-width: 0; display: flex; flex-direction: column; }
+        .fauves-embed-title { margin: 0; color: var(--theme-text); font-size: clamp(27px, 4vw, 38px); line-height: 1.05; letter-spacing: -.035em; font-weight: 750; }
+        .fauves-embed-host { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--theme-muted); font-size: 14px; font-weight: 550; }
+        .fauves-embed-host img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+        .fauves-embed-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+        .fauves-embed-meta-item { min-width: 0; display: flex; align-items: center; gap: 10px; }
+        .fauves-embed-meta-icon { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--theme-text) 12%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--theme-text) 6%, transparent); color: var(--theme-muted); }
+        .fauves-embed-meta-copy { min-width: 0; }
+        .fauves-embed-meta-copy strong, .fauves-embed-meta-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .fauves-embed-meta-copy strong { color: var(--theme-text); font-size: 13px; line-height: 1.35; }
+        .fauves-embed-meta-copy span { margin-top: 2px; color: var(--theme-muted); font-size: 12px; line-height: 1.3; }
+        @media (max-width: 680px) {
+          .fauves-embed-shell { display: block; min-height: 100dvh; padding: 12px; }
+          .fauves-embed-card { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 14px; border-radius: 16px; }
+          .fauves-embed-cover { min-height: 0; aspect-ratio: 16 / 9; }
+          .fauves-embed-meta { grid-template-columns: minmax(0, 1fr); margin: 16px 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .fauves-embed-root *, .fauves-embed-root *::before, .fauves-embed-root *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; }
+        }
+      `}</style>
+
+      <main className="fauves-embed-shell">
+        <section className="fauves-embed-card" aria-label={`Evento ${event.name}`}>
+          <EventImage className="fauves-embed-cover" event={event} alt={event.name} />
+
+          <div className="fauves-embed-content">
+            <h1 className="fauves-embed-title">{event.name}</h1>
+            <div className="fauves-embed-host">
+              <img src={event.host?.avatar} alt="" />
+              <span>Organizado por <strong style={{ color: 'var(--theme-text)' }}>{event.host?.name || 'Organização'}</strong></span>
+            </div>
+
+            <div className="fauves-embed-meta">
+              <div className="fauves-embed-meta-item">
+                <span className="fauves-embed-meta-icon" aria-hidden="true">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </span>
+                <div className="fauves-embed-meta-copy">
+                  <strong>{event.date?.weekday || 'Data a confirmar'}</strong>
+                  <span>{event.date?.time || ''}</span>
+                </div>
+              </div>
+              <div className="fauves-embed-meta-item">
+                <span className="fauves-embed-meta-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                </span>
+                <div className="fauves-embed-meta-copy">
+                  <strong>{event.location?.name || 'Local a confirmar'}</strong>
+                  <span>{event.location?.city || event.location?.address || ''}</span>
+                </div>
+              </div>
+            </div>
+
+            <EventRegistrationCard
+              event={event}
+              ticketTypes={event.ticketTypes || []}
+              quantities={ticketCounts}
+              onQuantitiesChange={setTicketCounts}
+              variant="event-page"
+              compact
+              disableRemoteFetch
+              onPrimaryAction={({ action, couponCode: accessCouponCode }) => {
+                if (action !== 'closed') handleOpenCheckout(accessCouponCode);
+              }}
+            />
+          </div>
+        </section>
+      </main>
+
+      <AnimatePresence>
+        {isCheckoutModalOpen && (
+          <TicketCheckoutModal
+            event={event}
+            user={user}
+            ticketCounts={ticketCounts}
+            setTicketCounts={setTicketCounts}
+            initialCouponCode={couponCode}
+            onClose={() => setIsCheckoutModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+
   return (
     <div 
       className={`theme-root ${pageIsDark ? 'dark dark-mode' : 'light'} jsx-65c223694556bb7f`}
@@ -2381,10 +2523,10 @@ const EventPageV2: React.FC = () => {
                   </div>
               )}
               <div className="jsx-bf40f23d3e10e809 img-aspect-ratio cover-image cover-image-under">
-                <img src={event.image} alt="Glow" />
+                <EventImage event={event} alt="" aria-hidden="true" />
               </div>
               <div className="jsx-bf40f23d3e10e809 img-aspect-ratio cover-image cover-image-rect">
-                <img src={event.image} alt={event.name} />
+                <EventImage event={event} alt={event.name} />
               </div>
             </div>
 

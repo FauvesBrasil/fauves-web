@@ -167,7 +167,7 @@ const EventPanel: React.FC = () => {
         ] = await Promise.all([
           fetchApi(`/api/ticket-type/event/${id}`).catch(() => null),
           fetchApi(`/api/events/${id}/analytics/abandonment?days=30`).catch(() => null),
-          fetchApi(`/api/orders?eventId=${id}&limit=50`).catch(() => null),
+          fetchApi(`/api/orders?eventId=${id}&paymentStatus=PAID&limit=50`).catch(() => null),
           fetchApi(`/api/organization/event/${id}/financial`).catch(() => null),
           fetchApi(`/api/ticket/event/${id}/tickets?limit=1`).catch(() => null),
           fetchApi(`/api/ticket/event/${id}/by-type`).catch(() => null)

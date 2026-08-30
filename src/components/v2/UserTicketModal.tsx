@@ -13,8 +13,9 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import LogoFauves from '@/components/LogoFauves';
+import EventImage from '@/components/EventImage';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
-import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { fetchApi } from '@/lib/apiBase';
 
 type UserTicketModalProps = {
   tickets: any[];
@@ -93,7 +94,7 @@ function TicketSlide({ ticket, onTransfer, scale }: TicketSlideProps) {
   const locationDisplay = locationAddress && !locationName.toLocaleLowerCase('pt-BR').includes(locationAddress.toLocaleLowerCase('pt-BR'))
     ? `${locationName}, ${locationAddress}`
     : locationName;
-  const bannerUrl = resolveImageUrl(ticket.eventBannerUrl || ticket.event?.image || ticket.event?.bannerUrl) || '';
+  const hasBanner = Boolean(ticket.eventBannerUrl || ticket.bannerUrl || ticket.banner || ticket.image || ticket.event?.image || ticket.event?.bannerUrl);
 
   const printTicket = () => {
     if (!qrDataUrl) return;
@@ -123,8 +124,8 @@ function TicketSlide({ ticket, onTransfer, scale }: TicketSlideProps) {
       }}
     >
       <div className="relative h-[170px] overflow-hidden rounded-t-[30px] bg-[#d9d9d9]">
-        {bannerUrl ? (
-          <img src={bannerUrl} className="h-full w-full object-cover" alt={`Imagem de ${ticket.eventName || ticket.event?.name || 'evento'}`} />
+        {hasBanner ? (
+          <EventImage event={ticket} className="h-full w-full object-cover" alt={`Imagem de ${ticket.eventName || ticket.event?.name || 'evento'}`} />
         ) : (
           <div className="grid h-full place-items-center bg-gradient-to-br from-[#2A2AD7] to-[#111827] text-white/80">
             <TicketIcon className="h-11 w-11" strokeWidth={1.4} />

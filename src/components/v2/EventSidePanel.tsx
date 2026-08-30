@@ -22,10 +22,11 @@ import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { fetchApi, resolveEventImageUrl, resolveImageUrl } from '@/lib/apiBase';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 import EventRegistrationCard from './EventRegistrationCard';
+import EventImage from '@/components/EventImage';
 
 interface EventSidePanelProps {
   event: any | null;
@@ -289,7 +290,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
   );
   const canonicalPath = `/${slugOrId}`;
   const canonicalUrl = typeof window === 'undefined' ? canonicalPath : `${window.location.origin}${canonicalPath}`;
-  const cover = resolveImageUrl(first(resolvedEvent.bannerUrl, resolvedEvent.banner, resolvedEvent.image, resolvedEvent.coverUrl));
+  const cover = resolveEventImageUrl(resolvedEvent);
   const orgName = first(org.name, resolvedEvent.organizerName, typeof resolvedEvent.organizers === 'string' ? resolvedEvent.organizers : null);
   const orgLogo = resolveImageUrl(first(org.logoUrl, resolvedEvent.organizerLogo));
   const orgPath = org.slug || org.id ? `/${org.slug || org.id}` : null;
@@ -522,7 +523,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
               <div className="edm-cover-wrap">
                 {cover && <div className="edm-cover-glow" style={{ backgroundImage: `url(${cover})` }} />}
                 <div className="edm-cover">
-                  {cover ? <img src={cover} alt={title} /> : <CalendarDays className="edm-cover-placeholder" size={58} strokeWidth={1.25} />}
+                  {cover ? <EventImage event={resolvedEvent} alt={title} /> : <CalendarDays className="edm-cover-placeholder" size={58} strokeWidth={1.25} />}
                 </div>
               </div>
 

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { 
+import {
   ArrowLeft, Calendar, MapPin, Users, TrendingUp, DollarSign, 
   Eye, MousePointer, ShoppingCart, CreditCard, AlertTriangle,
   Clock, CheckCircle, XCircle, Package, BarChart3, Activity,
   FileText, Shield, Target, Zap, Wallet, Send, Download, ExternalLink, Edit2
 } from 'lucide-react';
+import EventImage from '@/components/EventImage';
 
 export default function AdminEventDetails() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -225,11 +226,11 @@ export default function AdminEventDetails() {
       {/* Event Image & Basic Info */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-          {event.image && (
+          {(event.image || event.bannerUrl || event.banner || event.coverUrl) && (
             <div className="flex flex-row gap-0 h-full min-h-[200px]">
               {/* Imagem Quadrada */}
               <div className="flex-shrink-0 w-[200px] aspect-square bg-slate-100">
-                <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
+                <EventImage event={event} alt={event.name} className="w-full h-full object-cover" />
               </div>
               
               {/* Descrição e Subtítulo */}
@@ -247,7 +248,7 @@ export default function AdminEventDetails() {
               </div>
             </div>
           )}
-          {!event.image && (
+          {!(event.image || event.bannerUrl || event.banner || event.coverUrl) && (
             <div className="p-4 space-y-3">
               <div>
                 <h3 className="font-medium text-slate-900 mb-1.5 text-sm">Descrição</h3>

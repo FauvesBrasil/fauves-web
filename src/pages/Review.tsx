@@ -16,6 +16,7 @@ import { ArrowRight, ChevronDown, ChevronUp, ShieldCheck, Loader2 } from 'lucide
 import { useAuth } from '@/context/AuthContext';
 import { AnimatePresence, motion } from 'framer-motion';
 import PaymentStatusAnimation from '@/components/PaymentStatusAnimation';
+import EventImage from '@/components/EventImage';
 
 // ── Constantes Efí Bank ────────────────────────────────────────────────
 const EFI_PAYEE_CODE = import.meta.env.VITE_EFI_PAYEE_CODE || '';
@@ -512,8 +513,8 @@ function Review() {
             {/* ─── Resumo do pedido ─────────────────────────────────────── */}
             <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-[#242424] dark:to-[#1a1a1a] border border-gray-200 dark:border-[#1F1F1F] rounded-2xl p-4 max-md:p-3 mb-6 max-md:mb-4 relative shadow-sm">
               <div className="flex items-center gap-4 max-md:gap-3">
-                {(selection.eventImage || selection.image) ? (
-                  <img src={selection.eventImage || selection.image} alt="evento" className="w-16 h-16 max-md:w-14 max-md:h-14 rounded-lg object-cover flex-shrink-0" />
+                {(selection.eventImage || selection.image || selection.bannerUrl) ? (
+                  <EventImage event={selection} alt="evento" className="w-16 h-16 max-md:w-14 max-md:h-14 rounded-lg object-cover flex-shrink-0" />
                 ) : (
                   <div className="w-16 h-16 max-md:w-14 max-md:h-14 bg-slate-100 dark:bg-[#1a1a1a] rounded-lg flex-shrink-0" />
                 )}

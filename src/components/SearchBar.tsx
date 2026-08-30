@@ -2,6 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import EventImage from '@/components/EventImage';
+import { resolveImageUrl } from '@/lib/apiBase';
 
 // Fallback image component for event images
 type EventImageWithFallbackProps = {
@@ -24,7 +26,7 @@ function EventImageWithFallback(props: EventImageWithFallbackProps) {
   }
   return (
     <img
-      src={src}
+      src={resolveImageUrl(src) || undefined}
       alt={alt}
       className="w-8 h-8 max-sm:w-12 max-sm:h-12 rounded object-cover bg-card"
       onError={() => setError(true)}
@@ -208,7 +210,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ mobile = false, onMobileFocus, on
                                   className="flex items-center gap-2 hover:bg-card/90 rounded px-1 py-1 w-full text-left"
                                   onMouseDown={() => navigate(`/event/${ev.slug || ev.id}`)}
                                 >
-                                  <EventImageWithFallback src={ev.image} alt={ev.name} />
+                                  <EventImage event={ev} alt={ev.name} className="w-8 h-8 max-sm:w-12 max-sm:h-12 rounded object-cover bg-card" />
                                   <span className="text-[#091747] dark:text-white text-xs font-semibold truncate max-w-[110px]">{ev.name}</span>
                                 </button>
                               ))}
@@ -313,7 +315,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ mobile = false, onMobileFocus, on
                                   }}
                                 >
                                   <div className="w-12 h-12 flex-shrink-0">
-                                    <EventImageWithFallback src={ev.image} alt={ev.name} />
+                                    <EventImage event={ev} alt={ev.name} className="w-8 h-8 max-sm:w-12 max-sm:h-12 rounded object-cover bg-card" />
                                   </div>
                                   <span className="text-[#091747] dark:text-white text-sm font-semibold flex-1">{ev.name}</span>
                                 </button>

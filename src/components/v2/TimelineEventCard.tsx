@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import EventImage from '@/components/EventImage';
 
 interface TimelineEventCardProps {
   event: {
@@ -138,7 +139,7 @@ const TimelineEventCard: React.FC<TimelineEventCardProps> = ({ event, isLast }) 
 
             {/* Rectangle 1275 – Thumbnail */}
             <div className="w-40 h-40 bg-zinc-300 rounded-xl relative overflow-hidden shrink-0">
-              <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
+              <EventImage event={event} alt={event.title} className="w-full h-full object-cover" />
             </div>
 
           </div>

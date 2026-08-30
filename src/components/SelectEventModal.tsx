@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useOrganization } from '@/context/OrganizationContext';
+import EventImage from '@/components/EventImage';
 
 // Exemplo de eventos mockados
 const mockEvents = [
@@ -84,7 +85,7 @@ export default function SelectEventModal({ open, onClose, onConfirm }) {
             ) : filteredEvents.map(ev => (
               <label key={ev.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-indigo-50 cursor-pointer">
                 <input type="radio" name="select-event" checked={String(selectedId) === String(ev.id)} onChange={() => setSelectedId(ev.id)} />
-                {ev.image || ev.img ? <img src={ev.image || ev.img} alt="" className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center"><span className="text-xs text-gray-500">IMG</span></div>}
+                {ev.image || ev.img || ev.bannerUrl ? <EventImage event={ev} alt="" className="w-8 h-8 rounded object-cover" /> : <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center"><span className="text-xs text-gray-500">IMG</span></div>}
                 <div className="flex flex-col">
                   <span className="font-bold text-[#231942] text-sm">{ev.name || ev.title}</span>
                   <span className="text-xs text-[#231942]">{ev.date || ev.startsAt || ''}</span>

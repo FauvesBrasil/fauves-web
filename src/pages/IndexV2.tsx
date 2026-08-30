@@ -29,6 +29,7 @@ import FooterV2 from '@/components/v2/FooterV2';
 import SubscribeControl from '@/components/v2/SubscribeControl';
 import AppShell from '@/components/AppShell';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
+import EventImage from '@/components/EventImage';
 import { fetchApi, apiUrl } from '@/lib/apiBase';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useLocation } from '@/context/LocationContext';
@@ -201,7 +202,7 @@ const TimelineEventCard = ({ event }: { event: any }) => {
         )}
       </div>
       <div style={{ width: '100px', height: '100px', margin: '1rem', flexShrink: 0, borderRadius: '0.75rem', overflow: 'hidden', background: isDark ? 'rgba(255,255,255,0.05)' : luma.gray20 }}>
-        <img src={event.image} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <EventImage event={event} alt={event.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
       </div>
     </div>
   );
