@@ -124,7 +124,6 @@ import HelpCategory from './pages/HelpCategory';
 import MyTickets from './pages/MyTickets';
 import CreateTicket from './pages/CreateTicket';
 import TicketDetail from './pages/TicketDetail';
-import ChatWidget from './components/ChatWidget';
 import EventAnalytics from './pages/EventAnalytics';
 import IssuedTickets from './pages/IssuedTickets';
 import ResetPassword from './pages/ResetPassword';
@@ -370,28 +369,7 @@ const AppInner = () => {
         toName={selectedOrg?.name || ''}
       />
       <LoginWelcomeOverlay />
-      {/* Hide ChatWidget on admin and organizer pages */}
-      {location.pathname !== '/' &&
-        !['/login', '/signin', '/termos-de-uso', '/politica-de-privacidade', '/seguranca', '/dmca'].includes(location.pathname) &&
-        !location.pathname.startsWith('/admin') &&
-        !location.pathname.startsWith('/organizer') &&
-        !location.pathname.startsWith('/create') &&
-        !location.pathname.startsWith('/create-tickets') &&
-        !location.pathname.startsWith('/publish-details') &&
-        !location.pathname.startsWith('/event/manage') &&
-        !location.pathname.startsWith('/marketing') &&
-        !location.pathname.startsWith('/pesquisa-satisfacao') &&
-        !location.pathname.startsWith('/participantes') &&
-        !location.pathname.startsWith('/gerenciar-equipe') &&
-        !location.pathname.startsWith('/v2/create') &&
-        !location.pathname.startsWith('/checkout') &&
-        !location.pathname.startsWith('/select-tickets') &&
-        !location.pathname.startsWith('/profile') &&
-        !location.pathname.startsWith('/notifications') &&
-        !location.pathname.startsWith('/account-settings') &&
-        !location.pathname.startsWith('/v2/account-settings') &&
-        !location.pathname.startsWith('/reset-password') &&
-        <ChatWidget />}
+      {/* Atendimento via chat desativado. O componente permanece no projeto como legado. */}
 
       <AuthModalWrapper />
     </>

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRightLeft,
+  CircleAlert,
   CheckCircle2,
   ChevronLeft,
   Info,
@@ -11,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import QRCode from 'qrcode';
+import LogoFauves from '@/components/LogoFauves';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 
@@ -25,14 +27,13 @@ type UserTicketModalProps = {
 type TicketSlideProps = {
   ticket: any;
   onTransfer: (ticket: any) => void;
-  onClose: () => void;
   scale: number;
 };
 
 const TICKET_WIDTH = 420;
 const TICKET_HEIGHT = 734;
 const VIEWPORT_HORIZONTAL_GUTTER = 56;
-const VIEWPORT_VERTICAL_GUTTER = 72;
+const VIEWPORT_VERTICAL_GUTTER = 144;
 const TICKET_CLIP_PATH = 'path("M30 0H390C406.569 0 420 13.431 420 30V374C412.268 374 406 380.268 406 388C406 395.732 412.268 402 420 402V704C420 720.569 406.569 734 390 734H30C13.431 734 0 720.569 0 704V402C7.732 402 14 395.732 14 388C14 380.268 7.732 374 0 374V30C0 13.431 13.431 0 30 0Z")';
 
 const ticketGlass = 'backdrop-blur-[32px]';
@@ -55,7 +56,7 @@ function getTicketScale() {
   ));
 }
 
-function TicketSlide({ ticket, onTransfer, onClose, scale }: TicketSlideProps) {
+function TicketSlide({ ticket, onTransfer, scale }: TicketSlideProps) {
   const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
   const ticketIsUsed = Boolean(ticket.used || ticket.status === 'USED');
 
@@ -133,14 +134,6 @@ function TicketSlide({ ticket, onTransfer, onClose, scale }: TicketSlideProps) {
         <span className={`absolute bottom-5 left-6 inline-flex h-7 items-center rounded-full px-[15px] text-xs font-semibold shadow-sm backdrop-blur-xl ${ticketIsUsed ? 'bg-emerald-500/90 text-white' : 'bg-black/20 text-white ring-1 ring-white/10'}`}>
           {ticketIsUsed ? 'Check-in realizado' : ticket.ticketTypeName || 'Ingresso'}
         </span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Fechar ingressos"
-          className="absolute right-5 top-5 z-10 grid h-10 w-10 place-items-center rounded-full bg-black/20 text-white/80 backdrop-blur-xl transition hover:bg-black/45 hover:text-white active:scale-95"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
 
       <section className={`${ticketGlass} flex h-[218px] flex-col px-[25px] pb-5 pt-5`} style={ticketGlassStyle}>
@@ -231,8 +224,9 @@ function TicketSlide({ ticket, onTransfer, onClose, scale }: TicketSlideProps) {
               </button>
             </div>
           ) : (
-            <p className="w-full rounded-xl bg-emerald-500/10 px-4 py-3 text-sm leading-relaxed text-emerald-300">
-              Este ingresso já foi validado e não pode ser transferido.
+            <p className="flex h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-amber-200/80">
+              <CircleAlert className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              Ingresso utilizado · transferência indisponível
             </p>
           )}
         </div>
@@ -343,6 +337,23 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
         animate={{ opacity: 1 }}
       />
 
+      <header className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 pb-2 pt-[max(12px,env(safe-area-inset-top))] sm:px-8">
+        <LogoFauves
+          variant="white"
+          width={88}
+          className="opacity-90 drop-shadow-[0_2px_12px_rgba(0,0,0,.3)]"
+          title="Fauves"
+        />
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar ingressos"
+          className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[.07] text-white/75 shadow-lg backdrop-blur-xl transition-all duration-200 hover:bg-white/[.14] hover:text-white active:scale-95"
+        >
+          <X className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </button>
+      </header>
+
       <motion.div
         initial={{ opacity: 0, y: 12, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -358,8 +369,12 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 12 }}
               transition={{ duration: 0.22 }}
-              className={`${ticketGlass} relative mx-auto flex max-h-[calc(100dvh-2rem)] min-h-[520px] w-[min(420px,calc(100vw-32px))] flex-col overflow-y-auto rounded-[28px] p-6 text-white shadow-2xl ring-1 ring-white/10`}
-              style={ticketGlassStyle}
+              className={`${ticketGlass} relative mx-auto flex w-[min(420px,calc(100vw-32px))] flex-col overflow-y-auto rounded-[28px] p-6 text-white shadow-2xl ring-1 ring-white/10`}
+              style={{
+                ...ticketGlassStyle,
+                maxHeight: 'calc(100dvh - 7rem)',
+                minHeight: 'min(520px, calc(100dvh - 7rem))',
+              }}
             >
               <button
                 type="button"
@@ -369,7 +384,6 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
               >
                 <ChevronLeft className="h-4.5 w-4.5" />
               </button>
-              <button type="button" onClick={onClose} aria-label="Fechar transferência" className="absolute right-6 top-6 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[.07] text-neutral-200 transition hover:bg-white/[.12]"><X className="h-4 w-4" /></button>
 
               <div className="mt-8 grid h-12 w-12 place-items-center rounded-2xl bg-[#2A2AD7]/10 text-[#2A2AD7]">
                 <ArrowRightLeft className="h-5 w-5" />
@@ -421,7 +435,7 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
                 aria-label="Ingressos do evento"
               >
                 {safeTickets.map(ticket => (
-                  <TicketSlide key={ticket.id} ticket={ticket} onTransfer={setTransferTicket} onClose={onClose} scale={ticketScale} />
+                  <TicketSlide key={ticket.id} ticket={ticket} onTransfer={setTransferTicket} scale={ticketScale} />
                 ))}
               </div>
 
