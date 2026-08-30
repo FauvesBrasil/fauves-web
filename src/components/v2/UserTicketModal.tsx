@@ -26,11 +26,36 @@ type TicketSlideProps = {
   ticket: any;
   onTransfer: (ticket: any) => void;
   onClose: () => void;
+  scale: number;
 };
 
-const ticketGlass = 'bg-[#151616]/82 backdrop-blur-[30px] supports-[backdrop-filter]:bg-[#151616]/72';
+const TICKET_WIDTH = 420;
+const TICKET_HEIGHT = 734;
+const VIEWPORT_HORIZONTAL_GUTTER = 56;
+const VIEWPORT_VERTICAL_GUTTER = 72;
+const TICKET_CLIP_PATH = 'path("M30 0H390C406.569 0 420 13.431 420 30V374C412.268 374 406 380.268 406 388C406 395.732 412.268 402 420 402V704C420 720.569 406.569 734 390 734H30C13.431 734 0 720.569 0 704V402C7.732 402 14 395.732 14 388C14 380.268 7.732 374 0 374V30C0 13.431 13.431 0 30 0Z")';
 
-function TicketSlide({ ticket, onTransfer, onClose }: TicketSlideProps) {
+const ticketGlass = 'backdrop-blur-[32px]';
+const ticketGlassStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.052) 0%, rgba(0,0,0,0.20) 46%, rgba(255,255,255,0.028) 100%)',
+  WebkitBackdropFilter: 'blur(32px) saturate(145%)',
+  backdropFilter: 'blur(32px) saturate(145%)',
+  boxShadow: 'inset 0 1px 0 rgba(255,255,255,.09), inset 1px 0 0 rgba(255,255,255,.035), inset -1px 0 0 rgba(255,255,255,.035)',
+};
+
+function getTicketScale() {
+  if (typeof window === 'undefined') return 1;
+  const viewport = window.visualViewport;
+  const viewportWidth = viewport?.width || window.innerWidth;
+  const viewportHeight = viewport?.height || window.innerHeight;
+  return Math.max(0.42, Math.min(
+    1,
+    (viewportWidth - VIEWPORT_HORIZONTAL_GUTTER) / TICKET_WIDTH,
+    (viewportHeight - VIEWPORT_VERTICAL_GUTTER) / TICKET_HEIGHT,
+  ));
+}
+
+function TicketSlide({ ticket, onTransfer, onClose, scale }: TicketSlideProps) {
   const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
   const ticketIsUsed = Boolean(ticket.used || ticket.status === 'USED');
 
@@ -81,7 +106,21 @@ function TicketSlide({ ticket, onTransfer, onClose }: TicketSlideProps) {
   const day = startDate ? startDate.toLocaleDateString('pt-BR', { day: '2-digit' }) : '—';
 
   return (
-    <article data-ticket-slide className="ticket-slide-scrollbar h-fit max-h-[calc(100dvh-3rem)] w-[min(420px,calc(100vw-56px))] shrink-0 snap-center overflow-y-auto overflow-x-hidden rounded-[30px] text-white shadow-[0_24px_80px_rgba(0,0,0,.32)] ring-1 ring-white/10">
+    <div
+      data-ticket-slide
+      className="shrink-0 snap-center"
+      style={{ width: TICKET_WIDTH * scale, height: TICKET_HEIGHT * scale }}
+    >
+    <article
+      className="relative h-[734px] w-[420px] overflow-hidden text-white"
+      style={{
+        clipPath: TICKET_CLIP_PATH,
+        WebkitClipPath: TICKET_CLIP_PATH,
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.10)',
+      }}
+    >
       <div className="relative h-[170px] overflow-hidden rounded-t-[30px] bg-[#d9d9d9]">
         {bannerUrl ? (
           <img src={bannerUrl} className="h-full w-full object-cover" alt={`Imagem de ${ticket.eventName || ticket.event?.name || 'evento'}`} />
@@ -104,7 +143,7 @@ function TicketSlide({ ticket, onTransfer, onClose }: TicketSlideProps) {
         </button>
       </div>
 
-      <section className={`${ticketGlass} flex min-h-[218px] flex-col px-[25px] pb-5 pt-5`}>
+      <section className={`${ticketGlass} flex h-[218px] flex-col px-[25px] pb-5 pt-5`} style={ticketGlassStyle}>
         <h2 className="text-xl font-bold leading-snug tracking-[-0.02em] text-white">
           {ticket.eventName || ticket.event?.name || 'Evento'}
         </h2>
@@ -144,20 +183,7 @@ function TicketSlide({ ticket, onTransfer, onClose }: TicketSlideProps) {
         </div>
       </section>
 
-      <div
-        className={`relative h-0 ${ticketGlass}`}
-        style={{
-          WebkitMaskImage: 'radial-gradient(circle 10px at 0 50%, transparent 9px, #000 10px), radial-gradient(circle 10px at 100% 50%, transparent 9px, #000 10px)',
-          WebkitMaskComposite: 'source-in',
-          maskImage: 'radial-gradient(circle 10px at 0 50%, transparent 9px, #000 10px), radial-gradient(circle 10px at 100% 50%, transparent 9px, #000 10px)',
-          maskComposite: 'intersect',
-        }}
-        aria-hidden="true"
-      >
-        <span className="absolute left-6 right-6 top-1/2 border-t border-dashed border-white/10" />
-      </div>
-
-      <section className={`${ticketGlass} relative min-h-[346px] rounded-b-[30px] border-t border-white/10 px-[25px] pb-[23px] pt-[23px] before:absolute before:left-0 before:top-0 before:h-5 before:w-2.5 before:-translate-x-px before:-translate-y-1/2 before:rounded-r-full before:bg-[#1b1b1b] after:absolute after:right-0 after:top-0 after:h-5 after:w-2.5 after:translate-x-px after:-translate-y-1/2 after:rounded-l-full after:bg-[#1b1b1b]`}>
+      <section className={`${ticketGlass} relative h-[346px] border-t border-white/10 px-[25px] pb-[23px] pt-[23px]`} style={ticketGlassStyle}>
         <div className="flex flex-col items-center gap-[26px] text-center">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -212,6 +238,7 @@ function TicketSlide({ ticket, onTransfer, onClose }: TicketSlideProps) {
         </div>
       </section>
     </article>
+    </div>
   );
 }
 
@@ -222,10 +249,25 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
   const [transferTicket, setTransferTicket] = React.useState<any | null>(null);
   const [transferEmail, setTransferEmail] = React.useState('');
   const [transferLoading, setTransferLoading] = React.useState(false);
+  const [ticketScale, setTicketScale] = React.useState(getTicketScale);
   const carouselRef = React.useRef<HTMLDivElement>(null);
   const scrollFrameRef = React.useRef<number | null>(null);
 
   React.useEffect(() => acquireDocumentScrollLock(), []);
+
+  React.useEffect(() => {
+    const updateScale = () => setTicketScale(getTicketScale());
+    const viewport = window.visualViewport;
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    window.addEventListener('orientationchange', updateScale);
+    viewport?.addEventListener('resize', updateScale);
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      window.removeEventListener('orientationchange', updateScale);
+      viewport?.removeEventListener('resize', updateScale);
+    };
+  }, []);
 
   React.useEffect(() => {
     const carousel = carouselRef.current;
@@ -238,7 +280,7 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
       });
     }
     setActiveIndex(initialIndex);
-  }, [initialIndex]);
+  }, [initialIndex, ticketScale]);
 
   React.useEffect(() => () => {
     if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
@@ -284,7 +326,14 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
   if (!safeTickets.length) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center overflow-hidden bg-[#1b1b1b] backdrop-blur-xl">
+    <div
+      className="fixed inset-0 z-[99999] flex items-center justify-center overflow-hidden backdrop-blur-[28px]"
+      style={{
+        background: 'radial-gradient(circle at 18% 12%, rgba(88,88,145,.16), transparent 34%), radial-gradient(circle at 82% 88%, rgba(65,91,82,.13), transparent 36%), rgba(17,18,19,.86)',
+        WebkitBackdropFilter: 'blur(28px) saturate(125%)',
+        backdropFilter: 'blur(28px) saturate(125%)',
+      }}
+    >
       <motion.button
         type="button"
         aria-label="Fechar ingressos"
@@ -310,6 +359,7 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
               exit={{ opacity: 0, x: 12 }}
               transition={{ duration: 0.22 }}
               className={`${ticketGlass} relative mx-auto flex max-h-[calc(100dvh-2rem)] min-h-[520px] w-[min(420px,calc(100vw-32px))] flex-col overflow-y-auto rounded-[28px] p-6 text-white shadow-2xl ring-1 ring-white/10`}
+              style={ticketGlassStyle}
             >
               <button
                 type="button"
@@ -362,21 +412,21 @@ export function UserTicketModal({ tickets, initialTicketId, onClose, onTransferr
               <div
                 ref={carouselRef}
                 onScroll={handleCarouselScroll}
-                className="scrollbar-hide flex w-screen snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain sm:gap-[50px]"
+                className="scrollbar-hide flex w-screen snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden overscroll-x-contain py-3 sm:gap-[50px]"
                 style={{
                   touchAction: 'pan-x pan-y',
-                  paddingInline: 'max(28px, calc((100vw - min(420px, calc(100vw - 56px))) / 2))',
-                  scrollPaddingInline: 'max(28px, calc((100vw - min(420px, calc(100vw - 56px))) / 2))',
+                  paddingInline: `max(28px, calc((100vw - ${TICKET_WIDTH * ticketScale}px) / 2))`,
+                  scrollPaddingInline: `max(28px, calc((100vw - ${TICKET_WIDTH * ticketScale}px) / 2))`,
                 }}
                 aria-label="Ingressos do evento"
               >
                 {safeTickets.map(ticket => (
-                  <TicketSlide key={ticket.id} ticket={ticket} onTransfer={setTransferTicket} onClose={onClose} />
+                  <TicketSlide key={ticket.id} ticket={ticket} onTransfer={setTransferTicket} onClose={onClose} scale={ticketScale} />
                 ))}
               </div>
 
               {safeTickets.length > 1 && (
-                <div className="pointer-events-none absolute inset-x-0 -bottom-6 flex justify-center gap-1.5" aria-hidden="true">
+                <div className="pointer-events-none absolute inset-x-0 -bottom-4 flex justify-center gap-1.5" aria-hidden="true">
                   {safeTickets.map((ticket, index) => (
                     <span key={ticket.id} className={`h-1.5 rounded-full transition-all duration-200 ${index === activeIndex ? 'w-5 bg-white' : 'w-1.5 bg-white/40'}`} />
                   ))}
