@@ -25,6 +25,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { fetchApi, resolveEventImageUrl, resolveImageUrl } from '@/lib/apiBase';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
+import { geocodeEventAddress, resolveEventCoordinates } from '@/lib/eventLocation';
 import EventRegistrationCard from './EventRegistrationCard';
 import EventImage from '@/components/EventImage';
 
@@ -170,6 +171,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
   const [followLoading, setFollowLoading] = React.useState(false);
   const [managementAccess, setManagementAccess] = React.useState<{ userId: string; eventIds: Set<string> } | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [geocodedCoordinates, setGeocodedCoordinates] = React.useState<{ lat: number; lng: number } | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -218,6 +220,18 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
   }, [event?.id, event?._id, isOpen]);
 
   const resolvedEvent = React.useMemo(() => ({ ...(event || {}), ...(fullEvent || {}) }), [event, fullEvent]);
+  React.useEffect(() => {
+    const coordinates = resolveEventCoordinates(resolvedEvent);
+    if (!isOpen || (coordinates.lat !== null && coordinates.lng !== null) || resolvedEvent.location === 'Evento online') {
+      setGeocodedCoordinates(null);
+      return;
+    }
+    let cancelled = false;
+    geocodeEventAddress(resolvedEvent)
+      .then((result) => { if (!cancelled) setGeocodedCoordinates(result); })
+      .catch(() => { if (!cancelled) setGeocodedCoordinates(null); });
+    return () => { cancelled = true; };
+  }, [isOpen, resolvedEvent]);
   const eventOrganization = resolvedEvent.organization || resolvedEvent.organizer || null;
   const organizationId = first(eventOrganization?.id, resolvedEvent.organizationId, resolvedEvent.organizerId);
   const organizationSlug = first(eventOrganization?.slug, resolvedEvent.organizationSlug);
@@ -297,8 +311,9 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
   const startDate = formatEventDate(resolvedEvent);
   const location = shortLocation(resolvedEvent);
   const isOnline = resolvedEvent.location === 'Evento online' || resolvedEvent.locationType === 'online' || resolvedEvent.isOnline;
-  const latitude = Number(first(resolvedEvent.locationLatitude, resolvedEvent.latitude, resolvedEvent.lat));
-  const longitude = Number(first(resolvedEvent.locationLongitude, resolvedEvent.longitude, resolvedEvent.lng));
+  const storedCoordinates = resolveEventCoordinates(resolvedEvent);
+  const latitude = storedCoordinates.lat ?? geocodedCoordinates?.lat ?? Number.NaN;
+  const longitude = storedCoordinates.lng ?? geocodedCoordinates?.lng ?? Number.NaN;
   const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0;
   const mapsQuery = hasCoordinates ? `${latitude},${longitude}` : location.full;
   const mapsUrl = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}` : null;

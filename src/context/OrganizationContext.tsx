@@ -33,6 +33,8 @@ export interface Organization {
   artistsMode?: 'popular' | 'recent' | 'hidden';
   createdAt?: string;
   updatedAt?: string;
+  fauvesPlusStatus?: 'INACTIVE' | 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED' | string;
+  fauvesPlusExpiresAt?: string | null;
 }
 
 interface OrganizationContextValue {

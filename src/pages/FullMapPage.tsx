@@ -9,6 +9,7 @@ import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { format, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
+import { geocodeEventAddress, resolveEventAddress, resolveEventCoordinates, resolveEventLocationLabel } from '@/lib/eventLocation';
 
 // --- SVGS ---
 const FAUVES_LOGO_SVG = (
@@ -496,8 +497,12 @@ const FullMapPage: React.FC = () => {
   const [viewingEventId, setViewingEventId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
   const [geoCache, setGeoCache] = useState<Record<string, { lat: number, lng: number }>>(() => {
-    const saved = localStorage.getItem('fauves_geo_cache_v1');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem('fauves_geo_cache_v1');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
   });
 
   useEffect(() => {
@@ -530,43 +535,46 @@ const FullMapPage: React.FC = () => {
 
   useEffect(() => {
     const process = async () => {
+      const nextCache = { ...geoCache };
       const missing = events.filter(ev => {
-        const addr = ev.location || ev.locationName || ev.locationAddress;
-        const cached = addr ? geoCache[addr] : null;
-        return !ev.locationLatitude && !ev.locationLongitude && !cached && addr;
+        const addr = resolveEventAddress(ev);
+        const coordinates = resolveEventCoordinates(ev);
+        return coordinates.lat === null && coordinates.lng === null && addr && !nextCache[addr];
       });
       for (const ev of missing) {
-        const addr = ev.location || ev.locationName || ev.locationAddress;
+        const addr = resolveEventAddress(ev);
         if (!addr) continue;
         try {
-          const query = [addr, ev.locationCity, ev.locationUf].filter(Boolean).join(', ');
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-          const resData = await res.json();
-          if (resData?.[0]) {
-            const coords = { lat: parseFloat(resData[0].lat), lng: parseFloat(resData[0].lon) };
-            const newCache = { ...geoCache, [addr]: coords };
-            setGeoCache(newCache);
-            localStorage.setItem('fauves_geo_cache_v1', JSON.stringify(newCache));
-          }
+          const coords = await geocodeEventAddress(ev);
+          if (coords) nextCache[addr] = coords;
           await new Promise(r => setTimeout(r, 1200));
-        } catch (e) { }
+        } catch (error) {
+          console.error('Erro ao localizar evento no mapa:', error);
+        }
+      }
+      if (Object.keys(nextCache).length !== Object.keys(geoCache).length) {
+        setGeoCache(nextCache);
+        localStorage.setItem('fauves_geo_cache_v1', JSON.stringify(nextCache));
       }
     };
     if (events.length > 0) process();
-  }, [events, geoCache]);
+    // O cache é atualizado em lote para não iniciar processos concorrentes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events]);
 
   const mappedEvents = useMemo(() => {
     return events.map(ev => {
-      const addr = ev.location || ev.locationName || ev.locationAddress;
+      const addr = resolveEventAddress(ev);
       const cached = addr ? geoCache[addr] : null;
+      const coordinates = resolveEventCoordinates(ev);
       return {
         ...ev,
-        lat: Number(ev.locationLatitude || ev.latitude || ev.lat || cached?.lat),
-        lng: Number(ev.locationLongitude || ev.longitude || ev.lng || cached?.lng),
-        displayLocation: ev.locationName || ev.location || [ev.locationCity, ev.locationUf].filter(Boolean).join(' - ') || 'Local a definir',
+        lat: coordinates.lat ?? cached?.lat ?? null,
+        lng: coordinates.lng ?? cached?.lng ?? null,
+        displayLocation: resolveEventLocationLabel(ev),
         displayImage: ev.bannerUrl || ev.banner || ev.image || ev.coverUrl
       };
-    }).filter(e => e.lat && e.lng);
+    }).filter(e => Number.isFinite(e.lat) && Number.isFinite(e.lng));
   }, [events, geoCache]);
 
   const groupedEvents = useMemo(() => {

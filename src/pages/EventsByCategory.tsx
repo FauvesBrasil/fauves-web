@@ -20,6 +20,8 @@ import SubscribeControl from '@/components/v2/SubscribeControl';
 import { useSEO } from '@/hooks/useSEO';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useTheme } from '@/context/ThemeContext';
+import LocationMapPreview from '@/components/v2/LocationMapPreview';
+import { resolveEventCoordinates } from '@/lib/eventLocation';
 
 type Category = {
   id: string;
@@ -39,6 +41,9 @@ type CategoryEvent = {
   endDate?: string | null;
   image?: string | null;
   location?: string | null;
+  locationAddress?: string | null;
+  locationLatitude?: number | null;
+  locationLongitude?: number | null;
   locationCity?: string | null;
   locationUf?: string | null;
 };
@@ -116,28 +121,6 @@ const initials = (name: string) =>
     .map((part) => part[0])
     .join('')
     .toUpperCase();
-
-const WorldMap: React.FC = () => (
-  <svg className="category-world-map" viewBox="0 0 620 285" role="img" aria-label="Mapa-múndi">
-    <defs>
-      <pattern id="category-map-dots" width="9" height="9" patternUnits="userSpaceOnUse">
-        <circle cx="3" cy="3" r="2.4" fill="rgba(255,255,255,.18)" />
-      </pattern>
-    </defs>
-    <path fill="url(#category-map-dots)" d="M31 58 76 36l64 5 47 25 34 43-16 29-29 5-18 38-24 18-11-33-27-13-19-32-40-16-18-26Z" />
-    <path fill="url(#category-map-dots)" d="m191 171 34 12 27 31-5 35-22 31-14-42-20-34-17-19Z" />
-    <path fill="url(#category-map-dots)" d="m287 60 38-26 75 4 39 23 55 1 62 26 41 4 18 29-37 21-58-3-35 21-35-10-21-28-29 2-14 26-18 42-23 43-31-15-18-47 10-36-21-19 7-25Z" />
-    <path fill="url(#category-map-dots)" d="m515 206 37-12 39 18 11 28-28 18-45-8-20-24Z" />
-    {[
-      [108, 127], [146, 105], [185, 150], [221, 193], [327, 97], [352, 126], [390, 112], [426, 173], [483, 194], [543, 221],
-    ].map(([x, y], index) => (
-      <g transform={`translate(${x} ${y})`} key={index}>
-        <path d="M0-12c-7 0-12 5-12 12 0 9 12 19 12 19S12 9 12 0C12-7 7-12 0-12Z" fill="rgba(255,255,255,.42)" />
-        <circle r="4" fill="#151719" />
-      </g>
-    ))}
-  </svg>
-);
 
 const EventsByCategory: React.FC = () => {
   const { isDark } = useTheme();
@@ -242,6 +225,10 @@ const EventsByCategory: React.FC = () => {
   const Icon = categoryIcon(category);
   const accent = categoryColor(category);
   const categoryImage = resolveImageUrl(category?.imageUrl);
+  const categoryMapLocations = useMemo(() => events.map((event) => {
+    const coordinates = resolveEventCoordinates(event);
+    return { id: event.id, lat: coordinates.lat ?? Number.NaN, lng: coordinates.lng ?? Number.NaN };
+  }).filter((location) => Number.isFinite(location.lat) && Number.isFinite(location.lng)), [events]);
 
   if (loading) {
     return (
@@ -353,11 +340,11 @@ const EventsByCategory: React.FC = () => {
               <button type="button" aria-label="Buscar"><Search size={16} /></button>
             </div>
             <div className="category-map-empty">
-              <WorldMap />
+              <LocationMapPreview locations={categoryMapLocations} isDark={isDark} accent={accent} />
               <div className="category-map-empty-copy">
-                <h3>Nenhum Evento por Perto</h3>
-                <p>No momento, não há eventos relevantes perto de você. Você pode explorar todos os eventos no mapa.</p>
-                <Link to="/discover"><MapIcon size={15} />Explorar Eventos</Link>
+                <h3>Eventos no mapa</h3>
+                <p>Veja onde acontecem os eventos desta categoria e explore outras opções próximas.</p>
+                <Link to="/map"><MapIcon size={15} />Explorar Eventos</Link>
               </div>
             </div>
           </div>

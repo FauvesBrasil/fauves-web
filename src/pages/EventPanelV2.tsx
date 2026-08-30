@@ -53,7 +53,6 @@ import {
     Heart,
     Circle,
     ArrowLeftRight,
-    Search,
     Ticket,
     X,
     Volume2,
@@ -81,6 +80,7 @@ import EventInsightsPanel from "@/components/v2/EventInsightsPanel";
 import EventMorePanel from "@/components/v2/EventMorePanel";
 import { FauvesSwitch } from "@/components/v2/FauvesSwitch";
 import EventGuestsPanel from "@/components/v2/EventGuestsPanel";
+import EventMarketingInviteModal from "@/components/v2/EventMarketingInviteModal";
 import {
     CheckinTeamPanel,
     EditEventHostModal,
@@ -1070,16 +1070,6 @@ const EventPanelV2: React.FC = () => {
     const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
     const [isTransferCalendarModalOpen, setIsTransferCalendarModalOpen] = React.useState(false);
     const [showInsightsPeriodDropdown, setShowInsightsPeriodDropdown] = React.useState(false);
-    const [showInviteCloseTooltip, setShowInviteCloseTooltip] = React.useState(false);
-    const [showInviteLimitView, setShowInviteLimitView] = React.useState(false);
-    const [selectedLeftMenu, setSelectedLeftMenu] = React.useState<'suggestions' | 'emails' | 'calendar_todos' | 'events_lapa'>('suggestions');
-    const [suggestionsSearchQuery, setSuggestionsSearchQuery] = React.useState('');
-    const [emailInputText, setEmailInputText] = React.useState('');
-    const [typedEmails, setTypedEmails] = React.useState<string[]>([]);
-    const [selectedInvitees, setSelectedInvitees] = React.useState<string[]>([]);
-    const [showLapaDropdown, setShowLapaDropdown] = React.useState(false);
-    const [lapaFilter, setLapaFilter] = React.useState<'attended' | 'invited' | 'all'>('attended');
-    const [sendingInvites, setSendingInvites] = React.useState(false);
     const [reloadKey, setReloadKey] = React.useState(0);
 
     React.useEffect(() => {
@@ -1374,7 +1364,7 @@ const EventPanelV2: React.FC = () => {
     const [editEventStartTime, setEditEventStartTime] = React.useState("19:00");
     const [editEventEndDate, setEditEventEndDate] = React.useState("");
     const [editEventEndTime, setEditEventEndTime] = React.useState("22:00");
-    const [editLocationData, setEditLocationData] = React.useState<{ type: string; address?: string; url?: string }>({ type: "Presencial", address: "" });
+    const [editLocationData, setEditLocationData] = React.useState<{ type: string; name?: string; address?: string; city?: string; uf?: string; latitude?: number; longitude?: number; url?: string }>({ type: "Presencial", address: "" });
     const [editSelectedThemeId, setEditSelectedThemeId] = React.useState('minimal');
     const [editQuantumPreset, setEditQuantumPreset] = React.useState('sonhador');
     const [editCustomColor, setEditCustomColor] = React.useState<string | null>(null);
@@ -1437,7 +1427,7 @@ const EventPanelV2: React.FC = () => {
     };
 
     const handleAddressInputChange = (val: string) => {
-        setEditLocationData({ ...editLocationData, address: val });
+        setEditLocationData({ ...editLocationData, address: val, latitude: undefined, longitude: undefined });
         
         if (addressDebounceRef.current) clearTimeout(addressDebounceRef.current);
         addressDebounceRef.current = setTimeout(() => fetchAddressSuggestions(val), 500);
@@ -1479,20 +1469,14 @@ const EventPanelV2: React.FC = () => {
             venueName = firstPart;
         }
 
-        let cleanAddress = '';
-        if (venueName) {
-            cleanAddress = [venueName, city, stateUf].filter(Boolean).join(', ');
-        } else {
-            cleanAddress = [city, stateUf].filter(Boolean).join(', ');
-        }
-
-        if (!cleanAddress) {
-            cleanAddress = result.display_name.split(',').slice(0, 2).join(', ');
-        }
-
         setEditLocationData({
             ...editLocationData,
-            address: cleanAddress
+            name: venueName || firstPart,
+            address: result.display_name,
+            city,
+            uf: stateUf,
+            latitude: Number(result.lat),
+            longitude: Number(result.lon),
         });
         
         setAddressSuggestions([]);
@@ -1653,7 +1637,16 @@ const EventPanelV2: React.FC = () => {
             type = "Presencial";
             address = event.locationAddress || (event.location !== "Local" ? event.location : "");
         }
-        setEditLocationData({ type, address, url });
+        setEditLocationData({
+            type,
+            name: event.locationName || undefined,
+            address,
+            city: event.locationCity || undefined,
+            uf: event.locationUf || undefined,
+            latitude: event.locationLatitude != null ? Number(event.locationLatitude) : undefined,
+            longitude: event.locationLongitude != null ? Number(event.locationLongitude) : undefined,
+            url,
+        });
 
         // Temas e Aparência
         setEditSelectedThemeId(event.themeId || 'minimal');
@@ -1758,7 +1751,12 @@ const EventPanelV2: React.FC = () => {
                 startDate: startISO,
                 endDate: endISO,
                 location: location,
+                locationName: isVirtual ? null : editLocationData.name,
                 locationAddress: locationAddress,
+                locationCity: isVirtual ? null : editLocationData.city,
+                locationUf: isVirtual ? null : editLocationData.uf,
+                locationLatitude: isVirtual ? null : editLocationData.latitude,
+                locationLongitude: isVirtual ? null : editLocationData.longitude,
                 onlineUrl: onlineUrl,
                 restrictLocation: editRestrictLocation,
                 themeId: editSelectedThemeId,
@@ -2658,70 +2656,6 @@ const EventPanelV2: React.FC = () => {
             });
         } finally {
             setSavingRegistrationForm(false);
-        }
-    };
-
-    const handleSendInvites = async () => {
-        let emails: string[] = [];
-        if (selectedLeftMenu === 'emails') {
-            emails = [...typedEmails];
-            if (emailInputText.trim() && emailInputText.includes('@')) {
-                emails.push(emailInputText.trim());
-            }
-        } else {
-            emails = selectedInvitees;
-        }
-
-        if (emails.length === 0) {
-            toast({
-                title: "Nenhum e-mail válido",
-                description: "Por favor, insira ou selecione pelo menos um e-mail válido.",
-                variant: "destructive"
-            });
-            return;
-        }
-
-        setSendingInvites(true);
-        try {
-            // Send requests in parallel
-            await Promise.all(
-                emails.map(async (email) => {
-                    await fetchApi('/api/ticket', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            eventId: id,
-                            email,
-                            issuedBy: 'Organizer'
-                        }),
-                    });
-                })
-            );
-
-            toast({
-                title: "Convites enviados!",
-                description: `Enviamos ${emails.length} cortesia(s) com sucesso.`,
-            });
-
-            // Trigger reload of stats/tickets
-            setReloadKey(prev => prev + 1);
-
-            // Close and reset
-            setIsInviteModalOpen(false);
-            setShowInviteLimitView(false);
-            setSelectedInvitees([]);
-            setEmailInputText('');
-            setTypedEmails([]);
-        } catch (e) {
-            toast({
-                title: "Erro ao enviar convites",
-                description: "Ocorreu um erro ao processar os convites no servidor.",
-                variant: "destructive"
-            });
-        } finally {
-            setSendingInvites(false);
         }
     };
 
@@ -12479,373 +12413,14 @@ const EventPanelV2: React.FC = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Modal de Convidar Participantes */}
-                    <AnimatePresence>
-                        {isInviteModalOpen && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setIsInviteModalOpen(false)}
-                                className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 font-sans"
-                            >
-                                <motion.div
-                                    initial={{ scale: 0.95, y: 15 }}
-                                    animate={{ scale: 1, y: 0 }}
-                                    exit={{ scale: 0.95, y: 15 }}
-                                    transition={{ type: "spring", duration: 0.4 }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="bg-[#121417] text-white rounded-2xl border border-zinc-800/80 w-full max-w-[720px] flex flex-col shadow-2xl overflow-hidden"
-                                >
-                                    {/* Header */}
-                                    <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/80 select-none">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="text-lg font-bold text-white tracking-tight">Convidar Participantes</h3>
-                                            
-                                            {/* Badge limite: "15 RESTANTES" */}
-                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full">
-                                                <div className="w-2.5 h-2.5 rounded-full border border-zinc-500/80" />
-                                                <span className="text-[10px] font-extrabold tracking-wide text-zinc-400 uppercase">
-                                                    {15 - (selectedLeftMenu === 'emails' ? typedEmails.length + (emailInputText.trim() && emailInputText.includes('@') ? 1 : 0) : selectedInvitees.length)} RESTANTES
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            aria-label="Fechar"
-                                            onClick={() => setIsInviteModalOpen(false)}
-                                            className="w-8 h-8 flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-full transition-all"
-                                        >
-                                            <X size={16} />
-                                        </button>
-                                    </div>
-
-                                    {!showInviteLimitView ? (
-                                        <>
-                                            {/* Body */}
-                                            <div className="grid grid-cols-[240px_1fr] h-[400px]">
-                                                {/* Left Sidebar */}
-                                                <div className="border-r border-zinc-800/80 p-4 space-y-4 select-none">
-                                                    {/* Menu items */}
-                                                    <div className="space-y-1">
-                                                        <button
-                                                            onClick={() => setSelectedLeftMenu('suggestions')}
-                                                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold transition-all text-left ${selectedLeftMenu === 'suggestions' ? 'bg-zinc-800/85 text-white' : 'text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-200'}`}
-                                                        >
-                                                            <Sparkles size={16} className={selectedLeftMenu === 'suggestions' ? 'text-white' : 'text-zinc-500'} />
-                                                            <span>Sugestões</span>
-                                                        </button>
-
-                                                        <button
-                                                            onClick={() => setSelectedLeftMenu('emails')}
-                                                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-bold transition-all text-left ${selectedLeftMenu === 'emails' ? 'bg-zinc-800/85 text-white' : 'text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-200'}`}
-                                                        >
-                                                            <span className={`w-4 text-center font-bold text-base leading-none ${selectedLeftMenu === 'emails' ? 'text-white' : 'text-zinc-500'}`}>@</span>
-                                                            <span>Inserir E-mails</span>
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="h-px bg-zinc-800/50" />
-
-                                                    {/* CONTATOS DO CALENDÁRIO */}
-                                                    <div className="space-y-1.5">
-                                                        <span className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-3">
-                                                            Contatos do Calendário
-                                                        </span>
-                                                        <button
-                                                            onClick={() => setSelectedLeftMenu('calendar_todos')}
-                                                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold transition-all text-left ${selectedLeftMenu === 'calendar_todos' ? 'bg-zinc-800/85 text-white' : 'text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-200'}`}
-                                                        >
-                                                            <div className="flex items-center gap-2.5">
-                                                                <div className="w-2.5 h-2.5 rounded-full bg-zinc-500" />
-                                                                <span>Todos</span>
-                                                            </div>
-                                                            <span className="text-xs text-zinc-500">0</span>
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="h-px bg-zinc-800/50" />
-
-                                                    {/* EVENTOS */}
-                                                    <div className="space-y-1.5">
-                                                        <span className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-3">
-                                                            Eventos
-                                                        </span>
-                                                        <button
-                                                            onClick={() => setSelectedLeftMenu('events_lapa')}
-                                                            className={`w-full px-3 py-2 rounded-xl transition-all text-left ${selectedLeftMenu === 'events_lapa' ? 'bg-zinc-800/85 text-white' : 'text-zinc-400 hover:bg-zinc-900/50 hover:text-zinc-200'}`}
-                                                        >
-                                                            <div className="text-sm font-bold block">Na Lapa</div>
-                                                            <div className="text-[10px] text-zinc-500 font-medium mt-0.5">
-                                                                20 de nov. de 2024 · 1 Convidado
-                                                            </div>
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Right Content */}
-                                                <div className="p-5 flex flex-col h-full overflow-hidden">
-                                                    {selectedLeftMenu === 'suggestions' && (
-                                                        <div className="flex flex-col h-full space-y-4">
-                                                            {/* Search Bar */}
-                                                            <div className="relative">
-                                                                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Sugestões de Busca"
-                                                                    value={suggestionsSearchQuery}
-                                                                    onChange={(e) => setSuggestionsSearchQuery(e.target.value)}
-                                                                    className="w-full h-10 pl-10 pr-4 rounded-xl border border-zinc-800 bg-zinc-950 text-sm font-medium placeholder-zinc-500 text-white focus:outline-none focus:border-zinc-700 transition-all"
-                                                                />
-                                                            </div>
-
-                                                            {/* List */}
-                                                            <div className="flex-1 overflow-y-auto space-y-2 pr-1 select-none">
-                                                                {[
-                                                                    { email: 'levy@tokyon.com.br' },
-                                                                    { email: 'mateus@tokyon.com.br' },
-                                                                    { email: 'gabriel@fauves.co' },
-                                                                    { email: 'contato@fauves.co' }
-                                                                ]
-                                                                    .filter(item => item.email.toLowerCase().includes(suggestionsSearchQuery.toLowerCase()))
-                                                                    .map(item => {
-                                                                        const isSelected = selectedInvitees.includes(item.email);
-                                                                        return (
-                                                                            <div
-                                                                                key={item.email}
-                                                                                onClick={() => {
-                                                                                    if (isSelected) {
-                                                                                        setSelectedInvitees(prev => prev.filter(e => e !== item.email));
-                                                                                    } else {
-                                                                                        setSelectedInvitees(prev => [...prev, item.email]);
-                                                                                    }
-                                                                                }}
-                                                                                className="flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900/60 transition-all cursor-pointer"
-                                                                            >
-                                                                                <div className="flex items-center gap-3">
-                                                                                    {/* Carinha feliz SVG */}
-                                                                                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
-                                                                                        <circle cx="16" cy="16" r="16" fill="white"/>
-                                                                                        <circle cx="12" cy="14" r="1.5" fill="black"/>
-                                                                                        <circle cx="20" cy="14" r="1.5" fill="black"/>
-                                                                                        <path d="M16 19C16.8 19 17.5 19.5 17.5 20.5C17.5 21.5 16.8 22 16 22C15.2 22 14.5 21.5 14.5 20.5C14.5 19.5 15.2 19 16 19Z" fill="black"/>
-                                                                                    </svg>
-                                                                                    <span className="text-sm font-semibold text-zinc-200">{item.email}</span>
-                                                                                </div>
-                                                                                <div className="w-5 h-5 rounded-full border border-zinc-700/80 flex items-center justify-center transition-all">
-                                                                                    {isSelected && (
-                                                                                        <div className="w-3 h-3 rounded-full bg-white" />
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {selectedLeftMenu === 'emails' && (
-                                                        <div className="flex flex-col h-full space-y-4">
-                                                            {/* Input de e-mails */}
-                                                            <div className="flex gap-2">
-                                                                <input
-                                                                    type="email"
-                                                                    placeholder="Digite o e-mail do convidado..."
-                                                                    value={emailInputText}
-                                                                    onChange={(e) => setEmailInputText(e.target.value)}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === 'Enter') {
-                                                                            e.preventDefault();
-                                                                            const val = emailInputText.trim();
-                                                                            if (val && val.includes('@') && !typedEmails.includes(val)) {
-                                                                                setTypedEmails(prev => [...prev, val]);
-                                                                                setEmailInputText('');
-                                                                            }
-                                                                        }
-                                                                    }}
-                                                                    className="flex-1 h-10 px-4 rounded-xl border border-zinc-800 bg-zinc-950 text-sm font-medium placeholder-zinc-500 text-white focus:outline-none focus:border-zinc-700 transition-all"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        const val = emailInputText.trim();
-                                                                        if (val && val.includes('@') && !typedEmails.includes(val)) {
-                                                                            setTypedEmails(prev => [...prev, val]);
-                                                                            setEmailInputText('');
-                                                                        }
-                                                                    }}
-                                                                    className="h-10 px-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl border-0 transition-all flex items-center justify-center shrink-0 cursor-pointer"
-                                                                >
-                                                                    + Adicionar
-                                                                </button>
-                                                            </div>
-
-                                                            {/* Lista de e-mails digitados */}
-                                                            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                                                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider select-none">E-mails adicionados ({typedEmails.length})</span>
-                                                                {typedEmails.length === 0 ? (
-                                                                    <div className="flex flex-col items-center justify-center h-48 text-center border border-dashed border-zinc-800/80 rounded-2xl select-none">
-                                                                        <span className="text-2xl mb-1.5">✉️</span>
-                                                                        <p className="text-zinc-500 text-xs font-semibold">Nenhum e-mail adicionado</p>
-                                                                        <p className="text-zinc-600 text-[10px] mt-0.5">Digite um e-mail válido e clique em Adicionar.</p>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="grid grid-cols-1 gap-1.5">
-                                                                        {typedEmails.map(email => (
-                                                                            <div key={email} className="flex items-center justify-between px-3.5 py-2 bg-zinc-900 border border-zinc-800/80 rounded-xl">
-                                                                                <span className="text-sm font-semibold text-zinc-200">{email}</span>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => setTypedEmails(prev => prev.filter(e => e !== email))}
-                                                                                    className="text-zinc-500 hover:text-rose-400 transition-colors p-1"
-                                                                                >
-                                                                                    <X size={14} />
-                                                                                </button>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {selectedLeftMenu === 'calendar_todos' && (
-                                                        <div className="flex flex-col items-center justify-center h-full text-center select-none">
-                                                            <span className="text-3xl mb-3">👤</span>
-                                                            <h4 className="text-sm font-bold text-zinc-300">Nenhum contato encontrado</h4>
-                                                            <p className="text-zinc-500 text-xs mt-1 max-w-[240px] mx-auto leading-relaxed">
-                                                                Sua base de contatos do calendário está vazia no momento.
-                                                            </p>
-                                                        </div>
-                                                    )}
-
-                                                    {selectedLeftMenu === 'events_lapa' && (
-                                                        <div className="flex flex-col h-full space-y-4">
-                                                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider select-none">Participantes do Evento anterior</span>
-                                                            <div className="flex-1 overflow-y-auto space-y-2 pr-1 select-none">
-                                                                {[
-                                                                    { email: 'levy@tokyon.com.br' }
-                                                                ].map(item => {
-                                                                    const isSelected = selectedInvitees.includes(item.email);
-                                                                    return (
-                                                                        <div
-                                                                            key={item.email}
-                                                                            onClick={() => {
-                                                                                if (isSelected) {
-                                                                                    setSelectedInvitees(prev => prev.filter(e => e !== item.email));
-                                                                                } else {
-                                                                                    setSelectedInvitees(prev => [...prev, item.email]);
-                                                                                }
-                                                                            }}
-                                                                            className="flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-900/60 transition-all cursor-pointer"
-                                                                        >
-                                                                            <div className="flex items-center gap-3">
-                                                                                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
-                                                                                    <circle cx="16" cy="16" r="16" fill="white"/>
-                                                                                    <circle cx="12" cy="14" r="1.5" fill="black"/>
-                                                                                    <circle cx="20" cy="14" r="1.5" fill="black"/>
-                                                                                    <path d="M16 19C16.8 19 17.5 19.5 17.5 20.5C17.5 21.5 16.8 22 16 22C15.2 22 14.5 21.5 14.5 20.5C14.5 19.5 15.2 19 16 19Z" fill="black"/>
-                                                                                </svg>
-                                                                                <span className="text-sm font-semibold text-zinc-200">{item.email}</span>
-                                                                            </div>
-                                                                            <div className="w-5 h-5 rounded-full border border-zinc-700/80 flex items-center justify-center transition-all">
-                                                                                {isSelected && (
-                                                                                    <div className="w-3 h-3 rounded-full bg-white" />
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Footer */}
-                                            <div className="px-6 py-4 flex justify-end border-t border-zinc-800/80 bg-zinc-900/40 select-none">
-                                                <button
-                                                    type="button"
-                                                    disabled={
-                                                        selectedLeftMenu === 'emails' 
-                                                            ? typedEmails.length === 0 && !(emailInputText.trim() && emailInputText.includes('@'))
-                                                            : selectedInvitees.length === 0
-                                                    }
-                                                    onClick={() => setShowInviteLimitView(true)}
-                                                    className="px-5 py-2.5 bg-[#ebeced] hover:bg-white disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed text-zinc-950 font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer border-0 text-sm"
-                                                >
-                                                    <span>Próximo</span>
-                                                    <ChevronRight size={16} />
-                                                </button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            {/* Etapa 2: Confirmação e Envio */}
-                                            <div className="p-6 h-[400px] overflow-y-auto flex flex-col justify-between">
-                                                <div className="space-y-6 text-left">
-                                                    <div>
-                                                        <h4 className="text-base font-bold text-white mb-2">Revisar Convites</h4>
-                                                        <p className="text-zinc-400 text-xs leading-relaxed">
-                                                            Você está prestes a enviar convites de cortesia para as pessoas listadas abaixo. Elas receberão um e-mail com a confirmação e o ingresso correspondente.
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <span className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-                                                            Lista de Destinatários
-                                                        </span>
-                                                        <div className="max-h-[220px] overflow-y-auto border border-zinc-800/80 rounded-2xl bg-zinc-950/40 divide-y divide-zinc-800/60 px-4">
-                                                            {(selectedLeftMenu === 'emails' ? [...typedEmails, ...(emailInputText.trim() && emailInputText.includes('@') ? [emailInputText.trim()] : [])] : selectedInvitees).map(email => (
-                                                                <div key={email} className="py-2.5 flex items-center gap-3">
-                                                                    <svg width="24" height="24" viewBox="0 0 32 32" fill="none" className="shrink-0" xmlns="http://www.w3.org/2000/svg">
-                                                                        <circle cx="16" cy="16" r="16" fill="white"/>
-                                                                        <circle cx="12" cy="14" r="1.5" fill="black"/>
-                                                                        <circle cx="20" cy="14" r="1.5" fill="black"/>
-                                                                        <path d="M16 19C16.8 19 17.5 19.5 17.5 20.5C17.5 21.5 16.8 22 16 22C15.2 22 14.5 21.5 14.5 20.5C14.5 19.5 15.2 19 16 19Z" fill="black"/>
-                                                                    </svg>
-                                                                    <span className="text-sm font-semibold text-zinc-300">{email}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Action Buttons */}
-                                                <div className="flex gap-3 pt-4 border-t border-zinc-800/80 mt-4">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowInviteLimitView(false)}
-                                                        className="flex-1 h-11 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold rounded-xl transition-all text-sm border-0 cursor-pointer"
-                                                    >
-                                                        Voltar
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        disabled={sendingInvites}
-                                                        onClick={handleSendInvites}
-                                                        className="flex-1 h-11 bg-white hover:bg-zinc-100 text-zinc-950 font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 border-0 cursor-pointer"
-                                                    >
-                                                        {sendingInvites ? (
-                                                            <>
-                                                                <span className="w-4 h-4 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
-                                                                <span>Enviando...</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Check size={16} />
-                                                                <span>Confirmar e Enviar</span>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </motion.div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                    <EventMarketingInviteModal
+                        open={isInviteModalOpen}
+                        event={event}
+                        eventId={id || ''}
+                        organizationId={selectedOrg?.id || event?.organizationId || event?.organizerId}
+                        onClose={() => setIsInviteModalOpen(false)}
+                        onSent={() => setReloadKey(prev => prev + 1)}
+                    />
 
                     {/* Modal de Inscrição em Grupo */}
                     <AnimatePresence>

@@ -31,6 +31,7 @@ import AppShell from '@/components/AppShell';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import EventImage from '@/components/EventImage';
 import { fetchApi, apiUrl } from '@/lib/apiBase';
+import { geocodeEventAddress, resolveEventAddress, resolveEventCoordinates, resolveEventLocationLabel } from '@/lib/eventLocation';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useLocation } from '@/context/LocationContext';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
@@ -272,8 +273,9 @@ const IndexV2 = () => {
 
   useEffect(() => {
     const missing = paginatedEvents.filter(ev => {
-      const hasCoords = (ev.locationLatitude && ev.locationLongitude) || (ev.latitude && ev.longitude);
-      const addr = ev.location || ev.locationName || ev.venue;
+      const coords = resolveEventCoordinates(ev);
+      const hasCoords = coords.lat !== null && coords.lng !== null;
+      const addr = resolveEventAddress(ev);
       return !hasCoords && addr && !geoCache[addr] && !pendingRequests.current.has(addr);
     });
 
@@ -284,19 +286,13 @@ const IndexV2 = () => {
     const processMissing = async () => {
       for (const ev of missing) {
         if (!isMounted) break;
-        const addr = ev.location || ev.locationName || ev.venue;
+        const addr = resolveEventAddress(ev);
         if (!addr || geoCache[addr] || pendingRequests.current.has(addr)) continue;
 
         pendingRequests.current.add(addr);
         try {
-          // Search with city context for better accuracy
-          const query = `${addr}, ${ev.city || 'Fortaleza'}, ${ev.uf || 'CE'}, Brasil`;
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`, {
-            headers: { 'User-Agent': 'FauvesPlatform/1.0' }
-          });
-          const data = await res.json();
-          if (data && data[0]) {
-            const result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          const result = await geocodeEventAddress(ev);
+          if (result) {
             if (isMounted) {
               setGeoCache(prev => ({ ...prev, [addr]: result }));
             }
@@ -323,20 +319,10 @@ const IndexV2 = () => {
   const allMappedEvents = useMemo(() => {
     const mapped = paginatedEvents.map(ev => {
       const d = new Date(ev.startDate);
-      const addr = ev.location || ev.locationName || ev.venue;
+      const addr = resolveEventAddress(ev);
       const cached = (addr && geoCache[addr]) ? geoCache[addr] : null;
-
-      // Smart location formatting: "Place, City - UF"
-      const place = ev.locationName || ev.venue || (ev.location && ev.location.split(',')[0]) || '';
-      const city = ev.locationCity || ev.locationDetails?.city || ev.city || '';
-      const uf = ev.locationUf || ev.locationDetails?.uf || ev.uf || '';
-
-      let displayLocation = 'Local a definir';
-      if (place && city && uf) displayLocation = `${place}, ${city} - ${uf}`;
-      else if (place && city) displayLocation = `${place}, ${city}`;
-      else if (city && uf) displayLocation = `${city} - ${uf}`;
-      else if (place) displayLocation = place;
-      else if (ev.location) displayLocation = ev.location.split(',')[0];
+      const displayLocation = resolveEventLocationLabel(ev);
+      const coordinates = resolveEventCoordinates(ev);
 
       return {
         id: ev.id || ev._id,
@@ -356,15 +342,15 @@ const IndexV2 = () => {
         avatars: ['https://i.pravatar.cc/32?img=1', 'https://i.pravatar.cc/32?img=2'],
         artists: ev.artists || [],
         category: ev.category || ev.type || ev.categoryName || 'Geral',
-        fullLocation: ev.location || displayLocation,
-        lat: ev.locationLatitude ? parseFloat(ev.locationLatitude) : (ev.latitude ? parseFloat(ev.latitude) : (ev.lat ? parseFloat(ev.lat) : (ev.locationDetails?.lat ? parseFloat(ev.locationDetails.lat) : (ev.locationDetails?.latitude ? parseFloat(ev.locationDetails.latitude) : (cached ? cached.lat : null))))),
-        lng: ev.locationLongitude ? parseFloat(ev.locationLongitude) : (ev.longitude ? parseFloat(ev.longitude) : (ev.lng ? parseFloat(ev.lng) : (ev.locationDetails?.lng ? parseFloat(ev.locationDetails.lng) : (ev.locationDetails?.longitude ? parseFloat(ev.locationDetails.longitude) : (cached ? cached.lng : null)))))
+        fullLocation: addr || displayLocation,
+        lat: coordinates.lat ?? cached?.lat ?? null,
+        lng: coordinates.lng ?? cached?.lng ?? null,
       };
     });
 
     // Sort chronologically: Oldest (today) at the top (index 0), Future at the bottom
     return [...mapped].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [paginatedEvents]);
+  }, [paginatedEvents, geoCache]);
 
   // 2. De-duplicate
   const uniqueEvents = useMemo(() => {

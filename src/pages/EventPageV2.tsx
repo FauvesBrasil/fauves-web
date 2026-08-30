@@ -10,6 +10,7 @@ import EventRegistrationCard from '@/components/v2/EventRegistrationCard';
 import TicketCheckoutModal from '@/components/v2/TicketCheckoutModal';
 import { AnimatePresence } from 'framer-motion';
 import EventImage from '@/components/EventImage';
+import LocationMapPreview from '@/components/v2/LocationMapPreview';
 
 /* ─── HELPERS E CONFIGURAÇÕES DE TEMA ────────────────── */
 const THEMES = [
@@ -783,8 +784,8 @@ const EventPageV2: React.FC = () => {
             weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
             time: time
           },
-          latitude: data.locationLatitude || data.latitude || "-3.7196115",
-          longitude: data.locationLongitude || data.longitude || "-38.530061599999996",
+          latitude: data.locationLatitude ?? data.latitude ?? null,
+          longitude: data.locationLongitude ?? data.longitude ?? null,
           description: data.descriptionHtml || data.description || data.content || ""
         };
         
@@ -2710,38 +2711,16 @@ const EventPageV2: React.FC = () => {
                       <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--theme-text, #131517)' }}>{event.location.name}</div>
                       <div style={{ fontSize: '14px', color: 'var(--theme-muted, rgba(19, 21, 23, 0.7))' }}>{event.location.address}</div>
                     </div>
-                    <div style={{ borderRadius: '1rem', overflow: 'hidden', height: '240px', border: '1px solid var(--bg-opacity-16)' }}>
-                      {/* 🚀 Lazy-load map only when it enters the viewport */}
-                      {(() => {
-                        const LazyMap = () => {
-                          const [inView, setInView] = React.useState(false);
-                          const containerRef = React.useRef<HTMLDivElement>(null);
-                          React.useEffect(() => {
-                            const el = containerRef.current;
-                            if (!el) return;
-                            const observer = new IntersectionObserver(
-                              ([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect(); } },
-                              { rootMargin: '200px' }
-                            );
-                            observer.observe(el);
-                            return () => observer.disconnect();
-                          }, []);
-                          return (
-                            <div ref={containerRef} style={{ width: '100%', height: '100%', background: 'var(--gray-10, #f7f8f9)' }}>
-                              {inView && (
-                                <iframe
-                                  src={`https://maps.google.com/maps?q=${encodeURIComponent((event.location.name || '') + ', ' + (event.location.address || ''))}&hl=pt&z=15&output=embed`}
-                                  style={{ width: '100%', border: 'none', height: '100%', display: 'block' }}
-                                  loading="lazy"
-                                  title="Localização do evento"
-                                />
-                              )}
-                            </div>
-                          );
-                        };
-                        return <LazyMap />;
-                      })()}
-                    </div>
+                    {event.location.address && event.location.address !== 'Endereço não disponível' && (
+                      <div style={{ borderRadius: '1rem', overflow: 'hidden', height: '240px', border: '1px solid var(--bg-opacity-16)' }}>
+                        <LocationMapPreview
+                          locations={Number.isFinite(Number(event.latitude)) && Number.isFinite(Number(event.longitude)) ? [{ id: event.id, lat: Number(event.latitude), lng: Number(event.longitude) }] : []}
+                          query={`${event.location.name || ''}, ${event.location.address}`}
+                          isDark={pageIsDark}
+                          accent={pageAccentColor}
+                        />
+                      </div>
+                    )}
                   </>
                 )}
               </div>

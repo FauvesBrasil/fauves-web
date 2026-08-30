@@ -30,6 +30,7 @@ import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
+import BulkGuestStatusModal from '@/components/v2/BulkGuestStatusModal';
 
 type GuestStatus = 'confirmed' | 'invited' | 'declined' | 'waitlist' | 'pending' | 'checkedin';
 
@@ -103,6 +104,10 @@ function dateLabel(value?: string, withTime = false) {
     : { day: '2-digit', month: 'short', year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 function GuestAvatar({ guest, size = 34 }: { guest: Guest; size?: number }) {
   const src = guest.avatarUrl ? resolveImageUrl(guest.avatarUrl) : '';
   if (src) return <img src={src} alt="" className="rounded-full object-cover" style={{ width: size, height: size }} />;
@@ -172,8 +177,6 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onGuest
   const [message, setMessage] = React.useState('');
   const [savingStatus, setSavingStatus] = React.useState(false);
   const [bulkOpen, setBulkOpen] = React.useState(false);
-  const [bulkEmails, setBulkEmails] = React.useState('');
-  const [bulkStatus, setBulkStatus] = React.useState<Exclude<GuestStatus, 'checkedin'>>('confirmed');
   const [timelineMenuId, setTimelineMenuId] = React.useState<string | null>(null);
   const [emailPreview, setEmailPreview] = React.useState<GuestHistoryEvent | null>(null);
   const [checkinPickerOpen, setCheckinPickerOpen] = React.useState(false);
@@ -186,8 +189,8 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onGuest
       if (!response.ok) throw new Error('Falha ao carregar convidados');
       const data = await response.json();
       setGuests(Array.isArray(data.tickets) ? data.tickets : []);
-    } catch (error: any) {
-      toast({ title: 'Não foi possível carregar os convidados', description: error?.message || 'Tente novamente.' });
+    } catch (error: unknown) {
+      toast({ title: 'Não foi possível carregar os convidados', description: errorMessage(error, 'Tente novamente.') });
     } finally {
       setLoading(false);
     }
@@ -243,8 +246,8 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onGuest
       if (selected?.id === statusGuest.id) setSelected(next);
       setStatusGuest(null);
       toast({ title: 'Status atualizado' });
-    } catch (error: any) {
-      toast({ title: 'Erro ao atualizar', description: error?.message || 'Tente novamente.' });
+    } catch (error: unknown) {
+      toast({ title: 'Erro ao atualizar', description: errorMessage(error, 'Tente novamente.') });
     } finally { setSavingStatus(false); }
   };
 
@@ -256,22 +259,18 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onGuest
     setStatusGuest(guest);
   };
 
-  const saveBulkStatus = async () => {
-    const emails = bulkEmails.split(/[\n,;]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
+  const saveBulkStatus = async (
+    emails: string[],
+    status: Exclude<GuestStatus, 'checkedin' | 'invited'>,
+    notify: boolean,
+    customMessage: string,
+  ) => {
     const targets = guests.filter(guest => emails.includes(guest.userEmail.toLowerCase()));
-    if (!emails.length || !targets.length) {
-      toast({ title: 'Nenhum convidado correspondente', description: 'Cole os e-mails que já fazem parte deste evento.' });
-      return;
-    }
-    setSavingStatus(true);
-    try {
-      await Promise.all(targets.map(guest => updateGuestStatus(guest, bulkStatus)));
-      await loadGuests();
-      setBulkOpen(false);
-      setBulkEmails('');
-      toast({ title: `${targets.length} status atualizado${targets.length > 1 ? 's' : ''}` });
-    } catch (error: any) { toast({ title: 'Erro ao atualizar convidados', description: error?.message }); }
-    finally { setSavingStatus(false); }
+    if (!targets.length) throw new Error('Nenhum e-mail corresponde aos convidados deste evento.');
+    await Promise.all(targets.map(guest => updateGuestStatus(guest, status, notify, customMessage)));
+    await loadGuests();
+    toast({ title: `${targets.length} status atualizado${targets.length > 1 ? 's' : ''}` });
+    return targets.length;
   };
 
   const exportCsv = () => {
@@ -412,7 +411,7 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onGuest
           <span className="mt-0.5 shrink-0 rounded-full px-2.5 py-1 text-[12px] font-semibold leading-none" style={{ color: statusInfo[normalizeStatus(statusGuest)].color, backgroundColor: statusInfo[normalizeStatus(statusGuest)].bg }}>{statusInfo[normalizeStatus(statusGuest)].label}</span>
         </div>
         <label className="mt-5 block text-[13px] font-semibold text-white/[.72]">Alterar status para:</label>
-        <select value={newStatus} onChange={event => setNewStatus(event.target.value as any)} className="mt-2 h-10 w-full rounded-[10px] border border-white/[.12] bg-[rgba(15,17,17,.72)] px-3 text-[14px] text-white/[.9] outline-none transition-colors focus:border-white/[.32]"><option value="confirmed">Confirmado</option><option value="invited">Convidado</option><option value="declined">Não vai</option><option value="pending">Pendente</option><option value="waitlist">Lista de espera</option></select>
+        <select value={newStatus} onChange={event => setNewStatus(event.target.value as Exclude<GuestStatus, 'checkedin'>)} className="mt-2 h-10 w-full rounded-[10px] border border-white/[.12] bg-[rgba(15,17,17,.72)] px-3 text-[14px] text-white/[.9] outline-none transition-colors focus:border-white/[.32]"><option value="confirmed">Confirmado</option><option value="invited">Convidado</option><option value="declined">Não vai</option><option value="pending">Pendente</option><option value="waitlist">Lista de espera</option></select>
         <label className="mt-4 flex items-center gap-2.5 text-[14px] font-medium text-white/[.88]"><input type="checkbox" checked={notifyGuest} onChange={event => setNotifyGuest(event.target.checked)} className="h-5 w-5 rounded accent-white" />Notificar Convidado</label>
         {notifyGuest && <>
           <textarea value={message} onChange={event => setMessage(event.target.value)} placeholder="Adicione uma mensagem personalizada opcional…" className="mt-3 h-20 w-full resize-none rounded-[10px] border border-white/[.12] bg-[rgba(15,17,17,.48)] p-3 text-[13px] leading-5 text-white/[.88] outline-none placeholder:text-white/[.34] focus:border-white/[.32]" />
@@ -421,13 +420,12 @@ export default function EventGuestsPanel({ eventId, eventName, onInvite, onGuest
         <button type="button" disabled={savingStatus} onClick={saveStatus} className="mt-5 h-10 w-full rounded-[10px] bg-white text-[14px] font-semibold text-[#171919] transition-colors hover:bg-white/[.92] disabled:opacity-50">{savingStatus ? 'Atualizando…' : 'Atualizar Status'}</button>
       </ModalShell>}</AnimatePresence></Portal>
 
-      <Portal><AnimatePresence>{bulkOpen && <ModalShell onClose={() => setBulkOpen(false)}>
-        <div className="grid h-14 w-14 place-items-center rounded-full bg-white/[.09] text-white/[.7]"><UsersRound size={28} /></div>
-        <h3 className="mt-5 text-[22px] font-semibold text-white/[.92]">Atualizar Convidados</h3><p className="mt-2 text-[15px] leading-6 text-white/[.58]">Cole uma lista de e-mails para atualizar o status em massa.</p>
-        <textarea value={bulkEmails} onChange={event => setBulkEmails(event.target.value)} placeholder="um@email.com, outro@email.com" className="mt-5 h-28 w-full resize-none rounded-xl border border-white/[.12] bg-transparent p-3 text-[14px] text-white/[.88] outline-none placeholder:text-white/[.34] focus:border-white/[.32]" />
-        <select value={bulkStatus} onChange={event => setBulkStatus(event.target.value as any)} className="mt-3 h-11 w-full rounded-xl border border-white/[.12] bg-[#171919] px-3 text-[15px] text-white/[.9] outline-none"><option value="confirmed">Confirmado</option><option value="invited">Convidado</option><option value="declined">Não vai</option><option value="pending">Pendente</option><option value="waitlist">Lista de espera</option></select>
-        <button type="button" disabled={savingStatus} onClick={saveBulkStatus} className="mt-5 h-11 w-full rounded-xl bg-white text-[15px] font-semibold text-[#171919] disabled:opacity-50">{savingStatus ? 'Atualizando…' : 'Atualizar Status'}</button>
-      </ModalShell>}</AnimatePresence></Portal>
+      <BulkGuestStatusModal
+        open={bulkOpen}
+        guestEmails={guests.map(guest => guest.userEmail.toLowerCase())}
+        onClose={() => setBulkOpen(false)}
+        onSubmit={saveBulkStatus}
+      />
 
       <Portal><AnimatePresence>{checkinPickerOpen && (
         <ModalShell onClose={() => setCheckinPickerOpen(false)} maxWidth={500}>

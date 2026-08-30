@@ -1,11 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Video, Info } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Info, Loader2, MapPin, Video } from 'lucide-react';
+import { fetchApi } from '../../lib/apiBase';
 import { ProviderConnectModal } from './ProviderConnectModal';
 
-interface LocationData {
+export interface LocationData {
     type: string;
+    name?: string;
     address?: string;
+    city?: string;
+    uf?: string;
+    latitude?: number;
+    longitude?: number;
     url?: string;
 }
 
@@ -14,49 +20,105 @@ interface LuxLocationPickerProps {
     onChange: (data: LocationData) => void;
 }
 
+interface GeocodeResult {
+    place_id: number;
+    name?: string;
+    display_name: string;
+    lat: string;
+    lon: string;
+    address?: {
+        city?: string;
+        town?: string;
+        village?: string;
+        municipality?: string;
+        state?: string;
+        state_code?: string;
+    };
+}
+
+const BRAZILIAN_STATES: Record<string, string> = {
+    Acre: 'AC', Alagoas: 'AL', Amapá: 'AP', Amazonas: 'AM', Bahia: 'BA', Ceará: 'CE',
+    'Distrito Federal': 'DF', 'Espírito Santo': 'ES', Goiás: 'GO', Maranhão: 'MA',
+    'Mato Grosso': 'MT', 'Mato Grosso do Sul': 'MS', 'Minas Gerais': 'MG', Pará: 'PA',
+    Paraíba: 'PB', Paraná: 'PR', Pernambuco: 'PE', Piauí: 'PI', 'Rio de Janeiro': 'RJ',
+    'Rio Grande do Norte': 'RN', 'Rio Grande do Sul': 'RS', Rondônia: 'RO', Roraima: 'RR',
+    'Santa Catarina': 'SC', 'São Paulo': 'SP', Sergipe: 'SE', Tocantins: 'TO',
+};
+
+const resultTitle = (result: GeocodeResult) => result.name || result.display_name.split(',')[0]?.trim();
+
 export const LuxLocationPicker: React.FC<LuxLocationPickerProps> = ({ value, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState('');
+    const [results, setResults] = useState<GeocodeResult[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
     const [providerModal, setProviderModal] = useState<'Zoom' | 'Google Meet' | null>(null);
+    const [isDark, setIsDark] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-    const [isDark, setIsDark] = useState(false);
+    const requestIdRef = useRef(0);
 
     useEffect(() => {
         if (!isOpen) return;
-        const isDarkTheme = document.documentElement.classList.contains("dark") || document.querySelector("[data-theme-dark='true']") !== null;
-        setIsDark(isDarkTheme);
+        setIsDark(document.documentElement.classList.contains('dark') || document.querySelector("[data-theme-dark='true']") !== null);
     }, [isOpen]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) setIsOpen(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     useEffect(() => {
-        if (isOpen && inputRef.current) {
-            // small delay to ensure animation doesn't block focus
-            setTimeout(() => inputRef.current?.focus(), 50);
-        } else {
-            setSearch(""); // reset search when closed
+        if (isOpen && inputRef.current) window.setTimeout(() => inputRef.current?.focus(), 50);
+        else {
+            setSearch('');
+            setResults([]);
         }
     }, [isOpen]);
 
-    const mockResults = search.length > 0 ? [
-        { title: "Arena Castelão", subtitle: "Boa Vista-Castelão, Fortaleza - CE" },
-        { title: "Estacionamento da Arena Castelão (Área Externa)", subtitle: "Rua R - Mata Galinha, Fortaleza - CE" },
-        { title: "Pousada Arena Castelão", subtitle: "Rua Humberto Holanda Cassunde - Bela Vista, Fortaleza - CE" },
-        { title: "CFO Arena", subtitle: "Avenida Alberto Craveiro - Dias Macedo, Fortaleza - CE" },
-        { title: "Passarela Arena Bar", subtitle: "Avenida Alberto Craveiro - Castelão, Fortaleza - CE" },
-    ] : [];
+    useEffect(() => {
+        const query = search.trim();
+        if (!isOpen || query.length < 3 || /^https?:\/\//i.test(query)) {
+            setResults([]);
+            setIsSearching(false);
+            return;
+        }
 
-    const handleSelectAddress = (address: string) => {
-        onChange({ type: 'Local', address });
+        const requestId = ++requestIdRef.current;
+        const timer = window.setTimeout(async () => {
+            setIsSearching(true);
+            try {
+                const response = await fetchApi(`/api/geocode/search?q=${encodeURIComponent(query)}`);
+                const data = response.ok ? await response.json() : [];
+                if (requestId === requestIdRef.current) setResults(Array.isArray(data) ? data : []);
+            } catch {
+                if (requestId === requestIdRef.current) setResults([]);
+            } finally {
+                if (requestId === requestIdRef.current) setIsSearching(false);
+            }
+        }, 350);
+
+        return () => window.clearTimeout(timer);
+    }, [isOpen, search]);
+
+    const handleSelectAddress = (address: string, result?: GeocodeResult) => {
+        const city = result?.address?.city || result?.address?.town || result?.address?.village || result?.address?.municipality;
+        const rawState = result?.address?.state_code?.replace(/^BR-/, '') || result?.address?.state || '';
+        const uf = rawState.length === 2 ? rawState.toUpperCase() : BRAZILIAN_STATES[rawState];
+        const latitude = result ? Number(result.lat) : undefined;
+        const longitude = result ? Number(result.lon) : undefined;
+        onChange({
+            type: 'Local',
+            name: result ? resultTitle(result) : address.split(',')[0]?.trim(),
+            address,
+            city,
+            uf,
+            latitude: Number.isFinite(latitude) ? latitude : undefined,
+            longitude: Number.isFinite(longitude) ? longitude : undefined,
+        });
         setIsOpen(false);
     };
 
@@ -65,138 +127,88 @@ export const LuxLocationPicker: React.FC<LuxLocationPickerProps> = ({ value, onC
         setIsOpen(false);
     };
 
-    const displayTitle = value.type ? (value.type === 'Virtual' ? value.url : value.address) : "Adicionar Local do Evento";
-    const displaySubtitle = value.type === 'Local' ? value.address : value.type === 'Virtual' ? value.url : null;
+    const displayTitle = value.type ? (value.type === 'Virtual' ? value.url : value.name || value.address) : 'Adicionar Local do Evento';
+    const displaySubtitle = value.type === 'Local' && value.name !== value.address ? value.address : value.type === 'Virtual' ? value.url : null;
 
     return (
         <div className="relative w-full" ref={containerRef}>
-            {/* The trigger row */}
-            <div
-                className="meta-row"
-                onClick={() => setIsOpen(true)}
-            >
-                <div className="meta-icon">
-                    <MapPin size={18} strokeWidth={2} />
-                </div>
+            <div className="meta-row" onClick={() => setIsOpen(true)}>
+                <div className="meta-icon"><MapPin size={18} strokeWidth={2} /></div>
                 <div className="meta-content">
-                    <div className="meta-title">
-                        {displayTitle}
-                    </div>
-                    {displaySubtitle && (
-                        <div className="meta-subtitle">
-                            {displaySubtitle}
-                        </div>
-                    )}
+                    <div className="meta-title">{displayTitle}</div>
+                    {displaySubtitle && <div className="meta-subtitle">{displaySubtitle}</div>}
                 </div>
             </div>
 
-            {/* The dropdown popover */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 5 }}
-                        transition={{ duration: 0.15 }}
-                        className={`fauves-floating-surface location-dropdown absolute top-0 left-0 w-full z-50 rounded-[8px] border overflow-hidden flex flex-col ${isDark ? "text-white" : "text-gray-800"}`}
+                        initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }}
+                        className={`fauves-floating-surface location-dropdown absolute top-0 left-0 w-full z-50 rounded-[8px] border overflow-hidden flex flex-col ${isDark ? 'text-white' : 'text-gray-800'}`}
                         style={{
-                            background: isDark ? "rgba(20, 20, 24, 0.90)" : "rgba(251, 251, 250, 0.95)",
-                            backdropFilter: "blur(30px) saturate(180%)",
-                            WebkitBackdropFilter: "blur(30px) saturate(180%)",
-                            border: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(0, 0, 0, 0.08)",
+                            background: isDark ? 'rgba(20, 20, 24, 0.90)' : 'rgba(251, 251, 250, 0.95)',
+                            backdropFilter: 'blur(30px) saturate(180%)', WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+                            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
                         }}
                     >
-                        {/* Input Area */}
-                        <div className={`location-input-area p-1 border-b ${isDark ? "bg-white/5 border-white/5" : "bg-[#F3F3F3] border-black/5"}`}>
-                            <input 
-                                ref={inputRef}
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Insira o local ou link virtual"
-                                className={`w-full bg-transparent border-none outline-none py-3 px-4 text-[0.95rem] ${isDark ? "text-white placeholder:text-white/35" : "text-gray-800 placeholder:text-gray-400"}`}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && search) {
-                                        if (search.includes('http')) {
-                                            handleSelectVirtual(search);
-                                        } else {
-                                            handleSelectAddress(search);
-                                        }
-                                    }
+                        <div className={`location-input-area p-1 border-b ${isDark ? 'bg-white/5 border-white/5' : 'bg-[#F3F3F3] border-black/5'}`}>
+                            <input
+                                ref={inputRef} type="text" value={search} onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Busque um local, endereço ou cole um link"
+                                className={`w-full bg-transparent border-none outline-none py-3 px-4 text-[0.95rem] ${isDark ? 'text-white placeholder:text-white/35' : 'text-gray-800 placeholder:text-gray-400'}`}
+                                onKeyDown={(event) => {
+                                    if (event.key !== 'Enter' || !search.trim()) return;
+                                    if (/^https?:\/\//i.test(search.trim())) handleSelectVirtual(search.trim());
+                                    else if (results[0]) handleSelectAddress(results[0].display_name, results[0]);
+                                    else handleSelectAddress(search.trim());
                                 }}
                             />
                         </div>
 
-                        <div className="max-h-[300px] overflow-y-auto pb-2">
-                            {search.length === 0 ? (
-                                /* Initial State (Recent + Virtual) */
+                        <div className="max-h-[320px] overflow-y-auto pb-2">
+                            {!search ? (
                                 <>
-                                    <div className={`px-4 pt-4 pb-2 text-[0.8rem] font-medium location-section-title ${isDark ? "text-white/50" : "text-gray-400"}`}>
-                                        Locais Recentes
+                                    <div className={`px-6 pt-4 pb-1 text-[0.82rem] leading-relaxed ${isDark ? 'text-white/45' : 'text-gray-500'}`}>
+                                        Busque pelo nome do local ou pelo endereço completo.
                                     </div>
-                                    <div className="px-2">
-                                        <div 
-                                            onClick={() => handleSelectAddress("Marina Park Hotel, Av. Pres. Castelo Branco, 400 - Moura Brasil, Fortaleza")}
-                                            className={`location-item-recent flex items-start gap-3 p-3 cursor-pointer rounded-[8px] transition-colors mx-2 ${isDark ? "bg-white/5 hover:bg-white/10" : "bg-gray-100 hover:bg-gray-200"}`}
-                                        >
-                                            <MapPin size={16} className="text-gray-400 mt-0.5 location-icon" />
-                                            <div>
-                                                <div className={`text-[0.9rem] font-medium location-title ${isDark ? "text-white/90" : "text-gray-900"}`}>Marina Park Hotel</div>
-                                                <div className={`text-[0.8rem] mt-0.5 location-subtitle ${isDark ? "text-white/55" : "text-gray-400"}`}>Av. Pres. Castelo Branco, 400 - Moura Brasil, Fortaleza - CE, 60312-060, Brasil</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className={`px-4 pt-5 pb-2 text-[0.8rem] font-medium location-section-title ${isDark ? "text-white/50" : "text-gray-400"}`}>
-                                        Opções Virtuais
-                                    </div>
+                                    <div className={`px-4 pt-5 pb-2 text-[0.8rem] font-medium ${isDark ? 'text-white/50' : 'text-gray-400'}`}>Opções Virtuais</div>
                                     <div className="flex flex-col">
-                                        <button 
-                                            onClick={() => { setIsOpen(false); setProviderModal('Zoom'); }}
-                                            className={`location-btn-virtual flex items-center gap-3 px-6 py-3 cursor-pointer transition-colors w-full text-left ${isDark ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-gray-900"}`}
-                                        >
-                                            <Video size={16} className="text-gray-400 location-icon" fill="currentColor" />
-                                            <span className={`text-[0.95rem] location-btn-text ${isDark ? "text-white/90" : "text-gray-900"}`}>Criar reunião no Zoom</span>
-                                        </button>
-                                        <button 
-                                            onClick={() => { setIsOpen(false); setProviderModal('Google Meet'); }}
-                                            className={`location-btn-virtual flex items-center gap-3 px-6 py-3 cursor-pointer transition-colors w-full text-left ${isDark ? "hover:bg-white/5 text-white" : "hover:bg-black/5 text-gray-900"}`}
-                                        >
-                                            <Video size={16} className="text-gray-400 location-icon" fill="currentColor" />
-                                            <span className={`text-[0.95rem] location-btn-text ${isDark ? "text-white/90" : "text-gray-900"}`}>Criar Google Meet</span>
-                                        </button>
+                                        {(['Zoom', 'Google Meet'] as const).map((provider) => (
+                                            <button key={provider} type="button" onClick={() => { setIsOpen(false); setProviderModal(provider); }}
+                                                className={`location-btn-virtual flex items-center gap-3 px-6 py-3 transition-colors w-full text-left ${isDark ? 'hover:bg-white/5 text-white' : 'hover:bg-black/5 text-gray-900'}`}>
+                                                <Video size={16} className="text-gray-400" fill="currentColor" />
+                                                <span className="text-[0.95rem]">Criar {provider === 'Zoom' ? 'reunião no Zoom' : 'Google Meet'}</span>
+                                            </button>
+                                        ))}
                                     </div>
-
-                                    <div className="flex items-start gap-2 px-6 pt-2 pb-3 location-info-row">
-                                        <Info size={14} className="text-gray-400 mt-0.5 flex-shrink-0 location-info-icon" />
-                                        <span className={`text-[0.8rem] leading-tight location-info-text ${isDark ? "text-white/45" : "text-gray-400"}`}>
-                                            Se você tiver um link de evento virtual, você pode digitá-lo ou colá-lo acima.
-                                        </span>
+                                    <div className="flex items-start gap-2 px-6 pt-2 pb-3">
+                                        <Info size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                        <span className={`text-[0.8rem] leading-tight ${isDark ? 'text-white/45' : 'text-gray-400'}`}>Para um evento virtual, cole o link no campo acima.</span>
                                     </div>
                                 </>
                             ) : (
-                                /* Search Results State */
                                 <div className="py-2">
-                                    {mockResults.map((res, i) => (
-                                        <div 
-                                            key={i}
-                                            onClick={() => handleSelectAddress(`${res.title}, ${res.subtitle}`)}
-                                            className={`location-result-row flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${isDark ? "hover:bg-white/5" : "hover:bg-black/5"}`}
-                                        >
-                                            <MapPin size={16} className="text-gray-400 mt-0.5 location-icon" />
-                                            <div>
-                                                <div className={`text-[0.9rem] location-title ${isDark ? "text-white/90" : "text-gray-900"}`}>{res.title}</div>
-                                                <div className={`text-[0.8rem] mt-0.5 location-subtitle ${isDark ? "text-white/55" : "text-gray-400"}`}>{res.subtitle}</div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div 
-                                        onClick={() => handleSelectAddress(search)}
-                                        className={`location-result-custom flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-t mt-1 ${isDark ? "hover:bg-white/5 border-white/5" : "hover:bg-black/5 border-black/5"}`}
-                                    >
-                                        <MapPin size={16} className="text-gray-400 location-icon" />
-                                        <div className={`text-[0.9rem] location-title ${isDark ? "text-white/90" : "text-gray-900"}`}>Use "{search}"</div>
-                                    </div>
+                                    {isSearching && <div className={`flex items-center gap-2 px-4 py-3 text-[0.85rem] ${isDark ? 'text-white/55' : 'text-gray-500'}`}><Loader2 size={15} className="animate-spin" /> Buscando locais…</div>}
+                                    {results.map((result) => {
+                                        const title = resultTitle(result);
+                                        const subtitle = result.display_name.split(',').slice(1).join(',').trim();
+                                        return (
+                                            <button key={result.place_id} type="button" onClick={() => handleSelectAddress(result.display_name, result)}
+                                                className={`location-result-row flex items-start gap-3 px-4 py-3 transition-colors w-full text-left ${isDark ? 'hover:bg-white/5' : 'hover:bg-black/5'}`}>
+                                                <MapPin size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                                <span>
+                                                    <span className={`block text-[0.9rem] ${isDark ? 'text-white/90' : 'text-gray-900'}`}>{title}</span>
+                                                    {subtitle && <span className={`block text-[0.8rem] mt-0.5 ${isDark ? 'text-white/55' : 'text-gray-400'}`}>{subtitle}</span>}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                    {!isSearching && search.trim().length >= 3 && results.length === 0 && <div className={`px-4 py-3 text-[0.82rem] ${isDark ? 'text-white/45' : 'text-gray-500'}`}>Nenhum local encontrado.</div>}
+                                    <button type="button" onClick={() => /^https?:\/\//i.test(search.trim()) ? handleSelectVirtual(search.trim()) : handleSelectAddress(search.trim())}
+                                        className={`location-result-custom flex items-center gap-3 px-4 py-3 transition-colors border-t mt-1 w-full text-left ${isDark ? 'hover:bg-white/5 border-white/5' : 'hover:bg-black/5 border-black/5'}`}>
+                                        <MapPin size={16} className="text-gray-400" />
+                                        <span className={`text-[0.9rem] ${isDark ? 'text-white/90' : 'text-gray-900'}`}>Usar “{search}”</span>
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -204,11 +216,7 @@ export const LuxLocationPicker: React.FC<LuxLocationPickerProps> = ({ value, onC
                 )}
             </AnimatePresence>
 
-            <ProviderConnectModal 
-                isOpen={!!providerModal} 
-                onClose={() => setProviderModal(null)} 
-                provider={providerModal} 
-            />
+            <ProviderConnectModal isOpen={!!providerModal} onClose={() => setProviderModal(null)} provider={providerModal} />
         </div>
     );
 };

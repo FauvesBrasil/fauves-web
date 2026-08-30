@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Check, Globe, ImagePlus, Instagram, MapPin, Upload, X, Youtube } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/apiBase';
 import ImagePickerModalV2, { CALENDAR_COVER_IMAGES } from './ImagePickerModalV2';
+import LocationMapPreview from './LocationMapPreview';
 
 export type CalendarDisplayData = {
   id?: string;
@@ -45,35 +46,6 @@ const readFile = (file: File, callback: (value: string) => void) => {
   reader.onload = () => callback(String(reader.result || ''));
   reader.readAsDataURL(file);
 };
-
-const CalendarMap = ({ city }: { city?: string }) => (
-  <svg viewBox="0 0 900 260" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden="true">
-    <rect width="900" height="260" fill="#191a1b" />
-    {city ? <>
-      <g fill="none" stroke="#333538" strokeWidth="2">
-        <path d="M-20 45C130 95 180 15 335 65s235 0 350 44 180-30 250-20" />
-        <path d="M50 245C150 170 245 210 320 130s180-75 265-8 185 15 345 70" />
-        <path d="M110-20c35 95 80 110 145 155s130 38 180 145M630-20c-35 70-18 130 45 190s115 65 150 110" />
-        <path d="M0 150h900M430 0v260M750 0v260" stroke="#292b2d" />
-      </g>
-      <g fill="#252729" stroke="#3b3d40"><path d="M0 0h310l-35 70-95 25-80-33z" /><path d="M610 0h290v90l-85 12-72-40-90 5z" /><path d="M0 205l130-35 120 90H0z" /></g>
-      <circle cx="450" cy="118" r="7" fill="#171819" stroke="#8c8e91" strokeWidth="3" />
-      <text x="463" y="122" fill="#9b9da0" fontSize="26" fontWeight="700">{city}</text>
-      <text x="278" y="145" fill="#696b6e" fontSize="16" fontWeight="600">Caucaia</text>
-      <text x="590" y="200" fill="#5c5e61" fontSize="15">Aquiraz</text>
-    </> : <>
-      <g fill="#343638" opacity=".9">
-        <path d="M60 62l82-42 116 10 45 35-42 35-68-2-30 40-56-18-56-36z" />
-        <path d="M248 137l52 22 24 72-38 48-28-74-31-35z" />
-        <path d="M420 55l69-27 82 11 28 28-42 20-12 49-51 20-33-38-55-19z" />
-        <path d="M482 141l78 9 45 59-39 66-69-18-24-70z" />
-        <path d="M575 43l158-26 115 31-15 46-83 14-41 46-70-29-80-34z" />
-        <path d="M756 178l76 4 42 45-57 31-78-20z" />
-      </g>
-      <g fill="#686a6d" fontSize="15" fontWeight="700" letterSpacing="7"><text x="423" y="55">EUROPA</text><text x="650" y="42">ÁSIA</text><text x="462" y="221">ÁFRICA</text></g>
-    </>}
-  </svg>
-);
 
 export function CalendarDisplaySettingsPanel({ calendar, isPersonal = false, saving = false, onSave }: Props) {
   const storageKey = `fauves-calendar-display-${calendar.id || 'default'}`;
@@ -188,7 +160,7 @@ export function CalendarDisplaySettingsPanel({ calendar, isPersonal = false, sav
 
         <label className="mb-2 mt-6 block text-[14px] font-semibold text-zinc-300">Localização</label>
         <div className="relative h-[160px] rounded-lg border border-white/[0.06]">
-          <div className="absolute inset-0 overflow-hidden rounded-lg"><CalendarMap city={locationMode === 'city' && locationQuery ? locationQuery : undefined} /><div className="absolute inset-0 bg-black/10" /></div>
+          <div className="absolute inset-0 overflow-hidden rounded-lg"><LocationMapPreview query={locationMode === 'city' ? locationQuery : undefined} isDark accent={accentColor} /><div className="pointer-events-none absolute inset-0 bg-black/10" /></div>
           <div className="absolute left-2 top-2 z-10 flex rounded-lg bg-[#2a2b2d]/90 p-0.5 backdrop-blur"><button type="button" onClick={() => setLocationMode('city')} className={`h-9 rounded-md border-0 px-3 text-[14px] font-semibold ${locationMode === 'city' ? 'bg-white/20 text-white' : 'bg-transparent text-zinc-400'}`}>Cidade</button><button type="button" onClick={() => { setLocationMode('global'); setLocationFocused(false); }} className={`h-9 rounded-md border-0 px-3 text-[14px] font-semibold ${locationMode === 'global' ? 'bg-white/20 text-white' : 'bg-transparent text-zinc-400'}`}>Global</button></div>
           {locationMode === 'city' && <div className="absolute bottom-2 left-2 right-2 z-20"><div className="relative"><MapPin size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" /><input value={locationQuery} onFocus={() => setLocationFocused(true)} onBlur={() => window.setTimeout(() => setLocationFocused(false), 100)} onChange={(event) => { setLocationQuery(event.target.value); setLocationFocused(true); }} placeholder="Escolha uma cidade" className="h-[38px] w-full rounded-lg border border-white/10 bg-[#131416]/95 pl-9 pr-9 text-[16px] font-semibold text-white outline-none placeholder:text-zinc-600 focus:border-white/35" />{locationQuery && <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setLocationQuery('')} aria-label="Limpar localização" className="absolute right-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full border-0 bg-white/15 p-0 text-zinc-400"><X size={13} /></button>}</div></div>}
           {locationMode === 'city' && locationFocused && suggestions.length > 0 && <div className="absolute left-2 right-2 top-[156px] z-50 overflow-hidden rounded-lg border border-white/10 bg-[#2a2b2d] p-1 shadow-2xl">{suggestions.slice(0, 5).map((city) => <button key={`${city.name}-${city.detail}`} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => { setLocationQuery(city.name); setLocationFocused(false); }} className="flex min-h-[48px] w-full items-center gap-3 rounded-md border-0 bg-transparent px-2.5 text-left hover:bg-white/[0.07]"><MapPin size={16} className="shrink-0 text-zinc-500" /><span><strong className="block text-[14px] text-white">{city.name}</strong><span className="text-[13px] font-medium text-zinc-400">{city.detail}</span></span></button>)}</div>}

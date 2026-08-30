@@ -4,6 +4,7 @@ import { useSEO } from '@/hooks/useSEO';
 import { fetchApi, apiUrl, resolveImageUrl } from '@/lib/apiBase';
 import { useTheme } from '@/context/ThemeContext';
 import HeaderV2 from '@/components/v2/HeaderV2';
+import LocationMapPreview from '@/components/v2/LocationMapPreview';
 import { MapPin, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -471,36 +472,8 @@ const CreateOrganizationV2: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Static dark map placeholder */}
-                  <div style={{
-                    width: '100%',
-                    height: '100%',
-                    background: isDark
-                      ? 'linear-gradient(135deg, #1e2030 0%, #252535 50%, #1e2030 100%)'
-                      : 'linear-gradient(135deg, #d1d9e6 0%, #c8d3e3 50%, #d1d9e6 100%)',
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'flex-end',
-                    padding: '6px 8px',
-                  }}>
-                    {/* Map grid overlay to simulate map tiles */}
-                    <svg
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }}
-                      viewBox="0 0 300 140"
-                      preserveAspectRatio="xMidYMid slice"
-                    >
-                      {/* Simplified world-map continent shapes */}
-                      <path d="M60,40 Q75,30 90,38 Q100,45 95,60 Q85,70 70,65 Q55,60 60,40Z" fill={isDark ? '#6b7280' : '#9ca3af'} />
-                      <path d="M100,35 Q130,25 160,35 Q175,45 170,65 Q155,80 130,75 Q105,70 100,55 Q95,45 100,35Z" fill={isDark ? '#6b7280' : '#9ca3af'} />
-                      <path d="M110,80 Q130,75 145,85 Q150,100 135,110 Q120,115 108,105 Q100,95 110,80Z" fill={isDark ? '#6b7280' : '#9ca3af'} />
-                      <path d="M170,45 Q190,38 205,50 Q215,62 205,78 Q190,85 175,78 Q162,68 170,45Z" fill={isDark ? '#6b7280' : '#9ca3af'} />
-                      <path d="M220,30 Q250,20 265,35 Q278,50 270,70 Q255,82 235,75 Q215,65 220,30Z" fill={isDark ? '#6b7280' : '#9ca3af'} />
-                      <path d="M230,75 Q250,70 260,85 Q265,100 250,108 Q235,112 225,100 Q220,88 230,75Z" fill={isDark ? '#6b7280' : '#9ca3af'} />
-                      <path d="M20,55 Q35,50 45,62 Q48,75 38,83 Q25,87 18,75 Q12,63 20,55Z" fill={isDark ? '#6b7280' : '#9ca3af'} />
-                    </svg>
-                    <span style={{ fontSize: 10, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)', fontFamily: 'Inter, sans-serif', position: 'relative', zIndex: 1 }}>
-                      Mapas
-                    </span>
+                  <div style={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
+                    <LocationMapPreview query={locationType === 'city' ? city : undefined} isDark={isDark} accent={themeColor} />
                   </div>
 
                   {/* City input (when city mode) */}

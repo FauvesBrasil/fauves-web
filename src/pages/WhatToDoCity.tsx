@@ -8,6 +8,7 @@ import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useSEO } from '@/hooks/useSEO';
 import { useTheme } from '@/context/ThemeContext';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
+import LocationMapPreview from '@/components/v2/LocationMapPreview';
 
 type CityEvent = {
   id: string;
@@ -211,7 +212,7 @@ const WhatToDoCity: React.FC = () => {
           <h3>{cityName}</h3>
           <p>Receba novidades sobre os próximos eventos em {cityName}.</p>
           <SubscribeControl scope={`city:${citySlug}`} compact />
-          <div className="city-events-map"><MapPin size={27} /><strong>{cityName}</strong></div>
+          <div className="city-events-map"><LocationMapPreview query={cityName} isDark={isDark} /></div>
         </aside>
       </main>
 
@@ -276,7 +277,7 @@ const cityStyles = `
   .city-events-aside-icon { color:#fff; background:#d98445; border:0; }
   .city-events-aside h3 { margin:18px 0 8px; font-size:1rem; font-weight:600; }
   .city-events-aside > p { margin:0 0 17px; color:rgba(255,255,255,.7); font-size:.8125rem; font-weight:500; line-height:1.5; }
-  .city-events-map { display:flex; height:260px; margin-top:32px; align-items:center; justify-content:center; gap:6px; border-radius:10px; color:rgba(255,255,255,.45); background:radial-gradient(circle at 60% 35%,rgba(255,255,255,.09),transparent 28%),repeating-linear-gradient(35deg,#292b2d 0 2px,#222426 2px 14px); }
+  .city-events-map { position:relative; height:260px; margin-top:32px; overflow:hidden; border-radius:10px; background:#222426; }
   .city-events-empty { padding:25px; border:1px solid rgba(255,255,255,.07); border-radius:12px; color:rgba(255,255,255,.48); background:#202224; font-size:.875rem; }
   .city-events-loader { display:block; width:30px; height:30px; margin:80px auto; border:2px solid rgba(255,255,255,.12); border-top-color:#fff; border-radius:50%; animation:city-spin .8s linear infinite; }
   .city-events-page.light {
@@ -309,10 +310,7 @@ const cityStyles = `
   }
   .city-events-page.light .city-event-card:hover { border-color:rgba(24,24,27,.27); }
   .city-events-page.light .city-event-image { color:#a1a1aa; background:#f1f1f2; }
-  .city-events-page.light .city-events-map {
-    color:#71717a;
-    background:radial-gradient(circle at 60% 35%,rgba(255,255,255,.9),transparent 28%),repeating-linear-gradient(35deg,#e4e4e7 0 2px,#eeeeef 2px 14px);
-  }
+  .city-events-page.light .city-events-map { background:#eeeeef; }
   .city-events-page.light .city-events-empty { color:#71717a; }
   .city-events-page.light .city-events-loader { border-color:rgba(24,24,27,.12); border-top-color:#27272a; }
   @keyframes city-spin { to { transform:rotate(360deg); } }

@@ -17,6 +17,8 @@ import CalendarIcalModal from '@/components/v2/CalendarIcalModal';
 import CalendarAddEventMenu from '@/components/v2/CalendarAddEventMenu';
 import CalendarExternalEventModal from '@/components/v2/CalendarExternalEventModal';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
+import LocationMapPreview from '@/components/v2/LocationMapPreview';
+import { geocodeEventAddress, resolveEventAddress, resolveEventCoordinates } from '@/lib/eventLocation';
 
 // Helper to convert hex to HSL for dynamic theme-tinted backgrounds
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
@@ -328,14 +330,12 @@ const OrganizationPublicProfile: React.FC = () => {
     const geocodeMissingEvents = async () => {
       const nextCache = { ...mapGeoCache };
       for (const event of events) {
-        const address = event.location || event.locationName || event.locationAddress;
-        const hasCoordinates = event.locationLatitude || event.latitude || event.lat;
-        if (!address || hasCoordinates || nextCache[address]) continue;
+        const address = resolveEventAddress(event);
+        const coordinates = resolveEventCoordinates(event);
+        if (!address || (coordinates.lat !== null && coordinates.lng !== null) || nextCache[address]) continue;
         try {
-          const query = [address, event.locationCity, event.locationUf].filter(Boolean).join(', ');
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
-          const data = await response.json();
-          if (data?.[0]) nextCache[address] = { lat: Number(data[0].lat), lng: Number(data[0].lon) };
+          const result = await geocodeEventAddress(event);
+          if (result) nextCache[address] = result;
         } catch { /* o preview continua disponível para os demais eventos */ }
       }
       if (!cancelled) {
@@ -350,34 +350,15 @@ const OrganizationPublicProfile: React.FC = () => {
   }, [events]);
 
   const calendarMapEvents = React.useMemo(() => events.map((event) => {
-    const address = event.location || event.locationName || event.locationAddress;
+    const address = resolveEventAddress(event);
     const cached = address ? mapGeoCache[address] : null;
+    const coordinates = resolveEventCoordinates(event);
     return {
       id: event.id,
-      lat: Number(event.locationLatitude || event.latitude || event.lat || cached?.lat),
-      lng: Number(event.locationLongitude || event.longitude || event.lng || cached?.lng),
+      lat: coordinates.lat ?? cached?.lat ?? Number.NaN,
+      lng: coordinates.lng ?? cached?.lng ?? Number.NaN,
     };
   }).filter((event) => Number.isFinite(event.lat) && Number.isFinite(event.lng)), [events, mapGeoCache]);
-
-  const previewMarkerPositions = React.useMemo(() => {
-    if (!calendarMapEvents.length) return [];
-    if (calendarMapEvents.length === 1) return [{ ...calendarMapEvents[0], left: 50, top: 52 }];
-
-    const latitudes = calendarMapEvents.map((event) => event.lat);
-    const longitudes = calendarMapEvents.map((event) => event.lng);
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-    const latSpan = maxLat - minLat || 1;
-    const lngSpan = maxLng - minLng || 1;
-
-    return calendarMapEvents.map((event) => ({
-      ...event,
-      left: 14 + ((event.lng - minLng) / lngSpan) * 72,
-      top: 16 + ((maxLat - event.lat) / latSpan) * 62,
-    }));
-  }, [calendarMapEvents]);
 
   const eventTags = React.useMemo(() => {
     const counts = new Map<string, number>();
@@ -1050,108 +1031,7 @@ const OrganizationPublicProfile: React.FC = () => {
               height: 170
             }}>
               <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: isDark
-                  ? 'linear-gradient(135deg, #222222 0%, #171717 100%)'
-                  : 'linear-gradient(135deg, #e4ebf5 0%, #d8e2ee 100%)',
-                opacity: 0.95
-              }} />
-
-              {/* Grid overlay maps street layout */}
-              <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: isDark ? 0.1 : 0.25 }} viewBox="0 0 260 150" preserveAspectRatio="none">
-                <line x1="20" y1="0" x2="35" y2="150" stroke={isDark ? '#ffffff' : '#000000'} strokeWidth="1.5" />
-                <line x1="80" y1="0" x2="85" y2="150" stroke={isDark ? '#ffffff' : '#000000'} strokeWidth="1" />
-                <line x1="140" y1="0" x2="130" y2="150" stroke={isDark ? '#ffffff' : '#000000'} strokeWidth="1.5" />
-                <line x1="200" y1="0" x2="215" y2="150" stroke={isDark ? '#ffffff' : '#000000'} strokeWidth="1" />
-                
-                <line x1="0" y1="25" x2="260" y2="35" stroke={isDark ? '#ffffff' : '#000000'} strokeWidth="2" />
-                <line x1="0" y1="75" x2="260" y2="70" stroke={isDark ? '#ffffff' : '#000000'} strokeWidth="1" />
-                <line x1="0" y1="115" x2="260" y2="125" stroke={isDark ? '#ffffff' : '#000000'} strokeWidth="1.5" />
-              </svg>
-
-              {/* Water Area labels */}
-              {((org.locationText || '').toLowerCase().includes('fortaleza')) && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  width: '55%',
-                  height: '35%',
-                  background: isDark ? 'rgba(28, 28, 28, 0.72)' : 'rgba(165, 195, 235, 0.5)',
-                  borderBottomLeftRadius: '50px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderBottom: `1px solid ${cardBorder}`,
-                  borderLeft: `1px solid ${cardBorder}`
-                }}>
-                  <span style={{ fontSize: 9, color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)', fontWeight: 600 }}>Enseada de Mucuripe</span>
-                </div>
-              )}
-
-              {/* Markers preserve the relative geographic position of every calendar event. */}
-              {previewMarkerPositions.map((marker) => (
-                <div
-                  key={marker.id}
-                  style={{
-                    position: 'absolute',
-                    top: `${marker.top}%`,
-                    left: `${marker.left}%`,
-                    transform: 'translate(-50%, -50%)',
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: themeColor,
-                    border: '1px solid #ffffff',
-                    boxShadow: `0 0 0 3px ${themeColor}38`,
-                    zIndex: 4
-                  }}
-                />
-              ))}
-
-              {/* Location City Label */}
-              <div style={{
-                position: 'absolute',
-                bottom: 12,
-                left: 12,
-                right: 12,
-                textAlign: 'center',
-                zIndex: 5
-              }}>
-                <h4 style={{
-                  fontSize: '1.125rem',
-                  fontWeight: 800,
-                  color: isDark ? '#ffffff' : '#111827',
-                  margin: 0,
-                  textShadow: isDark ? '0 1px 3px rgba(0,0,0,0.8)' : '0 1px 3px rgba(255,255,255,0.8)'
-                }}>
-                  {org.locationText || 'Global'}
-                </h4>
-              </div>
-
-              {/* Apple Map legal icon watermark */}
-              <div style={{
-                position: 'absolute',
-                bottom: 8,
-                left: 8,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 3,
-                opacity: 0.35,
-                fontSize: 8,
-                fontWeight: 600,
-                color: isDark ? '#ffffff' : '#000000',
-                zIndex: 5
-              }}>
-                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
-                  <path d="M12 6a1 1 0 1 0 1 1 1 1 0 0 0-1-1zm1 12h-2v-6h2z" />
-                </svg>
-                <span>Mapas</span>
-                <span style={{ fontSize: 7 }}>Legal</span>
-              </div>
+                <LocationMapPreview locations={calendarMapEvents} isDark={isDark} accent={themeColor} />
               </div>
               <Link
                 to={`/${org.slug || org.id}/map`}

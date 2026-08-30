@@ -151,19 +151,8 @@ export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
       venueName = '';
     }
 
-    // Format the clean address - use UF abbreviation
-    let cleanAddress = '';
-    if (venueName) {
-      cleanAddress = [venueName, city, stateUf].filter(Boolean).join(', ');
-    } else {
-      // For street addresses, only show city + state
-      cleanAddress = [city, stateUf].filter(Boolean).join(', ');
-    }
-
-    // Fallback if nothing
-    if (!cleanAddress) {
-      cleanAddress = result.display_name.split(',').slice(0, 2).join(', ');
-    }
+    // Preserve the complete geocoder result so the map never loses street or number.
+    const cleanAddress = result.display_name || [venueName, city, stateUf].filter(Boolean).join(', ');
 
 
     setInputValue(cleanAddress);

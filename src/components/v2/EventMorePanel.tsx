@@ -79,6 +79,16 @@ const EventMorePanel: React.FC<EventMorePanelProps> = ({ event, onEventChange })
   const { toast } = useToast();
   const { orgs, selectedOrg } = useOrganization();
   const eventId = event?.id || event?._id;
+  const calendarId = String(event?.organizationId || event?.organizerId || selectedOrg?.id || '');
+  const eventCalendar = orgs.find((organization) => organization.id === calendarId)
+    || (selectedOrg?.id === calendarId ? selectedOrg : null);
+  const plusStatus = String(eventCalendar?.fauvesPlusStatus || '').toUpperCase();
+  const plusExpiration = eventCalendar?.fauvesPlusExpiresAt
+    ? new Date(eventCalendar.fauvesPlusExpiresAt).getTime()
+    : null;
+  const hasFauvesPlus = ['ACTIVE', 'TRIALING'].includes(plusStatus)
+    && (plusExpiration === null || (!Number.isNaN(plusExpiration) && plusExpiration > Date.now()));
+  const plusSettingsUrl = calendarId ? `/calendar/manage/cal-${calendarId}?subTab=plus` : '/organizer-settings?subTab=plus';
   const [slug, setSlug] = React.useState(event?.slug || eventId || '');
   const [embedType, setEmbedType] = React.useState<EmbedType>('button');
   const [copyOk, setCopyOk] = React.useState(false);
@@ -141,6 +151,10 @@ const EventMorePanel: React.FC<EventMorePanelProps> = ({ event, onEventChange })
   };
 
   const handleUpdateSlug = async () => {
+    if (!hasFauvesPlus) {
+      navigate(plusSettingsUrl);
+      return;
+    }
     const normalized = normalizeSlug(slug).replace(/-+$/, '');
     if (normalized.length < 3) {
       toast({ title: 'URL inválida', description: 'Use pelo menos 3 letras ou números.', variant: 'destructive' });
@@ -265,15 +279,27 @@ const EventMorePanel: React.FC<EventMorePanelProps> = ({ event, onEventChange })
 
         <div className="mt-5 flex min-h-[49px] items-center justify-between gap-4 rounded-xl border border-zinc-300 bg-zinc-100 px-4 py-2.5 dark:border-white/10 dark:bg-[#2b2c2e]">
           <p className="text-[14px] font-medium leading-5 text-zinc-600 dark:text-zinc-300">
-            Escolha uma URL curta e fácil de compartilhar para este evento.
+            {hasFauvesPlus
+              ? 'Escolha uma URL curta e fácil de compartilhar para este evento.'
+              : 'Faça upgrade para o Fauves Plus para definir uma URL personalizada para este evento.'}
           </p>
-          <button
-            type="button"
-            onClick={() => window.open(publicUrl, '_blank', 'noopener,noreferrer')}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-zinc-200 px-3 text-[14px] font-semibold text-zinc-700 transition hover:bg-zinc-300 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-          >
-            Ver página <ExternalLink size={13} />
-          </button>
+          {hasFauvesPlus ? (
+            <button
+              type="button"
+              onClick={() => window.open(publicUrl, '_blank', 'noopener,noreferrer')}
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-zinc-200 px-3 text-[14px] font-semibold text-zinc-700 transition hover:bg-zinc-300 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+            >
+              Ver página <ExternalLink size={13} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate(plusSettingsUrl)}
+              className="inline-flex h-8 shrink-0 items-center rounded-lg bg-zinc-200 px-3 text-[14px] font-semibold text-zinc-700 transition hover:bg-zinc-300 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+            >
+              Saiba mais
+            </button>
+          )}
         </div>
 
         <div className="mt-6">
@@ -286,14 +312,16 @@ const EventMorePanel: React.FC<EventMorePanelProps> = ({ event, onEventChange })
                 value={slug}
                 onChange={(e) => setSlug(normalizeSlug(e.target.value))}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleUpdateSlug(); }}
+                readOnly={!hasFauvesPlus}
+                disabled={!hasFauvesPlus}
                 spellCheck={false}
-                className="w-[180px] min-w-[120px] bg-transparent px-3 text-[15px] font-semibold text-zinc-900 outline-none focus:ring-0 dark:text-zinc-100"
+                className="w-[180px] min-w-[120px] bg-transparent px-3 text-[15px] font-semibold text-zinc-900 outline-none focus:ring-0 disabled:cursor-not-allowed disabled:text-zinc-400 dark:text-zinc-100 dark:disabled:text-zinc-500"
               />
             </div>
             <button
               type="button"
               onClick={handleUpdateSlug}
-              disabled={savingSlug || normalizeSlug(slug).replace(/-+$/, '') === event?.slug}
+              disabled={!hasFauvesPlus || savingSlug || normalizeSlug(slug).replace(/-+$/, '') === event?.slug}
               className="inline-flex h-[38px] items-center gap-1.5 rounded-lg bg-zinc-300 px-4 text-[15px] font-semibold text-zinc-800 transition hover:bg-zinc-400 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-500 dark:text-zinc-100 dark:hover:bg-zinc-400"
             >
               {savingSlug && <Loader2 size={15} className="animate-spin" />}

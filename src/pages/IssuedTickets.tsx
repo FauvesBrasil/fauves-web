@@ -1,393 +1,162 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { Search } from 'lucide-react';
-import TicketDetailsModal from '../components/TicketDetailsModal';
-import AppHeader from '@/components/AppHeader';
-import SidebarMenu from '@/components/SidebarMenu';
-import EventDetailsSidebar from '@/components/EventDetailsSidebar';
-import { OrganizerLayout } from '@/components/OrganizerLayout';
-import { useLayoutOffsets } from '@/context/LayoutOffsetsContext';
-import MobileTopBar from '@/components/MobileTopBar';
-import MobileDrawerMenu from '@/components/MobileDrawerMenu';
-import EventMobileTopBar from '@/components/EventMobileTopBar';
-import EventMobileDrawer from '@/components/EventMobileDrawer';
-import { useOrganization } from '@/context/OrganizationContext';
+import * as React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Check, ChevronDown, Download, Filter, MoreHorizontal, Search, Settings, SlidersHorizontal, UsersRound, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { fetchApi } from '@/lib/apiBase';
+import { useToast } from '@/hooks/use-toast';
 
-interface Ticket {
-    id: string;
-    code: string;
-    ticketTypeName: string;
-    userName?: string;
-    userEmail?: string;
-    status: string;
-    isCourtesy: boolean;
-    issuedBy?: string;
-    pricePaid?: number;
-    createdAt: string;
-    used: boolean;
-}
+type GuestStatus = 'confirmed' | 'invited' | 'declined' | 'waitlist' | 'pending' | 'checkedin';
+type Guest = { id: string; code: string; ticketTypeName: string; userName?: string; userEmail: string; avatarUrl?: string; status: string; guestStatus?: string; createdAt: string; used: boolean };
+type EventSummary = { id: string; name: string };
 
-interface Stats {
-    totalIssued: number;
-    courtesies: number;
-    sold: number;
-    checkedIn: number;
-}
-
-const IssuedTickets: React.FC = () => {
-    const { eventId } = useParams<{ eventId: string }>();
-    const { token, user } = useAuth();
-    const { totalLeft } = useLayoutOffsets();
-    const navigate = useNavigate();
-    const location = useLocation();
-    const [tickets, setTickets] = useState<Ticket[]>([]);
-    const [stats, setStats] = useState<Stats | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-    const [event, setEvent] = useState<any>(null);
-
-    // Filters
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
-    const [courtesyFilter, setCourtesyFilter] = useState('');
-    const [page, setPage] = useState(1);
-    const [total, setTotal] = useState(0);
-
-    // Mobile menu states
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [eventMenuOpen, setEventMenuOpen] = useState(false);
-    const { selectedOrg, orgs: organizations, setSelectedOrgById: selectOrganization } = useOrganization();
-
-
-
-
-    const loadEvent = async () => {
-        try {
-            const response = await fetch(`/api/event/${eventId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setEvent(data);
-            }
-        } catch (error) {
-            // no-op
-        }
-    };
-
-    const loadTickets = async () => {
-        if (!token || !eventId) return;
-        setLoading(true);
-        try {
-            const queryParams = new URLSearchParams({
-                page: page.toString(),
-                limit: '50',
-                search,
-                status: statusFilter,
-                courtesy: courtesyFilter
-            });
-            const response = await fetch(`/api/ticket/event/${eventId}/tickets?${queryParams.toString()}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setTickets(data.tickets);
-                setStats(data.stats);
-                setTotal(data.total);
-            }
-        } catch (error) {
-            // no-op
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        setPage(1);
-        loadTickets();
-    };
-
-    useEffect(() => {
-        if (!eventId) return;
-        loadEvent();
-        loadTickets();
-    }, [eventId, token, page, statusFilter, courtesyFilter]);
-
-    const getStatusBadge = (status: string, used: boolean) => {
-        if (used) return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded dark:bg-green-900/30 dark:text-green-400">Check-in ✓</span>;
-        if (status === 'ISSUED') return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded dark:bg-blue-900/30 dark:text-blue-400">Emitido</span>;
-        if (status === 'CANCELED') return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded dark:bg-red-900/30 dark:text-red-400">Cancelado</span>;
-        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded dark:bg-gray-700 dark:text-gray-300">{status}</span>;
-    };
-
-    const getStatusLabel = (status: string | undefined): string => {
-        switch (status) {
-            case 'draft': return 'Rascunho';
-            case 'published': return 'Publicado';
-            case 'completed': return 'Encerrado';
-            case 'paused': return 'Pausado';
-            case 'deleted': return 'Excluído';
-            default: return status || 'Desconhecido';
-        }
-    };
-
-    return (
-        <div className="min-h-screen w-full bg-white dark:bg-[#0b0b0b]">
-            {/* Mobile Main Menu */}
-            <MobileTopBar onMenuOpen={() => setMobileMenuOpen(true)} />
-            <MobileDrawerMenu
-                isOpen={mobileMenuOpen}
-                onClose={() => setMobileMenuOpen(false)}
-                currentPath={location.pathname}
-                organizations={organizations}
-                selectedOrg={selectedOrg}
-                selectOrganization={selectOrganization}
-                user={user}
-            />
-
-            {/* Mobile Event Menu */}
-            <EventMobileTopBar
-                title="Ingressos Emitidos"
-                onMenuOpen={() => setEventMenuOpen(true)}
-            />
-            <EventMobileDrawer
-                isOpen={eventMenuOpen}
-                onClose={() => setEventMenuOpen(false)}
-                currentPath={location.pathname}
-                eventId={eventId || ''}
-                eventName={event?.name}
-                eventDate={event?.startDate ? new Date(event.startDate).toLocaleDateString('pt-BR') : undefined}
-                eventStatus={getStatusLabel(event?.status)}
-            />
-
-            {/* Fixed main sidebar */}
-            <div className="hidden lg:block">
-                <SidebarMenu />
-            </div>
-
-            {/* Fixed event details sidebar */}
-            <div className="hidden lg:block">
-                <EventDetailsSidebar
-                    eventName={event?.name}
-                    eventDate={event?.startDate ? new Date(event.startDate).toLocaleString('pt-BR') : undefined}
-                    eventStatus={getStatusLabel(event?.status)}
-                    onBack={() => navigate('/organizer-events')}
-                    eventIdOverride={eventId || null}
-                    panelRoute={`/event/manage/${eventId}`}
-                    fixed
-                    fixedLeft={70}
-                    fixedWidth={300}
-                    fixedTop={0}
-                />
-            </div>
-
-            {/* Global header */}
-            <AppHeader />
-
-            {/* Content with left margin for both sidebars */}
-            <OrganizerLayout>
-                <div style={{ marginLeft: totalLeft, transition: 'margin-left 200ms' }} className="flex flex-col px-4 sm:px-6 lg:px-8 min-h-screen relative pb-24 pt-24 max-md:pt-4">
-                    <div className="max-w-[1200px] w-full mx-auto">
-                        {/* Header com Estatísticas */}
-                        <div className="mb-6">
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                                Ingressos Emitidos
-                            </h1>
-
-                            {stats && (
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                                        <div className="text-sm text-gray-600 dark:text-gray-400">Total Emitidos</div>
-                                        <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalIssued}</div>
-                                    </div>
-                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                                        <div className="text-sm text-gray-600 dark:text-gray-400">Cortesias</div>
-                                        <div className="text-2xl font-bold text-purple-600">{stats.courtesies}</div>
-                                    </div>
-                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                                        <div className="text-sm text-gray-600 dark:text-gray-400">Vendidos</div>
-                                        <div className="text-2xl font-bold text-green-600">{stats.sold}</div>
-                                    </div>
-                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                                        <div className="text-sm text-gray-600 dark:text-gray-400">Check-ins</div>
-                                        <div className="text-2xl font-bold text-blue-600">{stats.checkedIn}</div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Filtros */}
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-                            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex-1">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                        <input
-                                            type="text"
-                                            placeholder="Buscar por código, nome ou email..."
-                                            value={search}
-                                            onChange={(e) => setSearch(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                        />
-                                    </div>
-                                </div>
-
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                >
-                                    <option value="">Todos os Status</option>
-                                    <option value="ISSUED">Emitidos</option>
-                                    <option value="CANCELED">Cancelados</option>
-                                </select>
-
-                                <select
-                                    value={courtesyFilter}
-                                    onChange={(e) => setCourtesyFilter(e.target.value)}
-                                    className="px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                >
-                                    <option value="">Todos os Tipos</option>
-                                    <option value="true">Cortesias</option>
-                                    <option value="false">Vendidos</option>
-                                </select>
-
-                                <button
-                                    type="submit"
-                                    className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-                                >
-                                    Buscar
-                                </button>
-                            </form>
-                        </div>
-
-                        {/* Tabela de Ingressos */}
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50 dark:bg-gray-700">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Código
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Usuário
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Tipo
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Status
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Cortesia
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Data
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Ações
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        {loading ? (
-                                            <tr>
-                                                <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                                                    Carregando...
-                                                </td>
-                                            </tr>
-                                        ) : tickets.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                                                    Nenhum ingresso encontrado
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            tickets.map((ticket) => (
-                                                <tr key={ticket.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                                        {ticket.code}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
-                                                        {ticket.userName && ticket.userName !== ticket.userEmail ? (
-                                                            <div>
-                                                                <div className="font-medium text-gray-900 dark:text-white">{ticket.userName}</div>
-                                                                <div className="text-xs text-gray-500 dark:text-gray-400">{ticket.userEmail}</div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="text-gray-500 dark:text-gray-400">{ticket.userEmail || '-'}</div>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                                                        {ticket.ticketTypeName}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                        {getStatusBadge(ticket.status, ticket.used)}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                        {ticket.isCourtesy ? (
-                                                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded dark:bg-purple-900/30 dark:text-purple-400">Sim</span>
-                                                        ) : (
-                                                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded dark:bg-gray-700 dark:text-gray-300">Não</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                                                        {new Date(ticket.createdAt).toLocaleDateString('pt-BR')}
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                        <button
-                                                            onClick={() => setSelectedTicket(ticket)}
-                                                            className="text-orange-600 hover:text-orange-700 font-medium"
-                                                        >
-                                                            Ver Detalhes
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* Paginação */}
-                        {total > 50 && (
-                            <div className="mt-4 flex justify-center gap-2">
-                                <button
-                                    onClick={() => setPage(page - 1)}
-                                    disabled={page === 1}
-                                    className="px-4 py-2 border rounded-lg disabled:opacity-50 dark:border-gray-600 dark:text-white"
-                                >
-                                    Anterior
-                                </button>
-                                <span className="px-4 py-2 dark:text-white">
-                                    Página {page} de {Math.ceil(total / 50)}
-                                </span>
-                                <button
-                                    onClick={() => setPage(page + 1)}
-                                    disabled={page >= Math.ceil(total / 50)}
-                                    className="px-4 py-2 border rounded-lg disabled:opacity-50 dark:border-gray-600 dark:text-white"
-                                >
-                                    Próxima
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </OrganizerLayout>
-
-            {/* Modal */}
-            {selectedTicket && (
-                <TicketDetailsModal
-                    ticketId={selectedTicket.id}
-                    onClose={() => setSelectedTicket(null)}
-                />
-            )}
-        </div>
-    );
+const statusInfo: Record<GuestStatus, { label: string; color: string; background: string }> = {
+  confirmed: { label: 'Confirmado(a)', color: '#77d86b', background: 'rgba(74, 181, 69, .15)' },
+  invited: { label: 'Convidado(a)', color: '#74a8ff', background: 'rgba(45, 110, 232, .2)' },
+  checkedin: { label: 'Check-in realizado', color: '#77d86b', background: 'rgba(74, 181, 69, .15)' },
+  declined: { label: 'Não vai', color: '#ff7b72', background: 'rgba(220, 66, 61, .16)' },
+  waitlist: { label: 'Na lista de espera', color: '#d6a5ff', background: 'rgba(160, 83, 211, .17)' },
+  pending: { label: 'Pendente', color: '#d7b66f', background: 'rgba(196, 145, 51, .16)' },
 };
 
-export default IssuedTickets;
+function normalizeStatus(guest: Guest): GuestStatus {
+  if (guest.used) return 'checkedin';
+  const status = String(guest.guestStatus || guest.status || '').toUpperCase();
+  if (status === 'CONFIRMED' || status === 'ISSUED' || status === 'ACTIVE') return 'confirmed';
+  if (status === 'DECLINED' || status === 'CANCELED' || status === 'NOT_GOING') return 'declined';
+  if (status.includes('WAIT')) return 'waitlist';
+  if (status === 'PENDING') return 'pending';
+  return 'invited';
+}
+
+function guestName(guest: Guest) {
+  return String(guest.userName || '').trim() || 'Anônimo';
+}
+
+function GuestAvatar({ guest }: { guest: Guest }) {
+  if (guest.avatarUrl) return <img src={guest.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />;
+  const hue = Array.from(guest.userEmail || guest.id).reduce((sum, character) => sum + character.charCodeAt(0), 0) % 360;
+  return <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[9px] font-bold text-white" style={{ background: `linear-gradient(145deg, hsl(${hue} 55% 67%), hsl(${(hue + 26) % 360} 52% 42%))` }}>{guestName(guest).slice(0, 2).toUpperCase()}</span>;
+}
+
+export default function IssuedTickets() {
+  const { eventId = '' } = useParams<{ eventId: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [event, setEvent] = React.useState<EventSummary | null>(null);
+  const [guests, setGuests] = React.useState<Guest[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState('');
+  const [filter, setFilter] = React.useState<'all' | GuestStatus>('all');
+  const [sort, setSort] = React.useState<'created' | 'name' | 'email' | 'status'>('created');
+  const [filterOpen, setFilterOpen] = React.useState(false);
+  const [sortOpen, setSortOpen] = React.useState(false);
+  const [actionsOpen, setActionsOpen] = React.useState(false);
+  const [selected, setSelected] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (!eventId) return;
+    let active = true;
+    Promise.all([
+      fetchApi(`/api/event/${eventId}`).then(async response => response.ok ? response.json() : null),
+      fetchApi(`/api/ticket/event/${eventId}/tickets?limit=2000`).then(async response => {
+        if (!response.ok) throw new Error((await response.json().catch(() => null))?.message || 'Não foi possível carregar os convidados.');
+        return response.json();
+      }),
+    ]).then(([eventData, guestData]) => {
+      if (!active) return;
+      setEvent(eventData ? { id: eventData.id, name: eventData.name || eventData.title || 'Evento' } : null);
+      setGuests(Array.isArray(guestData?.tickets) ? guestData.tickets : []);
+    }).catch((error: unknown) => {
+      if (!active) return;
+      toast({ title: 'Erro ao carregar a tabela', description: error instanceof Error ? error.message : 'Tente novamente.', variant: 'destructive' });
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [eventId, toast]);
+
+  const visibleGuests = React.useMemo(() => {
+    const term = search.trim().toLocaleLowerCase('pt-BR');
+    return guests
+      .filter(guest => filter === 'all' || normalizeStatus(guest) === filter)
+      .filter(guest => !term || `${guest.userName || ''} ${guest.userEmail} ${guest.ticketTypeName || ''}`.toLocaleLowerCase('pt-BR').includes(term))
+      .sort((a, b) => {
+        if (sort === 'name') return guestName(a).localeCompare(guestName(b), 'pt-BR');
+        if (sort === 'email') return a.userEmail.localeCompare(b.userEmail, 'pt-BR');
+        if (sort === 'status') return statusInfo[normalizeStatus(a)].label.localeCompare(statusInfo[normalizeStatus(b)].label, 'pt-BR');
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [filter, guests, search, sort]);
+
+  const allVisibleSelected = visibleGuests.length > 0 && visibleGuests.every(guest => selected.includes(guest.id));
+  const toggleAll = () => setSelected(current => allVisibleSelected
+    ? current.filter(id => !visibleGuests.some(guest => guest.id === id))
+    : Array.from(new Set([...current, ...visibleGuests.map(guest => guest.id)])));
+
+  const exportCsv = () => {
+    const selectedSet = new Set(selected);
+    const source = selected.length ? guests.filter(guest => selectedSet.has(guest.id)) : visibleGuests;
+    const rows = [['Convidado', 'Email', 'Status', 'Ingresso', 'Cadastrado'], ...source.map(guest => [guestName(guest), guest.userEmail, statusInfo[normalizeStatus(guest)].label, guest.ticketTypeName, new Date(guest.createdAt).toLocaleString('pt-BR')])];
+    const csv = '\ufeff' + rows.map(row => row.map(value => `"${String(value || '').replace(/"/g, '""')}"`).join(';')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `convidados-${event?.name || eventId}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setActionsOpen(false);
+  };
+
+  return <main className="min-h-screen bg-[#151616] text-white">
+    <header className="flex min-h-[84px] items-start justify-between px-4 pb-3 pt-3 sm:px-6">
+      <div className="flex min-w-0 items-center gap-3"><button type="button" aria-label="Voltar" onClick={() => navigate(`/event/manage/${eventId}/guests`)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/[.08] text-white/[.55] hover:text-white sm:hidden"><ArrowLeft size={17} /></button><h1 className="truncate text-[20px] font-semibold tracking-[-.02em] text-white/[.94]">{event?.name || 'Convidados'}</h1></div>
+      <button type="button" aria-label="Configurações dos convidados" onClick={() => navigate(`/event/manage/${eventId}/guests`)} className="grid h-8 w-8 place-items-center rounded-lg bg-white/[.09] text-white/[.6] hover:bg-white/[.14] hover:text-white"><Settings size={16} /></button>
+    </header>
+
+    <section className="px-4 pb-3 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <DropdownButton label={filter === 'all' ? 'Todos os Convidados' : statusInfo[filter].label} icon={<Filter size={15} />} open={filterOpen} onClick={() => { setFilterOpen(value => !value); setSortOpen(false); setActionsOpen(false); }}>
+            {(['all', 'confirmed', 'invited', 'declined', 'pending', 'waitlist', 'checkedin'] as const).map(value => <MenuButton key={value} checked={filter === value} onClick={() => { setFilter(value); setFilterOpen(false); }}>{value === 'all' ? 'Todos os Convidados' : statusInfo[value].label}</MenuButton>)}
+          </DropdownButton>
+          <DropdownButton label={{ created: 'Hora de Cadastro', name: 'Nome', email: 'E-mail', status: 'Status' }[sort]} icon={<SlidersHorizontal size={15} />} open={sortOpen} onClick={() => { setSortOpen(value => !value); setFilterOpen(false); setActionsOpen(false); }}>
+            {([['created', 'Hora de Cadastro'], ['name', 'Nome'], ['email', 'E-mail'], ['status', 'Status']] as const).map(([value, label]) => <MenuButton key={value} checked={sort === value} onClick={() => { setSort(value); setSortOpen(false); }}>{label}</MenuButton>)}
+          </DropdownButton>
+        </div>
+        <DropdownButton align="right" label={selected.length ? `Ações (${selected.length})` : 'Ações'} icon={<MoreHorizontal size={15} />} open={actionsOpen} onClick={() => { setActionsOpen(value => !value); setFilterOpen(false); setSortOpen(false); }}>
+          <button type="button" onClick={exportCsv} className="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-semibold text-white/[.86] hover:bg-white/[.08]"><Download size={15} />Baixar CSV{selected.length ? ' selecionado' : ''}</button>
+          <button type="button" onClick={() => navigate(`/event/manage/${eventId}/guests`)} className="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-semibold text-white/[.86] hover:bg-white/[.08]"><ArrowLeft size={15} />Voltar ao evento</button>
+        </DropdownButton>
+      </div>
+      <label className="mt-3 flex h-9 max-w-[420px] items-center gap-2 rounded-lg border border-white/[.09] bg-white/[.055] px-3 text-white/[.4] focus-within:border-white/[.22]"><Search size={16} /><input value={search} onChange={inputEvent => setSearch(inputEvent.target.value)} placeholder="Buscar convidados" className="h-full min-w-0 flex-1 border-0 bg-transparent text-[14px] text-white outline-none placeholder:text-white/[.32]" />{search && <button type="button" aria-label="Limpar busca" onClick={() => setSearch('')}><X size={15} /></button>}</label>
+    </section>
+
+    <div className="overflow-x-auto border-t border-white/[.1]">
+      <table className="w-full min-w-[620px] border-collapse text-left">
+        <thead><tr className="h-9 border-b border-white/[.1] text-[12px] font-semibold text-white/[.72]"><th className="w-11 border-r border-white/[.1] px-3"><SelectionBox checked={allVisibleSelected} label="Selecionar todos" onClick={toggleAll} /></th><th className="border-r border-white/[.1] px-4">Convidado</th><th className="w-[210px] border-r border-white/[.1] px-4">Status</th><th className="w-[180px] px-4">Cadastrado</th></tr></thead>
+        <tbody>
+          {loading ? <tr><td colSpan={4} className="h-32 text-center text-[14px] text-white/[.42]">Carregando convidados…</td></tr> : visibleGuests.length ? visibleGuests.map(guest => {
+            const info = statusInfo[normalizeStatus(guest)];
+            const checked = selected.includes(guest.id);
+            return <tr key={guest.id} className={`h-[58px] border-b border-white/[.1] transition hover:bg-white/[.04] ${checked ? 'bg-white/[.035]' : ''}`}>
+              <td className="border-r border-white/[.1] px-3"><SelectionBox checked={checked} label={`Selecionar ${guest.userEmail}`} onClick={() => setSelected(current => checked ? current.filter(id => id !== guest.id) : [...current, guest.id])} /></td>
+              <td className="border-r border-white/[.1] px-4"><div className="flex min-w-0 items-center gap-3"><GuestAvatar guest={guest} /><div className="min-w-0"><strong className="block truncate text-[14px] font-semibold text-white/[.9]">{guestName(guest)}</strong><span className="block max-w-[360px] truncate text-[12px] text-white/[.54]">{guest.userEmail || 'E-mail não informado'}</span></div></div></td>
+              <td className="border-r border-white/[.1] px-4"><span className="inline-flex rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ color: info.color, background: info.background }}>{info.label}</span></td>
+              <td className="px-4 text-[13px] font-medium text-white/[.54]">{new Date(guest.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+            </tr>;
+          }) : <tr><td colSpan={4} className="h-44 text-center"><UsersRound size={30} className="mx-auto text-white/[.24]" /><p className="mt-2 text-[14px] font-semibold text-white/[.5]">Nenhum convidado encontrado</p></td></tr>}
+        </tbody>
+      </table>
+    </div>
+  </main>;
+}
+
+function SelectionBox({ checked, label, onClick }: { checked: boolean; label: string; onClick: () => void }) {
+  return <button type="button" aria-label={label} onClick={onClick} className={`grid h-5 w-5 place-items-center rounded-[5px] border ${checked ? 'border-white bg-white text-[#171818]' : 'border-white/[.2]'}`}>{checked && <Check size={13} strokeWidth={3} />}</button>;
+}
+
+function DropdownButton({ label, icon, open, onClick, children, align = 'left' }: { label: string; icon: React.ReactNode; open: boolean; onClick: () => void; children: React.ReactNode; align?: 'left' | 'right' }) {
+  return <div className="relative"><button type="button" onClick={onClick} className="flex h-8 items-center gap-2 rounded-lg bg-white/[.1] px-3 text-[13px] font-semibold text-white/[.68] hover:text-white">{icon}{label}<ChevronDown size={14} /></button><AnimatePresence>{open && <motion.div initial={{ opacity: 0, y: -4, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -3, scale: .98 }} className={`absolute top-[calc(100%+6px)] z-30 w-[220px] rounded-lg border border-white/[.1] bg-[#272828] p-1.5 shadow-2xl ${align === 'right' ? 'right-0' : 'left-0'}`}>{children}</motion.div>}</AnimatePresence></div>;
+}
+
+function MenuButton({ checked, onClick, children }: { checked: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} className="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-semibold text-white/[.86] hover:bg-white/[.08]"><span className="w-4">{checked && <Check size={14} />}</span>{children}</button>;
+}

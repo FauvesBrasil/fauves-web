@@ -30,7 +30,7 @@ import ImagePickerModalV2, { PRESET_IMAGES } from "@/components/v2/ImagePickerMo
 import MinimalThemeImg from "@/assets/minimal.jpg";
 import DescriptionModalV2 from "@/components/v2/DescriptionModalV2";
 import AISuggestionModal from "@/components/v2/AISuggestionModal";
-import { LuxLocationPicker } from "@/components/v2/LuxLocationPicker";
+import { LuxLocationPicker, type LocationData } from "@/components/v2/LuxLocationPicker";
 import { LuxDatePicker } from '../components/v2/LuxDatePicker';
 import { LuxTimePicker } from '../components/v2/LuxTimePicker';
 import TicketPriceModal from "@/components/v2/TicketPriceModal";
@@ -92,7 +92,7 @@ export default function CreateEventV2() {
     const [startTime, setStartTime] = useState("19:00");
     const [endDate, setEndDate] = useState("");
     const [endTime, setEndTime] = useState("22:00");
-    const [locationData, setLocationData] = useState<{ type: string; address?: string; url?: string }>({ type: "" });
+    const [locationData, setLocationData] = useState<LocationData>({ type: "" });
     const [description, setDescription] = useState("");
     const [coverImage, setCoverImage] = useState<string | null>(() => {
         const randomIndex = Math.floor(Math.random() * PRESET_IMAGES.length);
@@ -1652,7 +1652,14 @@ export default function CreateEventV2() {
                 timezone: selectedTimezone.name,
                 organizationId: selectedOrgId,
                 image: coverImage,
-                location: locationData.type === 'Virtual' ? locationData.url : locationData.address,
+                location: locationData.type === 'Virtual' ? 'Evento online' : 'Local',
+                locationName: locationData.type === 'Local' ? locationData.name : null,
+                locationAddress: locationData.type === 'Local' ? locationData.address : null,
+                locationCity: locationData.type === 'Local' ? locationData.city : null,
+                locationUf: locationData.type === 'Local' ? locationData.uf : null,
+                locationLatitude: locationData.type === 'Local' ? locationData.latitude : null,
+                locationLongitude: locationData.type === 'Local' ? locationData.longitude : null,
+                onlineUrl: locationData.type === 'Virtual' ? locationData.url : null,
                 isFree: isFree,
                 requireApproval: requireApproval,
                 capacity: capacity,
