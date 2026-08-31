@@ -76,6 +76,7 @@ import Notifications from './pages/Notifications';
 import PricingPage from './pages/PricingPage';
 import CalendarEmbed from './pages/CalendarEmbed';
 import ConnectionStatusToast from '@/components/ConnectionStatusToast';
+import ChatwootController from '@/components/ChatwootController';
 import { resetDocumentScrollLocks } from '@/lib/documentScrollLock';
 
 // Lazy-loaded admin pages (only load when accessed)
@@ -369,7 +370,7 @@ const AppInner = () => {
         toName={selectedOrg?.name || ''}
       />
       <LoginWelcomeOverlay />
-      {/* Atendimento via chat desativado. O componente permanece no projeto como legado. */}
+      <ChatwootController />
 
       <AuthModalWrapper />
     </>
