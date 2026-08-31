@@ -12,6 +12,8 @@
   <link rel="dns-prefetch" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fauves-backend-production.up.railway.app">
   <link rel="dns-prefetch" href="https://fauves-backend-production.up.railway.app">
+  <link rel="preconnect" href="https://chat.manyways.com.br" crossorigin>
+  <link rel="dns-prefetch" href="https://chat.manyways.com.br">
 
   <!-- Google Fonts: Inter, DM Sans, Lora, Playfair Display, Space Mono, Syne, and Comic Neue -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
@@ -111,6 +113,36 @@
   </div>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+
+  <!-- Atendimento Fauves via Chatwoot/Manyways -->
+  <script>
+    (function (document, tagName) {
+      var baseUrl = 'https://chat.manyways.com.br';
+      var websiteToken = 'xPCqgQSZ2J7sVf6w1tMc2vyi';
+
+      if (document.querySelector('script[data-fauves-chatwoot]')) return;
+
+      var sdk = document.createElement(tagName);
+      var firstScript = document.getElementsByTagName(tagName)[0];
+      sdk.src = baseUrl + '/packs/js/sdk.js';
+      sdk.async = true;
+      sdk.dataset.fauvesChatwoot = 'true';
+
+      sdk.onload = function () {
+        if (!window.chatwootSDK || window.$chatwoot) return;
+        window.chatwootSDK.run({
+          websiteToken: websiteToken,
+          baseUrl: baseUrl
+        });
+      };
+
+      sdk.onerror = function () {
+        console.error('[Fauves Chat] Não foi possível carregar o atendimento.');
+      };
+
+      firstScript.parentNode.insertBefore(sdk, firstScript);
+    })(document, 'script');
+  </script>
 
   <style>
     /* Minimal, inline styles so splash appears before CSS bundles */
