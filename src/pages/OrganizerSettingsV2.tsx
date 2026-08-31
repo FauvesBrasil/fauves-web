@@ -3233,7 +3233,7 @@ export default function OrganizerSettingsV2() {
 
                       {/* Excluir Calendário Permanentemente Button */}
                       <div className="pt-2 flex justify-start">
-                        <button className="text-red-500 hover:text-red-400 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border-0 bg-transparent">
+                        <button type="button" onClick={() => setEditModal('delete')} className="text-red-500 hover:text-red-400 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border-0 bg-transparent">
                           <Trash2 size={14} />
                           <span>Excluir Calendário Permanentemente</span>
                         </button>
@@ -4528,13 +4528,29 @@ export default function OrganizerSettingsV2() {
                   <DialogFooter>
                      <Button variant="outline" className="border-zinc-800 text-zinc-300 hover:bg-[#252830]" onClick={() => setEditModal(null)}>Cancelar</Button>
                      <Button variant="destructive" onClick={async () => {
+                        const deleteTargetId = targetOrganizationId || org?.id || selectedOrg?.id;
+                        if (!deleteTargetId) {
+                          toast({ variant: 'destructive', title: 'Falha', description: 'Identificador do calendário não encontrado' });
+                          return;
+                        }
                         setSaving(true);
                         try {
-                           await fetchApi(`/api/organization/${selectedOrg.id}`, { method: 'DELETE' });
-                           toast({ title: 'Excluído' });
-                           window.location.reload();
-                        } catch { 
-                          toast({ variant:'destructive', title: 'Falha' }); 
+                           const res = await fetchApi(`/api/organization/${deleteTargetId}`, { method: 'DELETE' });
+                           if (!res.ok) {
+                             const errData = await res.json().catch(() => ({}));
+                             throw new Error(errData?.message || 'Falha ao excluir organização');
+                           }
+                           setEditModal(null);
+                           try {
+                             if (localStorage.getItem('selectedOrgId') === deleteTargetId) {
+                               localStorage.removeItem('selectedOrgId');
+                             }
+                           } catch (_) {}
+                           toast({ title: 'Calendário excluído com sucesso' });
+                           await refreshOrganizations();
+                           navigate('/organizations', { replace: true });
+                        } catch (err: any) { 
+                          toast({ variant:'destructive', title: 'Falha ao excluir calendário', description: err?.message || 'Tente novamente.' }); 
                         } finally { 
                           setSaving(false); 
                         }
