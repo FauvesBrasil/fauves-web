@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowRight,
@@ -13,6 +13,11 @@ import {
   Search,
   Trophy,
   Users,
+  Check,
+  ChevronDown,
+  ExternalLink,
+  MapPin,
+  X,
 } from 'lucide-react';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import FooterV2 from '@/components/v2/FooterV2';
@@ -46,6 +51,9 @@ type CategoryEvent = {
   locationLongitude?: number | null;
   locationCity?: string | null;
   locationUf?: string | null;
+  isExternal?: boolean;
+  externalUrl?: string | null;
+  externalLink?: string | null;
 };
 
 type Organization = {
@@ -130,11 +138,23 @@ const EventsByCategory: React.FC = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const cityFromUrl = searchParams.get('cidade') || '';
+  const [selectedCity, setSelectedCity] = useState<string>(cityFromUrl || 'Todas as cidades');
+  const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+  const [citySearchTerm, setCitySearchTerm] = useState('');
 
+  useEffect(() => {
+    if (cityFromUrl && cityFromUrl !== selectedCity) {
+      setSelectedCity(cityFromUrl);
+    }
+  }, [cityFromUrl]);
+
+  const cityTitleSuffix = selectedCity && selectedCity !== 'Todas as cidades' ? ` em ${selectedCity}` : '';
   useSEO({
-    title: category ? `${category.name} · Fauves` : 'Eventos por categoria · Fauves',
-    description: category?.description || undefined,
-    url: categorySlug ? `/eventos/${categorySlug}` : undefined,
+    title: category ? `${category.name}${cityTitleSuffix} · Fauves` : 'Eventos por categoria · Fauves',
+    description: category?.description ? (selectedCity && selectedCity !== 'Todas as cidades' ? `${category.description} Confira eventos em ${selectedCity}.` : category.description) : undefined,
+    url: categorySlug ? `/eventos/${categorySlug}${selectedCity && selectedCity !== 'Todas as cidades' ? `?cidade=${encodeURIComponent(selectedCity)}` : ''}` : undefined,
   });
 
   useEffect(() => {
@@ -192,7 +212,7 @@ const EventsByCategory: React.FC = () => {
 
         setEvents(
           publicEvents
-            .filter((event) => categoryEventIds.has(event.id))
+            .filter((event) => categoryEventIds.has(event.id) || (event as any).category?.toLowerCase() === matchedCategory.name.toLowerCase() || (event as any).category === categorySlug)
             .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
         );
       } catch (error) {
@@ -206,10 +226,32 @@ const EventsByCategory: React.FC = () => {
     void load();
   }, [categorySlug]);
 
+  const availableCities = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach((e) => {
+      if (e.locationCity && e.locationCity.trim()) {
+        set.add(e.locationCity.trim());
+      }
+    });
+    ['Fortaleza', 'São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Brasília', 'Curitiba', 'Salvador', 'Recife'].forEach((c) => set.add(c));
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [events]);
+
+  const filteredEvents = useMemo(() => {
+    if (!selectedCity || selectedCity === 'Todas as cidades') return events;
+    const norm = normalize(selectedCity);
+    return events.filter((e) => {
+      const c = normalize(e.locationCity);
+      const u = normalize(e.locationUf);
+      const a = normalize(e.locationAddress || e.location);
+      return (c && (c.includes(norm) || norm.includes(c))) || (u && (u === norm || norm.includes(u))) || (a && a.includes(norm));
+    });
+  }, [events, selectedCity]);
+
   const monthGroups = useMemo<MonthGroup[]>(() => {
     const groups = new Map<string, MonthGroup>();
 
-    events.forEach((event) => {
+    filteredEvents.forEach((event) => {
       const date = new Date(event.startDate);
       if (Number.isNaN(date.getTime())) return;
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -220,15 +262,15 @@ const EventsByCategory: React.FC = () => {
     });
 
     return Array.from(groups.values());
-  }, [events]);
+  }, [filteredEvents]);
 
   const Icon = categoryIcon(category);
   const accent = categoryColor(category);
   const categoryImage = resolveImageUrl(category?.imageUrl);
-  const categoryMapLocations = useMemo(() => events.map((event) => {
+  const categoryMapLocations = useMemo(() => filteredEvents.map((event) => {
     const coordinates = resolveEventCoordinates(event);
     return { id: event.id, lat: coordinates.lat ?? Number.NaN, lng: coordinates.lng ?? Number.NaN };
-  }).filter((location) => Number.isFinite(location.lat) && Number.isFinite(location.lng)), [events]);
+  }).filter((location) => Number.isFinite(location.lat) && Number.isFinite(location.lng)), [filteredEvents]);
 
   if (loading) {
     return (
@@ -257,9 +299,24 @@ const EventsByCategory: React.FC = () => {
       <main className="category-container" data-header-align>
         <section className="category-hero">
           <div className="category-hero-copy">
-            <h1>{category.name}</h1>
+            <h1 className="category-hero-title">
+              <span>{category.name}</span>
+              <span className="category-title-sep"> em </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setCitySearchTerm('');
+                  setIsCityModalOpen(true);
+                }}
+                className="category-inline-city-btn"
+                title="Trocar de cidade"
+              >
+                <span>{selectedCity}</span>
+                <ChevronDown size={22} className="category-inline-city-chevron" />
+              </button>
+            </h1>
             <div className="category-stats">
-              <span><CalendarDays size={16} />{formatNumber(events.length)} {events.length === 1 ? 'Evento' : 'Eventos'}</span>
+              <span><CalendarDays size={16} />{formatNumber(filteredEvents.length)} {filteredEvents.length === 1 ? 'Evento' : 'Eventos'}</span>
               <span><Users size={16} />{formatNumber(category.subscriberCount || 0)} {(category.subscriberCount || 0) === 1 ? 'Assinante' : 'Assinantes'}</span>
             </div>
             {category.description && <p className="category-description">{category.description}</p>}
@@ -287,6 +344,38 @@ const EventsByCategory: React.FC = () => {
                   </div>
                   {group.events.map((event) => {
                     const image = resolveImageUrl(event.image);
+                    const isExt = Boolean(event.isExternal || event.externalUrl || event.externalLink);
+                    const extUrl = event.externalUrl || event.externalLink;
+
+                    if (isExt && extUrl) {
+                      return (
+                        <a
+                          className="category-event-row category-event-row-external"
+                          href={extUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          key={event.id}
+                        >
+                          <span className="category-event-image">
+                            {image ? <img src={image} alt="" /> : <CalendarDays size={21} />}
+                          </span>
+                          <span className="category-event-copy">
+                            <span className="category-event-title-wrap">
+                              <strong>{event.name}</strong>
+                              <span className="category-external-badge">
+                                <ExternalLink size={11} /> Bilheteria
+                              </span>
+                            </span>
+                          </span>
+                          <span className="category-event-meta">
+                            <span>{eventLocation(event)}</span>
+                            <time>{formatEventRange(event)}</time>
+                            <ArrowRight size={15} />
+                          </span>
+                        </a>
+                      );
+                    }
+
                     return (
                       <Link className="category-event-row" to={`/${event.slug || event.id}`} key={event.id}>
                         <span className="category-event-image">
@@ -358,6 +447,71 @@ const EventsByCategory: React.FC = () => {
         </section>
       </main>
 
+      {isCityModalOpen && (
+        <div className="category-city-modal-overlay" onClick={() => setIsCityModalOpen(false)}>
+          <div className="category-city-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="category-city-modal-header">
+              <div className="category-city-modal-title">
+                <MapPin size={18} style={{ color: accent }} />
+                <h3>Selecione a cidade</h3>
+              </div>
+              <button
+                type="button"
+                className="category-city-modal-close"
+                onClick={() => setIsCityModalOpen(false)}
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="category-city-modal-search">
+              <Search size={16} />
+              <input
+                type="text"
+                placeholder="Buscar cidade..."
+                value={citySearchTerm}
+                onChange={(e) => setCitySearchTerm(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div className="category-city-modal-list">
+              <button
+                type="button"
+                className={`category-city-option ${selectedCity === 'Todas as cidades' ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedCity('Todas as cidades');
+                  setSearchParams({});
+                  setIsCityModalOpen(false);
+                }}
+              >
+                <span>🌐 Todas as cidades</span>
+                {selectedCity === 'Todas as cidades' && <Check size={16} />}
+              </button>
+
+              {availableCities
+                .filter((c) => normalize(c).includes(normalize(citySearchTerm)))
+                .map((city) => (
+                  <button
+                    key={city}
+                    type="button"
+                    className={`category-city-option ${selectedCity === city ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedCity(city);
+                      setSearchParams({ cidade: city });
+                      setIsCityModalOpen(false);
+                    }}
+                  >
+                    <span>{city}</span>
+                    {selectedCity === city && <Check size={16} />}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <FooterV2 maxWidth="960px" />
       <style>{categoryStyles}</style>
     </div>
@@ -391,6 +545,210 @@ const categoryStyles = `
     align-items: center;
     gap: 80px;
     padding-bottom: 72px;
+  }
+
+
+  .category-hero-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 18px;
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1.15;
+  }
+
+  .category-title-sep {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 400;
+  }
+
+  .category-inline-city-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: var(--category-accent, #f7c928);
+    font: inherit;
+    font-size: 0.85em;
+    font-weight: 700;
+    padding: 4px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: all 0.2s ease;
+  }
+
+  .category-inline-city-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .category-inline-city-chevron {
+    transition: transform 0.2s;
+    opacity: 0.8;
+  }
+
+  .category-inline-city-btn:hover .category-inline-city-chevron {
+    opacity: 1;
+    transform: translateY(1px);
+  }
+
+  .category-city-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: categoryModalFadeIn 0.18s ease-out;
+  }
+
+  @keyframes categoryModalFadeIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .category-city-modal {
+    background: #181a1d;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 420px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  }
+
+  .category-city-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .category-city-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff;
+  }
+
+  .category-city-modal-title h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .category-city-modal-close {
+    background: rgba(255, 255, 255, 0.07);
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .category-city-modal-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+
+  .category-city-modal-search {
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .category-city-modal-search input {
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+
+  .category-city-modal-search input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .category-city-modal-list {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .category-city-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+
+  .category-city-option:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .category-city-option.active {
+    background: color-mix(in srgb, var(--category-accent, #f7c928) 20%, transparent);
+    color: var(--category-accent, #f7c928);
+    font-weight: 700;
+  }
+
+  .category-event-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .category-external-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    padding: 2px 7px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+    vertical-align: middle;
   }
 
   .category-hero-copy h1 {
