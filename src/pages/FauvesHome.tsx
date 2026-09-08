@@ -713,8 +713,8 @@ const FauvesHome = () => {
         }
 
         @media (max-width: 820px) {
-          .home-hero { min-height: 820px; }
-          .home-hero-copy { top: 48%; width: min(90vw, 640px); }
+          .home-hero { min-height: 860px; }
+          .home-hero-copy { top: 46%; width: min(90vw, 640px); }
           .home-hero-copy h1 { font-size: clamp(3rem, 9vw, 4.8rem); }
           .home-hero-copy h1 span { white-space: normal; }
           .home-poster-slot { transform: scale(.78) translate3d(calc(var(--hero-shift-x) * var(--depth)), calc(var(--hero-shift-y) * var(--depth)), 0); }
@@ -722,26 +722,50 @@ const FauvesHome = () => {
           .home-poster-slot:nth-child(4),
           .home-poster-slot:nth-child(10),
           .home-poster-slot:nth-child(12) { display: none; }
-          .home-calendar-grid,
+          .home-calendar-grid {
+            grid-template-columns: none;
+            grid-auto-columns: min(72vw, 280px);
+            grid-auto-flow: column;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            overscroll-behavior-inline: contain;
+          }
+          .home-calendar-grid::-webkit-scrollbar { display: none; }
+          .home-calendar-card { scroll-snap-align: start; }
           .home-category-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
           .home-explore { padding-top: 130px; }
         }
 
         @media (max-width: 560px) {
-          .home-hero { min-height: 760px; }
+          .home-hero { min-height: 920px; }
           .home-theme-orb { width: 145vw; }
-          .home-hero-copy { top: 48%; }
+          .home-hero-copy { top: 43%; width: min(90vw, 390px); }
           .home-wordmark { width: 82px; margin-bottom: 18px; }
-          .home-hero-copy h1 { font-size: clamp(2.65rem, 13vw, 4rem); line-height: .97; }
+          .home-hero-copy h1 { font-size: clamp(2.4rem, 12vw, 3.45rem); line-height: .97; }
+          .home-hero-copy h1 strong { white-space: nowrap; }
           .home-hero-copy > p { max-width: 355px; margin-top: 24px; padding: 0 8px; font-size: .91rem; }
-          .home-poster-slot { transform: scale(.62); }
-          .home-poster-slot:nth-child(n+7) { display: none; }
-          .home-poster-slot:nth-child(1) { left: -32px !important; top: 92px !important; }
-          .home-poster-slot:nth-child(6) { right: -36px !important; top: 116px !important; }
-          .home-explore { width: min(100% - 28px, 960px); margin: 0 auto 100px; padding-top: 110px; }
+          .home-hero-actions { margin-top: 26px; }
+          .home-poster-slot { top: auto !important; transform: none; }
+          .home-poster-slot:nth-child(-n+5) { display: block; }
+          .home-poster-slot:nth-child(n+6) { display: none; }
+          .home-poster-slot:nth-child(1) { left: -42px !important; right: auto !important; bottom: -38px !important; width: 148px !important; }
+          .home-poster-slot:nth-child(2) { left: 25% !important; right: auto !important; bottom: 82px !important; width: 156px !important; }
+          .home-poster-slot:nth-child(3) { left: auto !important; right: -45px !important; bottom: 48px !important; width: 150px !important; }
+          .home-poster-slot:nth-child(4) { left: 8% !important; right: auto !important; bottom: -142px !important; width: 158px !important; }
+          .home-poster-slot:nth-child(5) { left: auto !important; right: 2% !important; bottom: -154px !important; width: 166px !important; }
+          .home-explore { width: min(100% - 28px, 960px); margin: 0 auto 100px; padding-top: 245px; }
+          .home-explore::before { height: 330px; }
           .home-explore-block + .home-explore-block { margin-top: 68px; }
           .home-section-heading > a { display: none; }
-          .home-calendar-grid,
+          .home-calendar-grid {
+            width: calc(100% + 28px);
+            grid-auto-columns: min(78vw, 280px);
+            gap: 10px;
+            margin-inline: -14px;
+            padding-inline: 14px;
+          }
           .home-category-grid { gap: 10px; }
           .home-calendar-card { min-height: 148px; padding: 14px; }
           .home-category-card { min-height: 100px; padding: 14px; }
