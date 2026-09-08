@@ -85,14 +85,21 @@ const WebGLParticleField = ({ className = '', mode = 'hero', active = false }: W
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const count = mode === 'footer' ? 920 : 460;
-    const renderer = new Renderer({
-      canvas,
-      alpha: true,
-      antialias: false,
-      depth: false,
-      dpr: Math.min(window.devicePixelRatio || 1, 1.7),
-      powerPreference: 'high-performance',
-    });
+    let renderer: Renderer;
+
+    try {
+      renderer = new Renderer({
+        canvas,
+        alpha: true,
+        antialias: false,
+        depth: false,
+        dpr: Math.min(window.devicePixelRatio || 1, 1.7),
+        powerPreference: 'high-performance',
+      });
+    } catch {
+      return undefined;
+    }
+
     const { gl } = renderer;
     gl.clearColor(0, 0, 0, 0);
 

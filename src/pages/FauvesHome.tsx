@@ -306,9 +306,16 @@ const FauvesHome = () => {
 
               return (
                 <div className="home-poster-slot" style={style} key={`${eventId || 'fallback'}-${index}`}>
-                  <Link className="home-poster" to={href} tabIndex={-1}>
-                    <img src={eventImage(event, fallback)} alt="" loading={index < 8 ? 'eager' : 'lazy'} />
-                  </Link>
+                  <motion.div
+                    className="home-poster-entry"
+                    initial={{ opacity: 0, scale: 0.72, y: 24, filter: 'blur(8px)' }}
+                    animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+                    transition={{ duration: 0.65, delay: 0.18 + index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <Link className="home-poster" to={href} tabIndex={-1}>
+                      <img src={eventImage(event, fallback)} alt="" loading={index < 8 ? 'eager' : 'lazy'} />
+                    </Link>
+                  </motion.div>
                 </div>
               );
             })}
@@ -322,8 +329,7 @@ const FauvesHome = () => {
           >
             <img className="home-wordmark" src={fauvesLogo} alt="Fauves" />
             <h1>
-              <span>Eventos que deixam</span>
-              <span>marca</span>
+              <span>Eventos que deixam marca</span>
               <strong>começam aqui.</strong>
             </h1>
             <p>
@@ -439,6 +445,7 @@ const FauvesHome = () => {
           --cta-gradient-end: #ff6635;
           background: #141516;
           font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          overflow-x: clip;
         }
 
         .home-hero {
@@ -448,7 +455,7 @@ const FauvesHome = () => {
           --hero-shift-y: 0px;
           position: relative;
           min-height: max(760px, 100svh);
-          overflow: hidden;
+          overflow: visible;
           isolation: isolate;
           background: #141516;
         }
@@ -527,6 +534,8 @@ const FauvesHome = () => {
           transition: transform 180ms ease-out;
         }
 
+        .home-poster-entry { width: 100%; height: 100%; }
+
         .home-poster {
           display: block;
           width: 100%;
@@ -555,15 +564,16 @@ const FauvesHome = () => {
           z-index: 4;
           left: 50%;
           top: 50%;
-          width: min(92vw, 600px);
+          width: min(92vw, 760px);
           translate: -50% -48%;
           text-align: center;
         }
 
         .home-wordmark { width: 96px; height: auto; margin: 0 auto 22px; filter: brightness(0) invert(1); opacity: .56; }
-        .home-hero-copy h1 { margin: 0; font-size: clamp(3.25rem, 5.3vw, 5.4rem); font-weight: 500; line-height: .94; letter-spacing: -.06em; }
+        .home-hero-copy h1 { margin: 0; font-size: clamp(3.25rem, 5vw, 5.1rem); font-weight: 500; line-height: .94; letter-spacing: -.06em; }
         .home-hero-copy h1 span,
         .home-hero-copy h1 strong { display: block; }
+        .home-hero-copy h1 span { white-space: nowrap; }
         .home-hero-copy h1 strong {
           padding-bottom: .08em;
           font-weight: 650;
@@ -591,7 +601,20 @@ const FauvesHome = () => {
         .home-discover-link { display: inline-flex; align-items: center; gap: 7px; color: rgba(255,255,255,.54); font-size: .86rem; font-weight: 650; transition: color 160ms ease, gap 160ms ease; }
         .home-discover-link:hover { gap: 11px; color: #fff; }
 
-        .home-explore { width: min(100% - 40px, 960px); margin: 118px auto 150px; }
+        .home-explore { position: relative; isolation: isolate; width: min(100% - 40px, 960px); margin: 0 auto 150px; padding-top: 160px; }
+        .home-explore::before {
+          position: absolute;
+          z-index: 0;
+          left: 50%;
+          top: 0;
+          width: 100vw;
+          height: 240px;
+          translate: -50% 0;
+          content: '';
+          pointer-events: none;
+          background: linear-gradient(to bottom, rgba(20,21,22,0), rgba(20,21,22,.78) 50%, #141516 82%);
+        }
+        .home-explore-block { position: relative; z-index: 1; }
         .home-explore-block + .home-explore-block { margin-top: 94px; }
         .home-section-heading { position: relative; margin-bottom: 22px; }
         .home-section-heading > span { display: block; margin-bottom: 8px; color: #7a77ff; font-size: .7rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
@@ -611,7 +634,7 @@ const FauvesHome = () => {
           border-radius: 14px;
           background: rgba(255,255,255,.052);
           box-shadow: inset 0 1px rgba(255,255,255,.02);
-          transition: transform 230ms cubic-bezier(.16,1,.3,1), border-color 230ms ease, box-shadow 230ms ease;
+          transition: border-color 230ms ease, box-shadow 230ms ease;
         }
         .home-glow-card::after {
           position: absolute;
@@ -629,7 +652,7 @@ const FauvesHome = () => {
           transition: opacity 230ms ease;
         }
         .home-card-glow { position: absolute !important; z-index: -1 !important; inset: 0; background: radial-gradient(260px circle at var(--spot-x) var(--spot-y), color-mix(in srgb, var(--card-accent) 20%, transparent), transparent 70%); opacity: 0; transition: opacity 230ms ease; }
-        .home-glow-card:hover { z-index: 2; transform: translateY(-3px); border-color: color-mix(in srgb, var(--card-accent) 35%, rgba(255,255,255,.1)); box-shadow: 0 17px 42px rgba(0,0,0,.24); }
+        .home-glow-card:hover { z-index: 2; border-color: color-mix(in srgb, var(--card-accent) 35%, rgba(255,255,255,.1)); box-shadow: 0 17px 42px rgba(0,0,0,.24); }
         .home-glow-card:hover::after,
         .home-glow-card:hover .home-card-glow { opacity: 1; }
         .home-glow-card:focus-visible { outline: 2px solid var(--card-accent); outline-offset: 3px; }
@@ -686,13 +709,14 @@ const FauvesHome = () => {
           .home-poster-slot:nth-child(5),
           .home-poster-slot:nth-child(9),
           .home-poster-slot:nth-child(11) { display: none; }
-          .home-hero-copy { width: min(86vw, 570px); }
+          .home-hero-copy { width: min(90vw, 700px); }
         }
 
         @media (max-width: 820px) {
           .home-hero { min-height: 820px; }
-          .home-hero-copy { top: 48%; width: min(88vw, 540px); }
+          .home-hero-copy { top: 48%; width: min(90vw, 640px); }
           .home-hero-copy h1 { font-size: clamp(3rem, 9vw, 4.8rem); }
+          .home-hero-copy h1 span { white-space: normal; }
           .home-poster-slot { transform: scale(.78) translate3d(calc(var(--hero-shift-x) * var(--depth)), calc(var(--hero-shift-y) * var(--depth)), 0); }
           .home-poster-slot:nth-child(3),
           .home-poster-slot:nth-child(4),
@@ -700,7 +724,7 @@ const FauvesHome = () => {
           .home-poster-slot:nth-child(12) { display: none; }
           .home-calendar-grid,
           .home-category-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
-          .home-explore { margin-top: 90px; }
+          .home-explore { padding-top: 130px; }
         }
 
         @media (max-width: 560px) {
@@ -714,7 +738,7 @@ const FauvesHome = () => {
           .home-poster-slot:nth-child(n+7) { display: none; }
           .home-poster-slot:nth-child(1) { left: -32px !important; top: 92px !important; }
           .home-poster-slot:nth-child(6) { right: -36px !important; top: 116px !important; }
-          .home-explore { width: min(100% - 28px, 960px); margin: 70px auto 100px; }
+          .home-explore { width: min(100% - 28px, 960px); margin: 0 auto 100px; padding-top: 110px; }
           .home-explore-block + .home-explore-block { margin-top: 68px; }
           .home-section-heading > a { display: none; }
           .home-calendar-grid,
