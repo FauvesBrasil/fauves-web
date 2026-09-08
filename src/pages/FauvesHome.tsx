@@ -34,7 +34,6 @@ import FooterV2 from '@/components/v2/FooterV2';
 import WebGLParticleField from '@/components/home/WebGLParticleField';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { getEventPath } from '@/lib/eventUrl';
-import fauvesLogo from '@/assets/logo-fauves.svg';
 import cover01 from '@/assets/covers/convites/e0d9e03b-63b3-452b-8899-3fc8f848a4bb.avif';
 import cover02 from '@/assets/covers/convites/f24cbc77-91df-4aa8-ab88-c073cbe98ba5.avif';
 import cover03 from '@/assets/covers/convites/2bd1bd20-c9c6-4df0-8bdd-66d155ce8641.avif';
@@ -275,6 +274,15 @@ const FauvesHome = () => {
         explorarText="Descobrir eventos"
       />
 
+      <header className="home-mobile-header" aria-label="Navegação principal">
+        <Link className="home-mobile-brand" to="/" aria-label="Fauves — página inicial">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M16 0c0 8.84-7.16 16-16 16 8.84 0 16 7.16 16 16 0-8.84 7.16-16 16-16C23.16 16 16 8.84 16 0Z" />
+          </svg>
+        </Link>
+        <Link className="home-mobile-login" to="/signin">Entrar</Link>
+      </header>
+
       <main>
         <section
           ref={heroRef}
@@ -327,7 +335,6 @@ const FauvesHome = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
           >
-            <img className="home-wordmark" src={fauvesLogo} alt="Fauves" />
             <h1>
               <span>Eventos que deixam marca</span>
               <strong>começam aqui.</strong>
@@ -359,7 +366,10 @@ const FauvesHome = () => {
           <div className="home-explore-block">
             <div className="home-section-heading">
               <span>Comunidades</span>
-              <h2>Calendários para acompanhar</h2>
+              <h2>
+                <span className="home-heading-desktop">Calendários para acompanhar</span>
+                <span className="home-heading-mobile">Explore comunidades</span>
+              </h2>
               <Link to="/organizations">Ver todos <ArrowUpRight size={14} /></Link>
             </div>
             <div className="home-calendar-grid">
@@ -447,6 +457,9 @@ const FauvesHome = () => {
           font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           overflow-x: clip;
         }
+
+        .home-mobile-header { display: none; }
+        .home-heading-mobile { display: none; }
 
         .home-hero {
           --orb-x: 50%;
@@ -569,7 +582,6 @@ const FauvesHome = () => {
           text-align: center;
         }
 
-        .home-wordmark { width: 96px; height: auto; margin: 0 auto 22px; filter: brightness(0) invert(1); opacity: .56; }
         .home-hero-copy h1 { margin: 0; font-size: clamp(3.25rem, 5vw, 5.1rem); font-weight: 500; line-height: .94; letter-spacing: -.06em; }
         .home-hero-copy h1 span,
         .home-hero-copy h1 strong { display: block; }
@@ -739,39 +751,124 @@ const FauvesHome = () => {
         }
 
         @media (max-width: 560px) {
-          .home-hero { min-height: 920px; }
+          .fauves-home > .luma-nav-v2 { display: none !important; }
+          .home-mobile-header {
+            position: absolute;
+            z-index: 20;
+            top: 0;
+            left: 0;
+            display: flex;
+            width: 100%;
+            min-height: calc(72px + env(safe-area-inset-top));
+            align-items: center;
+            justify-content: space-between;
+            padding: calc(18px + env(safe-area-inset-top)) 18px 10px;
+            pointer-events: none;
+          }
+          .home-mobile-header > * { pointer-events: auto; }
+          .home-mobile-brand {
+            display: grid;
+            width: 44px;
+            height: 44px;
+            place-items: center;
+            color: rgba(255,255,255,.5);
+          }
+          .home-mobile-brand svg { width: 25px; height: 25px; fill: currentColor; }
+          .home-mobile-login {
+            display: inline-flex;
+            min-height: 40px;
+            align-items: center;
+            justify-content: center;
+            padding: 0 17px;
+            border: 1px solid rgba(255,255,255,.035);
+            border-radius: 999px;
+            background: rgba(255,255,255,.075);
+            color: rgba(255,255,255,.72);
+            font-size: .9rem;
+            font-weight: 600;
+            text-decoration: none;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+          }
+
+          .home-hero { min-height: 900px; }
           .home-theme-orb { width: 145vw; }
-          .home-hero-copy { top: 43%; width: min(90vw, 390px); }
-          .home-wordmark { width: 82px; margin-bottom: 18px; }
-          .home-hero-copy h1 { font-size: clamp(2.4rem, 12vw, 3.45rem); line-height: .97; }
+          .home-webgl-canvas { opacity: .25; }
+          .home-hero-copy {
+            top: calc(150px + env(safe-area-inset-top));
+            width: min(calc(100% - 32px), 390px);
+            translate: -50% 0;
+          }
+          .home-hero-copy h1 { font-size: clamp(2.35rem, 11.8vw, 2.95rem); line-height: 1.01; letter-spacing: -.052em; }
           .home-hero-copy h1 strong { white-space: nowrap; }
-          .home-hero-copy > p { max-width: 355px; margin-top: 24px; padding: 0 8px; font-size: .91rem; }
-          .home-hero-actions { margin-top: 26px; }
-          .home-poster-slot { top: auto !important; transform: none; }
+          .home-hero-copy > p { max-width: 360px; margin-top: 24px; padding: 0 6px; font-size: .96rem; font-weight: 500; line-height: 1.55; }
+          .home-hero-actions { gap: 14px; margin-top: 25px; }
+          .home-create-button { min-height: 48px; padding-inline: 22px; font-size: .94rem; }
+          .home-discover-link { min-height: 34px; font-size: .91rem; }
+
+          .home-poster-slot { top: auto !important; bottom: auto !important; transform: none; }
           .home-poster-slot:nth-child(-n+5) { display: block; }
           .home-poster-slot:nth-child(n+6) { display: none; }
-          .home-poster-slot:nth-child(1) { left: -42px !important; right: auto !important; bottom: -38px !important; width: 148px !important; }
-          .home-poster-slot:nth-child(2) { left: 25% !important; right: auto !important; bottom: 82px !important; width: 156px !important; }
-          .home-poster-slot:nth-child(3) { left: auto !important; right: -45px !important; bottom: 48px !important; width: 150px !important; }
-          .home-poster-slot:nth-child(4) { left: 8% !important; right: auto !important; bottom: -142px !important; width: 158px !important; }
-          .home-poster-slot:nth-child(5) { left: auto !important; right: 2% !important; bottom: -154px !important; width: 166px !important; }
-          .home-explore { width: min(100% - 28px, 960px); margin: 0 auto 100px; padding-top: 245px; }
-          .home-explore::before { height: 330px; }
-          .home-explore-block + .home-explore-block { margin-top: 68px; }
+          .home-poster-slot:nth-child(1) { left: -56px !important; right: auto !important; top: 574px !important; width: 166px !important; }
+          .home-poster-slot:nth-child(2) { left: 50% !important; right: auto !important; top: 510px !important; width: 170px !important; transform: translateX(-50%); }
+          .home-poster-slot:nth-child(3) { left: auto !important; right: -58px !important; top: 548px !important; width: 164px !important; }
+          .home-poster-slot:nth-child(4) { left: 31px !important; right: auto !important; top: 684px !important; width: 166px !important; }
+          .home-poster-slot:nth-child(5) { left: auto !important; right: 17px !important; top: 652px !important; width: 176px !important; }
+          .home-poster { padding: 6px; border-radius: 18px; }
+          .home-poster img { border-radius: 13px; }
+
+          .home-explore { width: min(100% - 32px, 960px); margin: 0 auto 82px; padding-top: 72px; }
+          .home-explore::before { height: 150px; }
+          .home-explore-block + .home-explore-block { margin-top: 72px; }
+          .home-section-heading { margin-bottom: 19px; }
+          .home-section-heading > span { display: none; }
+          .home-section-heading h2 { font-size: 1.28rem; letter-spacing: -.02em; }
+          .home-heading-desktop { display: none; }
+          .home-heading-mobile { display: inline; }
           .home-section-heading > a { display: none; }
           .home-calendar-grid {
-            width: calc(100% + 28px);
-            grid-auto-columns: min(78vw, 280px);
-            gap: 10px;
-            margin-inline: -14px;
-            padding-inline: 14px;
+            width: calc(100% + 32px);
+            grid-auto-columns: min(64vw, 258px);
+            gap: 12px;
+            margin-inline: -16px;
+            padding-inline: 16px;
           }
-          .home-category-grid { gap: 10px; }
-          .home-calendar-card { min-height: 148px; padding: 14px; }
-          .home-category-card { min-height: 100px; padding: 14px; }
-          .home-ending { min-height: 500px; }
-          .home-ending-cta { min-height: 360px; padding-inline: 16px; }
+          .home-category-grid { gap: 12px 10px; }
+          .home-calendar-card { min-height: 150px; padding: 16px; }
+          .home-calendar-logo { margin-bottom: 17px; }
+          .home-calendar-card strong { font-size: .93rem; }
+          .home-calendar-card small { font-size: .81rem; }
+          .home-category-card { min-height: 108px; padding: 15px; border-radius: 13px; }
+          .home-category-card strong { font-size: .94rem; }
+
+          .home-ending { min-height: 520px; }
+          .home-ending-cta { min-height: 350px; padding: 64px 16px 42px; }
+          .home-ending-cta > span { display: none; }
+          .home-ending-cta h2 {
+            color: transparent;
+            font-size: clamp(1.8rem, 8.6vw, 2.2rem);
+            font-weight: 650;
+            line-height: 1.12;
+            letter-spacing: -.04em;
+            background: linear-gradient(95deg, #a74fec, #dd37a7 34%, #f15464 61%, #ffa921);
+            background-clip: text;
+            -webkit-background-clip: text;
+          }
+          .home-ending-cta h2 strong { font-weight: inherit; background: none; }
+          .home-ending-cta > div { margin-top: 27px; }
+          .home-ending-cta a { min-height: 44px; padding-inline: 17px; font-size: .89rem; }
           .home-ending-cta > div { flex-wrap: wrap; justify-content: center; }
+        }
+
+        @media (max-width: 360px) {
+          .home-hero { min-height: 850px; }
+          .home-hero-copy { top: calc(140px + env(safe-area-inset-top)); }
+          .home-poster-slot:nth-child(1) { top: 545px !important; width: 150px !important; }
+          .home-poster-slot:nth-child(2) { top: 500px !important; width: 154px !important; }
+          .home-poster-slot:nth-child(3) { top: 530px !important; width: 150px !important; }
+          .home-poster-slot:nth-child(4) { top: 648px !important; width: 152px !important; }
+          .home-poster-slot:nth-child(5) { top: 625px !important; width: 158px !important; }
+          .home-explore { padding-top: 62px; }
         }
 
         @media (hover: none), (pointer: coarse) {

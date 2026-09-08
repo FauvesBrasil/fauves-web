@@ -119,6 +119,27 @@ const FooterV2: React.FC<FooterV2Props> = ({ maxWidth = '1100px', variant = 'def
             justify-content: flex-start !important;
             margin-top: 22px !important;
           }
+          .footer-v2-home .footer-v2-main {
+            position: relative;
+            gap: 0;
+          }
+          .footer-v2-home .footer-v2-brand-nav {
+            gap: 20px !important;
+          }
+          .footer-v2-home .footer-v2-navigation {
+            display: flex !important;
+            flex-wrap: wrap;
+            gap: 10px 20px !important;
+          }
+          .footer-v2-home .footer-v2-socials {
+            position: absolute;
+            top: 24px;
+            right: 0;
+          }
+          .footer-v2-home .footer-home-legal {
+            gap: 10px 18px;
+            margin-top: 20px;
+          }
         }
 
         .footer-cta-gradient-link {
