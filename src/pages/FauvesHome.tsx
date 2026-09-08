@@ -34,6 +34,7 @@ import FooterV2 from '@/components/v2/FooterV2';
 import WebGLParticleField from '@/components/home/WebGLParticleField';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { getEventPath } from '@/lib/eventUrl';
+import fauvesLogo from '@/assets/logo-fauves.svg';
 import cover01 from '@/assets/covers/convites/e0d9e03b-63b3-452b-8899-3fc8f848a4bb.avif';
 import cover02 from '@/assets/covers/convites/f24cbc77-91df-4aa8-ab88-c073cbe98ba5.avif';
 import cover03 from '@/assets/covers/convites/2bd1bd20-c9c6-4df0-8bdd-66d155ce8641.avif';
@@ -276,9 +277,7 @@ const FauvesHome = () => {
 
       <header className="home-mobile-header" aria-label="Navegação principal">
         <Link className="home-mobile-brand" to="/" aria-label="Fauves — página inicial">
-          <svg viewBox="0 0 32 32" aria-hidden="true">
-            <path d="M16 0c0 8.84-7.16 16-16 16 8.84 0 16 7.16 16 16 0-8.84 7.16-16 16-16C23.16 16 16 8.84 16 0Z" />
-          </svg>
+          <img src={fauvesLogo} alt="" />
         </Link>
         <Link className="home-mobile-login" to="/signin">Entrar</Link>
       </header>
@@ -767,13 +766,18 @@ const FauvesHome = () => {
           }
           .home-mobile-header > * { pointer-events: auto; }
           .home-mobile-brand {
-            display: grid;
-            width: 44px;
+            display: flex;
+            width: 58px;
             height: 44px;
-            place-items: center;
-            color: rgba(255,255,255,.5);
+            align-items: center;
+            justify-content: flex-start;
           }
-          .home-mobile-brand svg { width: 25px; height: 25px; fill: currentColor; }
+          .home-mobile-brand img {
+            width: 54px;
+            height: auto;
+            opacity: .82;
+            filter: brightness(0) invert(1);
+          }
           .home-mobile-login {
             display: inline-flex;
             min-height: 40px;
