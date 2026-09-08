@@ -780,16 +780,16 @@ const FauvesHome = () => {
           }
           .home-mobile-login {
             display: inline-flex;
-            min-height: 40px;
             align-items: center;
             justify-content: center;
-            padding: 0 17px;
+            padding: 4px 12px;
             border: 1px solid rgba(255,255,255,.035);
             border-radius: 999px;
             background: rgba(255,255,255,.075);
             color: rgba(255,255,255,.72);
-            font-size: .9rem;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 14px;
             text-decoration: none;
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
