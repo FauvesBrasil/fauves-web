@@ -190,10 +190,32 @@ const eventImage = (event: HomeEvent, fallback: string) => resolveImageUrl(
   event.bannerUrl || event.banner || event.image,
 ) || fallback;
 
+const heroCopyVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      delayChildren: 0.16,
+      staggerChildren: 0.11,
+    },
+  },
+};
+
+const heroCopyItemVariants = {
+  hidden: { opacity: 0, y: 24, scale: 0.985, filter: 'blur(8px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 0.62, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
+
 const FauvesHome = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const heroRef = useRef<HTMLElement>(null);
+  const mobileCreateTimerRef = useRef<number | null>(null);
   const [heroEffectActive, setHeroEffectActive] = useState(false);
   const [heroEffect, setHeroEffect] = useState(0);
   const [events, setEvents] = useState<HomeEvent[]>(fallbackEvents);
@@ -237,11 +259,29 @@ const FauvesHome = () => {
     void loadHomeContent();
   }, []);
 
+  useEffect(() => () => {
+    if (mobileCreateTimerRef.current !== null) {
+      window.clearTimeout(mobileCreateTimerRef.current);
+    }
+  }, []);
+
   const floatingEvents = useMemo(() => Array.from({ length: floatingPlacements.length }, (_, index) => (
     events[index % events.length] || fallbackEvents[index]
   )), [events]);
 
-  const startCreating = () => navigate('/create');
+  const startCreating = () => {
+    const isTouchLayout = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    if (!isTouchLayout) {
+      navigate('/create');
+      return;
+    }
+
+    setHeroEffectActive(true);
+    if (mobileCreateTimerRef.current !== null) {
+      window.clearTimeout(mobileCreateTimerRef.current);
+    }
+    mobileCreateTimerRef.current = window.setTimeout(() => navigate('/create'), 420);
+  };
 
   const moveHero = (event: ReactPointerEvent<HTMLElement>) => {
     const hero = heroRef.current;
@@ -330,25 +370,32 @@ const FauvesHome = () => {
 
           <motion.div
             className="home-hero-copy"
-            initial={{ opacity: 0, y: 26 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
+            variants={heroCopyVariants}
+            initial="hidden"
+            animate="visible"
           >
-            <h1>
+            <motion.h1 variants={heroCopyItemVariants}>
               <span>Eventos que deixam marca</span>
               <strong>começam aqui.</strong>
-            </h1>
-            <p>
+            </motion.h1>
+            <motion.p variants={heroCopyItemVariants}>
               Da primeira ideia ao último aplauso, a Fauves deixa cada etapa mais simples para você criar experiências inesquecíveis.
-            </p>
-            <div className="home-hero-actions">
+            </motion.p>
+            <motion.div className="home-hero-actions" variants={heroCopyItemVariants}>
               <button
                 type="button"
                 className="home-create-button"
                 onClick={startCreating}
-                onPointerEnter={showHeroEffect}
+                onPointerEnter={(event) => {
+                  if (event.pointerType === 'mouse') showHeroEffect(event);
+                }}
+                onPointerDown={(event) => {
+                  if (event.pointerType !== 'mouse') showHeroEffect(event);
+                }}
                 onPointerMove={moveHero}
-                onPointerLeave={() => setHeroEffectActive(false)}
+                onPointerLeave={(event) => {
+                  if (event.pointerType === 'mouse') setHeroEffectActive(false);
+                }}
                 onFocus={() => setHeroEffectActive(true)}
                 onBlur={() => setHeroEffectActive(false)}
               >
@@ -357,7 +404,7 @@ const FauvesHome = () => {
               <Link className="home-discover-link" to="/discover">
                 Descobrir eventos <ArrowRight size={15} />
               </Link>
-            </div>
+            </motion.div>
           </motion.div>
         </section>
 
@@ -385,6 +432,7 @@ const FauvesHome = () => {
                     to={destination ? `/${destination}` : '/organizations'}
                     className="home-glow-card home-calendar-card"
                     onPointerMove={moveSpotlight}
+                    onPointerDown={moveSpotlight}
                     style={{ '--card-accent': accent } as CSSProperties}
                     key={organization.id || `${name}-${index}`}
                   >
@@ -414,6 +462,7 @@ const FauvesHome = () => {
                     to={`/eventos/${category.slug || category.id}`}
                     className="home-glow-card home-category-card"
                     onPointerMove={moveSpotlight}
+                    onPointerDown={moveSpotlight}
                     style={{ '--card-accent': visual.color } as CSSProperties}
                     key={category.id || category.slug || `${category.name}-${index}`}
                   >
@@ -576,12 +625,15 @@ const FauvesHome = () => {
           z-index: 4;
           left: 50%;
           top: 50%;
-          width: min(92vw, 760px);
-          translate: -50% -48%;
+          display: flex;
+          width: min(94vw, 1000px);
+          align-items: center;
+          flex-direction: column;
+          translate: -50% -50%;
           text-align: center;
         }
 
-        .home-hero-copy h1 { margin: 0; font-size: clamp(3.25rem, 5vw, 5.1rem); font-weight: 500; line-height: .94; letter-spacing: -.06em; }
+        .home-hero-copy h1 { width: 100%; margin: 0; font-size: clamp(3.25rem, 5vw, 5.1rem); font-weight: 500; line-height: .94; letter-spacing: -.06em; text-align: center; }
         .home-hero-copy h1 span,
         .home-hero-copy h1 strong { display: block; }
         .home-hero-copy h1 span { white-space: nowrap; }
@@ -666,6 +718,13 @@ const FauvesHome = () => {
         .home-glow-card:hover { z-index: 2; border-color: color-mix(in srgb, var(--card-accent) 35%, rgba(255,255,255,.1)); box-shadow: 0 17px 42px rgba(0,0,0,.24); }
         .home-glow-card:hover::after,
         .home-glow-card:hover .home-card-glow { opacity: 1; }
+        .home-glow-card:active {
+          border-color: color-mix(in srgb, var(--card-accent) 42%, rgba(255,255,255,.14));
+          box-shadow: 0 12px 34px rgba(0,0,0,.28);
+          transform: scale(.985);
+        }
+        .home-glow-card:active::after,
+        .home-glow-card:active .home-card-glow { opacity: 1; }
         .home-glow-card:focus-visible { outline: 2px solid var(--card-accent); outline-offset: 3px; }
 
         .home-calendar-card { display: flex; min-height: 156px; flex-direction: column; padding: 16px; }
@@ -720,7 +779,7 @@ const FauvesHome = () => {
           .home-poster-slot:nth-child(5),
           .home-poster-slot:nth-child(9),
           .home-poster-slot:nth-child(11) { display: none; }
-          .home-hero-copy { width: min(90vw, 700px); }
+          .home-hero-copy { width: min(94vw, 900px); }
         }
 
         @media (max-width: 820px) {
@@ -795,11 +854,11 @@ const FauvesHome = () => {
             -webkit-backdrop-filter: blur(14px);
           }
 
-          .home-hero { min-height: 900px; }
+          .home-hero { min-height: 965px; }
           .home-theme-orb { width: 145vw; }
           .home-webgl-canvas { opacity: .25; }
           .home-hero-copy {
-            top: calc(150px + env(safe-area-inset-top));
+            top: calc(132px + env(safe-area-inset-top));
             width: min(calc(100% - 32px), 390px);
             translate: -50% 0;
           }
@@ -813,11 +872,11 @@ const FauvesHome = () => {
           .home-poster-slot { top: auto !important; bottom: auto !important; transform: none; }
           .home-poster-slot:nth-child(-n+5) { display: block; }
           .home-poster-slot:nth-child(n+6) { display: none; }
-          .home-poster-slot:nth-child(1) { left: -56px !important; right: auto !important; top: 574px !important; width: 166px !important; }
-          .home-poster-slot:nth-child(2) { left: 50% !important; right: auto !important; top: 510px !important; width: 170px !important; transform: translateX(-50%); }
-          .home-poster-slot:nth-child(3) { left: auto !important; right: -58px !important; top: 548px !important; width: 164px !important; }
-          .home-poster-slot:nth-child(4) { left: 31px !important; right: auto !important; top: 684px !important; width: 166px !important; }
-          .home-poster-slot:nth-child(5) { left: auto !important; right: 17px !important; top: 652px !important; width: 176px !important; }
+          .home-poster-slot:nth-child(1) { left: -56px !important; right: auto !important; top: 642px !important; width: 166px !important; }
+          .home-poster-slot:nth-child(2) { left: 50% !important; right: auto !important; top: 578px !important; width: 170px !important; transform: translateX(-50%); }
+          .home-poster-slot:nth-child(3) { left: auto !important; right: -58px !important; top: 616px !important; width: 164px !important; }
+          .home-poster-slot:nth-child(4) { left: 31px !important; right: auto !important; top: 752px !important; width: 166px !important; }
+          .home-poster-slot:nth-child(5) { left: auto !important; right: 17px !important; top: 720px !important; width: 176px !important; }
           .home-poster { padding: 6px; border-radius: 18px; }
           .home-poster img { border-radius: 13px; }
 
@@ -865,20 +924,21 @@ const FauvesHome = () => {
         }
 
         @media (max-width: 360px) {
-          .home-hero { min-height: 850px; }
-          .home-hero-copy { top: calc(140px + env(safe-area-inset-top)); }
-          .home-poster-slot:nth-child(1) { top: 545px !important; width: 150px !important; }
-          .home-poster-slot:nth-child(2) { top: 500px !important; width: 154px !important; }
-          .home-poster-slot:nth-child(3) { top: 530px !important; width: 150px !important; }
-          .home-poster-slot:nth-child(4) { top: 648px !important; width: 152px !important; }
-          .home-poster-slot:nth-child(5) { top: 625px !important; width: 158px !important; }
+          .home-hero { min-height: 915px; }
+          .home-hero-copy { top: calc(122px + env(safe-area-inset-top)); }
+          .home-poster-slot:nth-child(1) { top: 607px !important; width: 150px !important; }
+          .home-poster-slot:nth-child(2) { top: 562px !important; width: 154px !important; }
+          .home-poster-slot:nth-child(3) { top: 592px !important; width: 150px !important; }
+          .home-poster-slot:nth-child(4) { top: 710px !important; width: 152px !important; }
+          .home-poster-slot:nth-child(5) { top: 687px !important; width: 158px !important; }
           .home-explore { padding-top: 62px; }
         }
 
         @media (hover: none), (pointer: coarse) {
           .home-poster-slot { pointer-events: none; }
-          .home-card-glow,
-          .home-glow-card::after { display: none; }
+          .home-create-button:active { transform: scale(.97); }
+          .home-glow-card::after,
+          .home-card-glow { display: block; }
         }
 
         @media (prefers-reduced-motion: reduce) {
