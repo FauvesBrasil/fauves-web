@@ -301,7 +301,7 @@ const EventsByCategory: React.FC = () => {
           <div className="category-hero-copy">
             <h1 className="category-hero-title">
               <span>{category.name}</span>
-              <span className="category-title-sep"> em </span>
+              <span> em </span>
               <button
                 type="button"
                 onClick={() => {
@@ -541,7 +541,7 @@ const categoryStyles = `
   .category-hero {
     display: grid;
     min-height: 500px;
-    grid-template-columns: 1fr 395px;
+    grid-template-columns: minmax(0, 1fr) 395px;
     align-items: center;
     gap: 80px;
     padding-bottom: 72px;
@@ -551,8 +551,8 @@ const categoryStyles = `
   .category-hero-title {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
+    align-items: baseline;
+    gap: 6px 10px;
     margin: 0 0 18px;
     color: #fff;
     font-size: 2.5rem;
@@ -561,36 +561,37 @@ const categoryStyles = `
     line-height: 1.15;
   }
 
-  .category-title-sep {
-    color: rgba(255, 255, 255, 0.5);
-    font-weight: 400;
-  }
-
   .category-inline-city-btn {
     display: inline-flex;
+    max-width: 100%;
     align-items: center;
-    gap: 6px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    color: var(--category-accent, #f7c928);
+    gap: 8px;
+    background: transparent;
+    border: 0;
+    color: inherit;
     font: inherit;
-    font-size: 0.85em;
-    font-weight: 700;
-    padding: 4px 16px;
-    border-radius: 999px;
+    letter-spacing: inherit;
+    text-align: left;
+    padding: 0;
+    border-radius: 0;
     cursor: pointer;
-    vertical-align: middle;
-    transition: all 0.2s ease;
   }
 
-  .category-inline-city-btn:hover {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  .category-inline-city-btn > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.15em;
+  }
+
+  .category-inline-city-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 6px;
   }
 
   .category-inline-city-chevron {
+    flex-shrink: 0;
     transition: transform 0.2s;
     opacity: 0.8;
   }
@@ -1098,7 +1099,7 @@ const categoryStyles = `
   .category-page footer { margin-top: 0 !important; }
 
   @media (max-width: 860px) {
-    .category-hero { grid-template-columns: 1fr 320px; gap: 40px; }
+    .category-hero { grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; }
     .category-artwork { width: 320px; height: 320px; }
     .category-artwork-circle { top: 50px; left: 50px; width: 220px; height: 220px; }
     .category-event-meta > span { max-width: 150px; }

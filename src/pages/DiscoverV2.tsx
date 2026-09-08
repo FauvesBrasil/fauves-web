@@ -5,6 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import {
   BrainCircuit,
   Baby,
+  ArrowRight,
+  ArrowUpRight,
   CalendarDays,
   Church,
   CloudSun,
@@ -32,6 +34,34 @@ type CategoryVisual = {
   Icon: LucideIcon;
   color: string;
   keywords: string[];
+};
+
+type EntityKey = string | number;
+
+type CategoryData = {
+  id?: EntityKey;
+  name?: string;
+  slug?: string;
+};
+
+type EventCategoryData = CategoryData | EntityKey;
+
+type EventData = {
+  categoryId?: EntityKey;
+  category?: EventCategoryData;
+  categories?: EventCategoryData[];
+  locationCity?: string;
+  locationUf?: string;
+};
+
+type OrganizationData = {
+  id: string;
+  slug?: string;
+  name?: string;
+  logoUrl?: string;
+  bio?: string;
+  description?: string;
+  themeColor?: string;
 };
 
 const categoryVisuals: CategoryVisual[] = [
@@ -67,7 +97,7 @@ const slugify = (value: string) =>
 
 const formatCount = (count: number) => new Intl.NumberFormat('pt-BR').format(count);
 
-const getCategoryVisual = (category: any, index: number): CategoryVisual => {
+const getCategoryVisual = (category: CategoryData, index: number): CategoryVisual => {
   const searchable = normalizeText(`${category?.name || ''} ${category?.slug || ''}`);
   const words = searchable.split(/[^a-z0-9]+/).filter(Boolean);
   return categoryVisuals.find((visual) => visual.keywords.some((keyword) => (
@@ -77,19 +107,25 @@ const getCategoryVisual = (category: any, index: number): CategoryVisual => {
     || { Icon: Sparkles, color: '#8b7aff', keywords: [] };
 };
 
-const eventBelongsToCategory = (event: any, category: any) => {
+const eventBelongsToCategory = (event: EventData, category: CategoryData) => {
+  const primaryCategory = typeof event.category === 'object' && event.category !== null
+    ? event.category
+    : {};
   const categoryKeys = [category?.id, category?.slug, category?.name]
     .filter(Boolean)
     .map(normalizeText);
 
   const eventKeys = [
     event?.categoryId,
-    event?.category?.id,
-    event?.category?.slug,
-    event?.category?.name,
+    primaryCategory.id,
+    primaryCategory.slug,
+    primaryCategory.name,
     event?.category,
     ...(Array.isArray(event?.categories)
-      ? event.categories.flatMap((item: any) => [item?.id, item?.slug, item?.name, item])
+      ? event.categories.flatMap((item) => {
+        const nested = typeof item === 'object' && item !== null ? item : {};
+        return [nested.id, nested.slug, nested.name, item];
+      })
       : []),
   ]
     .filter((item) => typeof item === 'string' || typeof item === 'number')
@@ -107,15 +143,29 @@ const getInitials = (name: string) =>
     .join('')
     .toUpperCase();
 
+const moveCardSpotlight = (event: React.PointerEvent<HTMLElement>) => {
+  const card = event.currentTarget;
+  const rect = card.getBoundingClientRect();
+  card.style.setProperty('--spot-x', `${event.clientX - rect.left}px`);
+  card.style.setProperty('--spot-y', `${event.clientY - rect.top}px`);
+};
+
+const getCalendarAccent = (organization: OrganizationData, index: number) => {
+  const candidate = String(organization?.themeColor || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(candidate)
+    ? candidate
+    : ['#5c73ff', '#ef6aa5', '#f5a000', '#68ae0d', '#63b6c6', '#8857ff'][index % 6];
+};
+
 const DiscoverV2: React.FC = () => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
   useSEO({ title: 'Descobrir eventos · Fauves' });
 
-  const [events, setEvents] = useState<any[]>([]);
-  const [featuredOrgs, setFeaturedOrgs] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [featuredOrgs, setFeaturedOrgs] = useState<OrganizationData[]>([]);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [loadingOrgs, setLoadingOrgs] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -135,7 +185,7 @@ const DiscoverV2: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data)) {
-            setFollowingOrgIds(new Set(data.map((org: any) => org.id)));
+            setFollowingOrgIds(new Set(data.map((org: OrganizationData) => org.id)));
           }
         }
       } catch (error) {
@@ -303,6 +353,8 @@ const DiscoverV2: React.FC = () => {
                   key={category.id || category.slug || category.name}
                   className="discover-v2-category-card"
                   to={`/eventos/${category.slug}`}
+                  onPointerMove={moveCardSpotlight}
+                  style={{ '--card-accent': color } as React.CSSProperties}
                 >
                   <span className="discover-v2-category-icon" style={{ color }}>
                     <Icon size={27} strokeWidth={1.8} aria-hidden="true" />
@@ -335,12 +387,15 @@ const DiscoverV2: React.FC = () => {
               const logo = resolveImageUrl(organization.logoUrl);
               const organizationName = organization.name || 'Calendário Fauves';
               const isFollowing = followingOrgIds.has(organization.id);
+              const calendarAccent = getCalendarAccent(organization, index);
 
               return (
                 <Link
                   className="discover-v2-calendar-card"
                   key={organization.id || organization.slug || index}
                   to={`/${organization.slug || organization.id}`}
+                  onPointerMove={moveCardSpotlight}
+                  style={{ '--card-accent': calendarAccent } as React.CSSProperties}
                 >
                   <div className="discover-v2-calendar-topline">
                     <span className="discover-v2-calendar-logo">
@@ -428,9 +483,30 @@ const DiscoverV2: React.FC = () => {
             </div>
           )}
         </section>
+
+        <section className="discover-v2-final-cta" aria-labelledby="discover-final-cta-title">
+          <div className="discover-v2-cta-aurora" aria-hidden="true" />
+          <div className="discover-v2-cta-grid" aria-hidden="true" />
+          <div className="discover-v2-cta-content">
+            <span className="discover-v2-cta-eyebrow"><Sparkles size={14} /> Faça acontecer</span>
+            <h2 id="discover-final-cta-title">
+              Sua próxima memória<br />
+              <span>inesquecível começa aqui.</span>
+            </h2>
+            <p>Encontre a experiência certa ou crie a que ainda não existe.</p>
+            <div className="discover-v2-cta-actions">
+              <Link className="discover-v2-cta-primary" to="/create">
+                Criar meu evento <ArrowUpRight size={15} />
+              </Link>
+              <a className="discover-v2-cta-secondary" href="#local-heading">
+                Ver eventos perto de mim <ArrowRight size={15} />
+              </a>
+            </div>
+          </div>
+        </section>
       </main>
 
-      <FooterV2 maxWidth="840px" />
+      <FooterV2 maxWidth="840px" variant="home" />
 
       <style>{`
         .discover-v2-page {
@@ -506,6 +582,7 @@ const DiscoverV2: React.FC = () => {
 
         .discover-v2-category-card {
           position: relative;
+          isolation: isolate;
           display: flex;
           min-width: 0;
           min-height: 66px;
@@ -518,11 +595,60 @@ const DiscoverV2: React.FC = () => {
           background: rgba(255, 255, 255, 0.055);
           border: 1px solid rgba(255, 255, 255, 0.07);
           border-radius: 12px;
-          transition: border-color 150ms ease;
+          transition: border-color 180ms ease, transform 220ms cubic-bezier(.16,1,.3,1), box-shadow 220ms ease;
         }
 
         .discover-v2-category-card:hover {
-          border-color: rgba(255, 255, 255, 0.28);
+          border-color: color-mix(in srgb, var(--card-accent) 52%, rgba(255,255,255,.15));
+          transform: translateY(-2px);
+          box-shadow: 0 12px 34px rgba(0,0,0,.16);
+        }
+
+        .discover-v2-category-card::before,
+        .discover-v2-calendar-card::before {
+          position: absolute;
+          z-index: 0;
+          inset: 0;
+          content: '';
+          pointer-events: none;
+          background: radial-gradient(210px circle at var(--spot-x, 50%) var(--spot-y, 50%), color-mix(in srgb, var(--card-accent) 22%, transparent), transparent 72%);
+          opacity: 0;
+          transition: opacity 220ms ease;
+        }
+
+        .discover-v2-category-card::after,
+        .discover-v2-calendar-card::after {
+          position: absolute;
+          z-index: 2;
+          inset: -1px;
+          padding: 1px;
+          content: '';
+          pointer-events: none;
+          background: radial-gradient(150px circle at var(--spot-x, 50%) var(--spot-y, 50%), color-mix(in srgb, var(--card-accent) 92%, white 8%), transparent 78%);
+          border-radius: inherit;
+          opacity: 0;
+          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          transition: opacity 220ms ease;
+        }
+
+        .discover-v2-category-card:hover::before,
+        .discover-v2-category-card:hover::after,
+        .discover-v2-category-card:focus-visible::before,
+        .discover-v2-category-card:focus-visible::after,
+        .discover-v2-calendar-card:hover::before,
+        .discover-v2-calendar-card:hover::after,
+        .discover-v2-calendar-card:focus-visible::before,
+        .discover-v2-calendar-card:focus-visible::after { opacity: 1; }
+
+        .discover-v2-category-card > *,
+        .discover-v2-calendar-card > * { position: relative; z-index: 1; }
+
+        .discover-v2-category-card:focus-visible,
+        .discover-v2-calendar-card:focus-visible {
+          outline: 2px solid color-mix(in srgb, var(--card-accent) 72%, white);
+          outline-offset: 3px;
         }
 
         .discover-v2-category-icon {
@@ -561,6 +687,9 @@ const DiscoverV2: React.FC = () => {
         }
 
         .discover-v2-calendar-card {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
           display: flex;
           min-width: 0;
           min-height: 154px;
@@ -571,11 +700,21 @@ const DiscoverV2: React.FC = () => {
           background: rgba(255, 255, 255, 0.055);
           border: 1px solid rgba(255, 255, 255, 0.07);
           border-radius: 12px;
-          transition: border-color 150ms ease;
+          transition: border-color 180ms ease, transform 220ms cubic-bezier(.16,1,.3,1), box-shadow 220ms ease;
         }
 
         .discover-v2-calendar-card:hover {
-          border-color: rgba(255, 255, 255, 0.28);
+          border-color: color-mix(in srgb, var(--card-accent) 52%, rgba(255,255,255,.15));
+          transform: translateY(-2px);
+          box-shadow: 0 16px 40px rgba(0,0,0,.2);
+        }
+
+        .discover-v2-calendar-card::before {
+          background: radial-gradient(280px circle at var(--spot-x, 50%) var(--spot-y, 50%), color-mix(in srgb, var(--card-accent) 20%, transparent), transparent 72%);
+        }
+
+        .discover-v2-calendar-card::after {
+          background: radial-gradient(210px circle at var(--spot-x, 50%) var(--spot-y, 50%), color-mix(in srgb, var(--card-accent) 90%, white 10%), transparent 78%);
         }
 
         .discover-v2-calendar-topline {
@@ -659,6 +798,117 @@ const DiscoverV2: React.FC = () => {
           line-height: 1.45;
           -webkit-box-orient: vertical;
           -webkit-line-clamp: 2;
+        }
+
+        .discover-v2-final-cta {
+          position: relative;
+          min-height: 360px;
+          margin-top: 92px;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,.08);
+          border-radius: 24px;
+          background: #111315;
+        }
+
+        .discover-v2-cta-grid {
+          position: absolute;
+          inset: 0;
+          opacity: .42;
+          background-image: radial-gradient(circle, rgba(255,255,255,.2) 1px, transparent 1.25px);
+          background-size: 12px 12px;
+          -webkit-mask-image: linear-gradient(to bottom, transparent, #000 24%, #000 86%, transparent);
+          mask-image: linear-gradient(to bottom, transparent, #000 24%, #000 86%, transparent);
+        }
+
+        .discover-v2-cta-aurora {
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(circle at 18% 56%, rgba(42,42,215,.28), transparent 31%),
+            radial-gradient(circle at 77% 40%, rgba(239,65,24,.22), transparent 34%),
+            radial-gradient(circle at 52% 95%, rgba(213,72,157,.16), transparent 38%);
+          filter: saturate(1.2);
+          animation: discover-cta-breathe 7s ease-in-out infinite alternate;
+        }
+
+        .discover-v2-cta-content {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          min-height: 360px;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          padding: 60px 24px;
+          text-align: center;
+        }
+
+        .discover-v2-cta-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 16px;
+          color: rgba(255,255,255,.6);
+          font-size: .75rem;
+          font-weight: 700;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+        }
+
+        .discover-v2-final-cta h2 {
+          margin: 0;
+          color: #fff;
+          font-size: clamp(2rem, 5vw, 3.1rem);
+          font-weight: 600;
+          letter-spacing: -.045em;
+          line-height: 1.04;
+        }
+
+        .discover-v2-final-cta h2 span {
+          color: transparent;
+          background: linear-gradient(98deg, #7a8bff 0%, #d5489d 50%, #ff7a36 100%);
+          background-clip: text;
+          -webkit-background-clip: text;
+        }
+
+        .discover-v2-final-cta p {
+          margin: 20px 0 0;
+          color: rgba(255,255,255,.5);
+          font-size: .95rem;
+        }
+
+        .discover-v2-cta-actions {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 28px;
+        }
+
+        .discover-v2-cta-actions a {
+          display: inline-flex;
+          min-height: 42px;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          padding: 0 17px;
+          border-radius: 999px;
+          font-size: .875rem;
+          font-weight: 700;
+          text-decoration: none;
+          transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+        }
+
+        .discover-v2-cta-actions a:hover { transform: translateY(-2px); }
+        .discover-v2-cta-primary { color: #151719; background: #fff; }
+        .discover-v2-cta-primary:hover { background: rgba(255,255,255,.86); }
+        .discover-v2-cta-secondary { color: #fff; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.07); }
+        .discover-v2-cta-secondary:hover { border-color: rgba(255,255,255,.34); background: rgba(255,255,255,.11); }
+
+        @keyframes discover-cta-breathe {
+          from { transform: scale(1) translate3d(-1%, 0, 0); }
+          to { transform: scale(1.08) translate3d(1%, -1%, 0); }
         }
 
         .discover-v2-local-heading {
@@ -806,6 +1056,7 @@ const DiscoverV2: React.FC = () => {
         }
         .discover-v2-page.light .discover-v2-category-card:hover,
         .discover-v2-page.light .discover-v2-calendar-card:hover { border-color: rgba(24,24,27,.28); }
+        .discover-v2-page.light .discover-v2-final-cta { border-color: rgba(24,24,27,.08); }
         .discover-v2-page.light .discover-v2-calendar-logo {
           color: #52525b;
           border-color: rgba(24,24,27,.1);
@@ -894,6 +1145,14 @@ const DiscoverV2: React.FC = () => {
           .discover-v2-section-heading {
             align-items: center;
           }
+
+          .discover-v2-final-cta {
+            min-height: 330px;
+            margin-top: 64px;
+            border-radius: 19px;
+          }
+
+          .discover-v2-cta-content { min-height: 330px; padding: 50px 18px; }
 
         }
 
