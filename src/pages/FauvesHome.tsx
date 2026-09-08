@@ -289,14 +289,11 @@ const FauvesHome = () => {
     const rect = hero.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    hero.style.setProperty('--orb-x', `${x}px`);
-    hero.style.setProperty('--orb-y', `${y}px`);
     hero.style.setProperty('--hero-shift-x', `${((x / rect.width) - 0.5) * -18}px`);
     hero.style.setProperty('--hero-shift-y', `${((y / rect.height) - 0.5) * -14}px`);
   };
 
-  const showHeroEffect = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    moveHero(event);
+  const showHeroEffect = () => {
     setHeroEffect((current) => (current + 1) % 3);
     setHeroEffectActive(true);
   };
@@ -387,10 +384,10 @@ const FauvesHome = () => {
                 className="home-create-button"
                 onClick={startCreating}
                 onPointerEnter={(event) => {
-                  if (event.pointerType === 'mouse') showHeroEffect(event);
+                  if (event.pointerType === 'mouse') showHeroEffect();
                 }}
                 onPointerDown={(event) => {
-                  if (event.pointerType !== 'mouse') showHeroEffect(event);
+                  if (event.pointerType !== 'mouse') showHeroEffect();
                 }}
                 onPointerMove={moveHero}
                 onPointerLeave={(event) => {
