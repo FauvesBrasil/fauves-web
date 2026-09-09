@@ -5,7 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { apiUrl, fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useToast } from '@/hooks/use-toast';
 import HeaderV2 from '@/components/v2/HeaderV2';
-import fauvesLogo from '@/assets/logo-fauves.svg';
+import LogoFauves from '@/components/LogoFauves';
 import {
   Clock, MapPin, Rss, ArrowUpRight, Search, List, Calendar as CalendarIcon,
   ChevronLeft, ChevronRight, Globe, Instagram, Linkedin, Twitter, Map as MapIcon
@@ -26,7 +26,7 @@ const CalendarMobileNav = ({ isDark, signedIn }: { isDark: boolean; signedIn: bo
     <header className={`calendar-mobile-nav ${isDark ? 'is-dark' : 'is-light'}`}>
       <div className="calendar-mobile-nav-inner">
         <Link className="calendar-mobile-nav-logo" to="/" aria-label="Fauves">
-          <img src={fauvesLogo} alt="Fauves" />
+          <LogoFauves variant={isDark ? 'white' : 'mono'} width={46} />
         </Link>
         <nav aria-label="Navegação principal">
           <Link to="/discover">Descobrir Eventos</Link>
@@ -40,15 +40,18 @@ const CalendarMobileNav = ({ isDark, signedIn }: { isDark: boolean; signedIn: bo
       .calendar-mobile-nav { display:none; }
       @media (max-width:820px) {
         .calendar-desktop-nav { display:none; }
-        .calendar-mobile-nav { display:block; position:relative; z-index:40; height:52px; color:#fff; background:#131517; }
-        .calendar-mobile-nav.is-light { color:#131517; background:#f7f8f9; }
+        .calendar-mobile-nav { display:block; position:relative; z-index:40; height:52px; color:#fff; background:#151515; }
+        .calendar-mobile-nav.is-light { color:#151515; background:#f8f8f8; }
         .calendar-mobile-nav-inner { display:flex; width:100%; height:52px; box-sizing:border-box; align-items:center; justify-content:space-between; padding:0 12px; }
         .calendar-mobile-nav-logo { display:flex; width:46px; height:28px; align-items:center; }
-        .calendar-mobile-nav-logo img { display:block; width:46px; height:28px; object-fit:contain; }
+        .calendar-mobile-nav-logo > span { display:block; width:46px; line-height:0; }
+        .calendar-mobile-nav-logo svg { display:block; width:46px; height:auto; }
         .calendar-mobile-nav nav { display:flex; align-items:center; gap:12px; }
         .calendar-mobile-nav nav a { color:inherit; text-decoration:none; font-size:13px; font-weight:600; line-height:1; white-space:nowrap; }
-        .calendar-mobile-nav nav .calendar-mobile-nav-account { padding:9px 13px; border-radius:999px; background:rgba(255,255,255,.12); }
-        .calendar-mobile-nav.is-light nav .calendar-mobile-nav-account { background:rgba(19,21,23,.08); }
+        .calendar-mobile-nav nav .calendar-mobile-nav-account { padding:9px 13px; border-radius:999px; background:rgba(255,255,255,.08); transition:color .16s ease,background-color .16s ease; }
+        .calendar-mobile-nav nav .calendar-mobile-nav-account:hover { color:#151515; background:rgba(255,255,255,.64); }
+        .calendar-mobile-nav.is-light nav .calendar-mobile-nav-account { background:rgba(21,21,21,.04); }
+        .calendar-mobile-nav.is-light nav .calendar-mobile-nav-account:hover { color:#fff; background:rgba(21,21,21,.64); }
       }
       @media (max-width:390px) {
         .calendar-mobile-nav nav { gap:8px; }
@@ -301,14 +304,14 @@ const OrganizationPublicProfile: React.FC = () => {
   // event accent colors belong to event pages and must not tint this entire view.
   const themeColor = '#2A2AD7';
   const hsl = hexToHsl(themeColor);
-  const pageBg = isDark ? '#131517' : '#f7f8f9';
-  const cardBg = isDark ? '#1b1d1f' : '#ffffff';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(19, 21, 23, 0.08)';
+  const pageBg = isDark ? '#151515' : '#f8f8f8';
+  const cardBg = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.80)';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.04)' : '#ffffff';
 
-  const textPrimary = isDark ? '#ffffff' : '#111827';
-  const textSecondary = isDark ? 'rgba(255, 255, 255, 0.50)' : 'rgba(0, 0, 0, 0.50)';
-  const textBody = isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
-  const themedControlBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(19, 21, 23, 0.05)';
+  const textPrimary = isDark ? '#ffffff' : '#151515';
+  const textSecondary = isDark ? 'rgba(255, 255, 255, 0.50)' : 'rgba(21, 21, 21, 0.36)';
+  const textBody = isDark ? 'rgba(255, 255, 255, 0.79)' : 'rgba(21, 21, 21, 0.64)';
+  const themedControlBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(21, 21, 21, 0.04)';
 
   // Filter events based on upcoming / past toggle + search query
   const filteredEvents = React.useMemo(() => {
@@ -649,7 +652,7 @@ const OrganizationPublicProfile: React.FC = () => {
               alignItems: 'center',
               gap: 8,
               marginTop: 10,
-              color: textSecondary,
+              color: textBody,
               fontSize: 13,
               fontWeight: 500
             }}>
@@ -806,6 +809,7 @@ const OrganizationPublicProfile: React.FC = () => {
               cardBorder={cardBorder}
               textPrimary={textPrimary}
               textSecondary={textSecondary}
+              isDark={isDark}
               onEventClick={openCalendarEvent}
               onManage={(event) => navigate(`/event/manage/${event.id}`)}
               onEditExternal={setExternalEventToEdit}
@@ -1128,16 +1132,18 @@ const OrganizationPublicProfile: React.FC = () => {
           cursor: pointer;
           transition: filter .16s ease, transform .16s ease;
         }
-        .calendar-follow-button:hover { filter: brightness(1.1); }
+        .calendar-follow-button:hover { filter: brightness(1.08); }
         .calendar-follow-button:active { transform: translateY(1px); }
         .calendar-follow-button:disabled { opacity: .6; cursor: wait; }
         .calendar-profile-primary-actions { display:flex; align-items:center; gap:6px; }
-        .calendar-profile-map-action { display:none; width:32px; height:32px; place-items:center; border-radius:8px; color:rgba(255,255,255,.58); background:rgba(255,255,255,.075); text-decoration:none; }
+        .calendar-profile-map-action { display:none; width:30px; height:30px; place-items:center; border-radius:8px; color:rgba(255,255,255,.64); background:rgba(255,255,255,.08); text-decoration:none; transition:color .16s ease,background-color .16s ease,transform .16s ease; }
+        .calendar-profile-map-action:hover { color:#151515; background:rgba(255,255,255,.64); }
+        .calendar-profile-map-action:active { transform:scale(.95); }
         .calendar-location-tags { display:flex; flex-wrap:wrap; gap:6px; margin:-8px 0 22px; }
         .calendar-location-tags span { padding:5px 10px; border:1px solid rgba(255,255,255,.12); border-radius:999px; color:rgba(255,255,255,.72); font-size:11px; font-weight:600; line-height:1; }
         .calendar-view-actions { display:flex; align-items:center; gap:8px; }
-        .calendar-mobile-create-actions { display:none; align-items:center; gap:6px; }
-        .calendar-view-switch { position:relative; display:flex; align-items:center; padding:3px; border-radius:9px; background:rgba(255,255,255,.075); }
+        .calendar-mobile-create-actions { display:none; align-items:center; gap:8px; }
+        .calendar-view-switch { position:relative; display:flex; align-items:center; padding:3px; border-radius:9px; background:rgba(255,255,255,.08); }
         .calendar-view-switch:before { content:''; position:absolute; top:3px; left:3px; width:32px; height:29px; border-radius:7px; background:rgba(255,255,255,.16); transform:translateX(0); transition:transform .24s cubic-bezier(.2,.75,.25,1),background-color .2s ease; }
         .calendar-view-switch[data-view='list']:before { transform:translateX(32px); }
         .calendar-view-switch button, .calendar-search-trigger, .calendar-ical-trigger { display:grid; place-items:center; border:0; color:rgba(255,255,255,.52); cursor:pointer; }
@@ -1145,11 +1151,12 @@ const OrganizationPublicProfile: React.FC = () => {
         .calendar-view-switch button:hover { color:rgba(255,255,255,.86); }
         .calendar-view-switch button:active { transform:scale(.88); }
         .calendar-view-switch button.is-active { color:#fff; }
-        .calendar-search-trigger, .calendar-ical-trigger { width:34px; height:34px; border-radius:9px; background:rgba(255,255,255,.075); }
+        .calendar-search-trigger, .calendar-ical-trigger { width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,.08); }
         .calendar-search-trigger, .calendar-ical-trigger, .calendar-add-event-button { transition:color .2s ease,background-color .2s ease,transform .18s cubic-bezier(.2,.75,.25,1) !important; }
-        .calendar-search-trigger:hover, .calendar-ical-trigger:hover { color:#171819; background:rgba(255,255,255,.72) !important; }
+        .calendar-search-trigger:hover, .calendar-ical-trigger:hover { color:#151515; background:rgba(255,255,255,.64) !important; }
         .calendar-search-trigger:active, .calendar-ical-trigger:active, .calendar-add-event-button:active { transform:scale(.95); }
-        .calendar-add-event-button:hover { color:#171819 !important; background:rgba(255,255,255,.72) !important; }
+        .calendar-add-event-button:hover { color:#151515 !important; background:rgba(255,255,255,.64) !important; }
+        .calendar-public-profile .cae-main { color:rgba(255,255,255,.64); background:rgba(255,255,255,.08); }
         .calendar-tooltip { position:relative; }
         .calendar-tooltip:before { content:attr(data-tooltip); position:absolute; left:50%; bottom:calc(100% + 10px); z-index:80; width:max-content; max-width:240px; padding:7px 10px; border-radius:8px; color:#171819; background:rgba(255,255,255,.96); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(0,0,0,.18); font-size:12px; font-weight:500; line-height:1.2; pointer-events:none; visibility:hidden; opacity:0; transform:translate(-50%,7px) scale(.94); transform-origin:50% 100%; transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.25,1),visibility 0s linear .22s; }
         .calendar-tooltip:after { content:''; position:absolute; left:50%; bottom:calc(100% + 5px); z-index:81; border:5px solid transparent; border-top-color:rgba(255,255,255,.96); pointer-events:none; visibility:hidden; opacity:0; transform:translateX(-50%) translateY(3px); transition:opacity .16s ease,transform .2s cubic-bezier(.2,.8,.25,1),visibility 0s linear .22s; }
@@ -1158,16 +1165,21 @@ const OrganizationPublicProfile: React.FC = () => {
         .calendar-tooltip:hover:after { transform:translateX(-50%) translateY(0); }
         .calendar-social-link:before { bottom:calc(100% + 12px); }
         .calendar-public-profile.is-light .calendar-location-tags span { border-color:rgba(19,21,23,.12); color:rgba(19,21,23,.62); }
+        .calendar-public-profile.is-light .cae-main,
         .calendar-public-profile.is-light .calendar-view-switch,
         .calendar-public-profile.is-light .calendar-search-trigger,
-        .calendar-public-profile.is-light .calendar-ical-trigger { background:rgba(19,21,23,.055); }
+        .calendar-public-profile.is-light .calendar-ical-trigger { color:rgba(21,21,21,.64); background:rgba(21,21,21,.04); }
         .calendar-public-profile.is-light .calendar-view-switch:before { background:#fff; box-shadow:0 1px 4px rgba(19,21,23,.12); }
         .calendar-public-profile.is-light .calendar-view-switch button,
         .calendar-public-profile.is-light .calendar-search-trigger,
         .calendar-public-profile.is-light .calendar-ical-trigger { color:rgba(19,21,23,.5); }
         .calendar-public-profile.is-light .calendar-view-switch button.is-active { color:#131517; }
         .calendar-public-profile.is-light .calendar-profile-avatar { border-color:rgba(19,21,23,.1) !important; }
-        .calendar-public-profile.is-light .calendar-profile-map-action { color:rgba(19,21,23,.52); background:rgba(19,21,23,.055); }
+        .calendar-public-profile.is-light .calendar-profile-map-action { color:rgba(21,21,21,.64); background:rgba(21,21,21,.04); }
+        .calendar-public-profile.is-light .calendar-profile-map-action:hover,
+        .calendar-public-profile.is-light .calendar-search-trigger:hover,
+        .calendar-public-profile.is-light .calendar-ical-trigger:hover,
+        .calendar-public-profile.is-light .calendar-add-event-button:hover { color:#fff !important; background:rgba(21,21,21,.64) !important; }
         @media (max-width: 1100px) {
           .profile-cols {
             grid-template-columns: minmax(0, 1fr) 272px !important;
@@ -1220,11 +1232,11 @@ const OrganizationPublicProfile: React.FC = () => {
             width:64px !important;
             height:64px !important;
             box-sizing:content-box;
-            border:3px solid #131517 !important;
+            border:3px solid #151515 !important;
             border-radius:11px !important;
             box-shadow: none !important;
           }
-          .calendar-public-profile.is-light .calendar-profile-avatar { border-color:#f7f8f9 !important; }
+          .calendar-public-profile.is-light .calendar-profile-avatar { border-color:#f8f8f8 !important; }
           .calendar-profile-avatar > div { font-size:1.5rem !important; }
           .calendar-follow-button { min-width:66px; min-height:30px; margin-bottom:0; padding:7px 13px; border-radius:8px; font-size:14px; }
           .calendar-profile-primary-actions > button { margin-bottom:0 !important; min-height:30px !important; padding:7px 12px !important; font-size:13px !important; }
@@ -1233,21 +1245,22 @@ const OrganizationPublicProfile: React.FC = () => {
           .calendar-profile-brand > div { width:100%; min-width:0; }
           .calendar-profile-brand h1 { max-width:100%; overflow-wrap:anywhere; font-size:24px !important; font-weight:600 !important; line-height:1.2; letter-spacing:-.02em !important; margin:0 !important; }
           .calendar-profile-time { gap:7px !important; margin-top:8px !important; font-size:14px !important; line-height:1.4; }
-          .calendar-profile-time svg { width:16px; height:16px; }
+          .calendar-profile-time svg { width:16px; height:16px; color:${textSecondary}; }
           .calendar-profile-description { max-width:100% !important; margin-top:16px !important; font-size:14px !important; line-height:1.5 !important; }
           .calendar-profile-socials { gap:10px !important; margin-top:12px !important; }
           .calendar-profile-divider { margin-top:24px !important; margin-bottom:0 !important; }
           .calendar-events-heading { flex-wrap:nowrap !important; gap:8px !important; margin-bottom:16px !important; }
           .calendar-events-heading h2 { flex:0 0 auto; font-size:20px !important; font-weight:600 !important; }
-          .calendar-view-actions { width:auto; min-width:0; margin-left:auto; justify-content:flex-end; gap:5px; }
+          .calendar-view-actions { width:auto; min-width:0; margin-left:auto; justify-content:flex-end; gap:8px; }
           .calendar-mobile-create-actions { display:flex; min-width:0; }
           .calendar-mobile-create-actions .cae-root { flex:0 1 auto; }
-          .calendar-mobile-create-actions .cae-main { width:auto; height:30px; padding:0 10px; font-size:12px; white-space:nowrap; }
+          .calendar-mobile-create-actions .cae-main { width:auto; height:30px; padding:0 10px; font-size:14px; white-space:nowrap; }
           .calendar-view-switch { padding:2px; }
           .calendar-view-switch button { width:30px; height:26px; }
           .calendar-view-switch:before { top:2px; left:2px; width:30px; height:26px; }
           .calendar-view-switch[data-view='list']:before { transform:translateX(30px); }
           .calendar-search-trigger, .calendar-ical-trigger { width:30px; height:30px; flex:0 0 30px; }
+          .calendar-search-trigger svg, .calendar-ical-trigger svg, .calendar-view-switch svg, .calendar-profile-map-action svg { width:14px; height:14px; }
           .calendar-location-tags { display:none; }
           .calendar-social-link { display:grid; width:28px; height:28px; place-items:center; margin:-5px 0; }
           .calendar-profile-sidebar { display:none !important; }
