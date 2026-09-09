@@ -474,10 +474,10 @@ const OrganizationPublicProfile: React.FC = () => {
       fontFamily: 'Inter, sans-serif',
       paddingBottom: '6rem',
       position: 'relative',
-      overflowX: 'hidden'
+      overflowX: 'clip'
     }}>
       {/* ── App Header ── */}
-      <HeaderV2 transparent={true} fixed={false} theme={isDark ? 'dark' : 'light'} blueGlow={false} />
+      <HeaderV2 transparent={true} fixed={false} theme={isDark ? 'dark' : 'light'} blueGlow={false} scrollTransition={false} />
 
       {/* A capa começa logo abaixo do header, como na referência pública. */}
       <div className="calendar-header-gap" style={{ height: 36 }} />
@@ -485,7 +485,7 @@ const OrganizationPublicProfile: React.FC = () => {
       <main className="calendar-profile-shell" style={{ maxWidth: 1056, margin: '0 auto', padding: '24px 24px 0', position: 'relative', zIndex: 2 }}>
         
         {/* ── Banner/Cover Container ── */}
-        <div className="calendar-profile-cover" style={{
+        <div className={`calendar-profile-cover ${org.coverUrl ? 'has-cover' : 'no-cover'}`} style={{
           width: '100%',
           aspectRatio: '3.5',
           borderRadius: 12,
@@ -605,7 +605,7 @@ const OrganizationPublicProfile: React.FC = () => {
             </h1>
 
             {/* Current Time / Timezone */}
-            <div style={{
+            <div className="calendar-profile-time" style={{
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -619,13 +619,13 @@ const OrganizationPublicProfile: React.FC = () => {
             </div>
 
             {(org.bio || org.description) && (
-              <p style={{ maxWidth: 760, margin: '14px 0 0', color: textBody, fontSize: 14, lineHeight: 1.5 }}>
+              <p className="calendar-profile-description" style={{ maxWidth: 760, margin: '14px 0 0', color: textBody, fontSize: 14, lineHeight: 1.5 }}>
                 {org.bio || org.description}
               </p>
             )}
 
             {/* Social Icons row */}
-            <div style={{ display: 'flex', gap: 16, marginTop: 14, alignItems: 'center' }}>
+            <div className="calendar-profile-socials" style={{ display: 'flex', gap: 16, marginTop: 14, alignItems: 'center' }}>
               {org.instagram && (
                 <a
                   href={`https://instagram.com/${org.instagram.replace('@', '')}`}
@@ -1140,20 +1140,42 @@ const OrganizationPublicProfile: React.FC = () => {
           }
         }
         @media (max-width: 768px) {
-          .calendar-header-gap { display: none; }
+          .calendar-header-gap { display:block; height:64px !important; }
           .calendar-profile-shell {
-            padding: 10px 12px 0 !important;
+            width:100%;
+            max-width:100%;
+            box-sizing:border-box;
+            padding: 8px 12px 0 !important;
           }
           .profile-inner {
             padding-left: 0 !important;
             padding-right: 0 !important;
           }
           .profile-cols {
+            width:100%;
+            min-width:0;
+            max-width:100%;
+            box-sizing:border-box;
             grid-template-columns: 1fr !important;
             gap: 18px !important;
           }
-          .calendar-profile-cover { display: none; }
-          .profile-overlap-row { margin-top: 0 !important; align-items: center !important; }
+          .profile-cols > * { min-width:0; max-width:100%; }
+          .calendar-profile-cover {
+            display:block;
+            height:72px;
+            min-height:72px;
+            aspect-ratio:auto !important;
+            border:0 !important;
+            border-radius:0 !important;
+            background-color:transparent !important;
+            background-position:center !important;
+            background-repeat:no-repeat !important;
+            background-size:contain !important;
+          }
+          .calendar-profile-cover.no-cover { display:none; }
+          .calendar-profile-cover-overlay { display:none; }
+          .profile-overlap-row { margin-top:10px !important; align-items: center !important; }
+          .calendar-profile-cover.no-cover + .profile-overlap-row { margin-top:0 !important; }
           .calendar-profile-avatar {
             width: 48px !important;
             height: 48px !important;
@@ -1165,20 +1187,25 @@ const OrganizationPublicProfile: React.FC = () => {
           .calendar-follow-button { min-width: 64px; min-height: 32px; margin-bottom: 0; padding: 7px 13px; font-size: 12px; }
           .calendar-profile-primary-actions > button { margin-bottom:0 !important; min-height:32px !important; padding:7px 12px !important; font-size:12px !important; }
           .calendar-profile-map-action { display:grid; }
-          .calendar-profile-brand { margin-top: 7px !important; gap: 10px !important; }
-          .calendar-profile-brand h1 { max-width: 100%; overflow-wrap: anywhere; font-size: 1.3rem !important; line-height:1.2; margin-top:6px !important; }
-          .calendar-profile-brand p { margin-top:10px !important; font-size:12px !important; line-height:1.45 !important; }
-          .calendar-profile-divider { margin-top:14px !important; margin-bottom:16px !important; }
+          .calendar-profile-brand { margin-top: 10px !important; gap: 10px !important; }
+          .calendar-profile-brand > div { width:100%; min-width:0; }
+          .calendar-profile-brand h1 { max-width: 100%; overflow-wrap: anywhere; font-size:1.5rem !important; font-weight:750 !important; line-height:1.18; margin-top:7px !important; }
+          .calendar-profile-time { gap:7px !important; margin-top:12px !important; font-size:14px !important; }
+          .calendar-profile-time svg { width:16px; height:16px; }
+          .calendar-profile-description { max-width:100% !important; margin-top:13px !important; font-size:14px !important; line-height:1.5 !important; }
+          .calendar-profile-socials { gap:10px !important; margin-top:13px !important; }
+          .calendar-profile-divider { margin-top:18px !important; margin-bottom:18px !important; }
           .calendar-events-heading { flex-wrap:nowrap !important; gap:6px !important; margin-bottom:14px !important; }
-          .calendar-events-heading h2 { flex:0 0 auto; font-size:1rem !important; }
+          .calendar-events-heading h2 { flex:0 0 auto; font-size:1.25rem !important; }
           .calendar-view-actions { width:auto; min-width:0; margin-left:auto; justify-content:flex-end; gap:5px; }
           .calendar-mobile-create-actions { display:flex; min-width:0; }
           .calendar-mobile-create-actions .cae-root { flex:0 1 auto; }
-          .calendar-mobile-create-actions .cae-main { width:auto; height:34px; padding:0 9px; font-size:10.5px; white-space:nowrap; }
-          .calendar-view-switch button { width:32px; height:29px; }
-          .calendar-view-switch:before { width:32px; height:29px; }
-          .calendar-view-switch[data-view='list']:before { transform:translateX(32px); }
-          .calendar-search-trigger, .calendar-ical-trigger { width:34px; height:34px; flex:0 0 34px; }
+          .calendar-mobile-create-actions .cae-main { width:auto; height:31px; padding:0 9px; font-size:11px; white-space:nowrap; }
+          .calendar-view-switch { padding:2px; }
+          .calendar-view-switch button { width:29px; height:27px; }
+          .calendar-view-switch:before { top:2px; left:2px; width:29px; height:27px; }
+          .calendar-view-switch[data-view='list']:before { transform:translateX(29px); }
+          .calendar-search-trigger, .calendar-ical-trigger { width:31px; height:31px; flex:0 0 31px; }
           .calendar-location-tags { margin:-2px 0 16px; }
           .calendar-social-link { display:grid; width:28px; height:28px; place-items:center; margin:-5px 0; }
           .calendar-profile-sidebar { display:none !important; }
