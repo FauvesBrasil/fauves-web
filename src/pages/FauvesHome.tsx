@@ -23,7 +23,6 @@ import {
   MicVocal,
   Palette,
   PartyPopper,
-  Sparkles,
   Trophy,
   Utensils,
 } from 'lucide-react';
@@ -184,6 +183,42 @@ const moveSpotlight = (event: ReactPointerEvent<HTMLElement>) => {
   const rect = event.currentTarget.getBoundingClientRect();
   event.currentTarget.style.setProperty('--spot-x', `${event.clientX - rect.left}px`);
   event.currentTarget.style.setProperty('--spot-y', `${event.clientY - rect.top}px`);
+};
+
+const moveCardField = (event: ReactPointerEvent<HTMLElement>) => {
+  if (event.pointerType !== 'mouse') return;
+
+  const pointerX = event.clientX;
+  const pointerY = event.clientY;
+  const cards = event.currentTarget.querySelectorAll<HTMLElement>('.home-glow-card');
+  const cardRects = Array.from(cards, (card) => ({ card, rect: card.getBoundingClientRect() }));
+
+  cardRects.forEach(({ card, rect }) => {
+    const distanceX = Math.max(rect.left - pointerX, 0, pointerX - rect.right);
+    const distanceY = Math.max(rect.top - pointerY, 0, pointerY - rect.bottom);
+    const distance = Math.hypot(distanceX, distanceY);
+    const isInside = distance === 0;
+    const proximity = isInside ? 1 : Math.max(0, 1 - distance / 190) * 0.38;
+    const localX = Math.min(Math.max(pointerX - rect.left, 0), rect.width);
+    const localY = Math.min(Math.max(pointerY - rect.top, 0), rect.height);
+    const normalizedX = Math.max(-1, Math.min(1, (pointerX - (rect.left + rect.width / 2)) / rect.width));
+    const normalizedY = Math.max(-1, Math.min(1, (pointerY - (rect.top + rect.height / 2)) / rect.height));
+    const movement = isInside ? 2.4 : proximity * 1.7;
+
+    card.style.setProperty('--spot-x', `${localX}px`);
+    card.style.setProperty('--spot-y', `${localY}px`);
+    card.style.setProperty('--card-proximity', proximity.toFixed(3));
+    card.style.setProperty('--card-shift-x', `${normalizedX * movement}px`);
+    card.style.setProperty('--card-shift-y', `${normalizedY * movement}px`);
+  });
+};
+
+const resetCardField = (event: ReactPointerEvent<HTMLElement>) => {
+  event.currentTarget.querySelectorAll<HTMLElement>('.home-glow-card').forEach((card) => {
+    card.style.setProperty('--card-proximity', '0');
+    card.style.setProperty('--card-shift-x', '0px');
+    card.style.setProperty('--card-shift-y', '0px');
+  });
 };
 
 const eventImage = (event: HomeEvent, fallback: string) => resolveImageUrl(
@@ -415,7 +450,7 @@ const FauvesHome = () => {
               </h2>
               <Link to="/organizations">Ver todos <ArrowUpRight size={14} /></Link>
             </div>
-            <div className="home-calendar-grid">
+            <div className="home-calendar-grid" onPointerMove={moveCardField} onPointerLeave={resetCardField}>
               {organizations.slice(0, 8).map((organization, index) => {
                 const name = organization.name || 'Calendário Fauves';
                 const accent = /^#[0-9a-f]{6}$/i.test(organization.themeColor || '')
@@ -428,7 +463,6 @@ const FauvesHome = () => {
                   <Link
                     to={destination ? `/${destination}` : '/organizations'}
                     className="home-glow-card home-calendar-card"
-                    onPointerMove={moveSpotlight}
                     onPointerDown={moveSpotlight}
                     style={{ '--card-accent': accent } as CSSProperties}
                     key={organization.id || `${name}-${index}`}
@@ -450,7 +484,7 @@ const FauvesHome = () => {
               <span>Descobrir</span>
               <h2>Explorar por categoria</h2>
             </div>
-            <div className="home-category-grid">
+            <div className="home-category-grid" onPointerMove={moveCardField} onPointerLeave={resetCardField}>
               {categories.slice(0, 12).map((category, index) => {
                 const visual = getCategoryVisual(category, index);
                 const { Icon } = visual;
@@ -458,7 +492,6 @@ const FauvesHome = () => {
                   <Link
                     to={`/eventos/${category.slug || category.id}`}
                     className="home-glow-card home-category-card"
-                    onPointerMove={moveSpotlight}
                     onPointerDown={moveSpotlight}
                     style={{ '--card-accent': visual.color } as CSSProperties}
                     key={category.id || category.slug || `${category.name}-${index}`}
@@ -477,7 +510,6 @@ const FauvesHome = () => {
           <WebGLParticleField className="home-ending-canvas" mode="footer" active />
           <div className="home-ending-grid" aria-hidden="true" />
           <div className="home-ending-cta">
-            <span><Sparkles size={16} /> O próximo encontro</span>
             <h2>Sua próxima memória<br /><strong>inesquecível está esperando.</strong></h2>
             <div>
               <Link to="/discover">Descobrir eventos</Link>
@@ -687,6 +719,9 @@ const FauvesHome = () => {
         .home-glow-card {
           --spot-x: 50%;
           --spot-y: 50%;
+          --card-proximity: 0;
+          --card-shift-x: 0px;
+          --card-shift-y: 0px;
           position: relative;
           isolation: isolate;
           overflow: hidden;
@@ -694,7 +729,9 @@ const FauvesHome = () => {
           border-radius: 14px;
           background: rgba(255,255,255,.052);
           box-shadow: inset 0 1px rgba(255,255,255,.02);
-          transition: border-color 230ms ease, box-shadow 230ms ease;
+          transform: translate3d(var(--card-shift-x), var(--card-shift-y), 0);
+          transition: border-color 230ms ease, box-shadow 230ms ease, transform 180ms ease-out;
+          will-change: transform;
         }
         .home-glow-card::after {
           position: absolute;
@@ -705,13 +742,13 @@ const FauvesHome = () => {
           pointer-events: none;
           border-radius: inherit;
           background: radial-gradient(170px circle at var(--spot-x) var(--spot-y), color-mix(in srgb, var(--card-accent) 90%, white), transparent 72%);
-          opacity: 0;
+          opacity: calc(var(--card-proximity) * .62);
           -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
           -webkit-mask-composite: xor;
           mask-composite: exclude;
           transition: opacity 230ms ease;
         }
-        .home-card-glow { position: absolute !important; z-index: -1 !important; inset: 0; background: radial-gradient(260px circle at var(--spot-x) var(--spot-y), color-mix(in srgb, var(--card-accent) 20%, transparent), transparent 70%); opacity: 0; transition: opacity 230ms ease; }
+        .home-card-glow { position: absolute !important; z-index: -1 !important; inset: 0; background: radial-gradient(260px circle at var(--spot-x) var(--spot-y), color-mix(in srgb, var(--card-accent) 20%, transparent), transparent 70%); opacity: calc(var(--card-proximity) * .72); transition: opacity 230ms ease; }
         .home-glow-card:hover { z-index: 2; border-color: color-mix(in srgb, var(--card-accent) 35%, rgba(255,255,255,.1)); box-shadow: 0 17px 42px rgba(0,0,0,.24); }
         .home-glow-card:hover::after,
         .home-glow-card:hover .home-card-glow { opacity: 1; }
@@ -748,7 +785,6 @@ const FauvesHome = () => {
           mask-image: linear-gradient(to bottom, transparent 2%, #000 24%, #000 100%);
         }
         .home-ending-cta { position: relative; z-index: 1; display: flex; min-height: 390px; align-items: center; justify-content: center; flex-direction: column; padding: 70px 20px 54px; text-align: center; }
-        .home-ending-cta > span { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 17px; color: rgba(255,255,255,.5); font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
         .home-ending-cta h2 { margin: 0; color: rgba(255,255,255,.96); font-size: clamp(2.25rem, 4vw, 3.8rem); font-weight: 550; line-height: 1.05; letter-spacing: -.05em; }
         .home-ending-cta h2 strong { color: transparent; font-weight: 650; background: linear-gradient(95deg, #845eff, #d736ae 40%, #f15464 68%, #ffa921); background-clip: text; -webkit-background-clip: text; }
         .home-ending-cta > div { display: flex; gap: 10px; margin-top: 28px; }
@@ -903,7 +939,6 @@ const FauvesHome = () => {
 
           .home-ending { min-height: 520px; }
           .home-ending-cta { min-height: 350px; padding: 64px 16px 42px; }
-          .home-ending-cta > span { display: none; }
           .home-ending-cta h2 {
             color: transparent;
             font-size: clamp(1.8rem, 8.6vw, 2.2rem);
