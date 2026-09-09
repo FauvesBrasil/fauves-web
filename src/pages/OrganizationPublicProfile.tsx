@@ -40,9 +40,9 @@ const CalendarMobileNav = ({ isDark, signedIn }: { isDark: boolean; signedIn: bo
       .calendar-mobile-nav { display:none; }
       @media (max-width:820px) {
         .calendar-desktop-nav { display:none; }
-        .calendar-mobile-nav { display:block; position:relative; z-index:40; height:52px; color:#fff; background:#151515; }
+        .calendar-mobile-nav { display:block; position:relative; z-index:40; height:56px; color:#fff; background:#151515; }
         .calendar-mobile-nav.is-light { color:#151515; background:#f8f8f8; }
-        .calendar-mobile-nav-inner { display:flex; width:100%; height:52px; box-sizing:border-box; align-items:center; justify-content:space-between; padding:0 12px; }
+        .calendar-mobile-nav-inner { display:flex; width:100%; height:56px; box-sizing:border-box; align-items:center; justify-content:space-between; padding:0 16px; }
         .calendar-mobile-nav-logo { display:flex; width:46px; height:28px; align-items:center; }
         .calendar-mobile-nav-logo > span { display:block; width:46px; line-height:0; }
         .calendar-mobile-nav-logo svg { display:block; width:46px; height:auto; }
@@ -1214,20 +1214,22 @@ const OrganizationPublicProfile: React.FC = () => {
           .profile-cols > * { min-width:0; max-width:100%; }
           .calendar-profile-cover {
             display:block;
-            width:100%;
+            width:calc(100% + 32px);
             height:auto;
             min-height:0;
+            margin-left:-16px;
+            margin-right:-16px;
             aspect-ratio:3.5 !important;
             border:0 !important;
-            border-radius:12px !important;
+            border-radius:0 !important;
             background-position:center !important;
             background-repeat:no-repeat !important;
             background-size:cover !important;
           }
           .calendar-profile-cover.no-cover { display:none; }
           .calendar-profile-cover-overlay { display:none; }
-          .profile-overlap-row { min-height:70px; margin-top:-28px !important; margin-bottom:16px; align-items:center !important; }
-          .calendar-profile-cover.no-cover + .profile-overlap-row { margin-top:16px !important; }
+          .profile-overlap-row { min-height:72px; margin-top:-32px !important; margin-bottom:16px; align-items:flex-start !important; }
+          .calendar-profile-cover.no-cover + .profile-overlap-row { margin-top:16px !important; align-items:center !important; }
           .calendar-profile-avatar {
             width:64px !important;
             height:64px !important;
@@ -1240,6 +1242,8 @@ const OrganizationPublicProfile: React.FC = () => {
           .calendar-profile-avatar > div { font-size:1.5rem !important; }
           .calendar-follow-button { min-width:66px; min-height:30px; margin-bottom:0; padding:7px 13px; border-radius:8px; font-size:14px; }
           .calendar-profile-primary-actions > button { margin-bottom:0 !important; min-height:30px !important; padding:7px 12px !important; font-size:13px !important; }
+          .calendar-profile-primary-actions { gap:8px; margin-top:44px; }
+          .calendar-profile-cover.no-cover + .profile-overlap-row .calendar-profile-primary-actions { margin-top:0; }
           .calendar-profile-map-action { display:grid; }
           .calendar-profile-brand { margin-top:0 !important; gap:8px !important; }
           .calendar-profile-brand > div { width:100%; min-width:0; }

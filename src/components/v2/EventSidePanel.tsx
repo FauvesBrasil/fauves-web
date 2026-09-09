@@ -16,6 +16,7 @@ import {
   Linkedin,
   Mail,
   MapPin,
+  X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet';
@@ -172,7 +173,18 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
   const [managementAccess, setManagementAccess] = React.useState<{ userId: string; eventIds: Set<string> } | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [geocodedCoordinates, setGeocodedCoordinates] = React.useState<{ lat: number; lng: number } | null>(null);
+  const [isMobileSheet, setIsMobileSheet] = React.useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
+  ));
   const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const query = window.matchMedia('(max-width: 640px)');
+    const update = () => setIsMobileSheet(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -292,7 +304,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
     return () => { cancelled = true; };
   }, [isOpen, token, user?.id, user?.isAdmin]);
 
-  if (!event || !isOpen) return null;
+  if (!event) return null;
 
   const title = first(resolvedEvent.name, resolvedEvent.title) || 'Evento';
   const slugOrId = first(resolvedEvent.slug, resolvedEvent.id, resolvedEvent._id);
@@ -372,7 +384,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
 
   return (
     <AnimatePresence>
-      <>
+      {isOpen && <>
         <style>{`
           @keyframes edm-pulse {
             0%, 100% { opacity: 1; }
@@ -462,15 +474,38 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
           .edm-tooltip::after { content:attr(data-tip); position:absolute; z-index:4; left:50%; bottom:-42px; transform:translateX(-50%) translateY(-4px); max-width:250px; padding:7px 10px; border-radius:8px; background:#fff; color:#171717; box-shadow:0 7px 20px rgba(0,0,0,.24); font-size:12px; font-weight:500; line-height:1; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity .12s ease,transform .12s ease; }
           .edm-tooltip:hover::after,.edm-tooltip:focus-visible::after { opacity:1; transform:translateX(-50%) translateY(0); }
           @media (max-width:640px) {
-            .edm-panel { inset:0; width:100%; max-width:none; border-radius:0; border-left:0; border-right:0; }
-            .edm-toolbar { padding:8px 10px; }
-            .edm-toolbar .edm-button-label { display:none; }
-            .edm-toolbar .edm-button { width:34px; padding:0; }
+            .edm-backdrop { background:rgba(0,0,0,.66); backdrop-filter:blur(2px); }
+            .edm-panel { top:max(32px,env(safe-area-inset-top)); right:0; bottom:0; left:0; width:100%; max-width:none; border-right:0; border-bottom:0; border-left:0; border-radius:24px 24px 0 0; box-shadow:0 -14px 54px rgba(0,0,0,.34); }
+            .edm-panel.is-dark { --edm-bg:#232323; --edm-raised:rgba(255,255,255,.08); --edm-soft:rgba(255,255,255,.04); --edm-text:#fff; --edm-muted:rgba(255,255,255,.64); --edm-border:rgba(255,255,255,.08); }
+            .edm-toolbar { min-height:54px; padding:8px 12px; }
+            .edm-toolbar-group:first-child { order:2; }
+            .edm-toolbar-group:last-child { order:1; }
+            .edm-toolbar-group:first-child .edm-button:nth-child(1) { order:3; }
+            .edm-toolbar-group:first-child .edm-button:nth-child(2) { order:1; }
+            .edm-toolbar-group:first-child .edm-button:nth-child(3) { order:2; }
+            .edm-toolbar .edm-button { min-height:34px; padding:0 9px; font-size:12px; }
+            .edm-toolbar .edm-icon-button { width:34px; padding:0; }
+            .edm-close-desktop { display:none; }
+            .edm-close-mobile { display:block; }
+            .edm-tooltip::after { display:none; }
             .edm-manage-bar { min-height:56px; padding:9px 14px; gap:10px; }
             .edm-manage-copy { font-size:12px; }
             .edm-manage-action { min-height:34px; padding:0 12px; font-size:12px; }
             .edm-content { padding:22px 18px 32px; }
-            .edm-cover-wrap { width:min(276px,100%); margin-top:2px; }
+            .edm-cover-wrap { width:min(306px,100%); margin-top:2px; }
+          }
+          @media (min-width:641px) {
+            .edm-close-mobile { display:none; }
+          }
+          @media (max-width:390px) {
+            .edm-toolbar { padding-right:8px; padding-left:8px; gap:5px; }
+            .edm-toolbar-group { gap:4px; }
+            .edm-toolbar .edm-button { padding:0 7px; font-size:11px; }
+            .edm-toolbar .edm-icon-button { width:32px; min-height:32px; }
+          }
+          @media (max-width:350px) {
+            .edm-toolbar .edm-button-label { display:none; }
+            .edm-toolbar .edm-button { width:32px; padding:0; }
           }
         `}</style>
 
@@ -490,15 +525,16 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
           aria-label={`Detalhes de ${title}`}
           className={`edm-panel ${isDark ? 'is-dark' : ''}`}
           style={{ '--edm-accent': accent } as React.CSSProperties}
-          initial={{ x: '105%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '105%' }}
+          initial={isMobileSheet ? { x: 0, y: '105%' } : { x: '105%', y: 0 }}
+          animate={{ x: 0, y: 0 }}
+          exit={isMobileSheet ? { x: 0, y: '105%' } : { x: '105%', y: 0 }}
           transition={{ type: 'spring', damping: 30, stiffness: 260 }}
         >
           <header className="edm-toolbar">
             <div className="edm-toolbar-group">
               <button type="button" className="edm-button edm-icon-button edm-tooltip" data-tip="Fechar" onClick={onClose} aria-label="Fechar">
-                <ChevronsRight size={18} strokeWidth={2.5} />
+                <ChevronsRight className="edm-close-desktop" size={18} strokeWidth={2.5} />
+                <X className="edm-close-mobile" size={19} strokeWidth={2.3} />
               </button>
               <button type="button" className="edm-button edm-tooltip" data-tip={copied ? 'Link copiado' : 'Copiar link'} onClick={copyLink}>
                 {copied ? <Check size={15} /> : <Copy size={15} />}
@@ -693,7 +729,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
             </div>
           </div>
         </motion.aside>
-      </>
+      </>}
     </AnimatePresence>
   );
 };
