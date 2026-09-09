@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import {
   Clock, MapPin, Rss, ArrowUpRight, Search, List, Calendar as CalendarIcon,
-  ChevronLeft, ChevronRight, Globe, Instagram, Linkedin, Twitter
+  ChevronLeft, ChevronRight, Globe, Instagram, Linkedin, Twitter, Map as MapIcon
 } from 'lucide-react';
 import { useSEO, buildOrganizationJsonLd } from '@/hooks/useSEO';
 import LoginModal from '@/components/LoginModal';
@@ -259,51 +259,18 @@ const OrganizationPublicProfile: React.FC = () => {
     toast({ title: 'Evento removido do calendário' });
   }, [refreshCalendarEvents, toast]);
 
-  // Handle color conversions and theme variables
-  const locallySavedThemeColor = React.useMemo(() => {
-    if (!org?.id) return '';
-    try {
-      const saved = JSON.parse(localStorage.getItem(`fauves-calendar-display-${org.id}`) || '{}');
-      return /^#[0-9a-f]{6}$/i.test(String(saved?.accentColor || ''))
-        ? String(saved.accentColor).toLowerCase()
-        : '';
-    } catch {
-      return '';
-    }
-  }, [org?.id, org?.themeColor]);
-  const storedThemeColor = React.useMemo(() => {
-    try {
-      const parsed = typeof org?.tags === 'string' ? JSON.parse(org.tags) : null;
-      const color = String(parsed?.appearance?.accentColor || '');
-      return /^#[0-9a-f]{6}$/i.test(color) ? color.toLowerCase() : '';
-    } catch {
-      return '';
-    }
-  }, [org?.tags]);
-  const themeColor = org?.themeColor || storedThemeColor || locallySavedThemeColor || '#ff4b13';
+  // Public calendars always use the Fauves interface palette. Organization and
+  // event accent colors belong to event pages and must not tint this entire view.
+  const themeColor = '#2A2AD7';
   const hsl = hexToHsl(themeColor);
-  const darkBgSaturation = hsl.s < 8 ? 0 : Math.min(92, Math.max(55, Math.round(hsl.s * 0.9)));
-  const darkSurfaceSaturation = hsl.s < 8 ? 0 : Math.min(72, Math.max(38, Math.round(hsl.s * 0.68)));
-
-  // Background and UI Colors based on Light/Dark Theme & User themeColor
-  const pageBg = isDark
-    ? `hsl(${hsl.h}, ${darkBgSaturation}%, 7%)`
-    : `hsl(${hsl.h}, ${Math.min(hsl.s, 12)}%, 97%)`;
-
-  const cardBg = isDark
-    ? `hsl(${hsl.h}, ${darkSurfaceSaturation}%, 10%)`
-    : '#ffffff';
-
-  const cardBorder = isDark
-    ? `hsla(${hsl.h}, ${Math.max(hsl.s, 20)}%, 72%, 0.12)`
-    : `rgba(0, 0, 0, 0.06)`;
+  const pageBg = isDark ? '#131517' : '#f7f8f9';
+  const cardBg = isDark ? '#1b1d1f' : '#ffffff';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(19, 21, 23, 0.08)';
 
   const textPrimary = isDark ? '#ffffff' : '#111827';
   const textSecondary = isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)';
   const textBody = isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
-  const themedControlBg = isDark
-    ? `hsla(${hsl.h}, ${Math.max(hsl.s, 32)}%, ${Math.max(hsl.l, 42)}%, 0.12)`
-    : 'rgba(0, 0, 0, 0.04)';
+  const themedControlBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(19, 21, 23, 0.05)';
 
   // Filter events based on upcoming / past toggle + search query
   const filteredEvents = React.useMemo(() => {
@@ -500,10 +467,8 @@ const OrganizationPublicProfile: React.FC = () => {
   }
 
   return (
-    <div className="calendar-public-profile" style={{
-      background: isDark
-        ? `radial-gradient(ellipse 105% 760px at 50% -150px, ${themeColor}30 0%, ${themeColor}12 42%, transparent 78%), ${pageBg}`
-        : `radial-gradient(ellipse 105% 680px at 50% -150px, ${themeColor}18 0%, transparent 76%), ${pageBg}`,
+    <div className={`calendar-public-profile ${isDark ? 'is-dark' : 'is-light'}`} style={{
+      background: pageBg,
       color: textPrimary,
       minHeight: '100vh',
       fontFamily: 'Inter, sans-serif',
@@ -515,7 +480,7 @@ const OrganizationPublicProfile: React.FC = () => {
       <HeaderV2 transparent={true} fixed={false} theme={isDark ? 'dark' : 'light'} blueGlow={false} />
 
       {/* A capa começa logo abaixo do header, como na referência pública. */}
-      <div style={{ height: 36 }} />
+      <div className="calendar-header-gap" style={{ height: 36 }} />
 
       <main className="calendar-profile-shell" style={{ maxWidth: 1056, margin: '0 auto', padding: '24px 24px 0', position: 'relative', zIndex: 2 }}>
         
@@ -531,7 +496,7 @@ const OrganizationPublicProfile: React.FC = () => {
           position: 'relative',
           border: `1px solid ${cardBorder}`
         }}>
-          <div className="calendar-profile-logo" style={{
+          <div className="calendar-profile-cover-overlay" style={{
             position: 'absolute',
             inset: 0,
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%)'
@@ -549,7 +514,7 @@ const OrganizationPublicProfile: React.FC = () => {
           zIndex: 10
         }}>
           {/* Logo */}
-          <div style={{
+          <div className="calendar-profile-avatar" style={{
             width: 104,
             height: 104,
             borderRadius: 14,
@@ -574,50 +539,55 @@ const OrganizationPublicProfile: React.FC = () => {
             )}
           </div>
 
-          {/* Gerenciar Button (Calendar admins only) */}
-          {canManageCalendar && (
-            <button
-              onClick={() => navigate(`/calendar/manage/${org.id}`)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                minHeight: 36,
-                padding: '8px 17px',
-                borderRadius: '8px',
-                background: 'transparent',
-                border: `1px solid ${themeColor}`,
-                color: themeColor,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                backdropFilter: 'blur(10px)',
-                marginBottom: 4
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%, 0.56)`;
-                e.currentTarget.style.color = '#ffffff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = themeColor;
-              }}
-            >
-              Gerenciar <ArrowUpRight size={15} />
-            </button>
-          )}
-          {!canManageCalendar && (
-            <button
-              type="button"
-              disabled={followLoading}
-              onClick={handleFollow}
-              className="calendar-follow-button"
-              style={{ background: following ? 'rgba(255,255,255,.12)' : themeColor, color: following ? textPrimary : '#fff' }}
-            >
-              {following ? 'Seguindo' : 'Seguir'}
-            </button>
-          )}
+          <div className="calendar-profile-primary-actions">
+            {/* Gerenciar Button (Calendar admins only) */}
+            {canManageCalendar && (
+              <button
+                onClick={() => navigate(`/calendar/manage/${org.id}`)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  minHeight: 36,
+                  padding: '8px 17px',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  border: `1px solid ${themeColor}`,
+                  color: themeColor,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  backdropFilter: 'blur(10px)',
+                  marginBottom: 4
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%, 0.56)`;
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = themeColor;
+                }}
+              >
+                Gerenciar <ArrowUpRight size={15} />
+              </button>
+            )}
+            {!canManageCalendar && (
+              <button
+                type="button"
+                disabled={followLoading}
+                onClick={handleFollow}
+                className="calendar-follow-button"
+                style={{ background: following ? themedControlBg : themeColor, color: following ? textPrimary : '#fff' }}
+              >
+                {following ? 'Seguindo' : 'Seguir'}
+              </button>
+            )}
+            <Link className="calendar-profile-map-action" to={`/${org.slug || org.id}/map`} aria-label={`Abrir mapa de eventos de ${org.name}`}>
+              <MapIcon size={16} />
+            </Link>
+          </div>
         </div>
 
         {/* ── Brand Header block ── */}
@@ -717,7 +687,7 @@ const OrganizationPublicProfile: React.FC = () => {
         </div>
 
         {/* Divider */}
-        <hr style={{
+        <hr className="calendar-profile-divider" style={{
           border: 'none',
           borderBottom: `1px solid ${cardBorder}`,
           width: '100vw',
@@ -734,7 +704,7 @@ const OrganizationPublicProfile: React.FC = () => {
           
           {/* ── Left Column: Events ── */}
           <div>
-            <div style={{
+            <div className="calendar-events-heading" style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
@@ -754,6 +724,24 @@ const OrganizationPublicProfile: React.FC = () => {
 
               {/* View Switches Toolbar */}
               <div className="calendar-view-actions">
+                <div className="calendar-mobile-create-actions">
+                  <CalendarAddEventMenu
+                    organization={org}
+                    user={user}
+                    canManage={canManageCalendar}
+                    accentColor={themeColor}
+                    onCreateNew={() => navigate(`/create?organizationId=${org.id}`)}
+                    onAdded={refreshCalendarEvents}
+                  />
+                  <button
+                    onClick={() => setShowIcalModal(true)}
+                    data-tooltip="Adicionar assinatura iCal"
+                    aria-label="Adicionar assinatura iCal"
+                    className="calendar-tooltip calendar-ical-trigger"
+                  >
+                    <Rss size={14} />
+                  </button>
+                </div>
                 <div className="calendar-view-switch" data-view={calendarViewMode}>
                   <button type="button" aria-label="Visualização em calendário" data-tooltip="Calendário" onClick={() => setCalendarViewMode('cards')} className={`calendar-tooltip ${calendarViewMode === 'cards' ? 'is-active' : ''}`}><CalendarIcon size={16} /></button>
                   <button type="button" aria-label="Visualização em lista" data-tooltip="Lista" onClick={() => setCalendarViewMode('list')} className={`calendar-tooltip ${calendarViewMode === 'list' ? 'is-active' : ''}`}><List size={17} /></button>
@@ -787,7 +775,7 @@ const OrganizationPublicProfile: React.FC = () => {
           </div>
 
           {/* ── Right Column: Sidebar ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <aside className="calendar-profile-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             
             {/* Create Event Row */}
               <div style={{ display: 'flex', gap: 8 }}>
@@ -822,7 +810,7 @@ const OrganizationPublicProfile: React.FC = () => {
 
             {/* ── Sidebar Component 1: Mini Calendar ── */}
             <div style={{
-              background: isDark ? `hsla(${hsl.h}, ${darkSurfaceSaturation}%, 11%, 0.78)` : 'rgba(255, 255, 255, 0.72)',
+              background: isDark ? 'rgba(255, 255, 255, 0.035)' : 'rgba(255, 255, 255, 0.72)',
               border: `1px solid ${cardBorder}`,
               borderRadius: 14,
               padding: 14,
@@ -972,7 +960,7 @@ const OrganizationPublicProfile: React.FC = () => {
               {/* Filter Tabs */}
               <div style={{
                 display: 'flex',
-                background: isDark ? `hsla(${hsl.h}, ${darkSurfaceSaturation}%, 24%, 0.12)` : 'rgba(0, 0, 0, 0.03)',
+                background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
                 borderRadius: 9,
                 padding: 2,
                 marginTop: 13,
@@ -1041,7 +1029,7 @@ const OrganizationPublicProfile: React.FC = () => {
 
             </div>
 
-          </div>
+          </aside>
 
         </div>
 
@@ -1104,9 +1092,12 @@ const OrganizationPublicProfile: React.FC = () => {
         .calendar-follow-button:hover { filter: brightness(1.1); }
         .calendar-follow-button:active { transform: translateY(1px); }
         .calendar-follow-button:disabled { opacity: .6; cursor: wait; }
+        .calendar-profile-primary-actions { display:flex; align-items:center; gap:6px; }
+        .calendar-profile-map-action { display:none; width:32px; height:32px; place-items:center; border-radius:8px; color:rgba(255,255,255,.58); background:rgba(255,255,255,.075); text-decoration:none; }
         .calendar-location-tags { display:flex; flex-wrap:wrap; gap:6px; margin:-8px 0 22px; }
         .calendar-location-tags span { padding:5px 10px; border:1px solid rgba(255,255,255,.12); border-radius:999px; color:rgba(255,255,255,.72); font-size:11px; font-weight:600; line-height:1; }
         .calendar-view-actions { display:flex; align-items:center; gap:8px; }
+        .calendar-mobile-create-actions { display:none; align-items:center; gap:6px; }
         .calendar-view-switch { position:relative; display:flex; align-items:center; padding:3px; border-radius:9px; background:rgba(255,255,255,.075); }
         .calendar-view-switch:before { content:''; position:absolute; top:3px; left:3px; width:32px; height:29px; border-radius:7px; background:rgba(255,255,255,.16); transform:translateX(0); transition:transform .24s cubic-bezier(.2,.75,.25,1),background-color .2s ease; }
         .calendar-view-switch[data-view='list']:before { transform:translateX(32px); }
@@ -1127,6 +1118,17 @@ const OrganizationPublicProfile: React.FC = () => {
         .calendar-tooltip:hover:before { transform:translate(-50%,0) scale(1); }
         .calendar-tooltip:hover:after { transform:translateX(-50%) translateY(0); }
         .calendar-social-link:before { bottom:calc(100% + 12px); }
+        .calendar-public-profile.is-light .calendar-location-tags span { border-color:rgba(19,21,23,.12); color:rgba(19,21,23,.62); }
+        .calendar-public-profile.is-light .calendar-view-switch,
+        .calendar-public-profile.is-light .calendar-search-trigger,
+        .calendar-public-profile.is-light .calendar-ical-trigger { background:rgba(19,21,23,.055); }
+        .calendar-public-profile.is-light .calendar-view-switch:before { background:#fff; box-shadow:0 1px 4px rgba(19,21,23,.12); }
+        .calendar-public-profile.is-light .calendar-view-switch button,
+        .calendar-public-profile.is-light .calendar-search-trigger,
+        .calendar-public-profile.is-light .calendar-ical-trigger { color:rgba(19,21,23,.5); }
+        .calendar-public-profile.is-light .calendar-view-switch button.is-active { color:#131517; }
+        .calendar-public-profile.is-light .calendar-profile-avatar { border-color:rgba(19,21,23,.1) !important; }
+        .calendar-public-profile.is-light .calendar-profile-map-action { color:rgba(19,21,23,.52); background:rgba(19,21,23,.055); }
         @media (max-width: 1100px) {
           .profile-cols {
             grid-template-columns: minmax(0, 1fr) 272px !important;
@@ -1138,37 +1140,54 @@ const OrganizationPublicProfile: React.FC = () => {
           }
         }
         @media (max-width: 768px) {
+          .calendar-header-gap { display: none; }
           .calendar-profile-shell {
-            padding: 14px 12px 0 !important;
+            padding: 10px 12px 0 !important;
           }
           .profile-inner {
-            padding-left: 2px !important;
-            padding-right: 2px !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
           }
           .profile-cols {
             grid-template-columns: 1fr !important;
-            gap: 24px !important;
+            gap: 18px !important;
           }
-          .calendar-profile-cover { min-height: 132px; aspect-ratio: 16 / 7 !important; border-radius: 10px !important; }
-          .profile-overlap-row { margin-top: -40px !important; align-items: flex-end !important; }
-          .calendar-profile-logo { width: 82px !important; height: 82px !important; border-radius: 12px !important; }
-          .calendar-follow-button { min-height: 44px; margin-bottom: 0; padding: 10px 16px; }
-          .calendar-profile-brand { margin-top: 10px !important; }
-          .calendar-profile-brand h1 { max-width: 100%; overflow-wrap: anywhere; font-size: 1.65rem !important; }
-          .calendar-view-actions { width: 100%; justify-content: flex-end; }
-          .calendar-view-switch button { width: 40px; height: 38px; }
-          .calendar-view-switch:before { width: 40px; height: 38px; }
-          .calendar-view-switch[data-view='list']:before { transform: translateX(40px); }
-          .calendar-search-trigger, .calendar-ical-trigger { width: 44px; height: 44px; }
-          .calendar-location-tags { margin-top: -2px; }
-          .calendar-social-link { display: grid; width: 40px; height: 40px; place-items: center; margin: -8px 0; }
+          .calendar-profile-cover { display: none; }
+          .profile-overlap-row { margin-top: 0 !important; align-items: center !important; }
+          .calendar-profile-avatar {
+            width: 48px !important;
+            height: 48px !important;
+            border: 1px solid rgba(255,255,255,.09) !important;
+            border-radius: 9px !important;
+            box-shadow: none !important;
+          }
+          .calendar-profile-avatar > div { font-size: 1.35rem !important; }
+          .calendar-follow-button { min-width: 64px; min-height: 32px; margin-bottom: 0; padding: 7px 13px; font-size: 12px; }
+          .calendar-profile-primary-actions > button { margin-bottom:0 !important; min-height:32px !important; padding:7px 12px !important; font-size:12px !important; }
+          .calendar-profile-map-action { display:grid; }
+          .calendar-profile-brand { margin-top: 7px !important; gap: 10px !important; }
+          .calendar-profile-brand h1 { max-width: 100%; overflow-wrap: anywhere; font-size: 1.3rem !important; line-height:1.2; margin-top:6px !important; }
+          .calendar-profile-brand p { margin-top:10px !important; font-size:12px !important; line-height:1.45 !important; }
+          .calendar-profile-divider { margin-top:14px !important; margin-bottom:16px !important; }
+          .calendar-events-heading { flex-wrap:nowrap !important; gap:6px !important; margin-bottom:14px !important; }
+          .calendar-events-heading h2 { flex:0 0 auto; font-size:1rem !important; }
+          .calendar-view-actions { width:auto; min-width:0; margin-left:auto; justify-content:flex-end; gap:5px; }
+          .calendar-mobile-create-actions { display:flex; min-width:0; }
+          .calendar-mobile-create-actions .cae-root { flex:0 1 auto; }
+          .calendar-mobile-create-actions .cae-main { width:auto; height:34px; padding:0 9px; font-size:10.5px; white-space:nowrap; }
+          .calendar-view-switch button { width:32px; height:29px; }
+          .calendar-view-switch:before { width:32px; height:29px; }
+          .calendar-view-switch[data-view='list']:before { transform:translateX(32px); }
+          .calendar-search-trigger, .calendar-ical-trigger { width:34px; height:34px; flex:0 0 34px; }
+          .calendar-location-tags { margin:-2px 0 16px; }
+          .calendar-social-link { display:grid; width:28px; height:28px; place-items:center; margin:-5px 0; }
+          .calendar-profile-sidebar { display:none !important; }
           .calendar-tooltip:before, .calendar-tooltip:after { display: none; }
         }
-        @media (max-width: 380px) {
+        @media (max-width: 350px) {
           .calendar-profile-shell { padding-left: 8px !important; padding-right: 8px !important; }
-          .calendar-profile-cover { min-height: 120px; }
-          .calendar-profile-logo { width: 76px !important; height: 76px !important; }
-          .profile-overlap-row { margin-top: -36px !important; }
+          .calendar-events-heading { align-items:flex-start !important; flex-wrap:wrap !important; }
+          .calendar-view-actions { width:100%; }
         }
       ` }} />
     </div>

@@ -226,7 +226,7 @@ export default function CalendarAddEventMenu({
 
   return <>
     <div className={`cae-root ${isDark ? 'is-dark' : ''}`} ref={rootRef} style={{ '--cae-accent': accentColor } as React.CSSProperties}>
-      <button type="button" className="calendar-add-event-button cae-main" onClick={() => canManage ? setMenuOpen((value) => !value) : onCreateNew()} aria-expanded={canManage ? menuOpen : undefined}><Plus size={15} /> Adicionar Evento</button>
+      <button type="button" className="calendar-add-event-button cae-main" onClick={() => canManage ? setMenuOpen((value) => !value) : onCreateNew()} aria-expanded={canManage ? menuOpen : undefined}><Plus size={15} /> Enviar Evento</button>
       {menuOpen && <div className="cae-menu" role="menu">
         <button type="button" onClick={onCreateNew}><Plus /><span>Criar Novo Evento</span></button>
         <button type="button" onClick={() => openModal('existing')}><Sparkles /><span>Adicionar Evento Fauves<br />Existente</span></button>

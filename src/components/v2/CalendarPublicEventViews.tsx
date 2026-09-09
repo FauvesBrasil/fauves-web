@@ -58,7 +58,11 @@ export default function CalendarPublicEventViews({
     return [...grouped.values()];
   }, [events]);
 
-  if (!groups.length) return <div className="cp-event-empty">Nenhum evento encontrado.</div>;
+  if (!groups.length) return (
+    <div style={{ padding: '42px 20px', textAlign: 'center', color: textSecondary, fontSize: 14 }}>
+      Nenhum evento encontrado.
+    </div>
+  );
 
   return (
     <div
@@ -100,7 +104,7 @@ export default function CalendarPublicEventViews({
                   <article className="cp-event-card" key={event.id} onClick={() => onEventClick(event)}>
                     <div className="cp-event-card-copy">
                       <time>{timeLabel(event.startDate)}</time>
-                      <h3><Sparkles size={14} />{event.name}</h3>
+                      <h3>{event.name}</h3>
                       <p>{avatar && <img src={avatar} alt="" />}<span>Por {organizerName(event, organization)}</span></p>
                       {eventLocation(event) && <p><MapPin size={16} /><span>{eventLocation(event)}</span></p>}
                       {canManage && <button type="button" onClick={(e) => { e.stopPropagation(); onManage(event); }}>Gerenciar Evento <ArrowRight size={15} /></button>}
@@ -137,5 +141,5 @@ const styles = `
 .cp-event-empty{padding:42px 20px;text-align:center;color:rgba(255,255,255,.45);font-size:14px}
 .cp-events{animation:cp-view-enter .28s cubic-bezier(.2,.78,.25,1) both}
 @keyframes cp-view-enter{from{opacity:0;transform:translateY(7px);filter:blur(2px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
-@media(max-width:640px){.cp-event-card{min-height:145px;padding:14px}.cp-event-cover{width:88px;height:88px;flex-basis:88px}.cp-event-card h3,.cp-external-card h3{font-size:17px}.cp-event-row{grid-template-columns:58px minmax(0,1fr)}.cp-event-organizing{grid-column:2}.cp-event-date strong{font-size:15px}.cp-event-date span{font-size:13px}.cp-external-menu{right:-4px;width:205px}}
+@media(max-width:640px){.cp-event-group{margin-bottom:22px}.cp-events--cards .cp-event-group{padding-left:21px}.cp-events--cards .cp-event-group:before{left:4px;bottom:-23px}.cp-events--cards .cp-event-date i{left:0;width:8px;height:8px}.cp-event-date{gap:5px;margin-bottom:10px}.cp-event-card{min-height:128px;gap:11px;padding:11px;border-radius:11px}.cp-event-card-copy{overflow:hidden}.cp-event-card time,.cp-event-row time{font-size:12px}.cp-event-card h3,.cp-external-card h3{display:-webkit-box;overflow:hidden;margin:6px 0 7px;font-size:15px;line-height:1.16;-webkit-box-orient:vertical;-webkit-line-clamp:2}.cp-event-card p,.cp-event-row p{min-width:0;margin:4px 0;overflow:hidden;font-size:12px;white-space:nowrap}.cp-event-card p span,.cp-event-row p span{overflow:hidden;text-overflow:ellipsis}.cp-event-card p svg,.cp-event-row p svg{flex:0 0 auto;width:14px;height:14px}.cp-event-cover{width:76px;height:76px;flex-basis:76px;border-radius:8px}.cp-event-card button{margin-top:9px;padding:6px 9px;font-size:11px}.cp-event-row{grid-template-columns:52px minmax(0,1fr);gap:10px;min-height:96px;padding-top:13px;padding-bottom:13px}.cp-event-organizing{grid-column:2}.cp-event-date strong{font-size:13px}.cp-event-date span{font-size:12px}.cp-external-card{min-height:140px;padding:13px 14px}.cp-external-menu{right:-4px;width:205px}}
 `;
