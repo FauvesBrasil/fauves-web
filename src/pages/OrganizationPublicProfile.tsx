@@ -1214,7 +1214,7 @@ const OrganizationPublicProfile: React.FC = () => {
           .profile-cols > * { min-width:0; max-width:100%; }
           .calendar-profile-cover {
             display:block;
-            width:calc(100% + 32px);
+            width:calc(100% + 32px) !important;
             height:auto;
             min-height:0;
             margin-left:-16px;
