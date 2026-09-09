@@ -5,6 +5,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { apiUrl, fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useToast } from '@/hooks/use-toast';
 import HeaderV2 from '@/components/v2/HeaderV2';
+import fauvesLogo from '@/assets/logo-fauves.svg';
 import {
   Clock, MapPin, Rss, ArrowUpRight, Search, List, Calendar as CalendarIcon,
   ChevronLeft, ChevronRight, Globe, Instagram, Linkedin, Twitter, Map as MapIcon
@@ -19,6 +20,43 @@ import CalendarExternalEventModal from '@/components/v2/CalendarExternalEventMod
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import LocationMapPreview from '@/components/v2/LocationMapPreview';
 import { geocodeEventAddress, resolveEventAddress, resolveEventCoordinates } from '@/lib/eventLocation';
+
+const CalendarMobileNav = ({ isDark, signedIn }: { isDark: boolean; signedIn: boolean }) => (
+  <>
+    <header className={`calendar-mobile-nav ${isDark ? 'is-dark' : 'is-light'}`}>
+      <div className="calendar-mobile-nav-inner">
+        <Link className="calendar-mobile-nav-logo" to="/" aria-label="Fauves">
+          <img src={fauvesLogo} alt="Fauves" />
+        </Link>
+        <nav aria-label="Navegação principal">
+          <Link to="/discover">Descobrir Eventos</Link>
+          <Link className="calendar-mobile-nav-account" to={signedIn ? '/profile' : '/login'}>
+            {signedIn ? 'Minha conta' : 'Entrar'}
+          </Link>
+        </nav>
+      </div>
+    </header>
+    <style>{`
+      .calendar-mobile-nav { display:none; }
+      @media (max-width:820px) {
+        .calendar-desktop-nav { display:none; }
+        .calendar-mobile-nav { display:block; position:relative; z-index:40; height:52px; color:#fff; background:#131517; }
+        .calendar-mobile-nav.is-light { color:#131517; background:#f7f8f9; }
+        .calendar-mobile-nav-inner { display:flex; width:100%; height:52px; box-sizing:border-box; align-items:center; justify-content:space-between; padding:0 12px; }
+        .calendar-mobile-nav-logo { display:flex; width:46px; height:28px; align-items:center; }
+        .calendar-mobile-nav-logo img { display:block; width:46px; height:28px; object-fit:contain; }
+        .calendar-mobile-nav nav { display:flex; align-items:center; gap:12px; }
+        .calendar-mobile-nav nav a { color:inherit; text-decoration:none; font-size:13px; font-weight:600; line-height:1; white-space:nowrap; }
+        .calendar-mobile-nav nav .calendar-mobile-nav-account { padding:9px 13px; border-radius:999px; background:rgba(255,255,255,.12); }
+        .calendar-mobile-nav.is-light nav .calendar-mobile-nav-account { background:rgba(19,21,23,.08); }
+      }
+      @media (max-width:390px) {
+        .calendar-mobile-nav nav { gap:8px; }
+        .calendar-mobile-nav nav a { font-size:12px; }
+      }
+    `}</style>
+  </>
+);
 
 // Helper to convert hex to HSL for dynamic theme-tinted backgrounds
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
@@ -268,7 +306,7 @@ const OrganizationPublicProfile: React.FC = () => {
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(19, 21, 23, 0.08)';
 
   const textPrimary = isDark ? '#ffffff' : '#111827';
-  const textSecondary = isDark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)';
+  const textSecondary = isDark ? 'rgba(255, 255, 255, 0.50)' : 'rgba(0, 0, 0, 0.50)';
   const textBody = isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
   const themedControlBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(19, 21, 23, 0.05)';
 
@@ -403,7 +441,8 @@ const OrganizationPublicProfile: React.FC = () => {
         color: isDark ? '#f5f5f5' : '#1c1e21',
         fontFamily: 'Inter, sans-serif'
       }}>
-        <HeaderV2 transparent={true} theme={isDark ? 'dark' : 'light'} blueGlow={false} />
+        <div className="calendar-desktop-nav"><HeaderV2 transparent={true} theme={isDark ? 'dark' : 'light'} blueGlow={false} /></div>
+        <CalendarMobileNav isDark={isDark} signedIn={Boolean(user)} />
         <div style={{ height: '70px' }} />
         <style dangerouslySetInnerHTML={{ __html: `
           @keyframes shimmer { 0%, 100% { opacity: .45 } 50% { opacity: .85 } }
@@ -473,16 +512,16 @@ const OrganizationPublicProfile: React.FC = () => {
       minHeight: '100vh',
       fontFamily: 'Inter, sans-serif',
       paddingBottom: '6rem',
-      position: 'relative',
-      overflowX: 'clip'
+      position: 'relative'
     }}>
       {/* ── App Header ── */}
-      <HeaderV2 transparent={true} fixed={false} theme={isDark ? 'dark' : 'light'} blueGlow={false} scrollTransition={false} />
+      <div className="calendar-desktop-nav"><HeaderV2 transparent={true} fixed={false} theme={isDark ? 'dark' : 'light'} blueGlow={false} scrollTransition={false} /></div>
+      <CalendarMobileNav isDark={isDark} signedIn={Boolean(user)} />
 
       {/* A capa começa logo abaixo do header, como na referência pública. */}
       <div className="calendar-header-gap" style={{ height: 36 }} />
 
-      <main className="calendar-profile-shell" style={{ maxWidth: 1056, margin: '0 auto', padding: '24px 24px 0', position: 'relative', zIndex: 2 }}>
+      <main className="calendar-profile-shell" style={{ maxWidth: 820, boxSizing: 'border-box', margin: '0 auto', padding: '24px 24px 0', position: 'relative', zIndex: 2 }}>
         
         {/* ── Banner/Cover Container ── */}
         <div className={`calendar-profile-cover ${org.coverUrl ? 'has-cover' : 'no-cover'}`} style={{
@@ -1139,13 +1178,13 @@ const OrganizationPublicProfile: React.FC = () => {
             padding-right: 28px !important;
           }
         }
-        @media (max-width: 768px) {
-          .calendar-header-gap { display:block; height:64px !important; }
+        @media (max-width: 820px) {
+          .calendar-header-gap { display:none; height:0 !important; }
           .calendar-profile-shell {
             width:100%;
-            max-width:100%;
+            max-width:820px;
             box-sizing:border-box;
-            padding: 8px 12px 0 !important;
+            padding:0 16px !important;
           }
           .profile-inner {
             padding-left: 0 !important;
@@ -1157,62 +1196,69 @@ const OrganizationPublicProfile: React.FC = () => {
             max-width:100%;
             box-sizing:border-box;
             grid-template-columns: 1fr !important;
-            gap: 18px !important;
+            gap:16px !important;
+            padding-top:16px !important;
           }
           .profile-cols > * { min-width:0; max-width:100%; }
           .calendar-profile-cover {
             display:block;
-            height:72px;
-            min-height:72px;
-            aspect-ratio:auto !important;
+            width:100%;
+            height:auto;
+            min-height:0;
+            aspect-ratio:3.5 !important;
             border:0 !important;
-            border-radius:0 !important;
-            background-color:transparent !important;
+            border-radius:12px !important;
             background-position:center !important;
             background-repeat:no-repeat !important;
-            background-size:contain !important;
+            background-size:cover !important;
           }
           .calendar-profile-cover.no-cover { display:none; }
           .calendar-profile-cover-overlay { display:none; }
-          .profile-overlap-row { margin-top:10px !important; align-items: center !important; }
-          .calendar-profile-cover.no-cover + .profile-overlap-row { margin-top:0 !important; }
+          .profile-overlap-row { min-height:70px; margin-top:-28px !important; margin-bottom:16px; align-items:center !important; }
+          .calendar-profile-cover.no-cover + .profile-overlap-row { margin-top:16px !important; }
           .calendar-profile-avatar {
-            width: 48px !important;
-            height: 48px !important;
-            border: 1px solid rgba(255,255,255,.09) !important;
-            border-radius: 9px !important;
+            width:64px !important;
+            height:64px !important;
+            box-sizing:content-box;
+            border:3px solid #131517 !important;
+            border-radius:11px !important;
             box-shadow: none !important;
           }
-          .calendar-profile-avatar > div { font-size: 1.35rem !important; }
-          .calendar-follow-button { min-width: 64px; min-height: 32px; margin-bottom: 0; padding: 7px 13px; font-size: 12px; }
-          .calendar-profile-primary-actions > button { margin-bottom:0 !important; min-height:32px !important; padding:7px 12px !important; font-size:12px !important; }
+          .calendar-public-profile.is-light .calendar-profile-avatar { border-color:#f7f8f9 !important; }
+          .calendar-profile-avatar > div { font-size:1.5rem !important; }
+          .calendar-follow-button { min-width:66px; min-height:30px; margin-bottom:0; padding:7px 13px; border-radius:8px; font-size:14px; }
+          .calendar-profile-primary-actions > button { margin-bottom:0 !important; min-height:30px !important; padding:7px 12px !important; font-size:13px !important; }
           .calendar-profile-map-action { display:grid; }
-          .calendar-profile-brand { margin-top: 10px !important; gap: 10px !important; }
+          .calendar-profile-brand { margin-top:0 !important; gap:8px !important; }
           .calendar-profile-brand > div { width:100%; min-width:0; }
-          .calendar-profile-brand h1 { max-width: 100%; overflow-wrap: anywhere; font-size:1.5rem !important; font-weight:750 !important; line-height:1.18; margin-top:7px !important; }
-          .calendar-profile-time { gap:7px !important; margin-top:12px !important; font-size:14px !important; }
+          .calendar-profile-brand h1 { max-width:100%; overflow-wrap:anywhere; font-size:24px !important; font-weight:600 !important; line-height:1.2; letter-spacing:-.02em !important; margin:0 !important; }
+          .calendar-profile-time { gap:7px !important; margin-top:8px !important; font-size:14px !important; line-height:1.4; }
           .calendar-profile-time svg { width:16px; height:16px; }
-          .calendar-profile-description { max-width:100% !important; margin-top:13px !important; font-size:14px !important; line-height:1.5 !important; }
-          .calendar-profile-socials { gap:10px !important; margin-top:13px !important; }
-          .calendar-profile-divider { margin-top:18px !important; margin-bottom:18px !important; }
-          .calendar-events-heading { flex-wrap:nowrap !important; gap:6px !important; margin-bottom:14px !important; }
-          .calendar-events-heading h2 { flex:0 0 auto; font-size:1.25rem !important; }
+          .calendar-profile-description { max-width:100% !important; margin-top:16px !important; font-size:14px !important; line-height:1.5 !important; }
+          .calendar-profile-socials { gap:10px !important; margin-top:12px !important; }
+          .calendar-profile-divider { margin-top:24px !important; margin-bottom:0 !important; }
+          .calendar-events-heading { flex-wrap:nowrap !important; gap:8px !important; margin-bottom:16px !important; }
+          .calendar-events-heading h2 { flex:0 0 auto; font-size:20px !important; font-weight:600 !important; }
           .calendar-view-actions { width:auto; min-width:0; margin-left:auto; justify-content:flex-end; gap:5px; }
           .calendar-mobile-create-actions { display:flex; min-width:0; }
           .calendar-mobile-create-actions .cae-root { flex:0 1 auto; }
-          .calendar-mobile-create-actions .cae-main { width:auto; height:31px; padding:0 9px; font-size:11px; white-space:nowrap; }
+          .calendar-mobile-create-actions .cae-main { width:auto; height:30px; padding:0 10px; font-size:12px; white-space:nowrap; }
           .calendar-view-switch { padding:2px; }
-          .calendar-view-switch button { width:29px; height:27px; }
-          .calendar-view-switch:before { top:2px; left:2px; width:29px; height:27px; }
-          .calendar-view-switch[data-view='list']:before { transform:translateX(29px); }
-          .calendar-search-trigger, .calendar-ical-trigger { width:31px; height:31px; flex:0 0 31px; }
-          .calendar-location-tags { margin:-2px 0 16px; }
+          .calendar-view-switch button { width:30px; height:26px; }
+          .calendar-view-switch:before { top:2px; left:2px; width:30px; height:26px; }
+          .calendar-view-switch[data-view='list']:before { transform:translateX(30px); }
+          .calendar-search-trigger, .calendar-ical-trigger { width:30px; height:30px; flex:0 0 30px; }
+          .calendar-location-tags { display:none; }
           .calendar-social-link { display:grid; width:28px; height:28px; place-items:center; margin:-5px 0; }
           .calendar-profile-sidebar { display:none !important; }
           .calendar-tooltip:before, .calendar-tooltip:after { display: none; }
         }
+        @media (max-width: 390px) {
+          .calendar-mobile-create-actions .calendar-ical-trigger { display:none; }
+          .calendar-mobile-create-actions .cae-main { padding:0 8px; }
+        }
         @media (max-width: 350px) {
-          .calendar-profile-shell { padding-left: 8px !important; padding-right: 8px !important; }
+          .calendar-profile-shell { padding-left:12px !important; padding-right:12px !important; }
           .calendar-events-heading { align-items:flex-start !important; flex-wrap:wrap !important; }
           .calendar-view-actions { width:100%; }
         }
