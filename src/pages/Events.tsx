@@ -1378,16 +1378,49 @@ const Events = () => {
           .events-page-heading h1 { font-size: 1.5rem !important; padding-top: 7px; }
           .lux-button-switcher { flex-shrink: 0; }
           .lux-button-switcher .segment { min-height: 40px; padding: .5rem .75rem; }
-          .events-list { --timeline-title-width: 100%; --timeline-column-gap: 0; }
-          .events-list::before, .timeline-dot { display: none; }
+          .events-list {
+            --timeline-title-width: 100%;
+            --timeline-column-gap: 0;
+            padding-left: 22px;
+          }
+          .events-list::before {
+            display: block;
+            top: 18px;
+            left: 4px;
+            border-left-color: rgba(19,21,23,.12);
+          }
           .events-group-row { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 2rem; }
           .date-col {
-            position: static;
-            width: auto;
-            padding: 0 2px;
+            position: sticky;
+            top: calc(74px + env(safe-area-inset-top));
+            z-index: 40;
+            width: fit-content;
+            max-width: calc(100vw - 32px);
+            margin-left: -28px;
+            padding: 9px 15px 9px 28px;
             flex-direction: row;
             align-items: baseline;
             gap: 6px;
+            border: 1px solid rgba(19,21,23,.09);
+            border-radius: 999px;
+            background: rgba(247,248,249,.76);
+            box-shadow: 0 7px 24px rgba(19,21,23,.08);
+            backdrop-filter: blur(18px) saturate(155%);
+            -webkit-backdrop-filter: blur(18px) saturate(155%);
+          }
+          .date-col::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(19,21,23,.34);
+            transform: translateY(-50%);
+          }
+          .timeline-dot {
+            display: none;
           }
           .date-main { font-size: 14px; }
           .date-sub { font-size: 13px; margin-top: 0; }
@@ -1397,6 +1430,13 @@ const Events = () => {
           .event-card-v2 h3 { font-size: 1rem !important; }
           .event-card-v2 > div:last-child { flex-wrap: wrap; gap: 8px; }
           .manage-event-btn { min-height: 40px !important; padding: 8px 10px !important; }
+          .theme-root.dark .events-list::before { border-left-color: rgba(255,255,255,.12); }
+          .theme-root.dark .date-col {
+            border-color: rgba(255,255,255,.10);
+            background: rgba(30,31,33,.73);
+            box-shadow: 0 8px 26px rgba(0,0,0,.24);
+          }
+          .theme-root.dark .date-col::before { background: rgba(255,255,255,.36); }
         }
 
         @media (max-width: 360px) {

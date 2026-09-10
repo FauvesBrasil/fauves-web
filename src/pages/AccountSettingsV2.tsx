@@ -2997,6 +2997,18 @@ const AccountSettingsV2: React.FC = () => {
         @media (max-width: 820px) {
           .account-settings-body { padding-top: 8px !important; }
           .manage-sticky-tabs-title-shell { padding-top: 14px !important; }
+          .manage-sticky-tabs-header {
+            background: rgba(245,245,246,.76) !important;
+            border-bottom: 1px solid rgba(24,24,27,.08);
+            box-shadow: 0 8px 24px rgba(24,24,27,.05);
+            backdrop-filter: blur(22px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+          }
+          .account-settings-page.is-dark .manage-sticky-tabs-header {
+            background: rgba(19,21,23,.74) !important;
+            border-bottom-color: rgba(255,255,255,.08);
+            box-shadow: 0 8px 26px rgba(0,0,0,.2);
+          }
           .account-profile-grid {
             grid-template-columns: minmax(0, 342px) 140px !important;
             column-gap: 48px !important;

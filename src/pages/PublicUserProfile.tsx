@@ -361,8 +361,12 @@ const PublicUserProfile = () => {
             margin-bottom: 2rem;
         }
         @media (max-width: 640px) {
+            .profile-page-body {
+                padding-top: 20px !important;
+                padding-bottom: 64px !important;
+            }
             .profile-content-container {
-                padding: 28px 16px 20px;
+                padding: 0 16px 20px;
             }
             .profile-top-section {
                 flex-direction: column;
@@ -710,7 +714,7 @@ const PublicUserProfile = () => {
         }
       `}</style>
 
-      <div style={{ paddingTop: 72, paddingBottom: 80 }}>
+      <div className="profile-page-body" style={{ paddingTop: 72, paddingBottom: 80 }}>
         <div className="profile-content-container">
 
           {/* ── Profile Hero ────────────────────────────────────────────────── */}

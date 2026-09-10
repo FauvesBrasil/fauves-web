@@ -687,6 +687,17 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   const isDiscoverActive = activeSection === 'discover' || (!activeSection && (currentPath === '/discover' || currentPath === '/v2/discover' || currentPath.startsWith('/eventos/')));
   const isNotificationsActive = activeSection === 'notifications' || (!activeSection && currentPath === '/notifications');
   const isProfileActive = activeSection === 'profile' || (!activeSection && (currentPath === '/profile' || currentPath.startsWith('/u/') || currentPath.includes('account-settings')));
+  const shouldUseMobileStickyHeader = activeSection === 'calendars' || activeSection === 'discover' || activeSection === 'profile' || (
+    !activeSection && (
+      currentPath === '/events' ||
+      currentPath === '/organizations' ||
+      currentPath === '/discover' ||
+      currentPath === '/v2/discover' ||
+      currentPath === '/profile' ||
+      currentPath.startsWith('/u/') ||
+      currentPath.startsWith('/eventos/')
+    )
+  );
 
   useEffect(() => {
     if (!user?.id || !token) {
@@ -847,7 +858,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
 
   return (
     <>
-      <nav ref={navRef} className={`luma-nav-v2 ${transparent && !isScrolled ? 'transparent' : 'opaque'} ${isDarkTheme ? 'dark-mode-override' : ''} ${isMobileMenuOpen ? 'mobile-menu-open' : ''}`} style={{
+      <nav ref={navRef} className={`luma-nav-v2 ${transparent && !isScrolled ? 'transparent' : 'opaque'} ${isDarkTheme ? 'dark-mode-override' : ''} ${isMobileMenuOpen ? 'mobile-menu-open' : ''} ${shouldUseMobileStickyHeader ? 'mobile-sticky' : ''}`} style={{
         position: fixed ? 'fixed' : 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0.75rem 1rem',
@@ -1801,6 +1812,28 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         }
         html.dark .search-list-item:hover {
           background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        @media (max-width: 820px) {
+          .luma-nav-v2.mobile-sticky,
+          .luma-nav-v2.mobile-sticky.transparent,
+          .luma-nav-v2.mobile-sticky.opaque {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1000 !important;
+            background: rgba(247,248,249,.74) !important;
+            border-bottom: 1px solid rgba(19,21,23,.08) !important;
+            box-shadow: 0 8px 24px rgba(19,21,23,.045) !important;
+            backdrop-filter: blur(20px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+          }
+          .luma-nav-v2.mobile-sticky.dark-mode-override,
+          .luma-nav-v2.mobile-sticky.dark-mode-override.transparent,
+          .luma-nav-v2.mobile-sticky.dark-mode-override.opaque {
+            background: rgba(19,21,23,.72) !important;
+            border-bottom-color: rgba(255,255,255,.09) !important;
+            box-shadow: 0 8px 28px rgba(0,0,0,.18) !important;
+          }
         }
       `}</style>
     </>
