@@ -2739,6 +2739,100 @@ export default function CreateEventV2() {
                     }
                 }
 
+                @media (max-width: 820px) {
+                    .create-event-main {
+                        min-height: calc(100dvh - 66px) !important;
+                        padding: 14px 16px 56px !important;
+                    }
+
+                    .create-event-layout {
+                        width: 100% !important;
+                        max-width: 430px !important;
+                        flex-direction: column !important;
+                        gap: 18px !important;
+                    }
+
+                    .create-event-cover-column {
+                        position: static !important;
+                        top: auto !important;
+                        width: 100% !important;
+                        gap: 12px !important;
+                    }
+
+                    .create-event-cover-frame,
+                    .create-event-cover {
+                        width: 100% !important;
+                        height: auto !important;
+                        aspect-ratio: 1 / 1;
+                    }
+
+                    .create-event-theme-controls { width: 100% !important; }
+
+                    .create-event-form {
+                        width: 100% !important;
+                        gap: 18px !important;
+                    }
+
+                    .create-event-form-controls { gap: 10px !important; }
+                    .create-event-form-controls > .relative:first-child { min-width: 0; }
+                    .create-event-form-controls .calendar-toggle-btn span { max-width: 152px; }
+
+                    .lux-naked-input {
+                        min-height: 2.5rem !important;
+                        font-size: 2rem !important;
+                        line-height: 1.08 !important;
+                    }
+
+                    .create-event-datetime-block {
+                        display: flex !important;
+                        height: auto !important;
+                        overflow: visible;
+                        flex-direction: column;
+                        gap: 0 !important;
+                        border-radius: 9px;
+                        background: var(--black-opacity-4) !important;
+                        backdrop-filter: blur(8px);
+                        -webkit-backdrop-filter: blur(8px);
+                    }
+
+                    .create-event-datetime-card {
+                        width: 100% !important;
+                        height: 92px !important;
+                        padding: 7px 10px !important;
+                        border-radius: 9px 9px 0 0 !important;
+                        background: transparent !important;
+                    }
+
+                    .create-event-datetime-card > div:not(.timeline-line) { height: 38px !important; }
+                    .create-event-datetime-card .datetime-picker-btn {
+                        min-width: 0;
+                        max-width: none !important;
+                    }
+
+                    .create-event-timezone-wrap { width: 100%; }
+                    .create-event-timezone {
+                        width: 100% !important;
+                        height: 45px !important;
+                        flex-direction: row !important;
+                        align-items: center !important;
+                        justify-content: flex-start !important;
+                        gap: 6px;
+                        padding: 0 14px !important;
+                        border-top: 1px solid var(--black-opacity-8);
+                        border-radius: 0 0 9px 9px !important;
+                        background: transparent !important;
+                    }
+                    .create-event-timezone > div { margin-top: 0 !important; }
+                    .create-event-timezone > div:last-child { width: auto !important; }
+
+                    .create-event-submit {
+                        height: 52px !important;
+                        margin-top: 10px !important;
+                        border-radius: 10px !important;
+                        font-size: 17px !important;
+                    }
+                }
+
                 .style-popover {
                     width: 160px;
                     left: calc(50% - 80px);
@@ -3032,8 +3126,8 @@ export default function CreateEventV2() {
             
 
 
-            <main 
-                className="w-full flex justify-center pt-20 pb-16 px-4 min-h-screen relative z-10"
+            <main
+                className="create-event-main w-full flex justify-center pt-20 pb-16 px-4 min-h-screen relative z-10"
                 data-theme-dark={effectiveIsDark ? "true" : "false"}
                 data-theme-warp={selectedThemeId === 'warp' ? "true" : "false"}
                 style={{
@@ -3158,10 +3252,10 @@ export default function CreateEventV2() {
                         }}
                     />
                 )}
-                <div className="w-full max-w-[820px] mx-auto flex flex-col md:flex-row justify-center items-start gap-8 z-20">
+                <div className="create-event-layout w-full max-w-[820px] mx-auto flex flex-col md:flex-row justify-center items-start gap-8 z-20">
                     {/* Coluna Esquerda */}
-                    <aside className="w-full md:w-[330px] flex-shrink-0 flex flex-col gap-6 sticky top-24">
-                        <div className="relative flex justify-center items-center w-[330px] h-[330px]">
+                    <aside className="create-event-cover-column w-full md:w-[330px] flex-shrink-0 flex flex-col gap-6 sticky top-24">
+                        <div className="create-event-cover-frame relative flex justify-center items-center w-[330px] h-[330px]">
                             {/* Flores por trás do Cover (Estilo Floral do Tema Sazonal) */}
                             {selectedThemeId === 'seasonal' && (customStyle === 'Floral' || customStyle === 'Padrão') && (
                                 <div className="absolute w-[460px] h-[460px] pointer-events-none z-0" style={{ transform: 'scale(1.05)' }}>
@@ -3211,7 +3305,7 @@ export default function CreateEventV2() {
                             )}
 
                             <motion.div
-                                className="w-[330px] h-[330px] transition-all overflow-hidden relative cursor-pointer group photo-container"
+                                className="create-event-cover w-[330px] h-[330px] transition-all overflow-hidden relative cursor-pointer group photo-container"
                             style={{
                                 transform: selectedThemeId === 'seasonal' && (customStyle === 'Floral' || customStyle === 'Padrão') ? 'rotate(-3deg)' : 'none',
                                 background: selectedThemeId === 'warp' 
@@ -3272,7 +3366,7 @@ export default function CreateEventV2() {
                         </div>
  
                         {/* Botão de seleção de tema + Shuffle */}
-                        <div className="w-[330px] flex justify-start items-center gap-[8px]">
+                        <div className="create-event-theme-controls w-[330px] flex justify-start items-center gap-[8px]">
                             <div
                                 onClick={() => setIsThemeModalOpen(true)}
                                 className="flex-1 h-[55px] pl-[13px] pr-[11px] py-[9px] transition-all rounded-[8px] cursor-pointer flex justify-start items-center gap-[6px] theme-selector-btn"
@@ -3299,8 +3393,8 @@ export default function CreateEventV2() {
                     </aside>
 
                     {/* Coluna Direita (Formulário) */}
-                    <div className="w-full md:w-[566px] flex-shrink-0 flex flex-col gap-6">
-                        <div className="flex flex-row items-center justify-between gap-4 w-full">
+                    <div className="create-event-form w-full md:w-[566px] flex-shrink-0 flex flex-col gap-6">
+                        <div className="create-event-form-controls flex flex-row items-center justify-between gap-4 w-full">
                             {/* Dropdown de Calendário/Organização */}
                             <div className="relative">
                                 <button
@@ -3477,9 +3571,9 @@ export default function CreateEventV2() {
                         </div>
 
                         {/* Bloco de Data e Hora com Linha do Tempo Vertical - Figma Side-by-Side */}
-                        <div className="w-full h-[80px] flex items-stretch gap-[12px] relative z-20">
+                        <div className="create-event-datetime-block w-full h-[80px] flex items-stretch gap-[12px] relative z-20">
                             {/* Bloco Esquerdo (Pickers Início e Fim) */}
-                            <div className="w-[414px] h-[80px] datetime-container-bg backdrop-blur-[8px] rounded-[8px] relative px-[12px] py-[4px] flex flex-col justify-center gap-1 shrink-0">
+                            <div className="create-event-datetime-card w-[414px] h-[80px] datetime-container-bg backdrop-blur-[8px] rounded-[8px] relative px-[12px] py-[4px] flex flex-col justify-center gap-1 shrink-0">
                                 {/* Linha vertical pontilhada central */}
                                 <div className="absolute border-l border-dashed left-[21px] top-[26px] bottom-[26px] z-0 timeline-line" style={{ borderColor: 'var(--black-opacity-16)' }} />
                                 
@@ -3542,10 +3636,10 @@ export default function CreateEventV2() {
                             </div>
 
                             {/* Bloco Direito (Fuso Horário Interativo) */}
-                            <div className="relative shrink-0">
+                            <div className="create-event-timezone-wrap relative shrink-0">
                                 <div 
                                     onClick={() => setIsTimezoneDropdownOpen(!isTimezoneDropdownOpen)}
-                                    className="w-[140px] h-[80px] datetime-container-bg backdrop-blur-[8px] rounded-[8px] p-2.5 flex flex-col justify-center items-start cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all select-none"
+                                    className="create-event-timezone w-[140px] h-[80px] datetime-container-bg backdrop-blur-[8px] rounded-[8px] p-2.5 flex flex-col justify-center items-start cursor-pointer hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all select-none"
                                 >
                                     <Globe size={16} className="shrink-0" style={{ color: 'var(--black-opacity-64)' }} />
                                     <div className="text-[14px] font-sans font-medium leading-[18.2px] mt-1 shrink-0" style={{ color: 'var(--black-opacity-64)' }}>{selectedTimezone.gmt}</div>
@@ -3762,7 +3856,7 @@ export default function CreateEventV2() {
 
                         {/* Botão de Criação de Evento */}
                         <button
-                            className={`w-full h-[44px] rounded-[8px] font-sans font-medium text-[18px] transition-all duration-300 shadow-sm flex items-center justify-center shrink-0 border border-transparent select-none cursor-pointer mt-4 hover:brightness-110 active:scale-[0.98] ${
+                            className={`create-event-submit w-full h-[44px] rounded-[8px] font-sans font-medium text-[18px] transition-all duration-300 shadow-sm flex items-center justify-center shrink-0 border border-transparent select-none cursor-pointer mt-4 hover:brightness-110 active:scale-[0.98] ${
                                 !eventName 
                                     ? "bg-[#5d5d5d] text-white/50 cursor-not-allowed opacity-50" 
                                     : "text-white"

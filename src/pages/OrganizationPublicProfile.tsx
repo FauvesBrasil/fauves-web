@@ -445,7 +445,7 @@ const OrganizationPublicProfile: React.FC = () => {
         fontFamily: 'Inter, sans-serif'
       }}>
         <div className="calendar-desktop-nav"><HeaderV2 transparent={true} theme={isDark ? 'dark' : 'light'} blueGlow={false} /></div>
-        <CalendarMobileNav isDark={isDark} signedIn={Boolean(user)} />
+        {!user && <CalendarMobileNav isDark={isDark} signedIn={false} />}
         <div style={{ height: '70px' }} />
         <style dangerouslySetInnerHTML={{ __html: `
           @keyframes shimmer { 0%, 100% { opacity: .45 } 50% { opacity: .85 } }
@@ -519,7 +519,7 @@ const OrganizationPublicProfile: React.FC = () => {
     }}>
       {/* ── App Header ── */}
       <div className="calendar-desktop-nav"><HeaderV2 transparent={true} fixed={false} theme={isDark ? 'dark' : 'light'} blueGlow={false} scrollTransition={false} /></div>
-      <CalendarMobileNav isDark={isDark} signedIn={Boolean(user)} />
+      {!user && <CalendarMobileNav isDark={isDark} signedIn={false} />}
 
       {/* A capa começa logo abaixo do header, como na referência pública. */}
       <div className="calendar-header-gap" style={{ height: 36 }} />

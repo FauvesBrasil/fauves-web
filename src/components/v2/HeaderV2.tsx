@@ -113,7 +113,7 @@ const NotificationMenu = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="lux-menu-wrapper"
+            className={`lux-menu-wrapper ${isDark ? 'is-dark' : ''}`}
             style={{ position: 'absolute', top: '48px', right: '-10px', width: '320px', zIndex: 1001, transformOrigin: 'top right' }}
           >
             <div className="lux-menu-arrow arrow-up" style={{ right: '20px' }} />
@@ -147,7 +147,7 @@ const ProfileMenu = ({ isOpen, user, isDark, onClose, logout }: { isOpen: boolea
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="lux-menu-wrapper"
+            className={`lux-menu-wrapper profile-menu-wrapper ${isDark ? 'is-dark' : ''}`}
             style={{ position: 'absolute', top: '48px', right: '-8px', width: '260px', zIndex: 1001, transformOrigin: 'top right' }}
           >
             <div className="lux-menu-arrow arrow-up" style={{ right: '16px' }} />
@@ -164,6 +164,7 @@ const ProfileMenu = ({ isOpen, user, isDark, onClose, logout }: { isOpen: boolea
               <div style={{ height: '1px', background: isDark ? 'rgba(255,255,255,.1)' : 'rgba(19,21,23,.06)', margin: '4px 0' }} />
               <div style={{ padding: '0 4px' }}>
                 <Link to={`/u/${user?.id}`} onClick={onClose} className="menu-action-row">Ver Perfil</Link>
+                <a href="https://apps.apple.com/br/" target="_blank" rel="noreferrer" onClick={onClose} className="menu-action-row">Baixar app iOS</a>
                 <Link to="/v2/account-settings" onClick={onClose} className="menu-action-row">Configurações</Link>
                 <div onClick={() => { logout(); onClose(); }} className="menu-action-row" style={{ cursor: 'pointer' }}>Sair</div>
               </div>
@@ -635,7 +636,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   contentMaxWidth,
   blueGlow = true,
 }) => {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const location = useLocation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -644,6 +645,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   const [isLogoMenuOpen, setIsLogoMenuOpen] = useState(false);
   const [logoCopyState, setLogoCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [measuredContentLeft, setMeasuredContentLeft] = useState<number | null>(null);
   const navRef = useRef<HTMLElement>(null);
 
@@ -671,6 +673,34 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   // apenas para casos em que o header precisa declarar a largura diretamente.
   const resolvedMaxWidth = contentMaxWidth || 'var(--page-max-width, 1200px)';
   const isLoggedIn = !!user;
+
+  useEffect(() => {
+    if (!user?.id || !token) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let active = true;
+    const loadUnreadCount = async () => {
+      try {
+        const response = await fetchApi('/api/notifications/count', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active) setUnreadCount(Number(data.count) || 0);
+      } catch {
+        // O badge e opcional; o acesso a pagina continua disponivel.
+      }
+    };
+
+    void loadUnreadCount();
+    const interval = window.setInterval(loadUnreadCount, 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [user?.id, token]);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -810,7 +840,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         transition: 'all 0.3s ease',
       }}>
         {/* Logo (Extremidade Esquerda) */}
-        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, position: 'relative' }}>
+        <div className="header-brand-area" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, position: 'relative' }}>
           <Link
             to="/"
             className="logo-wrapper"
@@ -891,7 +921,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         )}
 
         {/* Extremidade Direita: Ícones e Ações */}
-        <div className="header-desktop-actions" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexShrink: 0 }}>
+        <div className={`header-desktop-actions ${isLoggedIn ? 'is-authenticated' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexShrink: 0 }}>
           {!isLoggedIn ? (
             <>
               <a href={explorarLink} className="luma-nav-link" style={{ color: contentColor }}>
@@ -906,13 +936,13 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             </>
           ) : (
             <>
-              <Link to="/create" className="luma-nav-link" style={{ color: contentColor, fontWeight: 600 }}>
-                Criar Evento
+              <Link to="/create" className="luma-nav-link header-create-event-link" style={{ color: contentColor, fontWeight: 600 }}>
+                Criar evento
               </Link>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <div className="header-auth-icon-group" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <button
-                  className="luma-icon-btn-hero tooltip-bottom"
+                  className="luma-icon-btn-hero tooltip-bottom header-search-action"
                   data-tooltip="Buscar — Ctrl + K"
                   onClick={() => setIsSearchOpen(true)}
                   style={{ color: contentColor }}
@@ -920,7 +950,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
                   <SearchIcon />
                 </button>
 
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <div className="header-desktop-notifications" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <button
                     className="luma-icon-btn-hero tooltip-bottom"
                     data-tooltip="Notificações"
@@ -928,11 +958,22 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
                     style={{ color: contentColor }}
                   >
                     <BellIcon />
+                    {unreadCount > 0 && <span className="header-notification-dot" />}
                   </button>
                   <NotificationMenu isOpen={isNotificationsOpen} isDark={isDarkTheme} onClose={() => setIsNotificationsOpen(false)} />
                 </div>
 
-                <div style={{ position: 'relative', marginLeft: '0.5rem' }}>
+                <Link
+                  to="/notifications"
+                  className="luma-icon-btn-hero header-mobile-notifications"
+                  aria-label={unreadCount > 0 ? `Notificacoes: ${unreadCount} nao lidas` : 'Notificacoes'}
+                  style={{ color: contentColor }}
+                >
+                  <BellIcon />
+                  {unreadCount > 0 && <span className="header-notification-dot" />}
+                </Link>
+
+                <div className="header-profile-anchor" style={{ position: 'relative', marginLeft: '0.5rem' }}>
                   <button
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                     className="luma-icon-btn-hero"
@@ -959,7 +1000,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           )}
         </div>
 
-        <button
+        {!isLoggedIn && <button
           type="button"
           className="header-mobile-trigger"
           onClick={() => setIsMobileMenuOpen((open) => !open)}
@@ -969,7 +1010,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           style={{ color: contentColor }}
         >
           {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        </button>}
       </nav>
 
       <AnimatePresence>
@@ -1098,6 +1139,23 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           border-radius: 10px;
           background: transparent;
           cursor: pointer;
+        }
+
+        .luma-icon-btn-hero.header-mobile-notifications {
+          display: none;
+          text-decoration: none;
+        }
+
+        .header-notification-dot {
+          position: absolute;
+          top: 4px;
+          right: 3px;
+          width: 7px;
+          height: 7px;
+          border: 2px solid currentColor;
+          border-radius: 50%;
+          background: #ff453a;
+          box-sizing: content-box;
         }
 
         .header-mobile-menu {
@@ -1244,12 +1302,18 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           text-decoration: none;
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 820px) {
           .luma-nav-v2 {
-            min-height: calc(64px + env(safe-area-inset-top));
-            padding-top: calc(.7rem + env(safe-area-inset-top)) !important;
-            padding-right: 14px !important;
-            padding-left: 14px !important;
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            z-index: 1000 !important;
+            width: 100%;
+            min-height: calc(66px + env(safe-area-inset-top));
+            gap: 8px;
+            padding: calc(11px + env(safe-area-inset-top)) 16px 11px !important;
+            transform: none !important;
           }
           .luma-nav-v2.mobile-menu-open {
             background: transparent !important;
@@ -1258,11 +1322,76 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
           }
-          .header-desktop-actions,
-          .header-content-alignment { display: none !important; }
+          .header-desktop-actions { display: none !important; }
+          .header-desktop-actions.is-authenticated {
+            display: flex !important;
+            min-width: 0;
+            gap: 8px !important;
+            margin-left: auto;
+          }
+          .header-content-alignment {
+            position: static !important;
+            display: flex !important;
+            width: auto !important;
+            max-width: none !important;
+            padding: 0 !important;
+            transform: none !important;
+          }
+          .authenticated-nav {
+            gap: 11px !important;
+          }
+          .authenticated-nav .luma-nav-link {
+            width: 26px;
+            height: 34px;
+            justify-content: center;
+            padding: 0;
+          }
+          .authenticated-nav .luma-nav-link span { display: none; }
+          .authenticated-nav .luma-nav-link svg {
+            width: 21px;
+            height: 21px;
+          }
+          .header-brand-area,
+          .header-brand-area .logo-wrapper {
+            min-width: 42px;
+            min-height: 42px;
+          }
+          .header-brand-area .header-fauves-logo { width: 48px; }
+          .header-create-event-link {
+            min-height: 36px;
+            font-size: 13px !important;
+            white-space: nowrap;
+          }
+          .header-auth-icon-group { gap: 2px !important; }
+          .luma-icon-btn-hero.header-search-action,
+          .header-desktop-notifications { display: none !important; }
+          .luma-icon-btn-hero.header-mobile-notifications {
+            display: inline-flex;
+            width: 34px;
+            height: 36px;
+            padding: 6px;
+          }
+          .header-profile-anchor { margin-left: 0 !important; }
+          .header-profile-anchor > .luma-icon-btn-hero {
+            width: 30px !important;
+            height: 30px !important;
+          }
+          .profile-menu-wrapper {
+            top: 45px !important;
+            right: -4px !important;
+            width: min(260px, calc(100vw - 24px)) !important;
+          }
           .header-mobile-trigger { display: inline-flex; }
           .luma-nav-v2.dark-mode-override .header-mobile-trigger { background: rgba(255,255,255,.07); }
           .luma-nav-v2:not(.dark-mode-override) .header-mobile-trigger { background: rgba(19,21,23,.055); }
+        }
+
+        @media (max-width: 374px) {
+          .luma-nav-v2 { gap: 4px; padding-right: 10px !important; padding-left: 10px !important; }
+          .authenticated-nav { gap: 6px !important; }
+          .header-desktop-actions.is-authenticated { gap: 4px !important; }
+          .header-create-event-link { font-size: 12px !important; }
+          .header-brand-area .header-fauves-logo { width: 43px; }
         }
 
         .luma-nav-v2.transparent {
@@ -1605,18 +1734,22 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         }
 
         /* Dark Mode Overrides */
-        html.dark .lux-menu-wrapper {
+        html.dark .lux-menu-wrapper,
+        .lux-menu-wrapper.is-dark {
           background-color: rgba(30, 31, 34, 0.95) !important;
           border-color: rgba(255, 255, 255, 0.08) !important;
           box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5) !important;
         }
-        html.dark .menu-action-row {
+        html.dark .menu-action-row,
+        .lux-menu-wrapper.is-dark .menu-action-row {
           color: rgba(255, 255, 255, 0.9) !important;
         }
-        html.dark .menu-action-row:hover {
+        html.dark .menu-action-row:hover,
+        .lux-menu-wrapper.is-dark .menu-action-row:hover {
           background-color: rgba(255, 255, 255, 0.08) !important;
         }
-        html.dark .lux-menu-arrow.arrow-up {
+        html.dark .lux-menu-arrow.arrow-up,
+        .lux-menu-wrapper.is-dark .lux-menu-arrow.arrow-up {
           border-bottom-color: rgba(30, 31, 34, 0.95) !important;
         }
         html.dark .search-list-item:hover {
