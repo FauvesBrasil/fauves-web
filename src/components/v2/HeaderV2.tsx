@@ -1406,26 +1406,6 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             width: 30px !important;
             height: 30px !important;
           }
-          .authenticated-nav .luma-nav-link.is-active,
-          .luma-icon-btn-hero.header-mobile-notifications.is-active {
-            background: rgba(19,21,23,.11);
-            box-shadow: inset 0 0 0 1px rgba(19,21,23,.05);
-          }
-          .luma-nav-v2.dark-mode-override .authenticated-nav .luma-nav-link.is-active,
-          .luma-nav-v2.dark-mode-override .luma-icon-btn-hero.header-mobile-notifications.is-active {
-            background: rgba(255,255,255,.15);
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
-          }
-          .header-create-event-link.is-active {
-            padding: 0 9px;
-            border-radius: 9px;
-            background: rgba(19,21,23,.10);
-          }
-          .luma-nav-v2.dark-mode-override .header-create-event-link.is-active { background: rgba(255,255,255,.14); }
-          .header-profile-anchor > .luma-icon-btn-hero.is-active {
-            outline: 2px solid currentColor;
-            outline-offset: 2px;
-          }
           .profile-menu-wrapper {
             top: 45px !important;
             right: -4px !important;
@@ -1815,6 +1795,32 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         }
 
         @media (max-width: 820px) {
+          .authenticated-nav .luma-nav-link,
+          .luma-icon-btn-hero.header-mobile-notifications,
+          .header-profile-anchor > .luma-icon-btn-hero,
+          .header-create-event-link {
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+            opacity: .56;
+          }
+          .authenticated-nav .luma-nav-link.is-active,
+          .luma-icon-btn-hero.header-mobile-notifications.is-active,
+          .header-profile-anchor > .luma-icon-btn-hero.is-active,
+          .header-create-event-link.is-active {
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+            opacity: 1;
+          }
+          .authenticated-nav .luma-nav-link:hover,
+          .luma-icon-btn-hero.header-mobile-notifications:hover,
+          .header-profile-anchor > .luma-icon-btn-hero:hover,
+          .header-create-event-link:hover {
+            background: transparent !important;
+            border-bottom: 0 !important;
+            top: auto !important;
+          }
           .luma-nav-v2.mobile-sticky,
           .luma-nav-v2.mobile-sticky.transparent,
           .luma-nav-v2.mobile-sticky.opaque {
@@ -1822,8 +1828,8 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             top: 0 !important;
             z-index: 1000 !important;
             background: rgba(247,248,249,.74) !important;
-            border-bottom: 1px solid rgba(19,21,23,.08) !important;
-            box-shadow: 0 8px 24px rgba(19,21,23,.045) !important;
+            border-bottom: 0 !important;
+            box-shadow: none !important;
             backdrop-filter: blur(20px) saturate(160%) !important;
             -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
           }
@@ -1831,8 +1837,8 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           .luma-nav-v2.mobile-sticky.dark-mode-override.transparent,
           .luma-nav-v2.mobile-sticky.dark-mode-override.opaque {
             background: rgba(19,21,23,.72) !important;
-            border-bottom-color: rgba(255,255,255,.09) !important;
-            box-shadow: 0 8px 28px rgba(0,0,0,.18) !important;
+            border-bottom: 0 !important;
+            box-shadow: none !important;
           }
         }
       `}</style>
