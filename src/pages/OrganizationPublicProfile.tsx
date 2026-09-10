@@ -550,7 +550,7 @@ const OrganizationPublicProfile: React.FC = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-end',
-          padding: '0 40px',
+          padding: '0 24px 0 40px',
           marginTop: -52,
           position: 'relative',
           zIndex: 10
