@@ -524,7 +524,7 @@ const OrganizationPublicProfile: React.FC = () => {
       {/* A capa começa logo abaixo do header, como na referência pública. */}
       <div className="calendar-header-gap" style={{ height: 36 }} />
 
-      <main className="calendar-profile-shell" style={{ maxWidth: 820, boxSizing: 'border-box', margin: '0 auto', padding: '24px 24px 0', position: 'relative', zIndex: 2 }}>
+      <main className="calendar-profile-shell" style={{ maxWidth: 1080, boxSizing: 'border-box', margin: '0 auto', padding: '24px 36px 0', position: 'relative', zIndex: 2 }}>
         
         {/* ── Banner/Cover Container ── */}
         <div className={`calendar-profile-cover ${org.coverUrl ? 'has-cover' : 'no-cover'}`} style={{
@@ -550,7 +550,7 @@ const OrganizationPublicProfile: React.FC = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-end',
-          padding: '0 35px',
+          padding: '0 40px',
           marginTop: -52,
           position: 'relative',
           zIndex: 10
@@ -633,7 +633,7 @@ const OrganizationPublicProfile: React.FC = () => {
         </div>
 
         {/* ── Brand Header block ── */}
-        <div className="profile-inner calendar-profile-brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginTop: 12, padding: '0 35px' }}>
+        <div className="profile-inner calendar-profile-brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginTop: 12, padding: '0 40px' }}>
           <div>
             {/* Title */}
             <h1 style={{
@@ -739,9 +739,9 @@ const OrganizationPublicProfile: React.FC = () => {
         {/* ── Two Columns Main Layout ── */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 280px',
-          gap: 40,
-          padding: '0 35px'
+          gridTemplateColumns: 'minmax(0, 1fr) 260px',
+          gap: 24,
+          padding: '0 40px'
         }} className="profile-cols profile-inner">
           
           {/* ── Left Column: Events ── */}
@@ -818,7 +818,7 @@ const OrganizationPublicProfile: React.FC = () => {
           </div>
 
           {/* ── Right Column: Sidebar ── */}
-          <aside className="calendar-profile-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <aside className="calendar-profile-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             
             {/* Create Event Row */}
               <div style={{ display: 'flex', gap: 8 }}>
@@ -835,8 +835,8 @@ const OrganizationPublicProfile: React.FC = () => {
                   data-tooltip="Adicionar assinatura iCal"
                   className="calendar-tooltip calendar-ical-trigger"
                   style={{
-                    width: 34,
-                    height: 34,
+                    width: 30,
+                    height: 30,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -870,16 +870,13 @@ const OrganizationPublicProfile: React.FC = () => {
               }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                   <span style={{
-                    fontSize: 14,
-                    fontWeight: 700,
+                    fontSize: 18,
+                    fontWeight: 600,
                     textTransform: 'capitalize',
                     color: textPrimary,
                     letterSpacing: '-0.01em'
                   }}>
                     {currentDate.toLocaleDateString('pt-BR', { month: 'long' })}
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: textSecondary }}>
-                    {currentDate.getFullYear()}
                   </span>
                 </div>
                 
@@ -917,8 +914,8 @@ const OrganizationPublicProfile: React.FC = () => {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(7, 1fr)',
                 textAlign: 'center',
-                fontSize: 9,
-                fontWeight: 700,
+                fontSize: 14,
+                fontWeight: 500,
                 color: textSecondary,
                 marginBottom: 6,
                 textTransform: 'uppercase',
@@ -937,7 +934,7 @@ const OrganizationPublicProfile: React.FC = () => {
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(7, 1fr)',
-                gap: '3px 2px',
+                gap: '1px 0',
                 textAlign: 'center'
               }}>
                 {calendarDays.map((cell, idx) => (
@@ -952,7 +949,8 @@ const OrganizationPublicProfile: React.FC = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       position: 'relative',
-                      minHeight: 29,
+                      minHeight: 0,
+                      aspectRatio: '1',
                       justifyContent: 'center',
                       padding: 0,
                       border: 0,
@@ -962,8 +960,8 @@ const OrganizationPublicProfile: React.FC = () => {
                     }}
                   >
                     <span style={{
-                      fontSize: 11,
-                      fontWeight: cell.isSelected || cell.isToday || cell.hasEvent ? '700' : '550',
+                      fontSize: 14,
+                      fontWeight: cell.isSelected || cell.isToday || cell.hasEvent ? '600' : '500',
                       color: !cell.currentMonth
                         ? (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.15)')
                         : cell.isSelected
@@ -1017,8 +1015,8 @@ const OrganizationPublicProfile: React.FC = () => {
                     padding: '5px 0',
                     border: 'none',
                     borderRadius: 6,
-                    fontSize: 11,
-                    fontWeight: 650,
+                      fontSize: 14,
+                      fontWeight: 600,
                     background: listFilter === 'upcoming' ? (isDark ? themedControlBg : '#ffffff') : 'transparent',
                     color: listFilter === 'upcoming' ? textPrimary : textSecondary,
                     cursor: 'pointer',
@@ -1036,8 +1034,8 @@ const OrganizationPublicProfile: React.FC = () => {
                     padding: '5px 0',
                     border: 'none',
                     borderRadius: 6,
-                    fontSize: 11,
-                    fontWeight: 650,
+                      fontSize: 14,
+                      fontWeight: 600,
                     background: listFilter === 'past' ? (isDark ? themedControlBg : '#ffffff') : 'transparent',
                     color: listFilter === 'past' ? textPrimary : textSecondary,
                     cursor: 'pointer',
@@ -1157,6 +1155,16 @@ const OrganizationPublicProfile: React.FC = () => {
         .calendar-search-trigger:active, .calendar-ical-trigger:active, .calendar-add-event-button:active { transform:scale(.95); }
         .calendar-add-event-button:hover { color:#151515 !important; background:rgba(255,255,255,.64) !important; }
         .calendar-public-profile .cae-main { color:rgba(255,255,255,.64); background:rgba(255,255,255,.08); }
+        .calendar-public-profile .cae-main { height:30px; font-size:14px; }
+        .calendar-profile-brand h1 { font-size:36px !important; font-weight:600 !important; line-height:1.2; }
+        .calendar-profile-time { font-size:16px !important; }
+        .calendar-profile-description { font-size:16px !important; }
+        .calendar-events-heading h2 { font-size:24px !important; font-weight:600 !important; }
+        .calendar-view-switch { padding:2px; }
+        .calendar-view-switch button { width:30px; height:26px; }
+        .calendar-view-switch:before { top:2px; left:2px; width:30px; height:26px; }
+        .calendar-view-switch[data-view='list']:before { transform:translateX(30px); }
+        .calendar-search-trigger, .calendar-ical-trigger { width:30px; height:30px; }
         .calendar-tooltip { position:relative; }
         .calendar-tooltip:before { content:attr(data-tooltip); position:absolute; left:50%; bottom:calc(100% + 10px); z-index:80; width:max-content; max-width:240px; padding:7px 10px; border-radius:8px; color:#171819; background:rgba(255,255,255,.96); backdrop-filter:blur(10px); box-shadow:0 8px 24px rgba(0,0,0,.18); font-size:12px; font-weight:500; line-height:1.2; pointer-events:none; visibility:hidden; opacity:0; transform:translate(-50%,7px) scale(.94); transform-origin:50% 100%; transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.25,1),visibility 0s linear .22s; }
         .calendar-tooltip:after { content:''; position:absolute; left:50%; bottom:calc(100% + 5px); z-index:81; border:5px solid transparent; border-top-color:rgba(255,255,255,.96); pointer-events:none; visibility:hidden; opacity:0; transform:translateX(-50%) translateY(3px); transition:opacity .16s ease,transform .2s cubic-bezier(.2,.8,.25,1),visibility 0s linear .22s; }
@@ -1182,12 +1190,12 @@ const OrganizationPublicProfile: React.FC = () => {
         .calendar-public-profile.is-light .calendar-add-event-button:hover { color:#fff !important; background:rgba(21,21,21,.64) !important; }
         @media (max-width: 1100px) {
           .profile-cols {
-            grid-template-columns: minmax(0, 1fr) 272px !important;
-            gap: 28px !important;
+            grid-template-columns: minmax(0, 1fr) 260px !important;
+            gap: 20px !important;
           }
           .profile-inner {
-            padding-left: 28px !important;
-            padding-right: 28px !important;
+            padding-left: 24px !important;
+            padding-right: 24px !important;
           }
         }
         @media (max-width: 820px) {
