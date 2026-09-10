@@ -327,7 +327,7 @@ const Notifications: React.FC = () => {
                     }
                     .notifications-main {
                         width: 100%;
-                        padding: 34px 16px 48px;
+                        padding: var(--page-top-spacing-mobile) 16px 48px;
                     }
                     .notifications-title-row {
                         align-items: center;

@@ -2213,7 +2213,7 @@ const EventPageV2: React.FC = () => {
         }
 
         @media (max-width: 650px) {
-          .page-container { padding-top: 52px; }
+          .page-container { padding-top: 0; }
           .event-page-content-wrapper {
             flex-direction: column;
             gap: 1.75rem;

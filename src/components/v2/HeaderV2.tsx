@@ -622,6 +622,7 @@ interface HeaderV2Props {
   scrollTransition?: boolean;
   contentMaxWidth?: string;
   blueGlow?: boolean;
+  activeSection?: 'events' | 'calendars' | 'discover' | 'notifications' | 'create' | 'profile';
 }
 
 const HeaderV2: React.FC<HeaderV2Props> = ({
@@ -635,6 +636,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   scrollTransition = true,
   contentMaxWidth,
   blueGlow = true,
+  activeSection,
 }) => {
   const { user, token, logout } = useAuth();
   const location = useLocation();
@@ -673,6 +675,18 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   // apenas para casos em que o header precisa declarar a largura diretamente.
   const resolvedMaxWidth = contentMaxWidth || 'var(--page-max-width, 1200px)';
   const isLoggedIn = !!user;
+  const currentPath = location.pathname;
+  const isCreateRoute = currentPath === '/create' || currentPath === '/events/create';
+  const isCreateActive = activeSection === 'create' || (!activeSection && isCreateRoute);
+  const isEventsActive = activeSection === 'events' || (!activeSection && !isCreateRoute && (
+    currentPath === '/events' ||
+    currentPath.startsWith('/event/') ||
+    currentPath.startsWith('/v2/event/')
+  ));
+  const isCalendarsActive = activeSection === 'calendars' || (!activeSection && (currentPath === '/organizations' || currentPath.startsWith('/calendar/')));
+  const isDiscoverActive = activeSection === 'discover' || (!activeSection && (currentPath === '/discover' || currentPath === '/v2/discover' || currentPath.startsWith('/eventos/')));
+  const isNotificationsActive = activeSection === 'notifications' || (!activeSection && currentPath === '/notifications');
+  const isProfileActive = activeSection === 'profile' || (!activeSection && (currentPath === '/profile' || currentPath.startsWith('/u/') || currentPath.includes('account-settings')));
 
   useEffect(() => {
     if (!user?.id || !token) {
@@ -904,15 +918,15 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
               gap: '1.5rem',
               pointerEvents: 'auto'
             }}>
-              <Link to="/events" className="luma-nav-link" style={{ color: contentColor }}>
+              <Link to="/events" className={`luma-nav-link ${isEventsActive ? 'is-active' : ''}`} aria-current={isEventsActive ? 'page' : undefined} style={{ color: contentColor }}>
                 <EventosIcon />
                 <span>Eventos</span>
               </Link>
-              <Link to="/organizations" className="luma-nav-link" style={{ color: contentColor }}>
+              <Link to="/organizations" className={`luma-nav-link ${isCalendarsActive ? 'is-active' : ''}`} aria-current={isCalendarsActive ? 'page' : undefined} style={{ color: contentColor }}>
                 <OrganizacoesIcon />
                 <span>Calendários</span>
               </Link>
-              <Link to="/discover" className="luma-nav-link" style={{ color: contentColor }}>
+              <Link to="/discover" className={`luma-nav-link ${isDiscoverActive ? 'is-active' : ''}`} aria-current={isDiscoverActive ? 'page' : undefined} style={{ color: contentColor }}>
                 <DescobrirIcon />
                 <span>Descobrir</span>
               </Link>
@@ -936,7 +950,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             </>
           ) : (
             <>
-              <Link to="/create" className="luma-nav-link header-create-event-link" style={{ color: contentColor, fontWeight: 600 }}>
+              <Link to="/create" className={`luma-nav-link header-create-event-link ${isCreateActive ? 'is-active' : ''}`} aria-current={isCreateActive ? 'page' : undefined} style={{ color: contentColor, fontWeight: 600 }}>
                 Criar evento
               </Link>
 
@@ -965,7 +979,8 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
 
                 <Link
                   to="/notifications"
-                  className="luma-icon-btn-hero header-mobile-notifications"
+                  className={`luma-icon-btn-hero header-mobile-notifications ${isNotificationsActive ? 'is-active' : ''}`}
+                  aria-current={isNotificationsActive ? 'page' : undefined}
                   aria-label={unreadCount > 0 ? `Notificacoes: ${unreadCount} nao lidas` : 'Notificacoes'}
                   style={{ color: contentColor }}
                 >
@@ -976,7 +991,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
                 <div className="header-profile-anchor" style={{ position: 'relative', marginLeft: '0.5rem' }}>
                   <button
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                    className="luma-icon-btn-hero"
+                    className={`luma-icon-btn-hero ${isProfileActive ? 'is-active' : ''}`}
                     style={{ padding: 0, width: 24, height: 24, overflow: 'hidden', border: isDarkTheme ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.1)' }}
                   >
                     {user?.photoUrl ? (
@@ -1345,6 +1360,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             height: 34px;
             justify-content: center;
             padding: 0;
+            border-radius: 9px;
           }
           .authenticated-nav .luma-nav-link span { display: none; }
           .authenticated-nav .luma-nav-link svg {
@@ -1356,6 +1372,9 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             min-width: 42px;
             min-height: 42px;
           }
+          .header-brand-area .logo-wrapper { opacity: .62; }
+          .header-brand-area .logo-wrapper:hover,
+          .header-brand-area .logo-wrapper:focus-visible { opacity: .9; }
           .header-brand-area .header-fauves-logo { width: 48px; }
           .header-create-event-link {
             min-height: 36px;
@@ -1375,6 +1394,26 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           .header-profile-anchor > .luma-icon-btn-hero {
             width: 30px !important;
             height: 30px !important;
+          }
+          .authenticated-nav .luma-nav-link.is-active,
+          .luma-icon-btn-hero.header-mobile-notifications.is-active {
+            background: rgba(19,21,23,.11);
+            box-shadow: inset 0 0 0 1px rgba(19,21,23,.05);
+          }
+          .luma-nav-v2.dark-mode-override .authenticated-nav .luma-nav-link.is-active,
+          .luma-nav-v2.dark-mode-override .luma-icon-btn-hero.header-mobile-notifications.is-active {
+            background: rgba(255,255,255,.15);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+          }
+          .header-create-event-link.is-active {
+            padding: 0 9px;
+            border-radius: 9px;
+            background: rgba(19,21,23,.10);
+          }
+          .luma-nav-v2.dark-mode-override .header-create-event-link.is-active { background: rgba(255,255,255,.14); }
+          .header-profile-anchor > .luma-icon-btn-hero.is-active {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
           }
           .profile-menu-wrapper {
             top: 45px !important;
@@ -1615,17 +1654,25 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
         
         .authenticated-nav .luma-nav-link {
           gap: 0.5rem;
-          color: rgba(19, 21, 23, 0.45) !important;
+          color: rgba(19, 21, 23, 0.64) !important;
           font-weight: 500;
           transition: color 0.25s ease;
         }
+        .authenticated-nav .luma-nav-link svg path[fill-opacity] { fill-opacity: .68; }
+        .authenticated-nav .luma-nav-link.is-active {
+          color: #131517 !important;
+        }
+        .authenticated-nav .luma-nav-link.is-active svg path[fill-opacity] { fill-opacity: 1; }
         .authenticated-nav .luma-nav-link:hover {
           color: #131517 !important;
         }
         
         /* Tema Escuro Adaptando os links autenticados */
         .luma-nav-v2.dark-mode-override .authenticated-nav .luma-nav-link {
-           color: rgba(255, 255, 255, 0.5) !important;
+           color: rgba(255, 255, 255, 0.66) !important;
+        }
+        .luma-nav-v2.dark-mode-override .authenticated-nav .luma-nav-link.is-active {
+           color: #ffffff !important;
         }
         .luma-nav-v2.dark-mode-override .authenticated-nav .luma-nav-link:hover {
            color: #ffffff !important;

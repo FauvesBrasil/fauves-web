@@ -5,14 +5,14 @@
 
 :root {
   --page-top-spacing: 100px;
-  --page-top-spacing-mobile: 80px;
+  --page-top-spacing-mobile: 24px;
   --fauves-modal-width: 440px;
   --fauves-side-panel-width: 520px;
   --fauves-modal-radius: 14px;
   --fauves-control-radius: 8px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 820px) {
   :root {
     --page-top-spacing: var(--page-top-spacing-mobile);
   }

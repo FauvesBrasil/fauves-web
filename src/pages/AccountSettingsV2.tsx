@@ -633,7 +633,7 @@ const AccountSettingsV2: React.FC = () => {
       <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
 
       {/* Main container with padding-top to compensate for absolute/transparent header */}
-      <div style={{ paddingTop: 'var(--page-top-spacing)' }}>
+      <div className="account-settings-body" style={{ paddingTop: 'var(--page-top-spacing)' }}>
         
         {/* Sticky Header with Title and Tabs */}
         <div
@@ -2995,6 +2995,8 @@ const AccountSettingsV2: React.FC = () => {
         .account-delete-confirm input:checked::after { content: '✓'; color: white; display: block; text-align: center; font-size: 14px; line-height: 18px; }
         .outlook-mark { font-size: 20px; line-height: 1; }
         @media (max-width: 820px) {
+          .account-settings-body { padding-top: 8px !important; }
+          .manage-sticky-tabs-title-shell { padding-top: 14px !important; }
           .account-profile-grid {
             grid-template-columns: minmax(0, 342px) 140px !important;
             column-gap: 48px !important;
