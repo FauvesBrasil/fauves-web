@@ -954,7 +954,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
                 <OrganizacoesIcon />
                 <span>Calendários</span>
               </Link>
-              <Link to="/discover" className={`luma-nav-link ${isDiscoverActive ? 'is-active' : ''}`} aria-current={isDiscoverActive ? 'page' : undefined} style={{ color: contentColor }}>
+              <Link to="/discover" className={`luma-nav-link header-discover-link ${isDiscoverActive ? 'is-active' : ''}`} aria-current={isDiscoverActive ? 'page' : undefined} style={{ color: contentColor }}>
                 <DescobrirIcon />
                 <span>Descobrir</span>
               </Link>
@@ -1394,6 +1394,10 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           .authenticated-nav .luma-nav-link svg {
             width: 21px;
             height: 21px;
+          }
+          .authenticated-nav .header-discover-link svg {
+            width: 19px;
+            height: 19px;
           }
           .header-brand-area,
           .header-brand-area .logo-wrapper {
