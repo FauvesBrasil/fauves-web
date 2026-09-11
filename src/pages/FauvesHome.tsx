@@ -923,11 +923,14 @@ const FauvesHome = () => {
           .home-heading-mobile { display: inline; }
           .home-section-heading > a { display: none; }
           .home-calendar-grid {
-            width: calc(100% + 32px);
+            width: calc(100% + 16px);
             grid-auto-columns: min(64vw, 258px);
             gap: 12px;
-            margin-inline: -16px;
-            padding-inline: 16px;
+            margin-left: 0;
+            margin-right: -16px;
+            padding-left: 0;
+            padding-right: 16px;
+            scroll-padding-left: 0;
           }
           .home-category-grid { gap: 12px 10px; }
           .home-calendar-card { min-height: 150px; padding: 16px; }
