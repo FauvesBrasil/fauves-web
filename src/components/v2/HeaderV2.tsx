@@ -647,6 +647,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
   const [isLogoMenuOpen, setIsLogoMenuOpen] = useState(false);
   const [logoCopyState, setLogoCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileStickyActive, setIsMobileStickyActive] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [measuredContentLeft, setMeasuredContentLeft] = useState<number | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -852,13 +853,29 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+    handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [transparent, scrollTransition]);
 
+  useEffect(() => {
+    if (!isLoggedIn || !shouldUseMobileStickyHeader) {
+      setIsMobileStickyActive(false);
+      return;
+    }
+
+    const handleStickyState = () => {
+      setIsMobileStickyActive(window.scrollY > 4);
+    };
+
+    handleStickyState();
+    window.addEventListener('scroll', handleStickyState, { passive: true });
+    return () => window.removeEventListener('scroll', handleStickyState);
+  }, [isLoggedIn, shouldUseMobileStickyHeader, currentPath]);
+
   return (
     <>
-      <nav ref={navRef} className={`luma-nav-v2 ${transparent && !isScrolled ? 'transparent' : 'opaque'} ${isDarkTheme ? 'dark-mode-override' : ''} ${isMobileMenuOpen ? 'mobile-menu-open' : ''} ${shouldUseMobileStickyHeader ? 'mobile-sticky' : ''}`} style={{
+      <nav ref={navRef} className={`luma-nav-v2 ${transparent && !isScrolled ? 'transparent' : 'opaque'} ${isDarkTheme ? 'dark-mode-override' : ''} ${isMobileMenuOpen ? 'mobile-menu-open' : ''} ${isLoggedIn ? 'authenticated-header' : ''} ${shouldUseMobileStickyHeader ? 'mobile-sticky' : ''} ${isMobileStickyActive ? 'mobile-sticky-active' : ''}`} style={{
         position: fixed ? 'fixed' : 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0.75rem 1rem',
@@ -1821,21 +1838,32 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             border-bottom: 0 !important;
             top: auto !important;
           }
-          .luma-nav-v2.mobile-sticky,
-          .luma-nav-v2.mobile-sticky.transparent,
-          .luma-nav-v2.mobile-sticky.opaque {
+          .luma-nav-v2.authenticated-header,
+          .luma-nav-v2.authenticated-header.transparent,
+          .luma-nav-v2.authenticated-header.opaque {
+            background: transparent !important;
+            border-bottom: 0 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+          .luma-nav-v2.mobile-sticky {
             position: sticky !important;
             top: 0 !important;
             z-index: 1000 !important;
+          }
+          .luma-nav-v2.mobile-sticky.mobile-sticky-active,
+          .luma-nav-v2.mobile-sticky.mobile-sticky-active.transparent,
+          .luma-nav-v2.mobile-sticky.mobile-sticky-active.opaque {
             background: rgba(247,248,249,.74) !important;
             border-bottom: 0 !important;
             box-shadow: none !important;
             backdrop-filter: blur(20px) saturate(160%) !important;
             -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
           }
-          .luma-nav-v2.mobile-sticky.dark-mode-override,
-          .luma-nav-v2.mobile-sticky.dark-mode-override.transparent,
-          .luma-nav-v2.mobile-sticky.dark-mode-override.opaque {
+          .luma-nav-v2.mobile-sticky.mobile-sticky-active.dark-mode-override,
+          .luma-nav-v2.mobile-sticky.mobile-sticky-active.dark-mode-override.transparent,
+          .luma-nav-v2.mobile-sticky.mobile-sticky-active.dark-mode-override.opaque {
             background: rgba(19,21,23,.72) !important;
             border-bottom: 0 !important;
             box-shadow: none !important;
