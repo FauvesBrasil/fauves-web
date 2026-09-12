@@ -1399,8 +1399,8 @@ const Events = () => {
 
         @media (max-width: 600px) {
           .events-page-v3 .zm-container { padding-top: var(--page-top-spacing-mobile) !important; }
-          .events-page-heading { align-items: flex-start !important; gap: 14px; margin-bottom: 2rem !important; }
-          .events-page-heading h1 { font-size: 1.5rem !important; padding-top: 7px; }
+          .events-page-heading { align-items: center !important; gap: 14px; margin-bottom: 2rem !important; }
+          .events-page-heading h1 { font-size: 1.5rem !important; line-height: 1.15; padding-top: 0; }
           .lux-button-switcher { flex-shrink: 0; }
           .lux-button-switcher .segment { min-height: 32px; padding: .35rem .7rem; }
           .events-list {
@@ -1464,7 +1464,7 @@ const Events = () => {
           .event-card-time { font-size: 15px !important; }
           .event-card-location { font-size: 15px !important; }
           .event-card-attendees { font-size: 14px !important; }
-          .event-card-cover { width: 70px; height: 70px; }
+          .event-card-cover { width: 80px; height: 80px; }
           .event-card-v2 h3 { font-size: 1.0625rem !important; }
           .event-card-v2 > div:last-child { flex-wrap: wrap; gap: 6px; margin-top: 0 !important; }
           .manage-event-btn { min-height: 32px !important; padding: 5px 9px !important; line-height: 1.1 !important; }
@@ -1478,10 +1478,10 @@ const Events = () => {
         }
 
         @media (max-width: 360px) {
-          .events-page-heading { flex-direction: column; }
+          .events-page-heading { flex-direction: column; align-items: stretch !important; }
           .events-page-heading .lux-button-switcher { width: 100%; }
           .events-page-heading .segments { width: 100%; }
-          .event-card-cover { width: 64px; height: 64px; }
+          .event-card-cover { width: 72px; height: 72px; }
         }
 
         /* Dark Theme Overrides at the bottom of stylesheet to ensure priority */
