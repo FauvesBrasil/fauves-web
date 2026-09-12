@@ -1919,13 +1919,6 @@ const EventPanelV2: React.FC = () => {
         }
     };
 
-
-    React.useEffect(() => {
-        if (!isInviteModalOpen) {
-            setShowInviteLimitView(false);
-        }
-    }, [isInviteModalOpen]);
-
     const loadEventTeam = React.useCallback(async () => {
         if (!id) return;
         try {
