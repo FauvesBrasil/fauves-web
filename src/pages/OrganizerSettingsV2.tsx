@@ -150,6 +150,53 @@ const EditIdentityModal = ({ open, onOpenChange, initialName, initialSlug, onSav
   );
 };
 
+const DashboardStickyDate = ({ children }: { children: React.ReactNode }) => {
+  const sentinelRef = React.useRef<HTMLSpanElement>(null);
+  const pillRef = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    const sentinel = sentinelRef.current;
+    const pill = pillRef.current;
+    if (!sentinel || !pill) return;
+
+    let frame = 0;
+    const stickyHeader = document.querySelector<HTMLElement>('.manage-sticky-tabs-header');
+    const update = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const headerBottom = stickyHeader?.getBoundingClientRect().bottom || 0;
+        const stickyTop = Math.max(0, Math.round(headerBottom)) + 8;
+        const hasReachedStickyEdge = sentinel.getBoundingClientRect().top <= stickyTop + 1;
+
+        pill.style.setProperty('--dashboard-date-sticky-top', `${stickyTop}px`);
+        pill.classList.toggle('is-stuck', hasReachedStickyEdge);
+      });
+    };
+
+    const resizeObserver = stickyHeader && typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(update)
+      : null;
+    resizeObserver?.observe(stickyHeader);
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      resizeObserver?.disconnect();
+    };
+  }, []);
+
+  return (
+    <>
+      <span ref={sentinelRef} className="dashboard-date-sentinel" aria-hidden="true" />
+      <div ref={pillRef} className="date-col">{children}</div>
+    </>
+  );
+};
+
 
 export default function OrganizerSettingsV2() {
   const { selectedOrg, orgs, setSelectedOrgById, refresh: refreshOrganizations } = useOrganization();
@@ -1338,10 +1385,10 @@ export default function OrganizerSettingsV2() {
                         <div key={dateKey} className="events-group-row">
 
                           {/* Left Column: Date & Weekday (Left-aligned) */}
-                          <div className="date-col">
+                          <DashboardStickyDate>
                             <span className="date-main" style={{ color: '#fff' }}>{groupName}</span>
                             <span className="date-sub" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{weekday}</span>
-                          </div>
+                          </DashboardStickyDate>
 
                           {/* Timeline Bullet Dot */}
                           <div className="timeline-dot" />
@@ -5057,6 +5104,14 @@ export default function OrganizerSettingsV2() {
           margin-bottom: 3rem;
           position: relative;
         }
+        .calendar-dashboard-events .dashboard-date-sentinel {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 1px;
+          height: 1px;
+          pointer-events: none;
+        }
 
         /* Left column for date & weekday */
         .date-col {
@@ -5190,14 +5245,41 @@ export default function OrganizerSettingsV2() {
             margin-bottom: 24px;
           }
           .calendar-dashboard-events .date-col {
-            position: relative;
-            top: auto;
-            z-index: 1;
+            position: sticky;
+            top: var(--dashboard-date-sticky-top, 112px);
+            z-index: 40;
             width: fit-content;
-            padding: 7px 0 5px;
+            max-width: calc(100vw - 32px);
+            margin-left: -28px;
+            padding: 8px 15px 8px 28px;
             flex-direction: row;
             align-items: baseline;
             gap: 6px;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            background: transparent;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+          }
+          .calendar-dashboard-events .date-col.is-stuck {
+            border-color: rgba(19,21,23,.09);
+            background: rgba(247,248,249,.76);
+            box-shadow: 0 7px 24px rgba(19,21,23,.08);
+            backdrop-filter: blur(18px) saturate(155%);
+            -webkit-backdrop-filter: blur(18px) saturate(155%);
+          }
+          .calendar-dashboard-events .date-col::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 6px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(19,21,23,.34);
+            transform: translateY(-50%);
           }
           .calendar-dashboard-events .date-main {
             font-size: 17px;
@@ -5208,8 +5290,7 @@ export default function OrganizerSettingsV2() {
             font-size: 15px;
           }
           .calendar-dashboard-events .timeline-dot {
-            top: 13px;
-            left: 4px;
+            display: none;
           }
           .calendar-dashboard-events .cards-col {
             gap: 10px;
@@ -5262,6 +5343,14 @@ export default function OrganizerSettingsV2() {
           }
           .theme-root.dark .calendar-dashboard-events .events-list::before {
             border-left-color: rgba(255,255,255,.10) !important;
+          }
+          .theme-root.dark .calendar-dashboard-events .date-col.is-stuck {
+            border-color: rgba(255,255,255,.10);
+            background: rgba(30,31,33,.73);
+            box-shadow: 0 8px 26px rgba(0,0,0,.24);
+          }
+          .theme-root.dark .calendar-dashboard-events .date-col::before {
+            background: rgba(255,255,255,.36);
           }
         }
 
