@@ -151,13 +151,12 @@ const EditIdentityModal = ({ open, onOpenChange, initialName, initialSlug, onSav
 };
 
 const DashboardStickyDate = ({ children }: { children: React.ReactNode }) => {
-  const sentinelRef = React.useRef<HTMLSpanElement>(null);
+  const [isStuck, setIsStuck] = React.useState(false);
   const pillRef = React.useRef<HTMLDivElement>(null);
 
   React.useLayoutEffect(() => {
-    const sentinel = sentinelRef.current;
     const pill = pillRef.current;
-    if (!sentinel || !pill) return;
+    if (!pill) return;
 
     let frame = 0;
     const stickyHeader = document.querySelector<HTMLElement>('.manage-sticky-tabs-header');
@@ -166,10 +165,9 @@ const DashboardStickyDate = ({ children }: { children: React.ReactNode }) => {
       frame = window.requestAnimationFrame(() => {
         const headerBottom = stickyHeader?.getBoundingClientRect().bottom || 0;
         const stickyTop = Math.max(0, Math.round(headerBottom)) + 8;
-        const hasReachedStickyEdge = sentinel.getBoundingClientRect().top <= stickyTop + 1;
 
         pill.style.setProperty('--dashboard-date-sticky-top', `${stickyTop}px`);
-        pill.classList.toggle('is-stuck', hasReachedStickyEdge);
+        setIsStuck(pill.getBoundingClientRect().top <= stickyTop + 1);
       });
     };
 
@@ -190,10 +188,7 @@ const DashboardStickyDate = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <>
-      <span ref={sentinelRef} className="dashboard-date-sentinel" aria-hidden="true" />
-      <div ref={pillRef} className="date-col">{children}</div>
-    </>
+    <div ref={pillRef} className={`date-col${isStuck ? ' is-stuck' : ''}`}>{children}</div>
   );
 };
 
@@ -1102,7 +1097,7 @@ export default function OrganizerSettingsV2() {
       {/* Import the existing premium HeaderV2 directly inside layout instead of local stub */}
       <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
 
-      <div style={{ paddingTop: '3rem' }}>
+      <div className="calendar-dashboard-shell" style={{ paddingTop: '3rem' }}>
         
         {/* Sticky Header with Title and Tabs matching the requested settings style */}
         <div
@@ -1243,7 +1238,7 @@ export default function OrganizerSettingsV2() {
         </div>
 
         {/* Largura compartilhada com Eventos e Manage Event. */}
-        <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0.75rem 1rem 5rem' }}>
+        <div className="calendar-dashboard-content" style={{ maxWidth: '820px', margin: '0 auto', padding: '0.75rem 1rem 5rem' }}>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* ─── TAB: EVENTOS (TOTALMENTE IDENTICO AO PRINT) ─── */}
@@ -5104,15 +5099,6 @@ export default function OrganizerSettingsV2() {
           margin-bottom: 3rem;
           position: relative;
         }
-        .calendar-dashboard-events .dashboard-date-sentinel {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 1px;
-          height: 1px;
-          pointer-events: none;
-        }
-
         /* Left column for date & weekday */
         .date-col {
           width: var(--timeline-title-width);
@@ -5208,6 +5194,12 @@ export default function OrganizerSettingsV2() {
         }
 
         @media (max-width: 600px) {
+          .calendar-dashboard-shell {
+            padding-top: 0 !important;
+          }
+          .calendar-dashboard-content {
+            padding-top: 0.5rem !important;
+          }
           .calendar-dashboard-events .calendar-events-toolbar {
             min-height: 34px;
             align-items: center !important;
