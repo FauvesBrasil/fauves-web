@@ -58,24 +58,41 @@ const getGuestAvatars = (eventId: string) => {
 
 const StickyDatePill = ({ children, className }: { children: React.ReactNode, className?: string }) => {
   const [isStuck, setIsStuck] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
+  const sentinelRef = React.useRef<HTMLSpanElement>(null);
 
   React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([e]) => setIsStuck(e.intersectionRatio < 1),
-      { threshold: [1], rootMargin: '-11px 0px 0px 0px' }
-    );
-    const current = ref.current;
-    if (current) observer.observe(current);
+    const current = sentinelRef.current;
+    if (!current) return;
+
+    let observer: IntersectionObserver | null = null;
+    const observe = () => {
+      observer?.disconnect();
+      const mobileHeader = document.querySelector<HTMLElement>('.luma-nav-v2.mobile-sticky');
+      const stickyTop = Math.round((mobileHeader?.getBoundingClientRect().height || 66) + 8);
+
+      observer = new IntersectionObserver(([entry]) => {
+        const passedStickyEdge = !entry.isIntersecting && entry.boundingClientRect.top <= stickyTop + 1;
+        setIsStuck(passedStickyEdge);
+      }, {
+        threshold: 0,
+        rootMargin: `-${stickyTop}px 0px 0px 0px`,
+      });
+      observer.observe(current);
+    };
+
+    observe();
+    window.addEventListener('resize', observe);
     return () => {
-      if (current) observer.unobserve(current);
+      window.removeEventListener('resize', observe);
+      observer?.disconnect();
     };
   }, []);
 
   return (
-    <div ref={ref} className={`${className} ${isStuck ? 'stuck' : ''}`}>
-      {children}
-    </div>
+    <>
+      <span ref={sentinelRef} className="date-sticky-sentinel" aria-hidden="true" />
+      <div className={`${className || ''}${isStuck ? ' is-stuck' : ''}`}>{children}</div>
+    </>
   );
 };
 
@@ -813,10 +830,10 @@ const Events = () => {
                   <div key={dateKey} className="events-group-row">
 
                     {/* Left Column: Date & Weekday (Left-aligned) */}
-                    <div className="date-col">
+                    <StickyDatePill className="date-col">
                       <span className="date-main" style={{ color: textColor }}>{groupName}</span>
                       <span className="date-sub" style={{ color: mutedTextColor }}>{weekday}</span>
-                    </div>
+                    </StickyDatePill>
 
                     {/* Timeline Bullet Dot */}
                     <div className="timeline-dot" />
@@ -845,10 +862,10 @@ const Events = () => {
                             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
 
                               {/* Left Column: Text Info */}
-                              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                              <div className="event-card-copy" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
 
                                 {/* Time above the title */}
-                                <div style={{
+                                <div className="event-card-time" style={{
                                   fontSize: '0.9375rem',
                                   fontWeight: 500,
                                   color: mutedTextColor,
@@ -888,7 +905,7 @@ const Events = () => {
                                 </div>
 
                                 {/* Location */}
-                                <p style={{
+                                <p className="event-card-location" style={{
                                   fontSize: '0.875rem',
                                   color: mutedTextColor,
                                   display: 'flex',
@@ -904,7 +921,7 @@ const Events = () => {
                                 </p>
 
                                 {/* Attendees */}
-                                <p style={{
+                                <p className="event-card-attendees" style={{
                                     fontSize: '0.8125rem',
                                     color: mutedTextColor,
                                     display: 'flex',
@@ -1277,6 +1294,14 @@ const Events = () => {
           margin-bottom: 3rem;
           position: relative;
         }
+        .date-sticky-sentinel {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 1px;
+          height: 1px;
+          pointer-events: none;
+        }
 
         /* Left column for date & weekday */
         .date-col {
@@ -1377,7 +1402,7 @@ const Events = () => {
           .events-page-heading { align-items: flex-start !important; gap: 14px; margin-bottom: 2rem !important; }
           .events-page-heading h1 { font-size: 1.5rem !important; padding-top: 7px; }
           .lux-button-switcher { flex-shrink: 0; }
-          .lux-button-switcher .segment { min-height: 40px; padding: .5rem .75rem; }
+          .lux-button-switcher .segment { min-height: 32px; padding: .35rem .7rem; }
           .events-list {
             --timeline-title-width: 100%;
             --timeline-column-gap: 0;
@@ -1389,7 +1414,7 @@ const Events = () => {
             left: 4px;
             border-left-color: rgba(19,21,23,.12);
           }
-          .events-group-row { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 2rem; }
+          .events-group-row { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 1.5rem; }
           .date-col {
             position: sticky;
             top: calc(74px + env(safe-area-inset-top));
@@ -1397,12 +1422,20 @@ const Events = () => {
             width: fit-content;
             max-width: calc(100vw - 32px);
             margin-left: -28px;
-            padding: 9px 15px 9px 28px;
+            padding: 8px 15px 8px 28px;
             flex-direction: row;
             align-items: baseline;
             gap: 6px;
-            border: 1px solid rgba(19,21,23,.09);
+            border: 1px solid transparent;
             border-radius: 999px;
+            background: transparent;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+          }
+          .date-col.is-stuck {
+            border-color: rgba(19,21,23,.09);
             background: rgba(247,248,249,.76);
             box-shadow: 0 7px 24px rgba(19,21,23,.08);
             backdrop-filter: blur(18px) saturate(155%);
@@ -1412,7 +1445,7 @@ const Events = () => {
             content: '';
             position: absolute;
             top: 50%;
-            left: 10px;
+            left: 6px;
             width: 8px;
             height: 8px;
             border-radius: 50%;
@@ -1422,16 +1455,21 @@ const Events = () => {
           .timeline-dot {
             display: none;
           }
-          .date-main { font-size: 14px; }
-          .date-sub { font-size: 13px; margin-top: 0; }
-          .event-card-v2 { padding: 12px !important; }
-          .event-card-v2 > div:first-child { gap: 12px !important; }
-          .event-card-cover { width: 72px; height: 72px; }
-          .event-card-v2 h3 { font-size: 1rem !important; }
-          .event-card-v2 > div:last-child { flex-wrap: wrap; gap: 8px; }
-          .manage-event-btn { min-height: 40px !important; padding: 8px 10px !important; }
+          .date-main { font-size: 17px; }
+          .date-sub { font-size: 15px; margin-top: 0; }
+          .cards-col { gap: 10px; }
+          .event-card-v2 { padding: 11px !important; gap: 8px !important; }
+          .event-card-v2 > div:first-child { gap: 10px !important; }
+          .event-card-copy { gap: 6px !important; }
+          .event-card-time { font-size: 15px !important; }
+          .event-card-location { font-size: 15px !important; }
+          .event-card-attendees { font-size: 14px !important; }
+          .event-card-cover { width: 70px; height: 70px; }
+          .event-card-v2 h3 { font-size: 1.0625rem !important; }
+          .event-card-v2 > div:last-child { flex-wrap: wrap; gap: 6px; margin-top: 0 !important; }
+          .manage-event-btn { min-height: 32px !important; padding: 5px 9px !important; line-height: 1.1 !important; }
           .theme-root.dark .events-list::before { border-left-color: rgba(255,255,255,.12); }
-          .theme-root.dark .date-col {
+          .theme-root.dark .date-col.is-stuck {
             border-color: rgba(255,255,255,.10);
             background: rgba(30,31,33,.73);
             box-shadow: 0 8px 26px rgba(0,0,0,.24);
