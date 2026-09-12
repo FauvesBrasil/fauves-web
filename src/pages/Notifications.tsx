@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { resolveNotificationDestination } from '@/lib/notificationLink';
 
 interface Notification {
     id: string;
@@ -100,6 +101,18 @@ const Notifications: React.FC = () => {
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
+    const openNotification = async (notification: Notification) => {
+        if (!notification.isRead) void markAsRead(notification.id);
+
+        const destination = await resolveNotificationDestination(notification);
+        if (!destination) return;
+        if (destination.external) {
+            window.location.assign(destination.href);
+            return;
+        }
+        navigate(destination.href);
+    };
+
     return (
         <div className={`notifications-page ${isDark ? 'is-dark' : 'is-light'}`}>
             <HeaderV2 transparent scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
@@ -146,10 +159,7 @@ const Notifications: React.FC = () => {
                                     type="button"
                                     key={notification.id}
                                     className={`notification-row ${!notification.isRead ? 'is-unread' : ''}`}
-                                    onClick={() => {
-                                        if (!notification.isRead) markAsRead(notification.id);
-                                        if (notification.link) navigate(notification.link);
-                                    }}
+                                    onClick={() => void openNotification(notification)}
                                 >
                                     <span className="notification-avatar" aria-hidden="true">
                                         {user?.photoUrl ? <img src={resolveImageUrl(user.photoUrl)} alt="" /> : (user?.name?.[0] || 'F')}

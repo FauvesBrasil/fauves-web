@@ -3811,7 +3811,7 @@ const EventPanelV2: React.FC = () => {
             <div className={`event-manage-page manage-theme-surface theme-root ${isDark ? 'dark dark-mode' : 'light'} w-full min-h-screen font-sans transition-colors duration-300`}>
                 {/* Real Header to preserve layout while content is loading */}
                 <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
-                <main className="w-full pb-20 relative pt-12">
+                <main className="event-manage-main w-full pb-20 relative pt-12 max-md:pt-0">
                     {/* Skeleton sticky header */}
                     <div style={{ padding: '0.75rem 1rem', maxWidth: '900px', margin: '0 auto' }}>
                         <div style={{ height: '12px', width: '120px', background: 'rgba(19,21,23,0.06)', borderRadius: '6px', marginBottom: '0.75rem' }} className="dark:bg-white/10" />
@@ -6359,7 +6359,7 @@ const EventPanelV2: React.FC = () => {
 
             <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
 
-            <main className="w-full pb-20 relative pt-12 transition-all duration-300">
+            <main className="event-manage-main w-full pb-20 relative pt-12 max-md:pt-0 transition-all duration-300">
                 {/* Sticky/Transforming Glassmorphism Header */}
                 <div
                     className={`manage-sticky-tabs-header event-manage-sticky-header ${isScrolled ? 'is-scrolled' : ''} sticky top-0 z-[50] w-full transition-all duration-300 ${isScrolled ? 'bg-white/75 dark:bg-[#131517]/90' : 'bg-transparent'} pt-2 pb-0`}

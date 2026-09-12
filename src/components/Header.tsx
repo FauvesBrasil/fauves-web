@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import LogoFauves from '@/components/LogoFauves';
 import LocationSelector from '@/components/LocationSelector';
 import SearchBar from '@/components/SearchBar';
@@ -14,6 +14,7 @@ import RequireOrganization from './RequireOrganization';
 import { useOrganization } from '@/context/OrganizationContext';
 import { fetchApi, apiUrl } from '@/lib/apiBase';
 import UserDropdown from '@/components/UserDropdown';
+import { resolveNotificationDestination } from '@/lib/notificationLink';
 
 interface HeaderProps {
   hideSearchOnMobile?: boolean;
@@ -21,6 +22,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBar = false }) => {
+  const navigate = useNavigate();
   const { isDark } = useTheme();
   const headerTextClass = isDark ? 'text-white' : 'text-[#091747]';
   const headerIconClass = isDark ? 'text-white' : 'text-[#091747]';
@@ -180,11 +182,14 @@ const Header: React.FC<HeaderProps> = ({ hideSearchOnMobile = true, hideSearchBa
                             <div
                               key={n.id}
                               className={'px-4 py-3 cursor-pointer transition-colors border-b border-border/50 last:border-0 ' + (!n.isRead ? 'bg-accent/50' : 'bg-card') + ' hover:bg-accent/30'}
-                              onClick={() => {
+                              onClick={async () => {
                                 if (!n.isRead) markAsRead(n.id);
                                 if (n.link) {
                                   setShowNotif(false);
-                                  window.location.href = n.link;
+                                  const destination = await resolveNotificationDestination(n);
+                                  if (!destination) return;
+                                  if (destination.external) window.location.assign(destination.href);
+                                  else navigate(destination.href);
                                 }
                               }}
                             >

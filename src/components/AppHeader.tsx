@@ -14,6 +14,7 @@ import RequireOrganization from './RequireOrganization';
 import ProducerJourneyBadge from '@/components/ProducerJourneyBadge';
 import { useFetchProducerJourney } from '@/hooks/useFetchProducerJourney';
 import { fetchApi } from '@/lib/apiBase';
+import { resolveNotificationDestination } from '@/lib/notificationLink';
 
 interface OrganizationOption { id: string; name: string; }
 
@@ -303,11 +304,14 @@ const AppHeader: React.FC<{ className?: string }> = ({ className }) => {
                         <div
                           key={n.id}
                           className={'px-4 py-3 cursor-pointer transition-colors ' + (!n.isRead ? 'bg-indigo-50 dark:bg-indigo-900/20' : '') + ' hover:bg-gray-50 dark:hover:bg-[#333]'}
-                          onClick={() => {
+                          onClick={async () => {
                             if (!n.isRead) markAsRead(n.id);
                             if (n.link) {
                               setShowNotif(false);
-                              window.location.href = n.link;
+                              const destination = await resolveNotificationDestination(n);
+                              if (!destination) return;
+                              if (destination.external) window.location.assign(destination.href);
+                              else navigate(destination.href);
                             }
                           }}
                         >
