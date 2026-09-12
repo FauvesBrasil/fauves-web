@@ -1381,7 +1381,7 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
             transform: none !important;
           }
           .authenticated-nav {
-            gap: 11px !important;
+            gap: 4px !important;
           }
           .authenticated-nav .luma-nav-link {
             width: 26px;
@@ -1392,12 +1392,12 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           }
           .authenticated-nav .luma-nav-link span { display: none; }
           .authenticated-nav .luma-nav-link svg {
-            width: 21px;
-            height: 21px;
+            width: 18px;
+            height: 18px;
           }
           .authenticated-nav .header-discover-link svg {
-            width: 19px;
-            height: 19px;
+            width: 17px;
+            height: 17px;
           }
           .header-brand-area,
           .header-brand-area .logo-wrapper {
@@ -1409,18 +1409,23 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
           .header-brand-area .logo-wrapper:focus-visible { opacity: .9; }
           .header-brand-area .header-fauves-logo { width: 48px; }
           .header-create-event-link {
-            min-height: 36px;
+            min-height: 34px;
             font-size: 13px !important;
             white-space: nowrap;
           }
-          .header-auth-icon-group { gap: 2px !important; }
+          .header-auth-icon-group { gap: 8px !important; }
           .luma-icon-btn-hero.header-search-action,
           .header-desktop-notifications { display: none !important; }
           .luma-icon-btn-hero.header-mobile-notifications {
             display: inline-flex;
             width: 34px;
-            height: 36px;
+            height: 34px;
             padding: 6px;
+          }
+          .luma-icon-btn-hero.header-mobile-notifications svg {
+            width: 18px;
+            height: 18px;
+            stroke-width: 1.7;
           }
           .header-profile-anchor { margin-left: 0 !important; }
           .header-profile-anchor > .luma-icon-btn-hero {
@@ -1439,8 +1444,9 @@ const HeaderV2: React.FC<HeaderV2Props> = ({
 
         @media (max-width: 374px) {
           .luma-nav-v2 { gap: 4px; padding-right: 10px !important; padding-left: 10px !important; }
-          .authenticated-nav { gap: 6px !important; }
+          .authenticated-nav { gap: 0 !important; }
           .header-desktop-actions.is-authenticated { gap: 4px !important; }
+          .header-auth-icon-group { gap: 4px !important; }
           .header-create-event-link { font-size: 12px !important; }
           .header-brand-area .header-fauves-logo { width: 43px; }
         }
