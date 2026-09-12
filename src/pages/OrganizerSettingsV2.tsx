@@ -1200,9 +1200,9 @@ export default function OrganizerSettingsV2() {
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* ─── TAB: EVENTOS (TOTALMENTE IDENTICO AO PRINT) ─── */}
-            <TabsContent value="eventos" className="space-y-8 animate-in fade-in duration-200">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
+            <TabsContent value="eventos" className="calendar-dashboard-events space-y-8 animate-in fade-in duration-200">
+              <div className="calendar-events-toolbar flex justify-between items-center">
+                <div className="calendar-events-heading flex items-center gap-2">
                   <h2 className="text-xl font-bold text-white">Eventos</h2>
                   <span className="event-add-button-wrap">
                     <button
@@ -1362,13 +1362,13 @@ export default function OrganizerSettingsV2() {
                                   className="event-card-v2"
                                 >
                                   {/* Top Row: Info (Left) & Cover (Right) */}
-                                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
+                                  <div className="calendar-event-card-main" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
 
                                     {/* Left Column: Text Info */}
-                                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.3125rem' }}>
+                                    <div className="calendar-event-card-copy" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.3125rem' }}>
 
                                       {/* Time above the title */}
-                                      <div style={{
+                                      <div className="calendar-event-time" style={{
                                         fontSize: '0.9375rem',
                                         fontWeight: 500,
                                         color: 'rgba(255, 255, 255, 0.6)',
@@ -1392,7 +1392,7 @@ export default function OrganizerSettingsV2() {
                                       </h3>
 
                                       {/* Location */}
-                                      <p style={{
+                                      <p className="calendar-event-location" style={{
                                         fontSize: '0.875rem',
                                         color: 'rgba(255, 255, 255, 0.6)',
                                         display: 'flex',
@@ -1408,7 +1408,7 @@ export default function OrganizerSettingsV2() {
                                       </p>
 
                                       {/* Attendees */}
-                                      <p style={{
+                                      <p className="calendar-event-attendees" style={{
                                         fontSize: '0.8125rem',
                                         color: 'rgba(255, 255, 255, 0.6)',
                                         display: 'flex',
@@ -1421,7 +1421,7 @@ export default function OrganizerSettingsV2() {
                                       </p>
 
                                       {/* Tags Row */}
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginTop: '0.25rem' }}>
+                                      <div className="calendar-event-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginTop: '0.25rem' }}>
                                         <div style={{ position: 'relative', display: 'inline-block' }}>
                                           <button
                                             type="button"
@@ -1445,7 +1445,7 @@ export default function OrganizerSettingsV2() {
                                               cursor: 'pointer',
                                               transition: 'all 0.2s',
                                             }}
-                                            className="hover:bg-[rgba(255,255,255,0.12)] hover:text-white"
+                                            className="calendar-add-tag-button hover:bg-[rgba(255,255,255,0.12)] hover:text-white"
                                           >
                                             <Plus className="w-3.5 h-3.5" /> Adicionar Tag
                                           </button>
@@ -1583,6 +1583,7 @@ export default function OrganizerSettingsV2() {
                                         {(eventTags[item.eventId] || []).map((tag) => (
                                           <span
                                             key={tag.id}
+                                            className="calendar-assigned-tag"
                                             onClick={(e) => e.stopPropagation()}
                                             style={{
                                               display: 'inline-flex',
@@ -1635,7 +1636,7 @@ export default function OrganizerSettingsV2() {
                                   </div>
 
                                   {/* Bottom Row: Status Badge/Button if confirmed or managed */}
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '0.25rem' }}>
+                                  <div className="calendar-event-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '0.25rem' }}>
                                     <span 
                                       className="manage-event-btn"
                                       onClick={(e) => {
@@ -5148,6 +5149,129 @@ export default function OrganizerSettingsV2() {
             width: 80px;
             height: 80px;
             border-radius: 0.375rem;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .calendar-dashboard-events .calendar-events-toolbar {
+            min-height: 34px;
+            align-items: center !important;
+            gap: 12px;
+          }
+          .calendar-dashboard-events .calendar-events-heading {
+            min-width: 0;
+            align-items: center;
+          }
+          .calendar-dashboard-events .calendar-events-heading h2 {
+            margin: 0;
+            font-size: 1.25rem !important;
+            line-height: 1.2;
+          }
+          .calendar-dashboard-events .lux-button-switcher {
+            flex: 0 0 auto;
+          }
+          .calendar-dashboard-events .lux-button-switcher .segment {
+            min-height: 30px;
+            padding: 4px 12px;
+          }
+          .calendar-dashboard-events .events-list {
+            --timeline-title-width: 100%;
+            --timeline-column-gap: 0;
+            padding-left: 22px;
+          }
+          .calendar-dashboard-events .events-list::before {
+            top: 18px;
+            left: 4px;
+            border-left-color: rgba(19,21,23,.12);
+          }
+          .calendar-dashboard-events .events-group-row {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+            margin-bottom: 24px;
+          }
+          .calendar-dashboard-events .date-col {
+            position: relative;
+            top: auto;
+            z-index: 1;
+            width: fit-content;
+            padding: 7px 0 5px;
+            flex-direction: row;
+            align-items: baseline;
+            gap: 6px;
+          }
+          .calendar-dashboard-events .date-main {
+            font-size: 17px;
+            line-height: 1.2;
+          }
+          .calendar-dashboard-events .date-sub {
+            margin-top: 0;
+            font-size: 15px;
+          }
+          .calendar-dashboard-events .timeline-dot {
+            top: 13px;
+            left: 4px;
+          }
+          .calendar-dashboard-events .cards-col {
+            gap: 10px;
+          }
+          .calendar-dashboard-events .event-card-v2 {
+            padding: 12px !important;
+            gap: 10px !important;
+            border-radius: 12px !important;
+          }
+          .calendar-dashboard-events .calendar-event-card-main {
+            gap: 12px !important;
+          }
+          .calendar-dashboard-events .calendar-event-card-copy {
+            gap: 5px !important;
+          }
+          .calendar-dashboard-events .calendar-event-time {
+            font-size: 15px !important;
+          }
+          .calendar-dashboard-events .event-card-v2 h3 {
+            font-size: 18px !important;
+          }
+          .calendar-dashboard-events .calendar-event-location {
+            font-size: 15px !important;
+          }
+          .calendar-dashboard-events .calendar-event-attendees {
+            font-size: 14px !important;
+          }
+          .calendar-dashboard-events .calendar-event-tags {
+            gap: 6px !important;
+            margin-top: 3px !important;
+          }
+          .calendar-dashboard-events .calendar-add-tag-button,
+          .calendar-dashboard-events .calendar-assigned-tag {
+            min-height: 28px;
+            padding: 4px 9px !important;
+            font-size: 13px !important;
+          }
+          .calendar-dashboard-events .event-card-cover {
+            width: 90px;
+            height: 90px;
+            border-radius: 8px;
+          }
+          .calendar-dashboard-events .calendar-event-card-footer {
+            margin-top: 0 !important;
+          }
+          .calendar-dashboard-events .manage-event-btn {
+            min-height: 32px;
+            padding: 5px 9px !important;
+            line-height: 1.1;
+          }
+          .theme-root.dark .calendar-dashboard-events .events-list::before {
+            border-left-color: rgba(255,255,255,.10) !important;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .calendar-dashboard-events .lux-button-switcher .segment {
+            padding-inline: 9px;
+          }
+          .calendar-dashboard-events .event-card-cover {
+            width: 82px;
+            height: 82px;
           }
         }
 
