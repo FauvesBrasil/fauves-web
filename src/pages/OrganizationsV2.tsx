@@ -186,13 +186,15 @@ const OrganizationsV2: React.FC = () => {
               {followingOrgs.map((organization) => (
                 <article className="calendar-following-card" key={organization.id}>
                   <div className="calendar-following-info">
-                    <span className="calendar-logo"><CalendarLogo organization={organization} /></span>
-                    <strong>{organization.name}</strong>
+                    <Link className="calendar-following-identity" to={`/${organization.slug || organization.id}`}>
+                      <span className="calendar-logo"><CalendarLogo organization={organization} /></span>
+                      <strong>{organization.name}</strong>
+                    </Link>
                     <Link className="v2-secondary-action" to={`/${organization.slug || organization.id}`}>Ver Calendário <ArrowRight size={15} /></Link>
                   </div>
                   <div className="calendar-upcoming">
                     <span>Próximos Eventos</span>
-                    {organization.events?.length ? organization.events.map((event) => (
+                    {organization.events?.length ? organization.events.slice(0, 2).map((event) => (
                       <Link to={`/${event.slug || event.id}`} key={event.id}>
                         <strong>{event.name}</strong>
                         <time>{formatEventDate(event.startDate)}</time>
@@ -245,8 +247,9 @@ const calendarStyles = `
   .calendars-following-list { display: grid; gap: 16px; }
   .calendar-following-card { display: grid; grid-template-columns: 190px 1fr; min-height: 171px; padding: 17px; border: 1px solid rgba(255,255,255,.075); border-radius: 12px; background: #202224; }
   .calendar-following-info { display: flex; flex-direction: column; align-items: flex-start; }
-  .calendar-following-info > strong { max-width: 170px; margin-top: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: 1rem; font-weight: 600; }
-  .calendar-following-info > a { height: 31px; margin-top: auto; }
+  .calendar-following-identity { display: flex; flex-direction: column; align-items: flex-start; max-width: 100%; color: inherit; text-decoration: none; }
+  .calendar-following-identity > strong { max-width: 170px; margin-top: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: 1rem; font-weight: 600; }
+  .calendar-following-info > .v2-secondary-action { height: 31px; margin-top: auto; }
   .calendar-upcoming { padding: 2px 0 0 21px; }
   .calendar-upcoming > span { display: block; margin-bottom: 16px; color: rgba(255,255,255,.45); font-size: .8125rem; font-weight: 600; }
   .calendar-upcoming > a { display: block; margin-bottom: 15px; color: inherit; text-decoration: none; }
@@ -269,7 +272,7 @@ const calendarStyles = `
   .calendars-page.light .calendars-container > h1,
   .calendars-page.light .calendars-section h2,
   .calendars-page.light .calendar-own-card,
-  .calendars-page.light .calendar-following-info > strong,
+  .calendars-page.light .calendar-following-identity > strong,
   .calendars-page.light .calendar-upcoming > a strong { color: #18181b; }
   .calendars-page.light .calendars-welcome,
   .calendars-page.light .calendar-own-card,
@@ -299,7 +302,8 @@ const calendarStyles = `
   @media (max-width: 700px) {
     .calendars-container { width: min(100% - 32px, 790px); padding-top: var(--page-top-spacing-mobile); padding-bottom: 52px; }
     .calendars-container > h1 { margin-bottom: 28px; font-size: 1.5rem; }
-    .calendars-section h2 { font-size: 1.25rem; }
+    .calendars-section > header { margin-bottom: 12px; }
+    .calendars-section h2 { font-size: 1.125rem; }
     .calendars-welcome { grid-template-columns: 1fr; min-height: 0; margin-bottom: 28px; }
     .calendars-welcome-art { display: flex; min-height: 168px; }
     .calendars-welcome-art img { width: 156px; height: 156px; }
@@ -309,27 +313,43 @@ const calendarStyles = `
     .calendars-welcome-close { width: 44px; height: 44px; top: 4px; right: 4px; display: grid; place-items: center; }
     .calendars-welcome-content > div:first-child { padding-right: 28px; }
     .calendars-welcome-steps button { width: 24px; height: 12px; background-clip: content-box; }
-    .calendars-next, .calendars-section > header > a, .calendar-following-info > a { min-height: 44px; }
-    .calendars-own-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .calendar-own-card { min-height: 123px; padding: 16px; }
-    .calendar-following-card { grid-template-columns: 145px 1fr; }
+    .calendars-next { min-height: 32px; height: 32px; }
+    .calendars-mine > header > a { height: 32px; min-height: 32px; padding: 0 11px; font-size: .8125rem; }
+    .calendars-own-grid { grid-template-columns: 1fr; gap: 8px; }
+    .calendar-own-card {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr);
+      grid-template-rows: 1fr 1fr;
+      column-gap: 12px;
+      min-height: 68px;
+      padding: 10px 16px;
+    }
+    .calendar-own-card > .calendar-logo { grid-row: 1 / 3; align-self: center; }
+    .calendar-own-card > strong { align-self: end; margin-top: 0; font-size: .9375rem; }
+    .calendar-own-card > small { align-self: start; margin-top: 1px; font-size: .8125rem; }
+    .calendars-following { margin-top: 26px; padding-top: 26px; }
+    .calendars-following-list { gap: 16px; }
+    .calendar-following-card { display: block; min-height: 0; padding: 17px; }
+    .calendar-following-info { display: block; }
+    .calendar-following-identity { display: block; }
+    .calendar-following-identity > strong { display: block; max-width: 100%; margin-top: 14px; }
+    .calendar-following-info > .v2-secondary-action { display: none; }
+    .calendar-upcoming { min-width: 0; margin-top: 16px; padding: 15px 0 0; border-top: 1px solid rgba(255,255,255,.08); }
+    .calendars-page.light .calendar-upcoming { border-top-color: rgba(24,24,27,.1); }
+    .calendar-upcoming > span { margin-bottom: 14px; }
+    .calendar-upcoming > a { margin-bottom: 14px; }
     .calendar-upcoming > a strong { overflow: visible; white-space: normal; line-height: 1.28; }
+    .calendars-own-grid .calendar-skeleton { height: 68px; }
+    .calendars-following .calendar-skeleton.is-wide { height: 230px; }
   }
   @media (max-width: 480px) {
     .calendars-welcome-footer { align-items: flex-end; gap: 12px; }
     .calendars-welcome-steps { max-width: none; flex-wrap: nowrap; }
-    .calendar-following-card { grid-template-columns: minmax(118px, 145px) minmax(0, 1fr); gap: 8px; }
-    .calendar-upcoming { min-width: 0; padding-left: 12px; }
     .calendar-upcoming > a strong { overflow-wrap: anywhere; }
   }
   @media (max-width: 340px) {
     .calendars-container { width: min(100% - 24px, 790px); }
-    .calendars-own-grid { grid-template-columns: 1fr; }
-    .calendar-own-card { min-height: 112px; }
-    .calendar-following-card { grid-template-columns: 1fr; }
-    .calendar-following-info > a { margin-top: 16px; }
-    .calendar-upcoming { margin-top: 20px; padding: 18px 0 0; border-top: 1px solid rgba(255,255,255,.07); }
-    .calendars-page.light .calendar-upcoming { border-top-color: rgba(24,24,27,.1); }
+    .calendar-own-card { padding-inline: 13px; }
   }
 `;
 
