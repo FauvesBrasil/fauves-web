@@ -4565,11 +4565,6 @@ const EventPanelV2: React.FC = () => {
                           aspect-ratio: 37 / 28;
                           min-height: 0;
                       }
-                      @supports (zoom: calc(100cqw / 760px)) {
-                          .event-overview-preview-column .luma-left-preview-actual {
-                              zoom: min(0.4868, calc(100cqw / 760px));
-                          }
-                      }
                       .event-overview-share-row {
                           width: 100% !important;
                           min-height: 32px;
@@ -5231,7 +5226,8 @@ const EventPanelV2: React.FC = () => {
 
                          .luma-left-preview-actual {
                              width: 700px;
-                             zoom: 0.5286;
+                             transform: scale(0.5286);
+                             transform-origin: top left;
                              position: relative;
                              margin: 0;
                              padding: 0 0 4.5rem 0;
@@ -6856,7 +6852,16 @@ const EventPanelV2: React.FC = () => {
                                                         className="absolute inset-0 w-full h-full pointer-events-none"
                                                         style={{ zIndex: 0, opacity: 1, display: previewThemeId === 'emoji' ? 'block' : 'none' }}
                                                     />
-                                                    <div className="luma-left-preview-actual" style={{ position: 'relative', zIndex: 1, width: `${previewBaseWidth}px`, zoom: previewScale }}>
+                                                    <div
+                                                        className="luma-left-preview-actual"
+                                                        style={{
+                                                            position: 'relative',
+                                                            zIndex: 1,
+                                                            width: `${previewBaseWidth}px`,
+                                                            transform: `scale(${previewScale})`,
+                                                            transformOrigin: 'top left'
+                                                        }}
+                                                    >
                                                         <div className="event-page-content-wrapper zm-container" style={{ position: 'relative', zIndex: 2 }}>
                                                             
                                                             {/* COLUNA ESQUERDA */}

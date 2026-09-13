@@ -2266,6 +2266,17 @@ const EventPageV2: React.FC = () => {
         }
 
         @media (max-width: 650px) {
+          .theme-root > .luma-nav-v2 {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            background: transparent !important;
+            border-bottom: 0 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
           .page-container { padding-top: 0; }
           .event-page-content-wrapper {
             flex-direction: column;
