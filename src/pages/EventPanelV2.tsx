@@ -3136,20 +3136,28 @@ const EventPanelV2: React.FC = () => {
     const previewEmojiCanvasRef = React.useRef<HTMLCanvasElement>(null);
     const previewFrameRef = React.useRef<HTMLDivElement>(null);
     const [previewScale, setPreviewScale] = React.useState(0.5286);
+    const [previewBaseWidth, setPreviewBaseWidth] = React.useState(700);
 
     React.useEffect(() => {
         const frame = previewFrameRef.current;
         if (!frame) return;
 
         const updateScale = () => {
-            const nextScale = Math.min(0.5286, frame.getBoundingClientRect().width / 700);
+            const isMobilePreview = window.matchMedia('(max-width: 768px)').matches;
+            const nextBaseWidth = isMobilePreview ? 760 : 700;
+            const nextScale = Math.min(370 / nextBaseWidth, frame.getBoundingClientRect().width / nextBaseWidth);
+            setPreviewBaseWidth((current) => current === nextBaseWidth ? current : nextBaseWidth);
             setPreviewScale((current) => Math.abs(current - nextScale) > 0.001 ? nextScale : current);
         };
 
         updateScale();
         const resizeObserver = new ResizeObserver(updateScale);
         resizeObserver.observe(frame);
-        return () => resizeObserver.disconnect();
+        window.addEventListener('resize', updateScale);
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', updateScale);
+        };
     }, []);
 
     // 1. Animação de Confete no Preview Luma
@@ -3208,7 +3216,7 @@ const EventPanelV2: React.FC = () => {
 
         function createParticle(side: 'left' | 'right'): ConfettiParticle {
             const isLeft = side === 'left';
-            const size = 12 + Math.random() * 12; 
+            const size = 8 + Math.random() * 10;
             const shape = previewCustomStyle === 'Estrela' ? 'Estrela' :
                           previewCustomStyle === 'Coração' ? 'Coração' :
                           previewCustomStyle === 'Círculo' ? 'Círculo' : 'Festa';
@@ -3233,7 +3241,7 @@ const EventPanelV2: React.FC = () => {
         }
 
         const spawnConfetti = () => {
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 4; i++) {
                 particles.push(createParticle('left'));
                 particles.push(createParticle('right'));
             }
@@ -4067,14 +4075,23 @@ const EventPanelV2: React.FC = () => {
                          display: none;
                      }
                      .quick-actions .rich-button {
-                         flex: 0 0 clamp(204px, 55vw, 224px) !important;
+                         flex: 0 0 clamp(188px, 51vw, 210px) !important;
                          width: auto;
-                         min-height: 56px;
+                         min-height: 48px;
                          scroll-snap-align: start;
                      }
                      .quick-actions .rich-button .name {
-                         font-size: 14px;
+                         font-size: 13px;
                          white-space: nowrap;
+                     }
+                     .quick-actions .rich-button .icon {
+                         width: 34px;
+                         height: 34px;
+                         padding: 0.4375rem;
+                     }
+                     .quick-actions .rich-button .icon svg {
+                         width: 19px;
+                         height: 19px;
                      }
                      .quick-actions.event-guests-actions .rich-button,
                      .quick-actions.event-registration-actions .rich-button {
@@ -4529,7 +4546,7 @@ const EventPanelV2: React.FC = () => {
                           border-radius: 1rem;
                       }
                       .event-overview-card-inner {
-                          gap: 1.5rem;
+                          gap: 1.25rem;
                       }
                       .event-overview-preview-column,
                       .event-overview-details {
@@ -4545,23 +4562,37 @@ const EventPanelV2: React.FC = () => {
                           aspect-ratio: 37 / 28;
                           min-height: 0;
                       }
-                      @supports (zoom: calc(100cqw / 700px)) {
+                      @supports (zoom: calc(100cqw / 760px)) {
                           .event-overview-preview-column .luma-left-preview-actual {
-                              zoom: min(0.5286, calc(100cqw / 700px));
+                              zoom: min(0.4868, calc(100cqw / 760px));
                           }
                       }
                       .event-overview-share-row {
                           width: 100% !important;
-                          min-height: 36px;
+                          min-height: 32px;
                       }
                       .event-overview-details > h3 {
                           margin-top: 0 !important;
-                          margin-bottom: 1.125rem !important;
-                          font-size: 20px !important;
+                          margin-bottom: 1rem !important;
+                          font-size: 18px !important;
                       }
                       .event-overview-details button,
                       .event-overview-footer-actions button {
-                          min-height: 44px;
+                          min-height: 40px;
+                      }
+                      .event-manage-sticky-header:not(.is-scrolled) .manage-sticky-tabs-title {
+                          font-size: 20px !important;
+                          line-height: 25px !important;
+                      }
+                      .event-manage-sticky-header.is-scrolled .manage-sticky-tabs-title {
+                          font-size: 16px !important;
+                          line-height: 24px !important;
+                      }
+                      .event-overview-preview-column .replica-bottom-linkbar a {
+                          font-size: 13px !important;
+                      }
+                      .event-overview-preview-column .replica-bottom-linkbar button {
+                          font-size: 11px !important;
                       }
                       .event-overview-footer-actions {
                           grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -4616,7 +4647,7 @@ const EventPanelV2: React.FC = () => {
 
                  @media (max-width: 359px) {
                       .quick-actions .rich-button {
-                          flex-basis: 196px !important;
+                          flex-basis: 184px !important;
                       }
                       .event-overview-footer-actions {
                           grid-template-columns: 1fr !important;
@@ -6822,7 +6853,7 @@ const EventPanelV2: React.FC = () => {
                                                         className="absolute inset-0 w-full h-full pointer-events-none"
                                                         style={{ zIndex: 0, opacity: 1, display: previewThemeId === 'emoji' ? 'block' : 'none' }}
                                                     />
-                                                    <div className="luma-left-preview-actual" style={{ position: 'relative', zIndex: 1, zoom: previewScale }}>
+                                                    <div className="luma-left-preview-actual" style={{ position: 'relative', zIndex: 1, width: `${previewBaseWidth}px`, zoom: previewScale }}>
                                                         <div className="event-page-content-wrapper zm-container" style={{ position: 'relative', zIndex: 2 }}>
                                                             
                                                             {/* COLUNA ESQUERDA */}

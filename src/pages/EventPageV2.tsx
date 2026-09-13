@@ -1673,7 +1673,7 @@ const EventPageV2: React.FC = () => {
         fontFamily: pageFontFamily,
       }}
     >
-      <HeaderV2 transparent={true} contentMaxWidth="960px" theme={pageIsDark ? 'dark' : 'light'} blueGlow={false} />
+      <HeaderV2 transparent={true} fixed={false} scrollTransition={false} contentMaxWidth="960px" theme={pageIsDark ? 'dark' : 'light'} blueGlow={false} />
 
       <style>{`
         /* Override geral de acessibilidade para o Tema Warp (Sempre Escuro) */
