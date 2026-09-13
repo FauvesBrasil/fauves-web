@@ -3134,12 +3134,15 @@ const EventPanelV2: React.FC = () => {
     const previewWarpCanvasRef = React.useRef<HTMLCanvasElement>(null);
     const previewQuantumCanvasRef = React.useRef<HTMLCanvasElement>(null);
     const previewEmojiCanvasRef = React.useRef<HTMLCanvasElement>(null);
-    const previewFrameRef = React.useRef<HTMLDivElement>(null);
+    const [previewFrameElement, setPreviewFrameElement] = React.useState<HTMLDivElement | null>(null);
+    const previewFrameRef = React.useCallback((element: HTMLDivElement | null) => {
+        setPreviewFrameElement(element);
+    }, []);
     const [previewScale, setPreviewScale] = React.useState(0.5286);
     const [previewBaseWidth, setPreviewBaseWidth] = React.useState(700);
 
     React.useEffect(() => {
-        const frame = previewFrameRef.current;
+        const frame = previewFrameElement;
         if (!frame) return;
 
         const updateScale = () => {
@@ -3158,7 +3161,7 @@ const EventPanelV2: React.FC = () => {
             resizeObserver.disconnect();
             window.removeEventListener('resize', updateScale);
         };
-    }, []);
+    }, [previewFrameElement]);
 
     // 1. Animação de Confete no Preview Luma
     React.useEffect(() => {
