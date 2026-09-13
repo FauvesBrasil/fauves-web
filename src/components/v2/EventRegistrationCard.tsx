@@ -381,9 +381,10 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
         @media (max-width: 650px) {
           .event-registration-card.is-event-page .erc-user { align-items:flex-start; }
           .event-registration-card.is-event-page .erc-user-text { overflow:visible; white-space:normal; line-height:1.4; overflow-wrap:anywhere; }
-          .event-registration-card.is-event-page .erc-ticket { min-height:68px; }
+          .event-registration-card.is-event-page .erc-copy-checkout { display:none; }
+          .event-registration-card.is-event-page .erc-ticket { min-height:56px; padding:8px 10px; }
           .event-registration-card.is-event-page .erc-counter { gap:8px; }
-          .event-registration-card.is-event-page .erc-counter button { width:40px; height:40px; border-radius:8px; }
+          .event-registration-card.is-event-page .erc-counter button { width:32px; height:32px; border-radius:8px; }
           .event-registration-card.is-event-page .erc-counter button svg { width:16px; height:16px; }
           .event-registration-card.is-event-page .erc-access-input,
           .event-registration-card.is-event-page .erc-access-submit { height:44px; }
@@ -499,7 +500,7 @@ export const EventRegistrationCard: React.FC<EventRegistrationCardProps> = ({
                     </div>
                   )}
 
-                  <p className="erc-copy">
+                  <p className={`erc-copy erc-copy-${action}`}>
                     Olá, <strong>{greetingName}</strong>! {isRsvp || registrationRequired
                       ? 'Para participar do evento, cadastre-se abaixo.'
                       : isSingleTicket

@@ -208,8 +208,19 @@ export default function TicketCheckoutModal({
   const eventDate = (() => {
     if (event?.startDate) {
       const date = new Date(event.startDate);
-      return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
-        + `, ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      const viewerTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Fortaleza';
+      const dateLabel = date.toLocaleDateString('pt-BR', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: viewerTimezone,
+      });
+      const timeLabel = date.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: viewerTimezone,
+        timeZoneName: 'short',
+      });
+      return `${dateLabel}, ${timeLabel}`;
     }
     if (event?.date) return `${event.date.day} de ${event.date.month}, ${event.date.time || ''}`;
     return '';
@@ -586,16 +597,26 @@ export default function TicketCheckoutModal({
               )}
               {error && <div className="tc-error">{error}</div>}
               <button type="submit" className="tc-primary" disabled={submitting || !acceptingRegistrations}>
-                {!acceptingRegistrations ? 'Inscrições encerradas' : submitting ? <><Loader2 size={17} /> Processando…</> : total <= 0 ? 'Confirmar inscrição' : paymentMethod === 'card' ? `Pagar ${formatMoney(total)} com cartão` : `Gerar Pix de ${formatMoney(total)}`}
+                {!acceptingRegistrations ? 'Inscrições encerradas' : submitting ? <><Loader2 size={17} /> Processando…</> : total <= 0 ? 'Confirmar inscrição' : paymentMethod === 'card' ? <><span className="tc-primary-desktop-label">Pagar {formatMoney(total)} com cartão</span><span className="tc-primary-mobile-label">Pagar com Cartão</span></> : <><span className="tc-primary-desktop-label">Gerar Pix de {formatMoney(total)}</span><span className="tc-primary-mobile-label">Gerar Pix</span></>}
               </button>
+              {total > 0 && (
+                <button
+                  type="button"
+                  className="tc-mobile-alternate-payment"
+                  onClick={() => setPaymentMethod((current) => current === 'card' ? 'pix' : 'card')}
+                >
+                  {paymentMethod === 'card' ? 'Pagar com Pix' : 'Pagar com cartão'}
+                </button>
+              )}
             </main>
 
             <aside className="tc-summary">
+              <h1 className="tc-mobile-title">Inscrições</h1>
               <div className="tc-event-head">
                 <EventImage event={event} alt={`Imagem de ${event.name || 'evento'}`} />
                 <div><strong>{event.name}</strong><span>{eventDate}</span></div>
               </div>
-              <button type="button" className="tc-ticket-trigger" aria-expanded={ticketMenuOpen} aria-controls="checkout-ticket-menu" onClick={() => setTicketMenuOpen((open) => !open)}>
+              <button type="button" className={`tc-ticket-trigger ${pricedTickets.length === 1 && allowGroupRegistration ? 'tc-ticket-trigger-single' : ''}`} aria-expanded={ticketMenuOpen} aria-controls="checkout-ticket-menu" onClick={() => setTicketMenuOpen((open) => !open)}>
                 <span>{pricedTickets.length > 1 ? 'Ingressos' : 'Ingresso'}</span>
                 <strong>
                   {selectedNames || 'Selecionar'}
@@ -622,7 +643,7 @@ export default function TicketCheckoutModal({
                 )}
               </AnimatePresence>
               {allowGroupRegistration && pricedTickets.length === 1 && (
-                <div className="tc-inline-quantity"><span>Quantidade</span><div className="tc-stepper"><button type="button" onClick={() => changeQuantity(pricedTickets[0].id, -1)} disabled={selectedCount <= 1}><Minus size={14} /></button><b>{selectedCount}</b><button type="button" onClick={() => changeQuantity(pricedTickets[0].id, 1)}><Plus size={14} /></button></div></div>
+                <div className="tc-inline-quantity"><span>{pricedTickets[0]?.name || 'Ingressos'}</span><div className="tc-stepper"><button type="button" onClick={() => changeQuantity(pricedTickets[0].id, -1)} disabled={selectedCount <= 1}><Minus size={14} /></button><b>{selectedCount}</b><button type="button" onClick={() => changeQuantity(pricedTickets[0].id, 1)}><Plus size={14} /></button></div></div>
               )}
               {subtotal > 0 && <div className="tc-subtotal"><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div>}
               <div className="tc-coupon">
@@ -644,6 +665,7 @@ const styles = `
   .ticket-checkout{position:fixed;inset:0;z-index:12000;overflow-y:auto;background:rgba(19,21,23,.94);backdrop-filter:blur(24px);color:#f7f7f8;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--tc-bg:#191b1d;--tc-surface:#202224;--tc-field:#303234;--tc-border:rgba(255,255,255,.10);--tc-text:#f7f7f8;--tc-muted:#9b9da1;--tc-hover:#292b2e}
   .ticket-checkout.is-light{background:rgba(244,245,247,.94);--tc-bg:#fff;--tc-surface:#f7f7f8;--tc-field:#eff0f2;--tc-border:rgba(19,21,23,.12);--tc-text:#17181a;--tc-muted:#74777b;--tc-hover:#f0f1f3;color:var(--tc-text)}
   .ticket-checkout.tc-status-active{background:#1b1b1b;--tc-bg:#1b1b1b;--tc-surface:#202224;--tc-field:#2a2c2e;--tc-border:rgba(255,255,255,.10);--tc-text:#fff;--tc-muted:#9b9da1;--tc-hover:#292b2e;color:#fff}
+  .tc-mobile-title,.tc-mobile-alternate-payment,.tc-primary-mobile-label{display:none}
   .tc-close{position:fixed;top:18px;right:22px;z-index:2;width:32px;height:32px;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.15);color:#d2d3d5;cursor:pointer}.is-light .tc-close{background:rgba(19,21,23,.08);color:#55585c}.tc-close:hover{transform:scale(1.04);background:rgba(255,255,255,.22)}
   .tc-shell{width:min(900px,calc(100% - 40px));min-height:100%;margin:0 auto;padding:clamp(86px,13vh,150px) 0 60px;box-sizing:border-box}.tc-form-state{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:56px;align-items:start}
   .tc-status-active .tc-shell{width:min(620px,calc(100% - 32px));padding-top:clamp(62px,10vh,100px)}
@@ -659,5 +681,72 @@ const styles = `
   .tc-state-screen{width:min(520px,100%);margin:0 auto;text-align:center;display:flex;flex-direction:column;align-items:center}.tc-state-screen>p{color:var(--tc-muted);font-size:14px;line-height:1.55;margin:-4px 0 20px}.tc-state-screen>.tc-primary{max-width:280px}.tc-state-screen>.tc-decline-reason{max-width:420px;margin:-4px 0 20px;padding:10px 12px;border-radius:9px;background:rgba(239,65,24,.1);color:#ff7554;font-size:12px}.tc-state-actions{display:flex;width:100%;max-width:360px;flex-direction:column;gap:9px}.tc-state-actions .tc-primary{margin-top:0}.tc-secondary{width:100%;height:44px;border:1px solid var(--tc-border);border-radius:8px;background:var(--tc-surface);color:var(--tc-text);font-size:14px;font-weight:700;cursor:pointer}.tc-pix-screen{width:min(520px,100%);text-align:center;align-items:center}.tc-qr-card{box-sizing:border-box;width:228px;height:228px;margin:24px auto 0;padding:7px;border-radius:20px;background:#fff;display:grid;place-items:center;box-shadow:none;color:#9ca3af;font-size:13px}.tc-qr-card svg{width:214px;height:214px;display:block}.tc-copy-row{display:flex;width:228px;height:50px;gap:0;margin:12px auto 0;padding:3px;border-radius:10px;background:#2a2c2e;box-sizing:border-box}.tc-copy-row input{height:44px;min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:0;color:#747a81;padding:0 11px;font:inherit;font-size:14px;font-weight:600;outline:0}.tc-copy-row button{width:94px;height:44px;flex:0 0 94px;border:0;border-radius:10px;background:#19191a;color:#fff;padding:0;font:inherit;font-size:14px;font-weight:700;display:grid;place-items:center;cursor:pointer}.is-light .tc-status-active .tc-copy-row button,.tc-status-active .tc-copy-row button{background:#19191a}.tc-copy-row button:disabled{opacity:.45;cursor:not-allowed}
   @keyframes tc-spin{to{transform:rotate(360deg)}}
   @media(min-height:900px){.tc-status-active .tc-shell{padding-top:17.6vh}}
-  @media(max-width:760px){.tc-close{top:12px;right:12px}.tc-shell{width:100%;padding:64px 18px 34px}.tc-status-active .tc-shell{width:100%;padding:62px 16px 34px}.tc-form-state{grid-template-columns:1fr;gap:22px}.tc-summary{position:static;grid-row:1}.tc-form-column{grid-row:2}.tc-grid-two{grid-template-columns:1fr}.tc-form-column h2{font-size:20px}.tc-card-number>div{flex-wrap:wrap;height:auto;min-height:44px;padding:9px 12px}.tc-card-number>div>input:first-of-type{flex-basis:65%}}
+  @media(max-width:760px){
+    .ticket-checkout{background:#191a1d;backdrop-filter:none;-webkit-backdrop-filter:none}
+    .ticket-checkout.is-light{background:#f7f8f9}
+    .tc-close{top:18px;right:16px;z-index:4;width:34px;height:34px;background:rgba(255,255,255,.22)}
+    .tc-close svg{width:20px;height:20px;stroke-width:2}
+    .tc-shell{width:100%;padding:0 18px 42px}
+    .tc-status-active .tc-shell{width:100%;padding:62px 16px 34px}
+    .tc-form-state{grid-template-columns:1fr;gap:0}
+    .tc-summary{position:static;grid-row:1;margin:0 -18px;border:0;border-bottom:1px solid var(--tc-border);border-radius:0;background:var(--tc-field);box-shadow:none}
+    .tc-mobile-title{display:block;margin:0;padding:23px 66px 10px 20px;color:var(--tc-text);font-size:20px;font-weight:720;line-height:1.2;letter-spacing:-.025em}
+    .tc-event-head{gap:14px;padding:16px 20px 18px}
+    .tc-event-head img{width:54px;height:54px;border-radius:9px}
+    .tc-event-head strong{font-size:17px;line-height:1.2;font-weight:600}
+    .tc-event-head span{margin-top:7px;font-size:14px;line-height:1.25}
+    .tc-ticket-trigger{min-height:58px;padding:0 20px;border-top:0}
+    .tc-ticket-trigger.tc-ticket-trigger-single{display:none}
+    .tc-ticket-trigger>span{font-size:16px;color:var(--tc-text)}
+    .tc-ticket-trigger>strong{font-size:14px}
+    .tc-ticket-menu{padding:8px 14px}
+    .tc-inline-quantity{min-height:58px;padding:10px 20px;border-top:0;border-bottom:1px solid var(--tc-border);font-size:16px}
+    .tc-inline-quantity>span{color:var(--tc-text);font-weight:650}
+    .tc-stepper{gap:12px}
+    .tc-stepper button{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.055)}
+    .is-light .tc-stepper button{background:rgba(19,21,23,.06)}
+    .tc-stepper button svg{width:19px;height:19px}
+    .tc-stepper b{min-width:16px;font-size:16px;font-weight:500}
+    .tc-subtotal{padding:17px 20px 6px;border-bottom:0;font-size:16px}
+    .tc-coupon{padding:9px 20px 4px}
+    .tc-coupon>button{font-size:16px;color:#6e78ef}
+    .tc-coupon>div{gap:8px}
+    .tc-coupon input{height:40px;font-size:14px}
+    .tc-coupon>div button{height:40px;padding:0 14px;background:#505bd0;font-size:13px}
+    .tc-discount{padding:8px 20px;font-size:15px}
+    .tc-total{padding:14px 20px 21px;font-size:17px}
+    .tc-total strong{font-size:26px;font-weight:560}
+    .tc-form-column{grid-row:2;padding:28px 2px 0}
+    .tc-form-column section+section{margin-top:28px}
+    .tc-form-column h2{margin-bottom:20px;font-size:20px}
+    .tc-identity{gap:13px;margin-bottom:25px}
+    .tc-identity img{width:46px;height:46px}
+    .tc-identity strong{font-size:16px}
+    .tc-identity span{margin-top:4px;font-size:14px}
+    .tc-identity button{margin-left:2px}
+    .tc-identity button svg{width:19px;height:19px}
+    .tc-grid-two{grid-template-columns:1fr}
+    .tc-field{gap:8px;margin-bottom:18px;font-size:15px}
+    .tc-field>input,.tc-field>select{height:48px;border-radius:10px;padding:0 13px;font-size:16px}
+    .tc-field>textarea{border-radius:10px;font-size:16px}
+    .tc-methods{display:none}
+    .tc-card-number>div{height:48px;min-height:48px;padding:0 13px;gap:9px;flex-wrap:nowrap}
+    .tc-card-number>div input{font-size:15px}
+    .tc-card-number>div>input:first-of-type{min-width:90px}
+    .tc-card-number .tc-expiry{max-width:66px}
+    .tc-card-number .tc-cvc{max-width:38px}
+    .tc-check-row{font-size:13px}
+    .tc-primary{height:48px;margin-top:10px;border-radius:9px;background:#505bd0;font-size:16px}
+    .tc-primary:hover{background:#444fc2}
+    .tc-primary-desktop-label{display:none}
+    .tc-primary-mobile-label{display:inline}
+    .tc-mobile-alternate-payment{display:flex;width:100%;height:48px;margin-top:12px;align-items:center;justify-content:center;border:0;border-radius:9px;background:#fff;color:#17181a;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+    .tc-status-active .tc-mobile-title,.tc-status-active .tc-mobile-alternate-payment{display:none}
+  }
+  @media(max-width:380px){
+    .tc-shell{padding-right:14px;padding-left:14px}
+    .tc-summary{margin-right:-14px;margin-left:-14px}
+    .tc-mobile-title{padding-left:16px}
+    .tc-event-head,.tc-ticket-trigger,.tc-inline-quantity,.tc-subtotal,.tc-coupon,.tc-discount,.tc-total{padding-right:16px;padding-left:16px}
+  }
 `;

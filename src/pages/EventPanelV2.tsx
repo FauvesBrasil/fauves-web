@@ -3134,6 +3134,23 @@ const EventPanelV2: React.FC = () => {
     const previewWarpCanvasRef = React.useRef<HTMLCanvasElement>(null);
     const previewQuantumCanvasRef = React.useRef<HTMLCanvasElement>(null);
     const previewEmojiCanvasRef = React.useRef<HTMLCanvasElement>(null);
+    const previewFrameRef = React.useRef<HTMLDivElement>(null);
+    const [previewScale, setPreviewScale] = React.useState(0.5286);
+
+    React.useEffect(() => {
+        const frame = previewFrameRef.current;
+        if (!frame) return;
+
+        const updateScale = () => {
+            const nextScale = Math.min(0.5286, frame.getBoundingClientRect().width / 700);
+            setPreviewScale((current) => Math.abs(current - nextScale) > 0.001 ? nextScale : current);
+        };
+
+        updateScale();
+        const resizeObserver = new ResizeObserver(updateScale);
+        resizeObserver.observe(frame);
+        return () => resizeObserver.disconnect();
+    }, []);
 
     // 1. Animação de Confete no Preview Luma
     React.useEffect(() => {
@@ -6746,6 +6763,7 @@ const EventPanelV2: React.FC = () => {
                                         {/* Coluna Esquerda: Preview Luma Premium Exact Event Page Replica */}
                                         <div className="event-overview-preview-column flex-1 min-w-0 flex flex-col items-center relative max-lg:mx-auto" style={{ maxWidth: '370px' }}>
                                             <div 
+                                                ref={previewFrameRef}
                                                 className={`luma-left-preview luma-left-preview-scale-wrapper ${previewIsDark ? 'dark dark-mode' : 'light'}`}
                                                 style={{
                                                      width: '370px',
@@ -6804,7 +6822,7 @@ const EventPanelV2: React.FC = () => {
                                                         className="absolute inset-0 w-full h-full pointer-events-none"
                                                         style={{ zIndex: 0, opacity: 1, display: previewThemeId === 'emoji' ? 'block' : 'none' }}
                                                     />
-                                                    <div className="luma-left-preview-actual" style={{ position: 'relative', zIndex: 1 }}>
+                                                    <div className="luma-left-preview-actual" style={{ position: 'relative', zIndex: 1, zoom: previewScale }}>
                                                         <div className="event-page-content-wrapper zm-container" style={{ position: 'relative', zIndex: 2 }}>
                                                             
                                                             {/* COLUNA ESQUERDA */}

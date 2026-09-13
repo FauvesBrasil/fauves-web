@@ -290,14 +290,15 @@ const EventPageV2: React.FC = () => {
 
     function createParticle(side: 'left' | 'right'): ConfettiParticle {
       const isLeft = side === 'left';
-      const size = 32 + Math.random() * 32; 
+      const isMobileViewport = width <= 650;
+      const size = isMobileViewport ? 10 + Math.random() * 24 : 32 + Math.random() * 32;
       const shape = customStyle === 'Estrela' ? 'Estrela' :
                     customStyle === 'Coração' ? 'Coração' :
                     customStyle === 'Círculo' ? 'Círculo' : 'Festa';
 
-      const x = isLeft 
-        ? (40 + Math.random() * 120) 
-        : (width - 160 - Math.random() * 120);
+      const x = isMobileViewport
+        ? (isLeft ? 8 + Math.random() * 72 : width - 8 - Math.random() * 72)
+        : (isLeft ? 40 + Math.random() * 120 : width - 160 - Math.random() * 120);
 
       const y = height + 40 + Math.random() * 140; 
 
@@ -315,7 +316,7 @@ const EventPageV2: React.FC = () => {
         rotationSpeed: (Math.random() - 0.5) * 0.025,
         twist: Math.random() * Math.PI * 2,
         twistSpeed: 0.015 + Math.random() * 0.02,
-        opacity: 1,
+        opacity: isMobileViewport ? 0.74 + Math.random() * 0.18 : 1,
         gravity: 0.045 + Math.random() * 0.035,
         shape
       };
@@ -323,7 +324,8 @@ const EventPageV2: React.FC = () => {
 
     function triggerBurst(side: 'left' | 'right', count: number) {
       if (document.hidden) return; // Não gera partículas em segundo plano
-      if (particles.length > 300) return; // Limite defensivo para evitar travamento
+      const particleLimit = width <= 650 ? 120 : 300;
+      if (particles.length > particleLimit) return; // Limite defensivo para evitar travamento
       for (let k = 0; k < count; k++) {
         particles.push(createParticle(side));
       }
@@ -331,10 +333,11 @@ const EventPageV2: React.FC = () => {
 
     const runBurstCycle = () => {
       if (document.hidden) return; // Não inicia se a página estiver oculta
-      triggerBurst('left', 80 + Math.floor(Math.random() * 30));
+      const mobileCount = width <= 650 ? 34 + Math.floor(Math.random() * 14) : 80 + Math.floor(Math.random() * 30);
+      triggerBurst('left', mobileCount);
       const timeoutId = setTimeout(() => {
         if (document.hidden) return;
-        triggerBurst('right', 80 + Math.floor(Math.random() * 30));
+        triggerBurst('right', mobileCount);
       }, 1500);
       return timeoutId;
     };
@@ -1471,6 +1474,52 @@ const EventPageV2: React.FC = () => {
     </div>
   );
 
+  const renderPresenter = (placement: 'desktop' | 'mobile') => (
+    <div className={`event-presenter event-presenter-${placement}`}>
+      <div className="jsx-da66ad346e2cad37 flex-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <img
+          className="square rounded"
+          width="32"
+          height="32"
+          alt="Avatar"
+          src={event.host.avatar}
+          style={{ border: '0.5px solid rgba(0,0,0,0.08)', borderRadius: 'var(--border-radius)' }}
+        />
+        <div className="jsx-da66ad346e2cad37 flex-1 ml-1">
+          <div className="jsx-da66ad346e2cad37 fs-xxs text-tinted reduced-line-height presenter-label">Apresentado por</div>
+          <a className="title" href="#" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="jsx-da66ad346e2cad37 flex-center" style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="jsx-da66ad346e2cad37 fw-medium text-ellipses presenter-name">{event.host.name}</div>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12" height="12" style={{ marginLeft: '2px' }}>
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </div>
+          </a>
+        </div>
+      </div>
+      {Array.isArray(event.hosts) && event.hosts.length > 0 && (
+        <div className="event-presenter-additional" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.85rem' }}>
+          {event.hosts.map((host: any) => (
+            <div key={host.id || host.email} className="jsx-da66ad346e2cad37 flex-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <img
+                className="square rounded"
+                width="32"
+                height="32"
+                alt={host.name || 'Anfitrião'}
+                src={host.avatar}
+                style={{ border: '0.5px solid rgba(0,0,0,0.08)', borderRadius: 'var(--border-radius)', objectFit: 'cover' }}
+              />
+              <div className="jsx-da66ad346e2cad37 flex-1 ml-1">
+                <div className="jsx-da66ad346e2cad37 fs-xxs text-tinted reduced-line-height presenter-label">Anfitrião</div>
+                <div className="jsx-da66ad346e2cad37 fw-medium text-ellipses presenter-name">{host.name || host.email}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   if (isEmbedded) return (
     <div
       className={`theme-root fauves-embed-root ${pageIsDark ? 'dark dark-mode' : 'light'}`}
@@ -2008,6 +2057,10 @@ const EventPageV2: React.FC = () => {
           font-family: var(--title-font) !important;
         }
 
+        .event-presenter-mobile {
+          display: none;
+        }
+
         .content-card {
           margin: 0;
         }
@@ -2224,14 +2277,23 @@ const EventPageV2: React.FC = () => {
             gap: 1.25rem;
           }
           .event-page-right { gap: 1.25rem; }
-          .event-title { font-size: clamp(2rem, 10vw, 2.6rem); overflow-wrap: anywhere; }
+          .event-title { font-size: clamp(1.8rem, 8vw, 2rem); overflow-wrap: anywhere; }
+          .event-presenter-desktop { display: none; }
+          .event-presenter-mobile {
+            display: flex;
+            flex-direction: column;
+            gap: .6rem;
+            margin-top: 1rem;
+          }
+          .event-presenter-mobile .presenter-label { display: none; }
+          .event-presenter-mobile .event-presenter-additional { margin-top: .35rem !important; }
           .img-aspect-ratio { border-radius: min(var(--card-border-radius), 14px); }
           .row-container { gap: .75rem; }
           .row-title { max-width: 100%; }
           .spark-content { overflow-wrap: anywhere; }
           .spark-content img, .spark-content iframe, .spark-content video { max-width: 100% !important; height: auto !important; }
           .lux-button.primary.solid { min-height: 44px; }
-          .count-button { width: 40px; height: 40px; }
+          .count-button { width: 32px; height: 32px; }
           .manage-card { gap: 10px; flex-wrap: wrap; }
         }
 
@@ -2543,48 +2605,8 @@ const EventPageV2: React.FC = () => {
               </div>
             )}
 
-            {/* Organizado por */}
-            <div className="jsx-da66ad346e2cad37 flex-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <img
-                className="square rounded"
-                width="32"
-                height="32"
-                alt="Avatar"
-                src={event.host.avatar}
-                style={{ border: '0.5px solid rgba(0,0,0,0.08)', borderRadius: 'var(--border-radius)' }}
-              />
-              <div className="jsx-da66ad346e2cad37 flex-1 ml-1">
-                <div className="jsx-da66ad346e2cad37 fs-xxs text-tinted reduced-line-height presenter-label">Apresentado por</div>
-                <a className="title" href="#" style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div className="jsx-da66ad346e2cad37 flex-center" style={{ display: 'flex', alignItems: 'center' }}>
-                    <div className="jsx-da66ad346e2cad37 fw-medium text-ellipses presenter-name">{event.host.name}</div>
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="12" height="12" style={{ marginLeft: '2px' }}>
-                      <path d="m9 18 6-6-6-6"></path>
-                    </svg>
-                  </div>
-                </a>
-              </div>
-            </div>
-            {Array.isArray(event.hosts) && event.hosts.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.85rem' }}>
-                {event.hosts.map((host: any) => (
-                  <div key={host.id || host.email} className="jsx-da66ad346e2cad37 flex-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <img
-                      className="square rounded"
-                      width="32"
-                      height="32"
-                      alt={host.name || 'Anfitrião'}
-                      src={host.avatar}
-                      style={{ border: '0.5px solid rgba(0,0,0,0.08)', borderRadius: 'var(--border-radius)', objectFit: 'cover' }}
-                    />
-                    <div className="jsx-da66ad346e2cad37 flex-1 ml-1">
-                      <div className="jsx-da66ad346e2cad37 fs-xxs text-tinted reduced-line-height presenter-label">Anfitrião</div>
-                      <div className="jsx-da66ad346e2cad37 fw-medium text-ellipses presenter-name">{host.name || host.email}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Organizador na coluna lateral no desktop. */}
+            {renderPresenter('desktop')}
           </div>
 
           {/* COLUNA DIREITA */}
@@ -2601,6 +2623,7 @@ const EventPageV2: React.FC = () => {
                 </div>
               )}
               <h1 className="event-title">{event.name}</h1>
+              {renderPresenter('mobile')}
 
               <div className="event-info-rows">
                 <div className="row-container">
