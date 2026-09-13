@@ -201,24 +201,47 @@ const EventPageV2: React.FC = () => {
       return;
     }
 
+    setCanManage(false);
+    const organizationId = event?.organizationId || event?.organization?.id;
+    const isLegacyEventOwner = !organizationId && String(event?.organizerId || '') === String(userId);
+    if (isLegacyEventOwner) {
+      setCanManage(true);
+      return;
+    }
+
     let cancelled = false;
-    fetchApi(`/api/events/by-user?userId=${encodeURIComponent(userId)}`)
-      .then((response) => (response.ok ? response.json() : []))
-      .then((data) => {
-        if (cancelled) return;
-        const items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
-        const eventIds = new Set(
-          items.map((item: any) => String(item?.id || item?.eventId || '')).filter(Boolean)
+    const checkAdministrativeAccess = async () => {
+      const checks: Promise<boolean>[] = [];
+
+      if (organizationId) {
+        checks.push(
+          fetchApi(`/api/organization/${encodeURIComponent(organizationId)}/admins`)
+            .then(async (response) => response.ok ? response.json() : [])
+            .then((admins) => Array.isArray(admins) && admins.some((admin: any) =>
+              admin?.isCurrentUser || String(admin?.userId || '') === String(userId)
+            ))
+            .catch(() => false)
         );
-        if (eventIds.has(String(eventId))) {
-          setCanManage(true);
-        } else {
-          setCanManage(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setCanManage(false);
-      });
+      }
+
+      checks.push(
+        fetchApi(`/api/event/${encodeURIComponent(eventId)}/team`)
+          .then(async (response) => response.ok ? response.json() : { items: [] })
+          .then((data) => {
+            const members = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+            return members.some((member: any) =>
+              String(member?.userId || member?.id || '') === String(userId)
+              && String(member?.funcao || member?.role || '').toUpperCase() === 'ORGANIZER'
+            );
+          })
+          .catch(() => false)
+      );
+
+      const results = await Promise.all(checks);
+      if (!cancelled) setCanManage(results.some(Boolean));
+    };
+
+    void checkAdministrativeAccess();
 
     return () => {
       cancelled = true;
@@ -1913,6 +1936,13 @@ const EventPageV2: React.FC = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: 12px;
+          flex-wrap: nowrap;
+        }
+
+        .manage-card-copy {
+          flex: 1 1 auto;
+          min-width: 0;
         }
 
         .theme-root.dark .manage-card {
@@ -2308,7 +2338,7 @@ const EventPageV2: React.FC = () => {
           .spark-content img, .spark-content iframe, .spark-content video { max-width: 100% !important; height: auto !important; }
           .lux-button.primary.solid { min-height: 44px; }
           .count-button { width: 32px; height: 32px; }
-          .manage-card { gap: 10px; flex-wrap: wrap; }
+          .manage-card { gap: 10px; flex-wrap: nowrap; }
         }
 
         @media (max-width: 360px) {
@@ -2609,7 +2639,7 @@ const EventPageV2: React.FC = () => {
 
             {canManage && (
               <div className="jsx-24d10356f2efd076 manage-card">
-                <div className="jsx-24d10356f2efd076">Você tem acesso de gerenciamento para este evento.</div>
+                <div className="jsx-24d10356f2efd076 manage-card-copy">Você tem acesso de gerenciamento para este evento.</div>
                 <a href={`/event/manage/${event.id}`} target="_blank" className="btn lux-button small" style={{ background: 'var(--theme-accent, #bc3f57)', color: 'white', padding: '8px 16px', borderRadius: '30px', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   Gerenciar
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" viewBox="0 0 24 24" style={{ width: '14px', height: '14px', display: 'inline-block', flexShrink: 0 }}>
