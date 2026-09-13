@@ -2266,12 +2266,15 @@ const EventPageV2: React.FC = () => {
         }
 
         @media (max-width: 650px) {
-          .theme-root > .luma-nav-v2 {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            background: transparent !important;
+          .theme-root > .luma-nav-v2,
+          .theme-root > .luma-nav-v2.authenticated-header,
+          .theme-root > .luma-nav-v2.authenticated-header.transparent,
+          .theme-root > .luma-nav-v2.authenticated-header.opaque {
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            background: var(--theme-bg) !important;
             border-bottom: 0 !important;
             box-shadow: none !important;
             backdrop-filter: none !important;
