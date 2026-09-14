@@ -6402,6 +6402,140 @@ const EventPanelV2: React.FC = () => {
                       color: var(--theme-accent, #bc3f57) !important;
                       font-weight: 600;
                   }
+
+                  /* Edit event drawer: keep the compact desktop layout, but let
+                     the controls reflow instead of overflowing on phones. */
+                  @media (max-width: 480px) {
+                      .edit-event-drawer {
+                          width: 100% !important;
+                          max-width: none !important;
+                          height: 100dvh !important;
+                          margin: 0 !important;
+                          border: 0 !important;
+                          border-radius: 0 !important;
+                      }
+
+                      .edit-event-header {
+                          padding: max(1rem, env(safe-area-inset-top)) 1rem 1rem !important;
+                      }
+
+                      .edit-event-body {
+                          padding: 1rem !important;
+                          overscroll-behavior: contain;
+                          -webkit-overflow-scrolling: touch;
+                      }
+
+                      .edit-event-theme-controls .theme-option {
+                          min-height: 3.5rem;
+                          padding: 0.5rem 0.625rem;
+                      }
+
+                      .edit-event-theme-controls .theme-option .content {
+                          min-width: 0;
+                          padding: 0 0.375rem;
+                          flex-direction: column;
+                          align-items: flex-start;
+                          justify-content: center;
+                          overflow: hidden;
+                      }
+
+                      .edit-event-theme-controls .theme-option .label {
+                          width: 100%;
+                          overflow: hidden;
+                          color: rgba(var(--black-base-rgb), 0.48);
+                          font-size: 0.6875rem;
+                          line-height: 0.875rem;
+                          text-overflow: ellipsis;
+                      }
+
+                      .edit-event-theme-controls .theme-option .value {
+                          width: 100%;
+                          font-size: 0.875rem;
+                          line-height: 1.125rem;
+                          text-align: left;
+                      }
+
+                      .edit-event-datetime-block {
+                          height: auto !important;
+                          flex-direction: column;
+                          gap: 0 !important;
+                          overflow: visible;
+                          border-radius: 0.625rem;
+                          background: var(--black-opacity-4, rgba(19, 21, 23, 0.04)) !important;
+                          backdrop-filter: blur(8px);
+                          -webkit-backdrop-filter: blur(8px);
+                      }
+
+                      .edit-event-datetime-card {
+                          width: 100% !important;
+                          height: 5.75rem !important;
+                          padding: 0.4375rem 0.625rem !important;
+                          border-radius: 0.625rem 0.625rem 0 0 !important;
+                          background: transparent !important;
+                      }
+
+                      .edit-event-datetime-row {
+                          height: 2.375rem !important;
+                      }
+
+                      .edit-event-datetime-label {
+                          width: 3.25rem !important;
+                      }
+
+                      .edit-event-datetime-picker {
+                          min-width: 0;
+                          max-width: none !important;
+                          flex-shrink: 1 !important;
+                      }
+
+                      .edit-event-datetime-picker > div:first-child {
+                          min-width: 0;
+                      }
+
+                      .edit-event-datetime-picker > div:first-child .fauves-floating-surface {
+                          right: 0 !important;
+                          left: auto !important;
+                      }
+
+                      .edit-event-timezone {
+                          width: 100% !important;
+                          height: 2.875rem !important;
+                          padding: 0 0.875rem !important;
+                          flex-direction: row !important;
+                          align-items: center !important;
+                          justify-content: flex-start !important;
+                          gap: 0.375rem;
+                          border-top: 1px solid var(--black-opacity-8, rgba(19, 21, 23, 0.08));
+                          border-radius: 0 0 0.625rem 0.625rem !important;
+                          background: transparent !important;
+                      }
+
+                      .edit-event-timezone > div {
+                          width: auto !important;
+                          margin-top: 0 !important;
+                      }
+
+                      .edit-event-footer {
+                          padding: 0.875rem 1rem max(0.875rem, env(safe-area-inset-bottom)) !important;
+                      }
+
+                      .edit-event-footer > button {
+                          min-width: 0;
+                      }
+
+                      .edit-event-footer > button:last-child {
+                          flex: 1;
+                          padding-left: 1rem;
+                          padding-right: 1rem;
+                      }
+
+                      .edit-event-theme-controls .color-popover,
+                      .edit-event-theme-controls .font-popover,
+                      .edit-event-theme-controls .style-popover,
+                      .edit-event-theme-controls .emoji-popover {
+                          max-width: calc(100vw - 2rem);
+                      }
+                  }
             `}} />
 
             <HeaderV2 transparent={true} scrollTransition={false} theme={isDark ? 'dark' : 'light'} />
@@ -10905,10 +11039,10 @@ const EventPanelV2: React.FC = () => {
                                         exit={{ x: "100%" }}
                                         transition={{ type: "spring", damping: 30, stiffness: 300 }}
                                         onClick={(e) => e.stopPropagation()}
-                                        className="relative w-full max-w-[550px] h-[calc(100vh-1rem)] m-2 mr-2 bg-[#f7f8f9] dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-[#f1f1f3] dark:border-zinc-800 z-10"
+                                        className="edit-event-drawer relative w-full max-w-[550px] h-[calc(100vh-1rem)] m-2 mr-2 bg-[#f7f8f9] dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-[#f1f1f3] dark:border-zinc-800 z-10"
                                     >
                                         {/* Header fixo */}
-                                        <div className="panel-header flex items-center justify-between gap-3 border-b border-[#ebeced] dark:border-zinc-800/80 bg-[#f7f8f9] dark:bg-zinc-900 px-6 py-4 min-h-[3.5rem] select-none flex-shrink-0 relative">
+                                        <div className="panel-header edit-event-header flex items-center justify-between gap-3 border-b border-[#ebeced] dark:border-zinc-800/80 bg-[#f7f8f9] dark:bg-zinc-900 px-6 py-4 min-h-[3.5rem] select-none flex-shrink-0 relative">
                                             <h3 className="text-lg font-bold text-zinc-800 dark:text-white">Editar Evento</h3>
                                             <button
                                                 aria-label="Fechar"
@@ -10922,7 +11056,7 @@ const EventPanelV2: React.FC = () => {
                                         </div>
 
                                         <form onSubmit={handleSaveEvent} className="flex-1 flex flex-col overflow-hidden">
-                                            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
+                                            <div className="edit-event-body flex-1 overflow-x-hidden overflow-y-auto p-6 space-y-6 text-left">
                                                 {/* Seção 1: Informações Básicas */}
                                                 <div className="space-y-4">
                                                     <div className="text-[13px] font-semibold text-zinc-400 dark:text-zinc-500 tracking-wide uppercase">Informações Básicas</div>
@@ -11025,7 +11159,7 @@ const EventPanelV2: React.FC = () => {
 
                                                     {/* Theme Customization Options (Luma theme-controls grid) */}
                                                     <div className="options pt-3">
-                                                        <div className="theme-controls relative">
+                                                        <div className="theme-controls edit-event-theme-controls relative">
                                                             
                                                             {/* Cor Pill */}
                                                             {(() => {
@@ -11486,19 +11620,19 @@ const EventPanelV2: React.FC = () => {
                                                 <div className="space-y-4 pt-2">
                                                     <div className="text-[13px] font-semibold text-zinc-400 dark:text-zinc-500 tracking-wide uppercase">Horário do Evento</div>
                                                     
-                                                    <div className="w-full h-[80px] flex items-stretch gap-[12px] relative z-20">
-                                                        <div className="flex-1 min-w-0 h-[80px] datetime-container-bg backdrop-blur-[8px] rounded-[8px] relative px-[12px] py-[4px] flex flex-col justify-center gap-1">
+                                                    <div className="edit-event-datetime-block w-full h-[80px] flex items-stretch gap-[12px] relative z-20">
+                                                        <div className="edit-event-datetime-card flex-1 min-w-0 h-[80px] datetime-container-bg backdrop-blur-[8px] rounded-[8px] relative px-[12px] py-[4px] flex flex-col justify-center gap-1">
                                                             <div className="absolute border-l border-dashed left-[21px] top-[26px] bottom-[26px] z-0 timeline-line" style={{ borderColor: 'var(--black-opacity-16)' }}></div>
                                                             
-                                                            <div className="flex items-center gap-[8px] relative z-20 w-full h-[34px]">
+                                                            <div className="edit-event-datetime-row flex items-center gap-[8px] relative z-20 w-full h-[34px]">
                                                                 <div className="w-[10px] h-[10px] rounded-full ml-[6px] shrink-0 z-10 timeline-dot" style={{ backgroundColor: 'var(--black-opacity-32)' }}></div>
-                                                                <span className="text-[16px] leading-[24px] font-sans font-normal ml-2 shrink-0 w-[64px] select-none" style={{ color: 'var(--black-opacity-64)' }}>Início</span>
-                                                                <div className="flex-1 max-w-[216px] flex items-center datetime-picker-btn transition-all rounded-[8px] h-[34px] ml-auto shrink-0">
+                                                                <span className="edit-event-datetime-label text-[16px] leading-[24px] font-sans font-normal ml-2 shrink-0 w-[64px] select-none" style={{ color: 'var(--black-opacity-64)' }}>Início</span>
+                                                                <div className="edit-event-datetime-picker flex-1 max-w-[216px] flex items-center datetime-picker-btn transition-all rounded-[8px] h-[34px] ml-auto shrink-0">
                                                                     <div className="relative h-full flex items-center justify-center flex-1">
                                                                         <LuxDatePicker
                                                                             value={editEventStartDate}
                                                                             onChange={updateEditStartDate}
-                                                                            className="bg-transparent border-none text-[16px] font-sans font-normal text-center cursor-pointer flex-1 w-full outline-none"
+                                                                            className="bg-transparent border-none text-[16px] font-sans font-normal text-center cursor-pointer flex-1 w-full outline-none whitespace-nowrap overflow-hidden text-ellipsis"
                                                                             style={{ color: 'var(--black)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                                         />
                                                                     </div>
@@ -11515,16 +11649,16 @@ const EventPanelV2: React.FC = () => {
                                                             </div>
 
                                                             {/* Fim */}
-                                                            <div className="flex items-center gap-[8px] relative z-10 w-full h-[34px]">
+                                                            <div className="edit-event-datetime-row flex items-center gap-[8px] relative z-10 w-full h-[34px]">
                                                                 <div className="w-[10px] h-[10px] rounded-full border bg-transparent ml-[6px] shrink-0 z-10 timeline-dot-outline" style={{ borderColor: 'var(--black-opacity-32)' }}></div>
-                                                                <span className="text-[16px] leading-[24px] font-sans font-normal ml-2 shrink-0 w-[64px] select-none" style={{ color: 'var(--black-opacity-64)' }}>Fim</span>
-                                                                <div className="flex-1 max-w-[216px] flex items-center datetime-picker-btn transition-all rounded-[8px] h-[34px] ml-auto shrink-0">
+                                                                <span className="edit-event-datetime-label text-[16px] leading-[24px] font-sans font-normal ml-2 shrink-0 w-[64px] select-none" style={{ color: 'var(--black-opacity-64)' }}>Fim</span>
+                                                                <div className="edit-event-datetime-picker flex-1 max-w-[216px] flex items-center datetime-picker-btn transition-all rounded-[8px] h-[34px] ml-auto shrink-0">
                                                                     <div className="relative h-full flex items-center justify-center flex-1">
                                                                         <LuxDatePicker
                                                                             value={editEventEndDate}
                                                                             onChange={updateEditEndDate}
                                                                             minDate={editEventStartDate}
-                                                                            className="bg-transparent border-none text-[16px] font-sans font-normal text-center cursor-pointer flex-1 w-full outline-none"
+                                                                            className="bg-transparent border-none text-[16px] font-sans font-normal text-center cursor-pointer flex-1 w-full outline-none whitespace-nowrap overflow-hidden text-ellipsis"
                                                                             style={{ color: 'var(--black)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                                         />
                                                                     </div>
@@ -11563,7 +11697,7 @@ const EventPanelV2: React.FC = () => {
                                                             return (
                                                                 <div 
                                                                     title="Fuso horário não editável"
-                                                                    className="w-[125px] shrink-0 h-[80px] datetime-container-bg backdrop-blur-[8px] rounded-[8px] p-2.5 flex flex-col justify-center items-start opacity-75 cursor-not-allowed select-none"
+                                                                    className="edit-event-timezone w-[125px] shrink-0 h-[80px] datetime-container-bg backdrop-blur-[8px] rounded-[8px] p-2.5 flex flex-col justify-center items-start opacity-75 cursor-not-allowed select-none"
                                                                 >
                                                                     <Globe size={16} className="shrink-0" style={{ color: 'var(--black-opacity-48)' }} />
                                                                     <div className="text-[14px] font-sans font-medium leading-[18.2px] mt-1 shrink-0" style={{ color: 'var(--black-opacity-64)' }}>{info.gmt}</div>
@@ -11778,7 +11912,7 @@ const EventPanelV2: React.FC = () => {
                                             </div>
 
                                             {/* Footer fixo */}
-                                            <div className="panel-footer flex-shrink-0 border-t border-[#ebeced] dark:border-zinc-800/80 bg-[#f7f8f9] dark:bg-zinc-900 px-6 py-4 flex justify-end gap-3 select-none">
+                                            <div className="panel-footer edit-event-footer flex-shrink-0 border-t border-[#ebeced] dark:border-zinc-800/80 bg-[#f7f8f9] dark:bg-zinc-900 px-6 py-4 flex justify-end gap-3 select-none">
                                                 <button
                                                     type="button"
                                                     onClick={() => setIsEditEventModalOpen(false)}
