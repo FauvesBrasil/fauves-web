@@ -19,6 +19,16 @@ describe('eventLocation', () => {
     expect(resolveEventAddress({ location: 'Local' })).toBe('');
   });
 
+  it('usa o nome do local presente no início do endereço e ignora o marcador Local', () => {
+    expect(resolveEventLocationLabel({
+      location: 'Local',
+      locationName: 'Local',
+      locationAddress: 'Reviver Hostel, R. de Nazaré, 200 - Centro Histórico',
+      locationCity: 'São Luís',
+      locationUf: 'MA',
+    })).toBe('Reviver Hostel, São Luís - MA');
+  });
+
   it('mantém coordenadas zero ou inválidas fora do mapa', () => {
     expect(resolveEventCoordinates({ locationLatitude: 0, locationLongitude: 0 })).toEqual({ lat: null, lng: null });
     expect(resolveEventCoordinates({ locationLatitude: -3.73, locationLongitude: -38.52 })).toEqual({ lat: -3.73, lng: -38.52 });

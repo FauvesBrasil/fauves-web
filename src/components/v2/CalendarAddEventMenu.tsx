@@ -1,10 +1,12 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarPlus, ChevronRight, Link2, Loader2, MapPin, Plus, Sparkles, Tag, X } from 'lucide-react';
+import { CalendarPlus, ChevronRight, Link2, Loader2, Plus, Sparkles, Tag, X } from 'lucide-react';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/context/ThemeContext';
+import { LocationAutocomplete } from '@/components/LocationAutocomplete';
+import { timeZoneForUf } from '@/lib/eventDateTime';
 
 type Props = {
   organization: any;
@@ -26,7 +28,7 @@ const initialExternalForm = () => {
   const start = new Date(Date.now() + 60 * 60_000);
   const end = new Date(start.getTime() + 60 * 60_000);
   return {
-    url: '', name: '', location: '', host: '',
+    url: '', name: '', location: '', locationCity: '', locationUf: '', categoryId: '', host: '',
     startDate: localInputValue(start), endDate: localInputValue(end),
   };
 };
@@ -50,6 +52,7 @@ export default function CalendarAddEventMenu({
   const [modal, setModal] = React.useState<ModalKind>(null);
   const [suggestions, setSuggestions] = React.useState<any[]>([]);
   const [tags, setTags] = React.useState<any[]>([]);
+  const [categories, setCategories] = React.useState<any[]>([]);
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
   const [showTags, setShowTags] = React.useState(false);
   const [eventUrl, setEventUrl] = React.useState('');
@@ -76,9 +79,10 @@ export default function CalendarAddEventMenu({
   }, [modal, working]);
 
   const loadModalData = React.useCallback(async () => {
-    const [tagsResponse, eventsResponse] = await Promise.all([
+    const [tagsResponse, eventsResponse, categoriesResponse] = await Promise.all([
       fetchApi(`/api/organization/${organization.id}/tags/public`),
       user?.id ? fetchApi(`/api/events/by-user?userId=${encodeURIComponent(user.id)}`) : Promise.resolve(null),
+      fetchApi('/api/categories'),
     ]);
     if (tagsResponse.ok) {
       const data = await tagsResponse.json();
@@ -89,6 +93,10 @@ export default function CalendarAddEventMenu({
       setSuggestions((Array.isArray(data) ? data : [])
         .filter((event: any) => event.organizationId !== organization.id && event.organizerId !== organization.id)
         .slice(0, 4));
+    }
+    if (categoriesResponse.ok) {
+      const data = await categoriesResponse.json();
+      setCategories(Array.isArray(data) ? data : []);
     }
   }, [organization.id, user?.id]);
 
@@ -160,8 +168,12 @@ export default function CalendarAddEventMenu({
   };
 
   const createExternal = async () => {
-    if (!external.url.trim() || !external.name.trim() || !external.startDate || !external.endDate) {
+    if (!external.url.trim() || !external.name.trim() || !external.startDate || !external.endDate || !external.categoryId) {
       toast({ title: 'Preencha os campos obrigatórios', variant: 'destructive' });
+      return;
+    }
+    if (external.location.trim() && (!external.locationCity || !external.locationUf)) {
+      toast({ title: 'Escolha uma sugestão de endereço para preencher cidade e estado', variant: 'destructive' });
       return;
     }
     if (new Date(external.endDate) <= new Date(external.startDate)) {
@@ -178,9 +190,12 @@ export default function CalendarAddEventMenu({
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: external.name.trim(), organizerId: organization.id, organizationId: organization.id,
-          startDate: new Date(external.startDate).toISOString(), endDate: new Date(external.endDate).toISOString(),
+          startDate: external.startDate, endDate: external.endDate,
+          timezone: timeZoneForUf(external.locationUf),
           location: external.location.trim() ? 'Local' : 'Local será anunciado em breve',
-          locationAddress: external.location.trim() || null, status: 'Publicado', isPublished: true,
+          locationAddress: external.location.trim() || null,
+          locationCity: external.locationCity || null, locationUf: external.locationUf || null,
+          categoryId: external.categoryId, status: 'Publicado', isPublished: true,
           isExternal: true, externalUrl: external.url.trim(), externalLink: external.url.trim(),
           registrationForm: { externalHost: external.host.trim() || null },
         }),
@@ -214,9 +229,10 @@ export default function CalendarAddEventMenu({
         </div> : <div className="cae-body cae-form">
           <label><span>URL da página do evento *</span><input autoFocus type="url" value={external.url} onChange={(event) => setExternal({ ...external, url: event.target.value })} placeholder="https://eventbrite.com/e/seu-evento" /></label>
           <label><span>Nome do Evento *</span><input value={external.name} onChange={(event) => setExternal({ ...external, name: event.target.value })} placeholder="Happy Hour" /></label>
-          <label><span>Local do Evento</span><span className="cae-input-icon"><MapPin /><input value={external.location} onChange={(event) => setExternal({ ...external, location: event.target.value })} placeholder="Qual é o endereço?" /></span></label>
+          <label><span>Local do Evento</span><LocationAutocomplete value={external.location} onInputChange={(location) => setExternal({ ...external, location, locationCity: '', locationUf: '' })} onSelect={(address, city, state) => setExternal({ ...external, location: address, locationCity: city || '', locationUf: state || '' })} placeholder="Busque o local e escolha uma sugestão" /></label>
+          <label><span>Categoria *</span><select value={external.categoryId} onChange={(event) => setExternal({ ...external, categoryId: event.target.value })}><option value="" disabled>Selecione a categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
           <label><span>Anfitrião</span><input value={external.host} onChange={(event) => setExternal({ ...external, host: event.target.value })} placeholder="Nome do anfitrião" /></label>
-          <fieldset><legend>Horário do Evento *</legend><div><label><small>Início</small><input type="datetime-local" value={external.startDate} onChange={(event) => setExternal({ ...external, startDate: event.target.value })} /></label><ChevronRight /><label><small>Término</small><input type="datetime-local" value={external.endDate} onChange={(event) => setExternal({ ...external, endDate: event.target.value })} /></label></div><p>🌐 GMT-03:00 Fortaleza</p></fieldset>
+          <fieldset><legend>Horário do Evento *</legend><div><label><small>Início</small><input type="datetime-local" value={external.startDate} onChange={(event) => setExternal({ ...external, startDate: event.target.value })} /></label><ChevronRight /><label><small>Término</small><input type="datetime-local" value={external.endDate} onChange={(event) => setExternal({ ...external, endDate: event.target.value })} /></label></div><p>🌐 Horário local · {timeZoneForUf(external.locationUf).replace('America/', '').replace('_', ' ')}</p></fieldset>
           {tagPicker}
           <button className="cae-submit" type="button" disabled={working} onClick={() => void createExternal()}>{working ? <Loader2 className="cae-spin" /> : null}Adicionar Evento</button>
         </div>}
@@ -244,9 +260,9 @@ const styles = `
 .cae-backdrop{position:fixed;inset:0;z-index:6500;display:grid;overflow:auto;place-items:center;padding:20px;background:rgba(3,3,4,.56);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:cae-fade .2s ease both}.cae-modal{width:min(var(--fauves-side-panel-width,520px),100%);max-height:calc(100vh - 40px);overflow:auto;border:1px solid rgba(255,255,255,.10);border-radius:var(--fauves-modal-radius,14px);color:#f9f9f9;background:linear-gradient(145deg,rgba(39,40,47,.82),rgba(25,22,22,.78));box-shadow:0 22px 64px rgba(0,0,0,.30);backdrop-filter:blur(30px) saturate(135%);-webkit-backdrop-filter:blur(30px) saturate(135%);animation:cae-modal-in .3s cubic-bezier(.2,.82,.2,1) both}.cae-modal--existing{width:min(var(--fauves-side-panel-width,520px),100%)}.cae-modal>header{position:sticky;z-index:3;top:0;display:flex;min-height:52px;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(70,71,81,.46);backdrop-filter:blur(22px)}.cae-modal h2{margin:0;font-size:17px;line-height:1.2}.cae-modal>header button{display:grid;width:32px;height:32px;place-items:center;border:0;border-radius:var(--fauves-control-radius,8px);color:rgba(255,255,255,.68);background:rgba(255,255,255,.09);cursor:pointer;transition:background .16s,color .16s,transform .16s}.cae-modal>header button:hover{color:#fff;background:rgba(255,255,255,.16);transform:rotate(4deg)}.cae-modal>header svg{width:17px}.cae-body{padding:17px 18px}.cae-url-input,.cae-input-icon{display:flex;align-items:center;gap:8px}.cae-url-input{height:42px;padding:0 12px;border:1px solid rgba(255,255,255,.25);border-radius:var(--fauves-control-radius,8px);background:rgba(10,13,14,.56)}.cae-url-input:focus-within{border-color:rgba(255,255,255,.8)}.cae-url-input svg,.cae-input-icon>svg{width:16px;color:rgba(255,255,255,.4)}.cae-url-input input,.cae-form input{width:100%;min-width:0;border:0;outline:0;color:#fff;background:transparent;font:500 13px/1.3 Inter,sans-serif}.cae-url-input input::placeholder,.cae-form input::placeholder{color:rgba(255,255,255,.32)}
 .cae-suggestions{margin-top:16px;padding:13px;border:1px dashed rgba(255,255,255,.13);border-radius:12px}.cae-suggestions>strong{display:block;margin:0 0 7px;color:rgba(255,255,255,.52);font-size:12px}.cae-suggestions>button{display:grid;width:100%;grid-template-columns:34px minmax(0,1fr) 24px;align-items:center;gap:10px;padding:7px;border:0;border-radius:8px;color:#fff;background:transparent;text-align:left;cursor:pointer;transition:background .16s}.cae-suggestions>button:hover{background:rgba(255,255,255,.08)}.cae-suggestion-image{display:grid;width:34px;height:34px;overflow:hidden;place-items:center;border-radius:7px;background:rgba(255,255,255,.06)}.cae-suggestion-image img{width:100%;height:100%;object-fit:cover}.cae-suggestions b,.cae-suggestions small{display:block}.cae-suggestions b{font-size:13px}.cae-suggestions small{margin-top:2px;color:rgba(255,255,255,.48);font-size:11px}.cae-suggestions>button>svg{width:17px;color:rgba(255,255,255,.55)}
 .cae-tags-wrap{position:relative;margin-top:15px}.cae-tag-trigger{display:flex;align-items:center;gap:5px;padding:6px 9px;border:0;border-radius:999px;color:rgba(255,255,255,.54);background:rgba(255,255,255,.08);font-size:12px;font-weight:650;cursor:pointer}.cae-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(10,10,11,.24);animation:cae-content-in .18s ease both}.cae-tags button{display:flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid rgba(255,255,255,.1);border-radius:999px;color:rgba(255,255,255,.66);background:transparent;font-size:11px;cursor:pointer}.cae-tags button.is-selected{border-color:color-mix(in srgb,var(--cae-accent) 70%,white);color:#fff;background:color-mix(in srgb,var(--cae-accent) 20%,transparent)}.cae-tags i{width:7px;height:7px;border-radius:50%}.cae-submit{display:flex;width:100%;height:46px;align-items:center;justify-content:center;gap:8px;margin-top:18px;border:0;border-radius:10px;color:#171717;background:rgba(255,255,255,.97);font-size:14px;font-weight:750;cursor:pointer;transition:background .18s,transform .18s,opacity .18s}.cae-submit:hover:not(:disabled){background:#fff}.cae-submit:active:not(:disabled){transform:scale(.99)}.cae-submit:disabled{opacity:.38;cursor:not-allowed}.cae-spin{width:17px;animation:cae-spin .8s linear infinite}
-.cae-form{display:grid;gap:14px}.cae-form>label>span:first-child,.cae-form fieldset>legend{display:block;margin:0 0 7px;color:rgba(255,255,255,.78);font-size:13px;font-weight:650}.cae-form>label>input,.cae-input-icon{box-sizing:border-box;height:46px;padding:0 13px;border:1px solid rgba(255,255,255,.15);border-radius:10px;background:rgba(8,11,12,.48)}.cae-form>label>input:focus,.cae-input-icon:focus-within{outline:0;border-color:rgba(255,255,255,.65)}.cae-input-icon input{height:100%}.cae-form fieldset{margin:0;padding:0;border:0}.cae-form fieldset>div{display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);align-items:center;padding:10px 12px;border:1px solid rgba(255,255,255,.15);border-bottom:0;border-radius:10px 10px 0 0;background:rgba(8,11,12,.48)}.cae-form fieldset label small{display:block;margin-bottom:3px;color:rgba(255,255,255,.4);font-size:10px}.cae-form fieldset input{color-scheme:dark;font-size:12px}.cae-form fieldset>div>svg{width:17px;color:rgba(255,255,255,.5)}.cae-form fieldset>p{margin:0;padding:9px 12px;border:1px solid rgba(255,255,255,.15);border-radius:0 0 10px 10px;color:rgba(255,255,255,.58);background:rgba(8,11,12,.48);font-size:11px}
+.cae-form{display:grid;gap:14px}.cae-form>label>span:first-child,.cae-form fieldset>legend{display:block;margin:0 0 7px;color:rgba(255,255,255,.78);font-size:13px;font-weight:650}.cae-form>label>input,.cae-form>label>select,.cae-input-icon{box-sizing:border-box;width:100%;height:46px;padding:0 13px;border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;background:rgba(8,11,12,.48)}.cae-form>label>input:focus,.cae-form>label>select:focus,.cae-input-icon:focus-within{outline:0;border-color:rgba(255,255,255,.65)}.cae-input-icon input{height:100%}.cae-form fieldset{margin:0;padding:0;border:0}.cae-form fieldset>div{display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);align-items:center;padding:10px 12px;border:1px solid rgba(255,255,255,.15);border-bottom:0;border-radius:10px 10px 0 0;background:rgba(8,11,12,.48)}.cae-form fieldset label small{display:block;margin-bottom:3px;color:rgba(255,255,255,.4);font-size:10px}.cae-form fieldset input{color-scheme:dark;font-size:12px}.cae-form fieldset>div>svg{width:17px;color:rgba(255,255,255,.5)}.cae-form fieldset>p{margin:0;padding:9px 12px;border:1px solid rgba(255,255,255,.15);border-radius:0 0 10px 10px;color:rgba(255,255,255,.58);background:rgba(8,11,12,.48);font-size:11px}
 .cae-root:not(.is-dark) .cae-menu{border-color:rgba(24,24,27,.11);background:rgba(250,250,251,.96);box-shadow:0 16px 38px rgba(24,24,27,.14)}.cae-root:not(.is-dark) .cae-menu:before{border-color:rgba(24,24,27,.1);background:#fafafb}.cae-root:not(.is-dark) .cae-menu button{color:#18181b}.cae-root:not(.is-dark) .cae-menu button:hover{color:#18181b;background:rgba(24,24,27,.065)}.cae-root:not(.is-dark) .cae-menu svg{color:#65686d}
-.cae-modal:not(.is-dark){border-color:rgba(24,24,27,.12);color:#18181b;background:rgba(250,250,251,.97);box-shadow:0 22px 64px rgba(24,24,27,.22)}.cae-modal:not(.is-dark)>header{border-color:rgba(24,24,27,.1);background:rgba(240,241,242,.92)}.cae-modal:not(.is-dark)>header button{color:#65686d;background:rgba(24,24,27,.07)}.cae-modal:not(.is-dark)>header button:hover{color:#18181b;background:rgba(24,24,27,.12)}.cae-modal:not(.is-dark) .cae-url-input,.cae-modal:not(.is-dark) .cae-form>label>input,.cae-modal:not(.is-dark) .cae-input-icon,.cae-modal:not(.is-dark) .cae-form fieldset>div,.cae-modal:not(.is-dark) .cae-form fieldset>p{border-color:rgba(24,24,27,.14);background:#f3f4f5}.cae-modal:not(.is-dark) .cae-url-input:focus-within,.cae-modal:not(.is-dark) .cae-form>label>input:focus,.cae-modal:not(.is-dark) .cae-input-icon:focus-within{border-color:rgba(42,42,215,.52)}.cae-modal:not(.is-dark) .cae-url-input input,.cae-modal:not(.is-dark) .cae-form input{color:#18181b}.cae-modal:not(.is-dark) .cae-url-input input::placeholder,.cae-modal:not(.is-dark) .cae-form input::placeholder{color:#91949a}.cae-modal:not(.is-dark) .cae-url-input svg,.cae-modal:not(.is-dark) .cae-input-icon>svg,.cae-modal:not(.is-dark) .cae-form fieldset>div>svg{color:#65686d}.cae-modal:not(.is-dark) .cae-form>label>span:first-child,.cae-modal:not(.is-dark) .cae-form fieldset>legend{color:#65686d}.cae-modal:not(.is-dark) .cae-form fieldset label small{color:#91949a}.cae-modal:not(.is-dark) .cae-form fieldset input{color-scheme:light}.cae-modal:not(.is-dark) .cae-form fieldset>p{color:#65686d}.cae-modal:not(.is-dark) .cae-suggestions{border-color:rgba(24,24,27,.14)}.cae-modal:not(.is-dark) .cae-suggestions>strong,.cae-modal:not(.is-dark) .cae-suggestions small,.cae-modal:not(.is-dark) .cae-suggestions>button>svg{color:#65686d}.cae-modal:not(.is-dark) .cae-suggestions>button{color:#18181b}.cae-modal:not(.is-dark) .cae-suggestions>button:hover{background:rgba(24,24,27,.06)}.cae-modal:not(.is-dark) .cae-suggestion-image,.cae-modal:not(.is-dark) .cae-tag-trigger{color:#65686d;background:#eef0f1}.cae-modal:not(.is-dark) .cae-tags{border-color:rgba(24,24,27,.1);background:#f3f4f5}.cae-modal:not(.is-dark) .cae-tags button{border-color:rgba(24,24,27,.12);color:#65686d}.cae-modal:not(.is-dark) .cae-submit{color:#fff;background:#18181b}.cae-modal:not(.is-dark) .cae-submit:hover:not(:disabled){background:#2f3033}
+.cae-modal:not(.is-dark){border-color:rgba(24,24,27,.12);color:#18181b;background:rgba(250,250,251,.97);box-shadow:0 22px 64px rgba(24,24,27,.22)}.cae-modal:not(.is-dark)>header{border-color:rgba(24,24,27,.1);background:rgba(240,241,242,.92)}.cae-modal:not(.is-dark)>header button{color:#65686d;background:rgba(24,24,27,.07)}.cae-modal:not(.is-dark)>header button:hover{color:#18181b;background:rgba(24,24,27,.12)}.cae-modal:not(.is-dark) .cae-url-input,.cae-modal:not(.is-dark) .cae-form>label>input,.cae-modal:not(.is-dark) .cae-form>label>select,.cae-modal:not(.is-dark) .cae-input-icon,.cae-modal:not(.is-dark) .cae-form fieldset>div,.cae-modal:not(.is-dark) .cae-form fieldset>p{border-color:rgba(24,24,27,.14);color:#18181b;background:#f3f4f5}.cae-modal:not(.is-dark) .cae-url-input:focus-within,.cae-modal:not(.is-dark) .cae-form>label>input:focus,.cae-modal:not(.is-dark) .cae-form>label>select:focus,.cae-modal:not(.is-dark) .cae-input-icon:focus-within{border-color:rgba(42,42,215,.52)}.cae-modal:not(.is-dark) .cae-url-input input,.cae-modal:not(.is-dark) .cae-form input{color:#18181b}.cae-modal:not(.is-dark) .cae-url-input input::placeholder,.cae-modal:not(.is-dark) .cae-form input::placeholder{color:#91949a}.cae-modal:not(.is-dark) .cae-url-input svg,.cae-modal:not(.is-dark) .cae-input-icon>svg,.cae-modal:not(.is-dark) .cae-form fieldset>div>svg{color:#65686d}.cae-modal:not(.is-dark) .cae-form>label>span:first-child,.cae-modal:not(.is-dark) .cae-form fieldset>legend{color:#65686d}.cae-modal:not(.is-dark) .cae-form fieldset label small{color:#91949a}.cae-modal:not(.is-dark) .cae-form fieldset input{color-scheme:light}.cae-modal:not(.is-dark) .cae-form fieldset>p{color:#65686d}.cae-modal:not(.is-dark) .cae-suggestions{border-color:rgba(24,24,27,.14)}.cae-modal:not(.is-dark) .cae-suggestions>strong,.cae-modal:not(.is-dark) .cae-suggestions small,.cae-modal:not(.is-dark) .cae-suggestions>button>svg{color:#65686d}.cae-modal:not(.is-dark) .cae-suggestions>button{color:#18181b}.cae-modal:not(.is-dark) .cae-suggestions>button:hover{background:rgba(24,24,27,.06)}.cae-modal:not(.is-dark) .cae-suggestion-image,.cae-modal:not(.is-dark) .cae-tag-trigger{color:#65686d;background:#eef0f1}.cae-modal:not(.is-dark) .cae-tags{border-color:rgba(24,24,27,.1);background:#f3f4f5}.cae-modal:not(.is-dark) .cae-tags button{border-color:rgba(24,24,27,.12);color:#65686d}.cae-modal:not(.is-dark) .cae-submit{color:#fff;background:#18181b}.cae-modal:not(.is-dark) .cae-submit:hover:not(:disabled){background:#2f3033}
 @keyframes cae-menu-in{from{opacity:0;transform:translateY(-5px) scale(.97)}to{opacity:1;transform:none}}@keyframes cae-fade{from{opacity:0}to{opacity:1}}@keyframes cae-modal-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}@keyframes cae-content-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}@keyframes cae-spin{to{transform:rotate(360deg)}}
 @media(max-width:640px){.cae-backdrop{align-items:end;padding:10px}.cae-modal{max-height:calc(100vh - 20px);border-radius:var(--fauves-modal-radius,14px)}.cae-modal>header,.cae-body{padding-left:16px;padding-right:16px}.cae-menu{right:0;width:min(285px,calc(100vw - 32px))}.cae-form fieldset>div{grid-template-columns:1fr}.cae-form fieldset>div>svg{display:none}.cae-form fieldset label+label{margin-top:10px}}
 `;

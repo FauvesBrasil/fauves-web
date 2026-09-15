@@ -1,32 +1,30 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, ChevronRight, ChevronsRight, Loader2, MapPin } from 'lucide-react';
+import { CheckCircle2, ChevronRight, ChevronsRight, Loader2 } from 'lucide-react';
 import { fetchApi } from '@/lib/apiBase';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from '@/context/ThemeContext';
+import { LocationAutocomplete } from '@/components/LocationAutocomplete';
+import { dateTimeLocalInZone, eventTimeZone, timeZoneForUf } from '@/lib/eventDateTime';
 
 type Props = { event: any | null; onClose: () => void; onSaved: () => void | Promise<void> };
-
-const localDateTime = (value?: string) => {
-  if (!value) return '';
-  const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-};
 
 export default function CalendarExternalEventModal({ event, onClose, onSaved }: Props) {
   const { toast } = useToast();
   const { isDark } = useTheme();
   const [working, setWorking] = React.useState(false);
-  const [form, setForm] = React.useState({ url: '', name: '', location: '', host: '', startDate: '', endDate: '' });
+  const [form, setForm] = React.useState({ url: '', name: '', location: '', locationCity: '', locationUf: '', host: '', startDate: '', endDate: '' });
 
   React.useEffect(() => {
     if (!event) return;
     setForm({
       url: event.externalUrl || event.externalLink || '', name: event.name || '',
       location: event.locationAddress || event.locationName || event.venue || '',
+      locationCity: event.locationCity || '', locationUf: event.locationUf || '',
       host: event.registrationForm?.externalHost || '',
-      startDate: localDateTime(event.startDate), endDate: localDateTime(event.endDate),
+      startDate: dateTimeLocalInZone(event.startDate, eventTimeZone(event)),
+      endDate: dateTimeLocalInZone(event.endDate, eventTimeZone(event)),
     });
   }, [event]);
 
@@ -48,13 +46,18 @@ export default function CalendarExternalEventModal({ event, onClose, onSaved }: 
     if (new Date(form.endDate) <= new Date(form.startDate)) {
       toast({ title: 'O término deve ser depois do início', variant: 'destructive' }); return;
     }
+    if (form.location.trim() && (!form.locationCity || !form.locationUf)) {
+      toast({ title: 'Escolha uma sugestão de endereço para preencher cidade e estado', variant: 'destructive' }); return;
+    }
     setWorking(true);
     try {
       const response = await fetchApi(`/api/event/${event.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: form.name.trim(), startDate: new Date(form.startDate).toISOString(), endDate: new Date(form.endDate).toISOString(),
+          title: form.name.trim(), startDate: form.startDate, endDate: form.endDate,
+          timezone: form.locationUf ? timeZoneForUf(form.locationUf) : eventTimeZone(event),
           location: form.location.trim() ? 'Local' : 'Local será anunciado em breve', locationAddress: form.location.trim() || null,
+          locationCity: form.locationCity || null, locationUf: form.locationUf || null,
           externalUrl: form.url.trim(), externalLink: form.url.trim(), isExternal: true,
           registrationForm: { externalHost: form.host.trim() || null },
         }),
@@ -73,9 +76,9 @@ export default function CalendarExternalEventModal({ event, onClose, onSaved }: 
       <div className="cee-scroll"><div className="cee-form">
         <label><span>URL da página do evento *</span><input autoFocus type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} /></label>
         <label><span>Nome do Evento *</span><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-        <label><span>Local do Evento</span><span className="cee-icon-input"><MapPin /><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Qual é o endereço?" /></span></label>
+        <label><span>Local do Evento</span><LocationAutocomplete value={form.location} onInputChange={(location) => setForm({ ...form, location, locationCity: '', locationUf: '' })} onSelect={(address, city, state) => setForm({ ...form, location: address, locationCity: city || '', locationUf: state || '' })} placeholder="Busque o local e escolha uma sugestão" /></label>
         <label><span>Anfitrião</span><input value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} /></label>
-        <fieldset><legend>Horário do Evento *</legend><div><label><small>Início</small><input type="datetime-local" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></label><ChevronRight /><label><small>Término</small><input type="datetime-local" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></label></div><p>🌐 GMT-03:00 Fortaleza</p></fieldset>
+        <fieldset><legend>Horário do Evento *</legend><div><label><small>Início</small><input type="datetime-local" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></label><ChevronRight /><label><small>Término</small><input type="datetime-local" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></label></div><p>🌐 Horário local · {timeZoneForUf(form.locationUf).replace('America/', '').replace('_', ' ')}</p></fieldset>
       </div></div>
       <footer><button className="cee-save" type="button" disabled={working} onClick={() => void save()}>{working ? <Loader2 className="is-loading" /> : <CheckCircle2 />}Salvar Alterações</button></footer>
     </section>

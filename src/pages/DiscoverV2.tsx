@@ -197,9 +197,10 @@ const DiscoverV2: React.FC = () => {
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const response = await fetchApi('/api/events');
+        const response = await fetchApi('/api/events?limit=500');
         const data = await response.json();
-        if (Array.isArray(data)) setEvents(data);
+        const list = Array.isArray(data) ? data : Array.isArray(data?.events) ? data.events : [];
+        setEvents(list);
       } catch (error) {
         console.error('Error loading events:', error);
       } finally {
@@ -240,25 +241,26 @@ const DiscoverV2: React.FC = () => {
   );
 
   const stateLocations = useMemo(() => {
-    const stateNames = Array.from(new Set(events.map((event) => event.locationUf).filter(Boolean))).sort() as string[];
-
-    return stateNames.map((uf) => {
-      const cities = new Map<string, number>();
-
-      events
-        .filter((event) => event.locationUf === uf)
-        .forEach((event) => {
-          const city = event.locationCity || 'Outras cidades';
-          cities.set(city, (cities.get(city) || 0) + 1);
-        });
-
-      return {
-        uf,
-        cities: Array.from(cities.entries())
-          .map(([name, count]) => ({ name, count, slug: slugify(name) }))
-          .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
-      };
+    const states = new Map<string, Map<string, { name: string; count: number }>>();
+    events.forEach((event) => {
+      const uf = String(event.locationUf || '').trim().toUpperCase();
+      if (!uf) return;
+      const cityName = String(event.locationCity || 'Outras cidades').trim();
+      const cityKey = normalizeText(cityName);
+      const cities = states.get(uf) || new Map<string, { name: string; count: number }>();
+      const current = cities.get(cityKey);
+      cities.set(cityKey, { name: current?.name || cityName, count: (current?.count || 0) + 1 });
+      states.set(uf, cities);
     });
+
+    return Array.from(states.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([uf, cities]) => ({
+        uf,
+        cities: Array.from(cities.values())
+          .map(({ name, count }) => ({ name, count, slug: slugify(name) }))
+          .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+      }));
   }, [events]);
 
   useEffect(() => {

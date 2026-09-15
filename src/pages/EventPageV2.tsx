@@ -3,7 +3,7 @@ import HeaderV2 from '../components/v2/HeaderV2';
 import FooterV2 from '../components/v2/FooterV2';
 import { useParams } from 'react-router-dom';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
-import { getEventTimezoneAndCity } from '@/lib/timezone';
+import { eventTimeZone } from '@/lib/eventDateTime';
 import { useAuth } from '@/context/AuthContext';
 import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 import EventRegistrationCard from '@/components/v2/EventRegistrationCard';
@@ -715,12 +715,12 @@ const EventPageV2: React.FC = () => {
 
         // Formatação de data
         const d = new Date(data.startDate);
-        const weekday = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-         const info = getEventTimezoneAndCity(
-            data.locationAddress || data.location || "",
-            data.location === "Evento online" || data.location?.startsWith('Virtual:')
-        );
-        const time = `${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ${info.gmt}`;
+        const timezone = eventTimeZone(data);
+        const weekday = d.toLocaleDateString('pt-BR', { timeZone: timezone, weekday: 'long', day: 'numeric', month: 'long' });
+        const timezoneLabel = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, timeZoneName: 'shortOffset' })
+          .formatToParts(d)
+          .find((part) => part.type === 'timeZoneName')?.value || '';
+        const time = `${d.toLocaleTimeString('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit' })} ${timezoneLabel}`.trim();
         
         // Mapeamento para o formato esperado pelo UI
         const mappedEvent = {
@@ -805,8 +805,8 @@ const EventPageV2: React.FC = () => {
             };
           })(),
           date: {
-            day: d.getDate().toString(),
-            month: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
+            day: new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, day: 'numeric' }).format(d),
+            month: d.toLocaleDateString('pt-BR', { timeZone: timezone, month: 'short' }).replace('.', ''),
             weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
             time: time
           },

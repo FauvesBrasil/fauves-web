@@ -27,6 +27,7 @@ import { fetchApi, resolveEventImageUrl, resolveImageUrl } from '@/lib/apiBase';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 import { geocodeEventAddress, resolveEventCoordinates } from '@/lib/eventLocation';
+import { eventTimeZone } from '@/lib/eventDateTime';
 import EventRegistrationCard from './EventRegistrationCard';
 import EventImage from '@/components/EventImage';
 
@@ -86,16 +87,17 @@ const formatTimeRange = (event: any, start: Date | null) => {
   const explicit = first(event.time, event.timeLabel);
   if (explicit) return explicit;
   if (!start) return '';
-  const startText = start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const timezone = eventTimeZone(event);
+  const startText = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(start);
   const endValue = first(event.endDate, event.endsAt);
   if (!endValue) return startText;
   const end = new Date(endValue);
   if (Number.isNaN(end.getTime())) return startText;
-  return `${startText} – ${end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  return `${startText} – ${new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit' }).format(end)}`;
 };
 
 const formatTimezone = (event: any, start: Date | null) => {
-  const zone = first(event.timezone, event.timeZone);
+  const zone = eventTimeZone(event);
   if (!zone) return first(event.utcOffset, event.timezoneLabel) || '';
   if (!String(zone).includes('/') || !start) return String(zone);
   try {
@@ -598,11 +600,11 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
                 {startDate && (
                   <div className="edm-info-row">
                     <div className="edm-info-icon edm-calendar">
-                      <span>{`${startDate.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase()}.`}</span>
-                      <span>{startDate.getDate()}</span>
+                      <span>{`${startDate.toLocaleDateString('pt-BR', { timeZone: eventTimeZone(resolvedEvent), month: 'short' }).replace('.', '').toUpperCase()}.`}</span>
+                      <span>{new Intl.DateTimeFormat('pt-BR', { timeZone: eventTimeZone(resolvedEvent), day: 'numeric' }).format(startDate)}</span>
                     </div>
                     <div>
-                      <div className="edm-info-primary">{startDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+                      <div className="edm-info-primary">{startDate.toLocaleDateString('pt-BR', { timeZone: eventTimeZone(resolvedEvent), weekday: 'long', day: 'numeric', month: 'long' })}</div>
                       <div className="edm-info-secondary">{formatTimeRange(resolvedEvent, startDate)}{formatTimezone(resolvedEvent, startDate) ? ` ${formatTimezone(resolvedEvent, startDate)}` : ''}</div>
                     </div>
                   </div>

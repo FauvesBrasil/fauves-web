@@ -8,6 +8,10 @@ const GENERIC_LOCATION_VALUES = new Set([
 ]);
 
 const clean = (value: unknown) => typeof value === 'string' ? value.trim() : '';
+const cleanVenue = (value: unknown) => {
+  const venue = clean(value);
+  return venue && !GENERIC_LOCATION_VALUES.has(venue.toLowerCase()) ? venue : '';
+};
 
 export const resolveEventAddress = (event: any): string => {
   const structuredAddress = clean(event?.locationAddress || event?.locationDetails?.address);
@@ -23,11 +27,14 @@ export const resolveEventAddress = (event: any): string => {
 };
 
 export const resolveEventLocationLabel = (event: any): string => {
-  const venue = clean(event?.locationName || event?.venue);
+  const address = clean(event?.locationAddress || event?.locationDetails?.address);
+  const explicitVenue = cleanVenue(event?.locationName || event?.venue);
+  const addressLead = clean(address.split(',')[0]);
+  const venue = explicitVenue || (addressLead && !/^(rua|r\.|avenida|av\.|travessa|rodovia|estrada|praça)\b/i.test(addressLead) ? addressLead : '');
   const city = clean(event?.locationCity || event?.locationDetails?.city || event?.city);
   const uf = clean(event?.locationUf || event?.locationDetails?.uf || event?.uf);
   if (venue && city) return `${venue}, ${city}${uf ? ` - ${uf}` : ''}`;
-  return resolveEventAddress(event) || [city, uf].filter(Boolean).join(' - ') || 'Local a definir';
+  return address || [city, uf].filter(Boolean).join(' - ') || 'Local a definir';
 };
 
 export const resolveEventCoordinates = (event: any) => {

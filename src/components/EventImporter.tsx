@@ -1,24 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Loader2, Save, Link as LinkIcon, Calendar, MapPin, User, Image as ImageIcon, X, CheckIcon } from 'lucide-react';
+import { Search, Loader2, Save, Link as LinkIcon, Image as ImageIcon, X } from 'lucide-react';
 import { fetchApi } from '@/lib/apiBase';
 import { toast } from 'sonner';
 import { LocationAutocomplete } from '@/components/LocationAutocomplete';
+import { timeZoneForUf } from '@/lib/eventDateTime';
 
 const BRAZIL_UFS = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
   "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
   "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ] as const;
-
-const UF_CAPITALS: Record<string, string> = {
-  AC: 'Rio Branco', AL: 'Maceió', AP: 'Macapá', AM: 'Manaus',
-  BA: 'Salvador', CE: 'Fortaleza', DF: 'Brasília', ES: 'Vitória',
-  GO: 'Goiânia', MA: 'São Luís', MT: 'Cuiabá', MS: 'Campo Grande',
-  MG: 'Belo Horizonte', PA: 'Belém', PB: 'João Pessoa', PR: 'Curitiba',
-  PE: 'Recife', PI: 'Teresina', RJ: 'Rio de Janeiro', RN: 'Natal',
-  RS: 'Porto Alegre', RO: 'Porto Velho', RR: 'Boa Vista', SC: 'Florianópolis',
-  SP: 'São Paulo', SE: 'Aracaju', TO: 'Palmas'
-};
 
 interface EventImporterProps {
   onSuccess?: () => void;
@@ -39,27 +30,24 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
     locationCity: '',
     producer: '',
     image: '',
-    externalUrl: ''
+    externalUrl: '',
+    categoryId: '',
   });
 
   const [existingOrgs, setExistingOrgs] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
     if (step === 'edit') {
-      fetchApi('/api/admin/organizations?perPage=100')
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.organizations) setExistingOrgs(data.organizations);
-        })
-        .catch(() => {});
+      void Promise.all([
+        fetchApi('/api/admin/organizations?perPage=100').then(res => res.json()),
+        fetchApi('/api/categories').then(res => res.json()),
+      ]).then(([organizationsData, categoriesData]) => {
+        if (organizationsData?.organizations) setExistingOrgs(organizationsData.organizations);
+        if (Array.isArray(categoriesData)) setCategories(categoriesData);
+      }).catch(() => {});
     }
   }, [step]);
-
-  useEffect(() => {
-    if (formData.locationUf && UF_CAPITALS[formData.locationUf] && !formData.locationCity) {
-      setFormData(prev => ({ ...prev, locationCity: UF_CAPITALS[formData.locationUf] }));
-    }
-  }, [formData.locationUf]);
 
   const handleExtract = async () => {
     if (!url) return;
@@ -73,17 +61,18 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
       setFormData({
         name: data.title || '',
         date: data.date ? data.date.substring(0, 16) : '',
-        location: data.location || data.locationAddress || '',
-        locationUf: data.locationUf || 'CE',
-        locationCity: data.locationCity || 'Fortaleza',
+        location: Array.from(new Set([data.location, data.locationAddress].filter(Boolean))).join(', '),
+        locationUf: data.locationUf || '',
+        locationCity: data.locationCity || '',
         producer: data.producer || '',
         image: data.image || '',
-        externalUrl: url
+        externalUrl: url,
+        categoryId: data.categoryId || '',
       });
       setStep('edit');
     } catch (error) {
       toast.error('Não foi possível extrair dados automaticamente. Preencha manualmente.');
-      setFormData({ ...formData, externalUrl: url, locationUf: 'CE', locationCity: 'Fortaleza' });
+      setFormData({ ...formData, externalUrl: url, locationUf: '', locationCity: '', categoryId: '' });
       setStep('edit');
     } finally {
       setLoading(false);
@@ -91,8 +80,8 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.date || !formData.producer || !formData.locationUf) {
-      toast.error('Preencha os campos obrigatórios (Nome, Data, Produtora e Estado)');
+    if (!formData.name || !formData.date || !formData.producer || !formData.location || !formData.locationUf || !formData.locationCity || !formData.categoryId) {
+      toast.error('Preencha nome, data, produtora, endereço, cidade, estado e categoria');
       return;
     }
     setSaving(true);
@@ -100,7 +89,7 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
       const res = await fetchApi('/api/admin/event-importer/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, timezone: timeZoneForUf(formData.locationUf) })
       });
 
       if (!res.ok) throw new Error('Erro ao salvar evento');
@@ -199,7 +188,13 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
                 <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Local / Endereço</label>
                 <LocationAutocomplete
                   value={formData.location}
-                  onChange={(val) => setFormData({ ...formData, location: val })}
+                  onInputChange={(location) => setFormData((current) => ({ ...current, location, locationCity: '', locationUf: '' }))}
+                  onSelect={(address, city, state) => setFormData((current) => ({
+                    ...current,
+                    location: address,
+                    locationCity: city || current.locationCity,
+                    locationUf: state || current.locationUf,
+                  }))}
                   placeholder="Arena Castelão ou Rua Exemplo, 123"
                   className="w-full"
                 />
@@ -212,7 +207,20 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
                   onChange={(e) => setFormData({ ...formData, locationUf: e.target.value })}
                   className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 >
+                  <option value="" disabled>Selecione</option>
                   {BRAZIL_UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Categoria *</label>
+                <select
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                  className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                >
+                  <option value="" disabled>Selecione a categoria</option>
+                  {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                 </select>
               </div>
 

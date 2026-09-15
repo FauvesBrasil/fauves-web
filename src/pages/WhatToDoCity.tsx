@@ -1,14 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Clock3, Landmark, MapPin, Plus, Rss, Search } from 'lucide-react';
+import { Clock3, Landmark, Plus, Rss, Search } from 'lucide-react';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import FooterV2 from '@/components/v2/FooterV2';
 import SubscribeControl from '@/components/v2/SubscribeControl';
-import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
+import { fetchApi } from '@/lib/apiBase';
 import { useSEO } from '@/hooks/useSEO';
 import { useTheme } from '@/context/ThemeContext';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import LocationMapPreview from '@/components/v2/LocationMapPreview';
+import CalendarPublicEventViews from '@/components/v2/CalendarPublicEventViews';
+import { eventTimeZone } from '@/lib/eventDateTime';
 
 type CityEvent = {
   id: string;
@@ -46,44 +48,14 @@ const cityImages: Record<string, string> = {
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const displayCity = (slug: string) => cityNames[slug] || slug.split('-').map((word) => word[0]?.toUpperCase() + word.slice(1)).join(' ');
 
-const formatCompactLocation = (event: CityEvent) => {
-  const venue = (event.locationName || event.venue || event.location?.split(',')[0] || '').trim();
-  const city = event.locationCity?.trim() || '';
-  const uf = event.locationUf?.trim() || '';
-  return [venue && normalize(venue) !== normalize(city) ? venue : '', [city, uf].filter(Boolean).join(' - ')].filter(Boolean).join(', ');
-};
-
-const formatDay = (date: Date) => {
-  const today = new Date();
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-  if (date.toDateString() === today.toDateString()) return 'Hoje';
-  if (date.toDateString() === tomorrow.toDateString()) return 'Amanhã';
-  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(date).replace('.', '');
-};
-
-const StickyEventDay: React.FC<{ date: Date }> = ({ date }) => {
-  const markerRef = useRef<HTMLDivElement>(null);
-  const [stuck, setStuck] = useState(false);
-  useEffect(() => {
-    let frame = 0;
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setStuck((markerRef.current?.getBoundingClientRect().top || Infinity) <= 65));
-    };
-    update();
-    window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', update); window.removeEventListener('resize', update); };
-  }, []);
-  return <div ref={markerRef} className={`city-event-day${stuck ? ' is-stuck' : ''}`}><i /><span className="city-event-day-pill"><strong>{formatDay(date)}</strong><span>{new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(date)}</span></span></div>;
-};
-
 const WhatToDoCity: React.FC = () => {
   const { isDark } = useTheme();
   const { citySlug: legacyCitySlug, slugOrId } = useParams<{ citySlug?: string; slugOrId?: string }>();
   const citySlug = legacyCitySlug || slugOrId || '';
   const cityName = displayCity(citySlug);
   const [events, setEvents] = useState<CityEvent[]>([]);
+  const [resolvedCityName, setResolvedCityName] = useState(cityName);
+  const [currentLocalTime, setCurrentLocalTime] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -123,9 +95,11 @@ const WhatToDoCity: React.FC = () => {
         const response = await fetchApi('/api/events?limit=200');
         const data = await response.json();
         const list = Array.isArray(data) ? data : Array.isArray(data?.events) ? data.events : [];
-        setEvents(list.filter((event: CityEvent) => normalize(event.locationCity || '') === normalize(cityName))
+        const cityEvents = list.filter((event: CityEvent) => normalize(event.locationCity || '') === normalize(cityName))
           .filter((event: CityEvent) => new Date(event.startDate).getTime() >= Date.now())
-          .sort((a: CityEvent, b: CityEvent) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()));
+          .sort((a: CityEvent, b: CityEvent) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+        setEvents(cityEvents);
+        setResolvedCityName(cityEvents[0]?.locationCity?.trim() || cityName);
       } catch (error) {
         console.error('Error loading city events:', error);
       } finally {
@@ -135,14 +109,18 @@ const WhatToDoCity: React.FC = () => {
     void load();
   }, [cityName]);
 
-  const groups = useMemo(() => {
-    const result = new Map<string, CityEvent[]>();
-    events.forEach((event) => {
-      const key = new Date(event.startDate).toDateString();
-      result.set(key, [...(result.get(key) || []), event]);
-    });
-    return Array.from(result.entries());
-  }, [events]);
+  const cityTimezone = eventTimeZone(events[0] || { locationUf: 'MA' });
+  const cityTimezoneLabel = ['America/Sao_Paulo', 'America/Fortaleza', 'America/Recife', 'America/Belem', 'America/Bahia', 'America/Maceio', 'America/Araguaina'].includes(cityTimezone)
+    ? 'BRT'
+    : cityTimezone.split('/').pop()?.replace(/_/g, ' ') || 'local';
+  useEffect(() => {
+    const update = () => setCurrentLocalTime(new Intl.DateTimeFormat('pt-BR', {
+      timeZone: cityTimezone, hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date()));
+    update();
+    const interval = window.setInterval(update, 60_000);
+    return () => window.clearInterval(interval);
+  }, [cityTimezone]);
 
   const heroImage = cityImages[citySlug] || `https://images.unsplash.com/featured/?${encodeURIComponent(cityName)},city,skyline`;
 
@@ -156,10 +134,10 @@ const WhatToDoCity: React.FC = () => {
         <div className="city-events-hero-content" data-header-align>
           <span className="city-events-icon"><Landmark size={25} strokeWidth={1.6} /></span>
           <p>O que está acontecendo em</p>
-          <h1>{cityName}</h1>
-          <span className="city-events-time"><Clock3 size={15} /> Horário local</span>
+          <h1>{resolvedCityName}</h1>
+          <span className="city-events-time"><Clock3 size={15} /> Horários em {cityTimezoneLabel}{currentLocalTime ? ` — ${currentLocalTime}` : ''}</span>
           <div className="city-events-rule" />
-          <p className="city-events-description">Descubra eventos, encontros e experiências acontecendo em {cityName}.</p>
+          <p className="city-events-description">Descubra eventos, encontros e experiências acontecendo em {resolvedCityName}.</p>
           <SubscribeControl scope={`city:${citySlug}`} />
         </div>
       </section>
@@ -185,34 +163,29 @@ const WhatToDoCity: React.FC = () => {
               <div className="skeleton-pulse" style={{ height: '140px', width: '100%', borderRadius: '12px' }} />
               <div className="skeleton-pulse" style={{ height: '140px', width: '100%', borderRadius: '12px' }} />
             </div>
-          ) : groups.length ? groups.map(([key, group]) => {
-            const date = new Date(group[0].startDate);
-            return <section className="city-event-group" key={key}>
-              <StickyEventDay date={date} />
-              <div className="city-event-cards">{group.map((event) => {
-                const image = resolveImageUrl(event.bannerUrl || event.banner || event.image);
-                const location = formatCompactLocation(event);
-                return <div className="city-event-card" onClick={() => handleEventClick(event)} key={event.id} style={{ cursor: 'pointer' }}>
-                  <div className="city-event-copy">
-                    <time>{new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(event.startDate))}</time>
-                    <h3>{event.name}</h3>
-                    {event.organization?.name && <p>{event.organization.name}</p>}
-                    {location && <p className="city-event-location" title={location}><MapPin size={15} /><span>{location}</span></p>}
-                    {event.price != null && event.price > 0 && <small>R$ {event.price.toLocaleString('pt-BR')}</small>}
-                  </div>
-                  <span className="city-event-image">{image ? <img src={image} alt="" /> : <Landmark size={28} />}</span>
-                </div>;
-              })}</div>
-            </section>;
-          }) : <p className="city-events-empty">Nenhum evento próximo em {cityName}.</p>}
+          ) : events.length ? <CalendarPublicEventViews
+            events={events}
+            variant="cards"
+            organization={null}
+            accentColor="#2A2AD7"
+            cardBackground={isDark ? '#202224' : '#ffffff'}
+            cardBorder={isDark ? 'rgba(255,255,255,.075)' : 'rgba(24,24,27,.09)'}
+            textPrimary={isDark ? '#ffffff' : '#18181b'}
+            textSecondary={isDark ? 'rgba(255,255,255,.50)' : '#71717a'}
+            isDark={isDark}
+            onEventClick={handleEventClick}
+            onManage={() => undefined}
+            onEditExternal={() => undefined}
+            onRemoveExternal={() => undefined}
+          /> : <p className="city-events-empty">Nenhum evento próximo em {resolvedCityName}.</p>}
         </section>
 
         <aside className="city-events-aside">
           <span className="city-events-aside-icon"><Landmark size={24} /></span>
-          <h3>{cityName}</h3>
-          <p>Receba novidades sobre os próximos eventos em {cityName}.</p>
+          <h3>{resolvedCityName}</h3>
+          <p>Receba novidades sobre os próximos eventos em {resolvedCityName}.</p>
           <SubscribeControl scope={`city:${citySlug}`} compact />
-          <div className="city-events-map"><LocationMapPreview query={cityName} isDark={isDark} /></div>
+          <div className="city-events-map"><LocationMapPreview query={resolvedCityName} isDark={isDark} /></div>
         </aside>
       </main>
 

@@ -6,6 +6,7 @@ import { fetchApi } from "../lib/apiBase";
 export interface LocationAutocompleteProps {
   value: string;
   onSelect: (address: string, city?: string, state?: string) => void;
+  onInputChange?: (address: string) => void;
   placeholder?: string;
   className?: string;
 }
@@ -22,6 +23,8 @@ interface NominatimResult {
     village?: string;
     municipality?: string;
     state?: string;
+    state_code?: string;
+    'ISO3166-2-lvl4'?: string;
     country?: string;
     postcode?: string;
   };
@@ -30,6 +33,7 @@ interface NominatimResult {
 export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   value,
   onSelect,
+  onInputChange,
   placeholder,
   className
 }) => {
@@ -40,6 +44,10 @@ export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   const [error, setError] = React.useState<string | null>(null);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    setInputValue(value || "");
+  }, [value]);
 
   // Close dropdown on outside click
   React.useEffect(() => {
@@ -95,6 +103,7 @@ export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInputValue(val);
+    onInputChange?.(val);
 
     // Debounce API call
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -117,16 +126,17 @@ export const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   };
 
   const getStateUf = (stateName: string): string => {
+    const normalizedState = stateName.replace(/^BR-/i, '');
     // If already a 2-letter abbreviation, return as-is
-    if (/^[A-Z]{2}$/.test(stateName)) return stateName;
+    if (/^[A-Z]{2}$/i.test(normalizedState)) return normalizedState.toUpperCase();
     // Try to find in mapping
-    return stateToUf[stateName] || stateName;
+    return stateToUf[stateName] || normalizedState;
   };
 
   const handleSelect = (result: NominatimResult) => {
     const addr = result.address;
     const city = getCity(addr);
-    const stateRaw = addr.state || '';
+    const stateRaw = addr.state_code || addr['ISO3166-2-lvl4'] || addr.state || '';
     const stateUf = getStateUf(stateRaw);
 
     // Build clean address: venue name (if exists) + city + state

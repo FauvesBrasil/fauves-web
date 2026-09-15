@@ -42,6 +42,7 @@ import RequireOrganization from '@/components/RequireOrganization';
 import { useAuth } from '@/context/AuthContext';
 import { useOrganization } from '@/context/OrganizationContext';
 import { useTheme } from '@/context/ThemeContext';
+import { timeZoneForUf } from '@/lib/eventDateTime';
 
 
 
@@ -1594,6 +1595,14 @@ export default function CreateEventV2() {
     const handleCreateEvent = async () => {
         if (!eventName || !startDate || !selectedOrgId) {
             toast.error("Por favor, preencha os campos obrigatórios.");
+            return;
+        }
+        if (!locationData.type) {
+            toast.error("Informe onde o evento vai acontecer.");
+            return;
+        }
+        if (locationData.type === 'Local' && (!locationData.address || !locationData.city || !locationData.uf)) {
+            toast.error("Busque o endereço e escolha uma das sugestões para preencher cidade e estado.");
             return;
         }
 
@@ -3776,7 +3785,20 @@ export default function CreateEventV2() {
                         <div className="flex flex-col gap-3">
                             <LuxLocationPicker
                                 value={locationData}
-                                onChange={setLocationData}
+                                onChange={(nextLocation) => {
+                                    setLocationData(nextLocation);
+                                    if (nextLocation.type === 'Local' && nextLocation.uf) {
+                                        const timezone = timeZoneForUf(nextLocation.uf);
+                                        const option = TIMEZONE_OPTIONS.find((item) => item.name === timezone);
+                                        setSelectedTimezone(option || {
+                                            name: timezone,
+                                            city: nextLocation.city || nextLocation.uf,
+                                            gmt: new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, timeZoneName: 'shortOffset' })
+                                                .formatToParts(new Date())
+                                                .find((part) => part.type === 'timeZoneName')?.value || '',
+                                        });
+                                    }
+                                }}
                             />
 
                             <div

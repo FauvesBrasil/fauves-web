@@ -26,7 +26,8 @@ import { useSEO } from '@/hooks/useSEO';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useTheme } from '@/context/ThemeContext';
 import LocationMapPreview from '@/components/v2/LocationMapPreview';
-import { resolveEventCoordinates } from '@/lib/eventLocation';
+import { resolveEventCoordinates, resolveEventLocationLabel } from '@/lib/eventLocation';
+import { eventDateKey, eventTimeZone } from '@/lib/eventDateTime';
 
 type Category = {
   id: string;
@@ -46,6 +47,7 @@ type CategoryEvent = {
   endDate?: string | null;
   image?: string | null;
   location?: string | null;
+  locationName?: string | null;
   locationAddress?: string | null;
   locationLatitude?: number | null;
   locationLongitude?: number | null;
@@ -54,6 +56,10 @@ type CategoryEvent = {
   isExternal?: boolean;
   externalUrl?: string | null;
   externalLink?: string | null;
+  timezone?: string | null;
+  registrationForm?: { timezone?: string | null } | null;
+  category?: string | null;
+  categories?: Array<{ id?: string; name?: string; slug?: string }>;
 };
 
 type Organization = {
@@ -103,23 +109,21 @@ const categoryColor = (category?: Category | null) => {
 
 const formatNumber = (value: number) => new Intl.NumberFormat('pt-BR').format(value);
 
-const formatDate = (value?: string | null) => {
+const formatDate = (value: string | null | undefined, timezone: string) => {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' }).format(date);
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, day: '2-digit', month: '2-digit' }).format(date);
 };
 
 const formatEventRange = (event: CategoryEvent) => {
-  const start = formatDate(event.startDate);
-  const end = formatDate(event.endDate);
+  const timezone = eventTimeZone(event);
+  const start = formatDate(event.startDate, timezone);
+  const end = formatDate(event.endDate, timezone);
   return end && end !== start ? `${start} – ${end}` : start;
 };
 
-const eventLocation = (event: CategoryEvent) => {
-  if (event.locationCity && event.locationUf) return `${event.locationCity}, ${event.locationUf}`;
-  return event.locationCity || event.locationUf || event.location || '';
-};
+const eventLocation = (event: CategoryEvent) => resolveEventLocationLabel(event);
 
 const initials = (name: string) =>
   name
@@ -172,7 +176,7 @@ const EventsByCategory: React.FC = () => {
       try {
         const [categoriesResponse, eventsResponse, organizationsResponse] = await Promise.all([
           fetchApi('/api/categories'),
-          fetchApi('/api/events'),
+          fetchApi('/api/events?limit=500'),
           fetchApi('/api/organization/featured'),
         ]);
 
@@ -201,18 +205,13 @@ const EventsByCategory: React.FC = () => {
           return;
         }
 
-        const eventIds = publicEvents.map((event) => event.id).join(',');
-        const relationsResponse = await fetchApi(`/api/event-category/relations?eventIds=${encodeURIComponent(eventIds)}`);
-        const relations = relationsResponse.ok ? await relationsResponse.json() : [];
-        const categoryEventIds = new Set(
-          Array.isArray(relations)
-            ? relations.filter((relation: any) => relation.slug === categorySlug).map((relation: any) => relation.eventId)
-            : [],
-        );
-
         setEvents(
           publicEvents
-            .filter((event) => categoryEventIds.has(event.id) || (event as any).category?.toLowerCase() === matchedCategory.name.toLowerCase() || (event as any).category === categorySlug)
+            .filter((event) => (
+              event.categories?.some((item) => item.slug === categorySlug || normalize(item.name) === normalize(matchedCategory.name))
+              || normalize(event.category) === normalize(matchedCategory.name)
+              || event.category === categorySlug
+            ))
             .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
         );
       } catch (error) {
@@ -254,8 +253,9 @@ const EventsByCategory: React.FC = () => {
     filteredEvents.forEach((event) => {
       const date = new Date(event.startDate);
       if (Number.isNaN(date.getTime())) return;
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const label = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(date);
+      const timezone = eventTimeZone(event);
+      const key = eventDateKey(event).slice(0, 7);
+      const label = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, month: 'long' }).format(date);
       const current = groups.get(key) || { key, label, events: [] };
       current.events.push(event);
       groups.set(key, current);
