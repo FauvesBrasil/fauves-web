@@ -29,6 +29,16 @@ type CityEvent = {
   price?: number | null;
 };
 
+type CityPageData = {
+  id: string;
+  name: string;
+  slug: string;
+  uf: string;
+  iconSvg?: string | null;
+  imageUrl?: string | null;
+  description?: string | null;
+};
+
 const cityNames: Record<string, string> = {
   'sao-paulo': 'São Paulo', 'rio-de-janeiro': 'Rio de Janeiro', vitoria: 'Vitória',
   maceio: 'Maceió', belem: 'Belém', florianopolis: 'Florianópolis', goiania: 'Goiânia',
@@ -47,6 +57,7 @@ const cityImages: Record<string, string> = {
 
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const displayCity = (slug: string) => cityNames[slug] || slug.split('-').map((word) => word[0]?.toUpperCase() + word.slice(1)).join(' ');
+const svgDataUrl = (svg?: string | null) => svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : '';
 
 const WhatToDoCity: React.FC = () => {
   const { isDark } = useTheme();
@@ -54,6 +65,7 @@ const WhatToDoCity: React.FC = () => {
   const citySlug = legacyCitySlug || slugOrId || '';
   const cityName = displayCity(citySlug);
   const [events, setEvents] = useState<CityEvent[]>([]);
+  const [cityPage, setCityPage] = useState<CityPageData | null>(null);
   const [resolvedCityName, setResolvedCityName] = useState(cityName);
   const [currentLocalTime, setCurrentLocalTime] = useState('');
   const [loading, setLoading] = useState(true);
@@ -83,23 +95,39 @@ const WhatToDoCity: React.FC = () => {
   };
 
   useSEO({
-    title: `Eventos em ${cityName} · Fauves`,
-    description: `Descubra os próximos eventos em ${cityName}.`,
+    title: `Eventos em ${resolvedCityName} · Fauves`,
+    description: cityPage?.description || `Descubra os próximos eventos em ${resolvedCityName}.`,
     url: `/${citySlug}`,
   });
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      let configuredCityName = cityName;
+      try {
+        const cityResponse = await fetchApi(`/api/cities/${encodeURIComponent(citySlug)}`);
+        if (cityResponse.ok) {
+          const cityPayload = await cityResponse.json();
+          const configuredCity = cityPayload.item || cityPayload;
+          setCityPage(configuredCity);
+          configuredCityName = configuredCity.name || cityName;
+          setResolvedCityName(configuredCityName);
+        } else {
+          setCityPage(null);
+        }
+      } catch (error) {
+        console.warn('City customization unavailable:', error);
+        setCityPage(null);
+      }
       try {
         const response = await fetchApi('/api/events?limit=200');
         const data = await response.json();
         const list = Array.isArray(data) ? data : Array.isArray(data?.events) ? data.events : [];
-        const cityEvents = list.filter((event: CityEvent) => normalize(event.locationCity || '') === normalize(cityName))
+        const cityEvents = list.filter((event: CityEvent) => normalize(event.locationCity || '') === normalize(configuredCityName))
           .filter((event: CityEvent) => new Date(event.startDate).getTime() >= Date.now())
           .sort((a: CityEvent, b: CityEvent) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
         setEvents(cityEvents);
-        setResolvedCityName(cityEvents[0]?.locationCity?.trim() || cityName);
+        setResolvedCityName(cityEvents[0]?.locationCity?.trim() || configuredCityName);
       } catch (error) {
         console.error('Error loading city events:', error);
       } finally {
@@ -107,9 +135,9 @@ const WhatToDoCity: React.FC = () => {
       }
     };
     void load();
-  }, [cityName]);
+  }, [cityName, citySlug]);
 
-  const cityTimezone = eventTimeZone(events[0] || { locationUf: 'MA' });
+  const cityTimezone = eventTimeZone(events[0] || { locationUf: cityPage?.uf || 'CE' });
   const cityTimezoneLabel = ['America/Sao_Paulo', 'America/Fortaleza', 'America/Recife', 'America/Belem', 'America/Bahia', 'America/Maceio', 'America/Araguaina'].includes(cityTimezone)
     ? 'BRT'
     : cityTimezone.split('/').pop()?.replace(/_/g, ' ') || 'local';
@@ -122,7 +150,8 @@ const WhatToDoCity: React.FC = () => {
     return () => window.clearInterval(interval);
   }, [cityTimezone]);
 
-  const heroImage = cityImages[citySlug] || `https://images.unsplash.com/featured/?${encodeURIComponent(cityName)},city,skyline`;
+  const heroImage = cityPage?.imageUrl || cityImages[citySlug] || `https://images.unsplash.com/featured/?${encodeURIComponent(cityName)},city,skyline`;
+  const cityIcon = svgDataUrl(cityPage?.iconSvg);
 
   return (
     <div className={`city-events-page theme-root ${isDark ? 'dark dark-mode' : 'light'}`}>
@@ -132,12 +161,12 @@ const WhatToDoCity: React.FC = () => {
         <div className="city-events-photo" />
         <div className="city-events-hero-shade" />
         <div className="city-events-hero-content" data-header-align>
-          <span className="city-events-icon"><Landmark size={25} strokeWidth={1.6} /></span>
+          <span className="city-events-icon">{cityIcon ? <img src={cityIcon} alt={`Ícone de ${resolvedCityName}`} /> : <Landmark size={25} strokeWidth={1.6} />}</span>
           <p>O que está acontecendo em</p>
           <h1>{resolvedCityName}</h1>
           <span className="city-events-time"><Clock3 size={15} /> Horários em {cityTimezoneLabel}{currentLocalTime ? ` — ${currentLocalTime}` : ''}</span>
           <div className="city-events-rule" />
-          <p className="city-events-description">Descubra eventos, encontros e experiências acontecendo em {resolvedCityName}.</p>
+          <p className="city-events-description">{cityPage?.description || `Descubra eventos, encontros e experiências acontecendo em ${resolvedCityName}.`}</p>
           <SubscribeControl scope={`city:${citySlug}`} />
         </div>
       </section>
@@ -181,7 +210,7 @@ const WhatToDoCity: React.FC = () => {
         </section>
 
         <aside className="city-events-aside">
-          <span className="city-events-aside-icon"><Landmark size={24} /></span>
+          <span className="city-events-aside-icon">{cityIcon ? <img src={cityIcon} alt="" /> : <Landmark size={24} />}</span>
           <h3>{resolvedCityName}</h3>
           <p>Receba novidades sobre os próximos eventos em {resolvedCityName}.</p>
           <SubscribeControl scope={`city:${citySlug}`} compact />
@@ -212,6 +241,7 @@ const cityStyles = `
   .city-events-hero-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(70,50,28,.82) 0%, rgba(70,50,28,.64) 42%, rgba(20,20,20,.08) 72%); }
   .city-events-hero-content { position: relative; display: flex; width: min(100% - 32px, 928px); height: 100%; margin: 0 auto; flex-direction: column; align-items: flex-start; justify-content: center; }
   .city-events-icon,.city-events-aside-icon { display:grid; width:48px; height:48px; place-items:center; border:1px solid rgba(255,255,255,.18); border-radius:50%; background:rgba(255,255,255,.12); }
+  .city-events-icon img,.city-events-aside-icon img { width:25px; height:25px; object-fit:contain; filter:brightness(0) invert(1); }
   .city-events-hero-content > p:first-of-type { margin:28px 0 3px; color:rgba(255,255,255,.62); font-size:1.65rem; font-weight:500; }
   .city-events-hero h1 { margin:0; color:#fff; font-size:3.25rem; font-weight:600; letter-spacing:-.035em; }
   .city-events-time { display:flex; align-items:center; gap:7px; margin-top:17px; color:rgba(255,255,255,.62); font-size:.875rem; font-weight:500; }
