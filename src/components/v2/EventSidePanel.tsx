@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet';
+import CartoTileLayer from '@/components/v2/CartoTileLayer';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -142,11 +143,9 @@ const EventLocationMap = ({ latitude, longitude, isDark, accent }: { latitude: n
     attributionControl={false}
     style={{ width: '100%', height: '100%' }}
   >
-    <TileLayer
-      url={isDark
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
-    />
+    {isDark
+      ? <CartoTileLayer isDark />
+      : <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />}
     <CircleMarker
       center={[latitude, longitude]}
       radius={7}

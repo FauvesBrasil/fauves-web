@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Plus, Pencil, Trash2, ArrowUpDown } from 'lucide-react';
+import { getCategoryIcon } from '@/lib/categoryIcons';
 
 export default function AdminCategories() {
   const { token } = useAuth();
@@ -117,10 +118,17 @@ export default function AdminCategories() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  cats.map((c) => (
+                  cats.map((c) => {
+                    const CategoryIcon = getCategoryIcon(c.icon);
+                    return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium text-zinc-900">
-                        {c.name}
+                        <span className="flex items-center gap-2.5">
+                          <span className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                            <CategoryIcon className="h-4 w-4" />
+                          </span>
+                          {c.name}
+                        </span>
                       </TableCell>
                       <TableCell className="text-zinc-500 font-mono text-xs">
                         {c.slug}
@@ -157,7 +165,8 @@ export default function AdminCategories() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

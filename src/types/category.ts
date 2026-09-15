@@ -3,6 +3,7 @@ export interface Category {
   name: string;
   slug?: string | null;
   description?: string | null;
+  icon?: string | null;
   parentId?: string | null;
   organizationId?: string | null;
   isActive: boolean;

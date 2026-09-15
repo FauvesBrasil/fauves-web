@@ -1,7 +1,8 @@
 import React from 'react';
-import { CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { CircleMarker, MapContainer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { fetchApi } from '@/lib/apiBase';
+import CartoTileLayer from '@/components/v2/CartoTileLayer';
 
 export interface MapPreviewLocation {
   id?: string;
@@ -71,7 +72,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({ locations = [],
         keyboard={false}
         style={{ width: '100%', height: '100%', background: isDark ? '#171717' : '#e9ecef' }}
       >
-        <TileLayer url={isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'} />
+        <CartoTileLayer isDark={isDark} />
         <FitLocations locations={validLocations} />
         {validLocations.map((location, index) => (
           <CircleMarker

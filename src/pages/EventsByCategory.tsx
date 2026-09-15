@@ -28,6 +28,8 @@ import { useTheme } from '@/context/ThemeContext';
 import LocationMapPreview from '@/components/v2/LocationMapPreview';
 import { resolveEventCoordinates, resolveEventLocationLabel } from '@/lib/eventLocation';
 import { eventDateKey, eventTimeZone } from '@/lib/eventDateTime';
+import { getCategoryIcon } from '@/lib/categoryIcons';
+import mapEmptyIllustration from '@/assets/map-empty.svg';
 
 type Category = {
   id: string;
@@ -37,6 +39,7 @@ type Category = {
   color?: string | null;
   description?: string | null;
   subscriberCount?: number;
+  icon?: string | null;
 };
 
 type CategoryEvent = {
@@ -86,6 +89,7 @@ const normalize = (value: unknown) =>
     .toLowerCase();
 
 const categoryIcon = (category?: Category | null): LucideIcon => {
+  if (category?.icon) return getCategoryIcon(category.icon);
   const value = normalize(`${category?.name || ''} ${category?.slug || ''}`);
   if (value.includes('esporte')) return Trophy;
   if (value.includes('festa') || value.includes('show')) return PartyPopper;
@@ -271,6 +275,7 @@ const EventsByCategory: React.FC = () => {
     const coordinates = resolveEventCoordinates(event);
     return { id: event.id, lat: coordinates.lat ?? Number.NaN, lng: coordinates.lng ?? Number.NaN };
   }).filter((location) => Number.isFinite(location.lat) && Number.isFinite(location.lng)), [filteredEvents]);
+  const hasNearbyEvents = filteredEvents.length > 0;
 
   if (loading) {
     return (
@@ -426,15 +431,28 @@ const EventsByCategory: React.FC = () => {
           <div className="category-nearby-main">
             <div className="category-nearby-heading">
               <h2 id="nearby-heading">Eventos Próximos</h2>
-              <button type="button" aria-label="Buscar"><Search size={16} /></button>
+              <Link className="category-nearby-map-link" to="/map" aria-label="Buscar eventos no mapa"><Search size={16} /></Link>
             </div>
-            <div className="category-map-empty">
-              <LocationMapPreview locations={categoryMapLocations} isDark={isDark} accent={accent} />
-              <div className="category-map-empty-copy">
-                <h3>Eventos no mapa</h3>
-                <p>Veja onde acontecem os eventos desta categoria e explore outras opções próximas.</p>
-                <Link to="/map"><MapIcon size={15} />Explorar Eventos</Link>
-              </div>
+            <div className={`category-map-empty ${hasNearbyEvents ? 'has-events' : 'is-empty'}`}>
+              {hasNearbyEvents ? (
+                <>
+                  <LocationMapPreview className="category-map-preview" locations={categoryMapLocations} isDark={isDark} accent={accent} />
+                  <div className="category-map-empty-copy">
+                    <h3>Eventos no mapa</h3>
+                    <p>Veja onde acontecem os eventos desta categoria e explore outras opções próximas.</p>
+                    <Link to="/map"><MapIcon size={15} />Explorar Eventos</Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <img className="category-world-map" src={mapEmptyIllustration} alt="" aria-hidden="true" />
+                  <div className="category-map-empty-copy">
+                    <h3>Nenhum Evento por Perto</h3>
+                    <p>No momento, não há eventos relevantes perto de você. Você pode explorar todos os eventos no mapa.</p>
+                    <Link to="/map"><MapIcon size={15} />Explorar Eventos</Link>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -533,6 +551,7 @@ const categoryStyles = `
   }
 
   .category-container {
+    box-sizing: border-box;
     width: min(100%, 960px);
     margin: 0 auto;
     padding: 126px 16px 0;
@@ -1034,11 +1053,16 @@ const categoryStyles = `
 
   .category-nearby-heading { display: flex; align-items: center; justify-content: space-between; }
   .category-nearby-heading h2 { margin-bottom: 0; }
-  .category-nearby-heading button { display: grid; width: 32px; height: 32px; place-items: center; color: rgba(255,255,255,.55); background: rgba(255,255,255,.08); border: 0; border-radius: 8px; }
+  .category-nearby-map-link { display: grid; width: 32px; height: 32px; place-items: center; color: rgba(255,255,255,.55); background: rgba(255,255,255,.08); border-radius: 8px; text-decoration: none; transition: color .18s ease, background .18s ease; }
+  .category-nearby-map-link:hover { color: #fff; background: rgba(255,255,255,.14); }
 
-  .category-map-empty { position: relative; min-height: 300px; margin-top: 18px; overflow: hidden; }
-  .category-world-map { width: 100%; height: auto; opacity: .8; }
-  .category-map-empty-copy { position: absolute; right: 16%; bottom: 5px; width: 330px; text-align: center; }
+  .category-map-empty { position: relative; min-height: 300px; margin-top: 18px; overflow: hidden; border-radius: 14px; isolation: isolate; }
+  .category-map-preview { position: absolute !important; inset: 0; }
+  .category-map-empty.is-empty { min-height: 340px; border-radius: 0; }
+  .category-map-empty.is-empty::after { position: absolute; z-index: 1; inset: 0; background: linear-gradient(180deg, transparent 25%, rgba(18,20,22,.16) 52%, #121416 92%); content: ''; pointer-events: none; }
+  .category-world-map { position: absolute; top: 0; left: 0; width: 100%; height: auto; opacity: .68; -webkit-mask-image: linear-gradient(to bottom, #000 64%, transparent 100%); mask-image: linear-gradient(to bottom, #000 64%, transparent 100%); }
+  .category-map-empty-copy { position: absolute; z-index: 500; right: 16%; bottom: 5px; width: 330px; text-align: center; }
+  .category-map-empty.is-empty .category-map-empty-copy { z-index: 2; right: 50%; bottom: 4px; width: min(90%, 360px); transform: translateX(50%); }
   .category-map-empty-copy h3 { margin: 0 0 8px; color: #fff; font-size: 1rem; font-weight: 600; }
   .category-map-empty-copy p { margin: 0 auto 18px; color: rgba(255,255,255,.48); font-size: .875rem; line-height: 1.5; }
   .category-map-empty-copy a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; color: rgba(255,255,255,.9); background: rgba(255,255,255,.35); border-radius: 999px; font-size: .8125rem; font-weight: 600; text-decoration: none; }
@@ -1089,9 +1113,11 @@ const categoryStyles = `
   .category-page.light .category-calendar-logo { color:#71717a; border-color:rgba(24,24,27,.09); background:#f1f1f2; }
   .category-page.light .category-calendar-card:hover { border-color:rgba(24,24,27,.27); }
   .category-page.light .category-follow-button,
-  .category-page.light .category-nearby-heading button { color:#52525b; background:rgba(24,24,27,.07); }
+  .category-page.light .category-nearby-map-link { color:#52525b; background:rgba(24,24,27,.07); }
+  .category-page.light .category-nearby-map-link:hover { color:#18181b; background:rgba(24,24,27,.12); }
   .category-page.light .category-map-empty-copy a { color:#fff; background:#27272a; }
-  .category-page.light .category-world-map path { fill:rgba(24,24,27,.13); }
+  .category-page.light .category-map-empty.is-empty::after { background:linear-gradient(180deg, transparent 25%, rgba(247,248,249,.2) 52%, #f7f8f9 92%); }
+  .category-page.light .category-world-map { opacity:.28; }
   .category-page.light .category-loader { border-color:rgba(24,24,27,.12); border-top-color:#27272a; }
   .category-page.light .category-empty-state { color:#71717a; border-color:rgba(24,24,27,.12); background:rgba(24,24,27,.025); }
   @keyframes category-spin { to { transform: rotate(360deg); } }
@@ -1125,7 +1151,7 @@ const categoryStyles = `
     .category-hero-copy .subscribe-control input { min-width: 0; }
     .category-calendar-card { min-height: 150px; }
     .category-follow-button { min-height: 40px; display: inline-flex; align-items: center; }
-    .category-nearby-heading button { width: 44px; height: 44px; }
+    .category-nearby-map-link { width: 44px; height: 44px; }
   }
 
   @media (max-width: 430px) {
@@ -1137,6 +1163,8 @@ const categoryStyles = `
     .category-month-heading { top: 48px; }
     .category-event-row { min-height: 92px; padding: 12px; }
     .category-map-empty { min-height: 280px; }
+    .category-map-empty.is-empty { min-height: 310px; }
+    .category-world-map { top: 12px; width: 118%; max-width: none; transform: translateX(-7.5%); }
     .category-map-empty-copy { bottom: 0; }
   }
 

@@ -34,6 +34,7 @@ import WebGLParticleField from '@/components/home/WebGLParticleField';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { getEventPath } from '@/lib/eventUrl';
 import fauvesLogo from '@/assets/logo-fauves.svg';
+import { getCategoryIcon } from '@/lib/categoryIcons';
 import cover01 from '@/assets/covers/convites/e0d9e03b-63b3-452b-8899-3fc8f848a4bb.avif';
 import cover02 from '@/assets/covers/convites/f24cbc77-91df-4aa8-ab88-c073cbe98ba5.avif';
 import cover03 from '@/assets/covers/convites/2bd1bd20-c9c6-4df0-8bdd-66d155ce8641.avif';
@@ -73,6 +74,7 @@ type HomeCategory = {
   id?: string | number;
   slug?: string;
   name?: string;
+  icon?: string | null;
 };
 
 type CategoryVisual = {
@@ -166,9 +168,10 @@ const normalizeText = (value: unknown) => String(value || '')
 const getCategoryVisual = (category: HomeCategory, index: number) => {
   const searchable = normalizeText(`${category.name || ''} ${category.slug || ''}`);
   const words = searchable.split(/[^a-z0-9]+/).filter(Boolean);
-  return categoryVisuals.find(({ keywords }) => keywords.some((keyword) => (
+  const fallback = categoryVisuals.find(({ keywords }) => keywords.some((keyword) => (
     keyword.length <= 2 ? words.includes(keyword) : searchable.includes(keyword)
   ))) || categoryVisuals[index % categoryVisuals.length];
+  return { ...fallback, Icon: getCategoryIcon(category.icon, fallback.Icon) };
 };
 
 const getInitials = (name: string) => name

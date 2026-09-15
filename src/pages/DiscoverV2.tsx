@@ -27,6 +27,7 @@ import FooterV2 from '@/components/v2/FooterV2';
 import { useSEO } from '@/hooks/useSEO';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { useTheme } from '@/context/ThemeContext';
+import { getCategoryIcon } from '@/lib/categoryIcons';
 
 type CategoryVisual = {
   Icon: LucideIcon;
@@ -70,11 +71,12 @@ const formatCount = (count: number) => new Intl.NumberFormat('pt-BR').format(cou
 const getCategoryVisual = (category: any, index: number): CategoryVisual => {
   const searchable = normalizeText(`${category?.name || ''} ${category?.slug || ''}`);
   const words = searchable.split(/[^a-z0-9]+/).filter(Boolean);
-  return categoryVisuals.find((visual) => visual.keywords.some((keyword) => (
+  const fallback = categoryVisuals.find((visual) => visual.keywords.some((keyword) => (
     keyword.length <= 2 ? words.includes(keyword) : searchable.includes(keyword)
   )))
     || categoryVisuals[index % categoryVisuals.length]
     || { Icon: Sparkles, color: '#8b7aff', keywords: [] };
+  return { ...fallback, Icon: getCategoryIcon(category?.icon, fallback.Icon) };
 };
 
 const eventBelongsToCategory = (event: any, category: any) => {

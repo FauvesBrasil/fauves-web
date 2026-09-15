@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { List, Map as MapIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { MapContainer, TileLayer, Marker, useMap, ZoomControl } from 'react-leaflet';
+import { MapContainer, Marker, useMap, ZoomControl } from 'react-leaflet';
+import CartoTileLayer from '@/components/v2/CartoTileLayer';
 import L from 'leaflet';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { format, isToday, isTomorrow, startOfDay } from 'date-fns';
@@ -758,7 +759,7 @@ const FullMapPage: React.FC = () => {
                 style={{ width: '100%', height: '100%' }}
                 zoomControl={false}
               >
-                <TileLayer url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"} />
+                <CartoTileLayer isDark={isDark} />
                 <ZoomControl position="bottomright" />
                 {mappedEvents.map(event => (
                   <Marker

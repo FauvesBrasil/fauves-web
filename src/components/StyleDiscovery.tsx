@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Music, Mic2, Radio, Guitar, Sparkles, PartyPopper, Trophy, Baby, HeartPulse, Theater } from 'lucide-react';
 import { apiUrl } from '@/lib/apiBase';
+import { getCategoryIcon } from '@/lib/categoryIcons';
 
 interface Category {
     id: string;
@@ -39,17 +40,8 @@ const StyleDiscovery: React.FC<StyleDiscoveryProps> = ({ events, selectedUf, cat
         
         // Use custom icon if available
         if (icon) {
-            if (icon === 'Music') return <Music className="w-8 h-8" />;
-            if (icon === 'Mic2') return <Mic2 className="w-8 h-8" />;
-            if (icon === 'Guitar') return <Guitar className="w-8 h-8" />;
-            if (icon === 'Headphones') return <Headphones className="w-8 h-8" />;
-            if (icon === 'Mic') return <Mic className="w-8 h-8" />;
-            if (icon === 'Volume2') return <Volume2 className="w-8 h-8" />;
-            if (icon === 'Disc') return <Disc className="w-8 h-8" />;
-            if (icon === 'Film') return <Film className="w-8 h-8" />;
-            if (icon === 'Palette') return <Palette className="w-8 h-8" />;
-            if (icon === 'Utensils') return <Utensils className="w-8 h-8" />;
-            if (icon === 'Plane') return <Plane className="w-8 h-8" />;
+            const CustomIcon = getCategoryIcon(icon);
+            return <CustomIcon className="w-8 h-8" />;
         }
 
         const lowerName = name.toLowerCase();

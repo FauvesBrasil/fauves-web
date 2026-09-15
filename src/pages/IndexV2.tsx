@@ -34,7 +34,8 @@ import { fetchApi, apiUrl } from '@/lib/apiBase';
 import { geocodeEventAddress, resolveEventAddress, resolveEventCoordinates, resolveEventLocationLabel } from '@/lib/eventLocation';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useLocation } from '@/context/LocationContext';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, Marker, useMap } from 'react-leaflet';
+import CartoTileLayer from '@/components/v2/CartoTileLayer';
 import L from 'leaflet';
 
 // Helper for Apple-style blue dot markers
@@ -1099,12 +1100,7 @@ const IndexV2 = () => {
                         scrollWheelZoom={false}
                         doubleClickZoom={false}
                       >
-                        <TileLayer
-                          url={isDark 
-                            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                          }
-                        />
+                        <CartoTileLayer isDark={isDark} />
                         <ChangeMapView markers={mapEvents.map(e => [e.lat, e.lng] as [number, number])} />
                         {mapEvents.map(e => (
                           <Marker
