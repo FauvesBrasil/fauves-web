@@ -57,7 +57,7 @@ const SubscribeControl: React.FC<SubscribeControlProps> = ({ scope, compact = fa
   };
 
   return (
-    <div ref={rootRef} className={`subscribe-control ${compact ? 'is-compact' : ''} ${className}`}>
+    <div ref={rootRef} className={`subscribe-control ${compact ? 'is-compact' : ''} ${user ? 'has-identity' : 'needs-email'} ${className}`}>
       {subscribed ? (
         <div className="subscribe-control-status">
           <button
@@ -101,18 +101,21 @@ const SubscribeControl: React.FC<SubscribeControlProps> = ({ scope, compact = fa
 };
 
 const subscribeControlStyles = `
-  .subscribe-control { position: relative; width: 100%; max-width: 320px; }
-  .subscribe-control form { display: flex; align-items: center; gap: 8px; }
+  .subscribe-control { position: relative; width: 100%; max-width: 360px; }
+  .subscribe-control form { display: grid; width: 100%; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; }
   .subscribe-control input {
-    min-width: 0; height: 38px; flex: 1; padding: 0 16px; border: 0; border-radius: 999px;
+    box-sizing: border-box; display: block; width: 100%; min-width: 0; height: 40px; min-height: 40px;
+    margin: 0; padding: 0 16px; border: 1px solid transparent; border-radius: 999px;
+    appearance: none; -webkit-appearance: none;
     outline: none; color: rgba(255,255,255,.88); background: rgba(255,255,255,.065);
-    font: inherit; font-size: .875rem;
+    font-family: inherit; font-size: .875rem; font-weight: 500; line-height: normal;
   }
   .subscribe-control input::placeholder { color: rgba(255,255,255,.35); }
-  .subscribe-control input:focus { box-shadow: 0 0 0 1px rgba(255,255,255,.22); }
+  .subscribe-control input:focus { border-color: rgba(255,255,255,.24); box-shadow: 0 0 0 3px rgba(255,255,255,.06); }
   .subscribe-control-action,
   .subscribe-control-subscribed {
-    height: 38px; min-width: 86px; padding: 0 18px; border: 0; border-radius: 999px;
+    box-sizing: border-box; display: inline-flex; height: 40px; min-height: 40px; min-width: 108px;
+    align-items: center; justify-content: center; margin: 0; padding: 0 20px; border: 0; border-radius: 999px;
     cursor: pointer; font: inherit; font-size: .875rem; font-weight: 500;
   }
   .subscribe-control-action { color: #151719; background: #fff; }
@@ -134,8 +137,14 @@ const subscribeControlStyles = `
   .subscribe-control-menu button:hover { background: rgba(255,255,255,.09); }
   .subscribe-control-menu svg { color: rgba(255,255,255,.52); }
   .subscribe-control.is-compact { max-width: none; }
-  .subscribe-control.is-compact form { flex-direction: column; align-items: stretch; }
+  .subscribe-control.is-compact form { grid-template-columns: minmax(0,1fr); align-items: stretch; gap: 9px; }
+  .subscribe-control.is-compact input { width: 100%; }
   .subscribe-control.is-compact .subscribe-control-action { width: 100%; }
+  .subscribe-control.has-identity form { display: flex; }
+  @media (max-width: 420px) {
+    .subscribe-control.needs-email:not(.is-compact) form { grid-template-columns: minmax(0,1fr); }
+    .subscribe-control.needs-email:not(.is-compact) .subscribe-control-action { width: 100%; }
+  }
 `;
 
 export default SubscribeControl;

@@ -247,8 +247,9 @@ const cityStyles = `
   .city-events-time { display:flex; align-items:center; gap:7px; margin-top:17px; color:rgba(255,255,255,.62); font-size:.875rem; font-weight:500; }
   .city-events-rule { width:465px; height:1px; margin:28px 0 25px; background:rgba(255,255,255,.18); }
   .city-events-description { width:min(465px,100%); margin:0 0 29px; color:rgba(255,255,255,.88); font-size:.9375rem; font-weight:500; line-height:1.55; }
-  .city-events-hero .subscribe-control { max-width:160px; }
-  .city-events-hero .subscribe-control-action { width:160px; }
+  .city-events-hero .subscribe-control { max-width:350px; }
+  .city-events-hero .subscribe-control.has-identity { max-width:160px; }
+  .city-events-hero .subscribe-control.has-identity .subscribe-control-action { width:160px; }
   .city-events-main { display:grid; width:min(100% - 32px,928px); margin:0 auto; padding:42px 0 80px; grid-template-columns:minmax(0,620px) 260px; gap:48px; }
   .city-events-list-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:27px; }
   .city-events-list-header h2 { margin:0; font-size:1.25rem; font-weight:600; }
