@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Clock3, Landmark, Plus, Rss, Search } from 'lucide-react';
+import { Clock3, Landmark, Map as MapIcon, Plus, Rss, Search } from 'lucide-react';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import FooterV2 from '@/components/v2/FooterV2';
 import SubscribeControl from '@/components/v2/SubscribeControl';
@@ -11,6 +11,7 @@ import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import LocationMapPreview from '@/components/v2/LocationMapPreview';
 import CalendarPublicEventViews from '@/components/v2/CalendarPublicEventViews';
 import { eventTimeZone } from '@/lib/eventDateTime';
+import { resolveEventCoordinates } from '@/lib/eventLocation';
 
 type CityEvent = {
   id: string;
@@ -152,6 +153,13 @@ const WhatToDoCity: React.FC = () => {
 
   const heroImage = cityPage?.imageUrl || cityImages[citySlug] || `https://images.unsplash.com/featured/?${encodeURIComponent(cityName)},city,skyline`;
   const cityIcon = svgDataUrl(cityPage?.iconSvg);
+  const cityMapLocations = useMemo(() => events.flatMap((event) => {
+    const coordinates = resolveEventCoordinates(event);
+    return coordinates.lat !== null && coordinates.lng !== null
+      ? [{ id: event.id, lat: coordinates.lat, lng: coordinates.lng }]
+      : [];
+  }), [events]);
+  const fullMapUrl = `/map?${new URLSearchParams({ city: resolvedCityName, citySlug, view: 'map' }).toString()}`;
 
   return (
     <div className={`city-events-page theme-root ${isDark ? 'dark dark-mode' : 'light'}`}>
@@ -214,7 +222,12 @@ const WhatToDoCity: React.FC = () => {
           <h3>{resolvedCityName}</h3>
           <p>Receba novidades sobre os próximos eventos em {resolvedCityName}.</p>
           <SubscribeControl scope={`city:${citySlug}`} compact />
-          <div className="city-events-map"><LocationMapPreview query={resolvedCityName} isDark={isDark} /></div>
+          <div className="city-events-map">
+            <LocationMapPreview locations={cityMapLocations} query={resolvedCityName} isDark={isDark} />
+            <Link className="city-events-map-link" to={fullMapUrl} aria-label={`Abrir mapa completo de eventos em ${resolvedCityName}`}>
+              <span><MapIcon size={14} /> Ver mapa</span>
+            </Link>
+          </div>
         </aside>
       </main>
 
@@ -282,6 +295,11 @@ const cityStyles = `
   .city-events-aside h3 { margin:18px 0 8px; font-size:1rem; font-weight:600; }
   .city-events-aside > p { margin:0 0 17px; color:rgba(255,255,255,.7); font-size:.8125rem; font-weight:500; line-height:1.5; }
   .city-events-map { position:relative; height:260px; margin-top:32px; overflow:hidden; border-radius:10px; background:#222426; }
+  .city-events-map-link { position:absolute; z-index:600; inset:0; display:flex; align-items:flex-end; justify-content:center; padding:14px; color:#fff; text-decoration:none; cursor:pointer; }
+  .city-events-map-link::before { content:''; position:absolute; inset:0; background:rgba(0,0,0,0); transition:background-color .16s ease; }
+  .city-events-map-link span { position:relative; display:inline-flex; min-height:32px; align-items:center; gap:6px; padding:0 12px; border:1px solid rgba(255,255,255,.2); border-radius:999px; background:rgba(20,21,23,.78); box-shadow:0 4px 16px rgba(0,0,0,.22); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); font-size:.75rem; font-weight:600; }
+  .city-events-map-link:hover::before { background:rgba(0,0,0,.08); }
+  .city-events-map-link:focus-visible { outline:3px solid rgba(42,42,215,.7); outline-offset:-3px; }
   .city-events-empty { padding:25px; border:1px solid rgba(255,255,255,.07); border-radius:12px; color:rgba(255,255,255,.48); background:#202224; font-size:.875rem; }
   .city-events-loader { display:block; width:30px; height:30px; margin:80px auto; border:2px solid rgba(255,255,255,.12); border-top-color:#fff; border-radius:50%; animation:city-spin .8s linear infinite; }
   .city-events-page.light {

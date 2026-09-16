@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { List, Map as MapIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -438,6 +438,17 @@ const ACTIVE_ICON = L.divIcon({
   iconAnchor: [8, 8]
 });
 
+const normalizeLocationName = (value: unknown) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-');
+
+const eventCityName = (event: any) => String(
+  event?.locationCity || event?.locationDetails?.city || event?.city || '',
+).trim();
+
 const StickyDateHeader = ({ children, className }: { children: React.ReactNode, className?: string }) => {
   const [isStuck, setIsStuck] = useState(false);
   const sentinelRef = React.useRef<HTMLDivElement>(null);
@@ -488,6 +499,10 @@ const MapController = ({ markers, selectedId, viewKey }: { markers: any[], selec
 
 const FullMapPage: React.FC = () => {
   const { calendarSlug } = useParams<{ calendarSlug?: string }>();
+  const [searchParams] = useSearchParams();
+  const requestedCity = searchParams.get('city')?.trim() || '';
+  const requestedCitySlug = searchParams.get('citySlug')?.trim() || normalizeLocationName(requestedCity);
+  const cityFilter = calendarSlug ? '' : requestedCity;
   const { isDark } = useTheme();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const { user, logout, openLoginModal } = useAuth();
@@ -496,7 +511,7 @@ const FullMapPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [viewingEventId, setViewingEventId] = useState<string | null>(null);
-  const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
+  const [mobileView, setMobileView] = useState<'list' | 'map'>(() => searchParams.get('view') === 'map' ? 'map' : 'list');
   const [geoCache, setGeoCache] = useState<Record<string, { lat: number, lng: number }>>(() => {
     try {
       const saved = localStorage.getItem('fauves_geo_cache_v1');
@@ -520,9 +535,13 @@ const FullMapPage: React.FC = () => {
           setEvents(Array.isArray(organizationEvents) ? organizationEvents : []);
         } else {
           setCalendar(null);
-          const response = await fetchApi('/api/events?limit=100');
+          const response = await fetchApi('/api/events?limit=200');
           const data = await response.json();
-          setEvents(Array.isArray(data) ? data : (data?.data || data?.events || []));
+          const eventList = Array.isArray(data) ? data : (data?.data || data?.events || []);
+          const scopedEvents = cityFilter
+            ? eventList.filter((event: any) => normalizeLocationName(eventCityName(event)) === normalizeLocationName(cityFilter))
+            : eventList;
+          setEvents(scopedEvents);
         }
       } catch (err) {
         console.error("Error fetching map events:", err);
@@ -532,7 +551,11 @@ const FullMapPage: React.FC = () => {
       }
     };
     fetchEvents();
-  }, [calendarSlug]);
+  }, [calendarSlug, cityFilter]);
+
+  useEffect(() => {
+    if (searchParams.get('view') === 'map') setMobileView('map');
+  }, [searchParams]);
 
   useEffect(() => {
     const process = async () => {
@@ -613,9 +636,9 @@ const FullMapPage: React.FC = () => {
             <Link to="/" className="flex-center map-header-logo" aria-label="Fauves — página inicial" style={{ textDecoration: 'none', color: '#131517' }}>
               {FAUVES_LOGO_SVG}
             </Link>
-            <Link className="flex-center gap-2 map-calendar-link" to={calendarSlug ? `/${calendarSlug}` : '/discover'} style={{ color: '#131517', textDecoration: 'none', background: '#f5f5f5', padding: '6px 12px', borderRadius: '8px' }}>
+            <Link className="flex-center gap-2 map-calendar-link" to={calendarSlug ? `/${calendarSlug}` : cityFilter ? `/${requestedCitySlug}` : '/discover'} style={{ color: '#131517', textDecoration: 'none', background: '#f5f5f5', padding: '6px 12px', borderRadius: '8px' }}>
               {calendar?.logoUrl && <img alt="" style={{ width: 16, height: 16, borderRadius: 4, objectFit: 'cover' }} src={resolveImageUrl(calendar.logoUrl) || ''} />}
-              <div className="fw-medium" style={{ fontSize: '13px' }}>{calendar?.name || 'Mapa de Eventos'}</div>
+              <div className="fw-medium" style={{ fontSize: '13px' }}>{calendar?.name || (cityFilter ? `Eventos em ${cityFilter}` : 'Mapa de Eventos')}</div>
             </Link>
           </div>
           
