@@ -1,14 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Loader2, Save, Link as LinkIcon, Image as ImageIcon, X } from 'lucide-react';
-import { fetchApi } from '@/lib/apiBase';
-import { toast } from 'sonner';
-import { LocationAutocomplete } from '@/components/LocationAutocomplete';
-import { timeZoneForUf } from '@/lib/eventDateTime';
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  Loader2,
+  Save,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  X,
+} from "lucide-react";
+import { fetchApi } from "@/lib/apiBase";
+import { toast } from "sonner";
+import { LocationAutocomplete } from "@/components/LocationAutocomplete";
+import { timeZoneForUf } from "@/lib/eventDateTime";
 
 const BRAZIL_UFS = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
-  "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
-  "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
 ] as const;
 
 interface EventImporterProps {
@@ -16,24 +47,28 @@ interface EventImporterProps {
   onClose?: () => void;
 }
 
-const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => {
-  const [url, setUrl] = useState('');
+const EventImporter: React.FC<EventImporterProps> = ({
+  onSuccess,
+  onClose,
+}) => {
+  const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [step, setStep] = useState<'url' | 'edit'>('url');
-  
+  const [step, setStep] = useState<"url" | "edit">("url");
+  const [extractionWarning, setExtractionWarning] = useState("");
+
   const [formData, setFormData] = useState({
-    name: '',
-    date: '',
-    location: '',
-    locationUf: '',
-    locationCity: '',
-    producer: '',
-    image: '',
-    externalUrl: '',
-    categoryId: '',
-    externalId: '',
-    sourceKey: '',
+    name: "",
+    date: "",
+    location: "",
+    locationUf: "",
+    locationCity: "",
+    producer: "",
+    image: "",
+    externalUrl: "",
+    categoryId: "",
+    externalId: "",
+    sourceKey: "",
     artists: [] as string[],
     priceFrom: null as number | null,
   });
@@ -42,70 +77,117 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
   const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
-    if (step === 'edit') {
+    if (step === "edit") {
       void Promise.all([
-        fetchApi('/api/admin/organizations?perPage=100').then(res => res.json()),
-        fetchApi('/api/categories').then(res => res.json()),
-      ]).then(([organizationsData, categoriesData]) => {
-        if (organizationsData?.organizations) setExistingOrgs(organizationsData.organizations);
-        if (Array.isArray(categoriesData)) setCategories(categoriesData);
-      }).catch(() => {});
+        fetchApi("/api/admin/organizations?perPage=100").then((res) =>
+          res.json(),
+        ),
+        fetchApi("/api/categories").then((res) => res.json()),
+      ])
+        .then(([organizationsData, categoriesData]) => {
+          if (organizationsData?.organizations)
+            setExistingOrgs(organizationsData.organizations);
+          if (Array.isArray(categoriesData)) setCategories(categoriesData);
+        })
+        .catch(() => {});
     }
   }, [step]);
 
   const handleExtract = async () => {
     if (!url) return;
     setLoading(true);
+    setExtractionWarning("");
     try {
-      const res = await fetchApi(`/api/admin/event-importer/extract?url=${encodeURIComponent(url)}`);
-      if (!res.ok) throw new Error('Erro ao extrair dados');
-      
+      const res = await fetchApi(
+        `/api/admin/event-importer/extract?url=${encodeURIComponent(url)}`,
+      );
+      if (!res.ok) throw new Error("Erro ao extrair dados");
+
       const data = await res.json();
-      
+      if (data?.error) throw new Error(String(data.error));
+
       setFormData({
-        name: data.title || '',
-        date: data.date ? data.date.substring(0, 16) : '',
-        location: Array.from(new Set([data.location, data.locationAddress].filter(Boolean))).join(', '),
-        locationUf: data.locationUf || '',
-        locationCity: data.locationCity || '',
-        producer: data.producer || '',
-        image: data.image || '',
+        name: data.title || "",
+        date: data.date ? data.date.substring(0, 16) : "",
+        location: Array.from(
+          new Set([data.location, data.locationAddress].filter(Boolean)),
+        ).join(", "),
+        locationUf: data.locationUf || "",
+        locationCity: data.locationCity || "",
+        producer: data.producer || "",
+        image: data.image || "",
         externalUrl: url,
-        categoryId: data.categoryId || '',
-        externalId: data.externalId || '',
-        sourceKey: data.sourceKey || '',
+        categoryId: data.categoryId || "",
+        externalId: data.externalId || "",
+        sourceKey: data.sourceKey || "",
         artists: Array.isArray(data.artists) ? data.artists : [],
-        priceFrom: Number.isFinite(Number(data.priceFrom)) ? Number(data.priceFrom) : null,
+        priceFrom: Number.isFinite(Number(data.priceFrom))
+          ? Number(data.priceFrom)
+          : null,
       });
-      setStep('edit');
+      setStep("edit");
     } catch (error) {
-      toast.error('Não foi possível extrair dados automaticamente. Preencha manualmente.');
-      setFormData({ ...formData, externalUrl: url, locationUf: '', locationCity: '', categoryId: '', externalId: '', sourceKey: '', artists: [], priceFrom: null });
-      setStep('edit');
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Não foi possível extrair os dados automaticamente.";
+      toast.error(message);
+      setExtractionWarning(
+        `${message} Você ainda pode preencher os campos manualmente.`,
+      );
+      setFormData({
+        name: "",
+        date: "",
+        location: "",
+        locationUf: "",
+        locationCity: "",
+        producer: "",
+        image: "",
+        externalUrl: url,
+        categoryId: "",
+        externalId: "",
+        sourceKey: "",
+        artists: [],
+        priceFrom: null,
+      });
+      setStep("edit");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.date || !formData.producer || !formData.location || !formData.locationUf || !formData.locationCity || !formData.categoryId) {
-      toast.error('Preencha nome, data, produtora, endereço, cidade, estado e categoria');
+    if (
+      !formData.name ||
+      !formData.date ||
+      !formData.producer ||
+      !formData.location ||
+      !formData.locationUf ||
+      !formData.locationCity ||
+      !formData.categoryId
+    ) {
+      toast.error(
+        "Preencha nome, data, produtora, endereço, cidade, estado e categoria",
+      );
       return;
     }
     setSaving(true);
     try {
-      const res = await fetchApi('/api/admin/event-importer/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, timezone: timeZoneForUf(formData.locationUf) })
+      const res = await fetchApi("/api/admin/event-importer/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          timezone: timeZoneForUf(formData.locationUf),
+        }),
       });
 
-      if (!res.ok) throw new Error('Erro ao salvar evento');
-      
-      toast.success('Evento importado com sucesso!');
+      if (!res.ok) throw new Error("Erro ao salvar evento");
+
+      toast.success("Evento importado com sucesso!");
       if (onSuccess) onSuccess();
     } catch (error) {
-      toast.error('Erro ao salvar evento');
+      toast.error("Erro ao salvar evento");
     } finally {
       setSaving(false);
     }
@@ -119,17 +201,21 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
           Importador de Eventos
         </h3>
         {onClose && (
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+          >
             <X className="w-5 h-5" />
           </button>
         )}
       </div>
 
       <div className="p-6">
-        {step === 'url' ? (
+        {step === "url" ? (
           <div className="space-y-4">
             <p className="text-sm text-slate-500 dark:text-slate-400 m-0">
-              Cole o link de um evento externo para tentarmos extrair as informações automaticamente.
+              Cole o link de um evento externo para tentarmos extrair as
+              informações automaticamente.
             </p>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
@@ -147,124 +233,197 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
                 disabled={loading || !url}
                 className="px-6 h-11 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 text-white rounded-lg font-bold transition disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
                 Buscar Informações
               </button>
             </div>
           </div>
         ) : (
           <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+            {extractionWarning && (
+              <div
+                role="alert"
+                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100"
+              >
+                {extractionWarning}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Nome do Evento *</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Nome do Evento *
+                </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Data e Hora *</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Data e Hora *
+                </label>
                 <input
                   type="datetime-local"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date: e.target.value })
+                  }
                   className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Produtora *</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Produtora *
+                </label>
                 <div className="relative">
                   <input
                     type="text"
                     list="existing-orgs"
                     placeholder="Ex: Move Concerts"
                     value={formData.producer}
-                    onChange={(e) => setFormData({ ...formData, producer: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, producer: e.target.value })
+                    }
                     className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                   />
                   <datalist id="existing-orgs">
-                    {existingOrgs.map(org => <option key={org.id} value={org.name} />)}
+                    {existingOrgs.map((org) => (
+                      <option key={org.id} value={org.name} />
+                    ))}
                   </datalist>
                 </div>
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Local / Endereço</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Local / Endereço
+                </label>
                 <LocationAutocomplete
                   value={formData.location}
-                  onInputChange={(location) => setFormData((current) => ({ ...current, location, locationCity: '', locationUf: '' }))}
-                  onSelect={(address, city, state) => setFormData((current) => ({
-                    ...current,
-                    location: address,
-                    locationCity: city || current.locationCity,
-                    locationUf: state || current.locationUf,
-                  }))}
+                  onInputChange={(location) =>
+                    setFormData((current) => ({
+                      ...current,
+                      location,
+                      locationCity: "",
+                      locationUf: "",
+                    }))
+                  }
+                  onSelect={(address, city, state) =>
+                    setFormData((current) => ({
+                      ...current,
+                      location: address,
+                      locationCity: city || current.locationCity,
+                      locationUf: state || current.locationUf,
+                    }))
+                  }
                   placeholder="Arena Castelão ou Rua Exemplo, 123"
                   className="w-full"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Estado (UF) *</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Estado (UF) *
+                </label>
                 <select
                   value={formData.locationUf}
-                  onChange={(e) => setFormData({ ...formData, locationUf: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, locationUf: e.target.value })
+                  }
                   className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 >
-                  <option value="" disabled>Selecione</option>
-                  {BRAZIL_UFS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                  <option value="" disabled>
+                    Selecione
+                  </option>
+                  {BRAZIL_UFS.map((uf) => (
+                    <option key={uf} value={uf}>
+                      {uf}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Categoria *</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Categoria *
+                </label>
                 <select
                   value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, categoryId: e.target.value })
+                  }
                   className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 >
-                  <option value="" disabled>Selecione a categoria</option>
-                  {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                  <option value="" disabled>
+                    Selecione a categoria
+                  </option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Cidade *</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  Cidade *
+                </label>
                 <input
                   type="text"
                   value={formData.locationCity}
-                  onChange={(e) => setFormData({ ...formData, locationCity: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, locationCity: e.target.value })
+                  }
                   className="w-full px-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                 />
               </div>
 
               <div className="space-y-1.5 md:col-span-2">
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">URL da Imagem (Banner)</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  URL da Imagem (Banner)
+                </label>
                 <div className="relative">
                   <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, image: e.target.value })
+                    }
                     placeholder="https://exemplo.com/imagem.jpg"
                     className="w-full pl-9 pr-3 h-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 outline-none"
                   />
                 </div>
                 {formData.image && (
                   <div className="mt-2 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 h-24 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <img src={formData.image} alt="Preview" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.src = 'https://placehold.co/600x300?text=Erro+ao+carregar+imagem')} />
+                    <img
+                      src={formData.image}
+                      alt="Preview"
+                      className="h-full w-full object-cover"
+                      onError={(e) =>
+                        (e.currentTarget.src =
+                          "https://placehold.co/600x300?text=Erro+ao+carregar+imagem")
+                      }
+                    />
                   </div>
                 )}
               </div>
             </div>
 
             <div className="pt-4 flex gap-2 border-t border-slate-100 dark:border-slate-800 mt-2">
-               <button
-                onClick={() => setStep('url')}
+              <button
+                onClick={() => setStep("url")}
                 className="flex-1 px-4 h-11 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg font-bold transition hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
               >
                 Voltar
@@ -274,7 +433,11 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
                 disabled={saving}
                 className="flex-[2] px-6 h-11 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 text-white rounded-lg font-bold transition shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2 cursor-pointer"
               >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 Salvar Evento Importado
               </button>
             </div>
