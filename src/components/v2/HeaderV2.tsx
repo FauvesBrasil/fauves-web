@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Bell, LogOut, Settings, User, Mail, Plus, Search, Home, Users, Compass, HelpCircle, Calendar, ChevronRight, Copy, Download, Check, Menu, X } from 'lucide-react';
 import { apiUrl, fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { getEventPath, getOrganizationPath } from '@/lib/eventUrl';
+import EventDestinationLink from '@/components/EventDestinationLink';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import fauvesBrandSvg from '@/assets/fauves-logotipo-brand.svg?raw';
 
@@ -359,23 +360,8 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
     </div>
   );
 
-  const ListItem = ({ icon, label, sublabel, image, color, to, onClick }: any) => (
-    <Link 
-      to={to || '#'} 
-      onClick={onClick || onClose}
-      style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.75rem', 
-        padding: '0.625rem 1rem', 
-        textDecoration: 'none',
-        color: isDark ? '#ffffff' : '#131517',
-        borderRadius: '8px',
-        margin: '0 0.5rem',
-        transition: 'background 0.2s'
-      }}
-      className="search-list-item"
-    >
+  const ListItem = ({ icon, label, sublabel, image, color, to, onClick, eventDestination }: any) => {
+    const content = <>
       <div style={{ 
         width: '32px', 
         height: '32px', 
@@ -388,7 +374,7 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
         overflow: 'hidden'
       }}>
         {image ? (
-          <img src={resolveImageUrl(image)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={resolveImageUrl(image)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           icon || null
         )}
@@ -398,8 +384,25 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
         {sublabel && <div style={{ fontSize: '0.75rem', color: '#939597' }}>{sublabel}</div>}
       </div>
       {to && to.startsWith('http') && <ChevronRight size={14} color="#dee0e2" />}
-    </Link>
-  );
+    </>;
+    const itemStyle: React.CSSProperties = {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        padding: '0.625rem 1rem',
+        textDecoration: 'none',
+        color: isDark ? '#ffffff' : '#131517',
+        borderRadius: '8px',
+        margin: '0 0.5rem',
+        transition: 'background 0.2s'
+    };
+    if (eventDestination) return (
+      <EventDestinationLink event={eventDestination} source="header-search" onClick={onClick || onClose} style={itemStyle} className="search-list-item">
+        {content}
+      </EventDestinationLink>
+    );
+    return <Link to={to || '#'} onClick={onClick || onClose} style={itemStyle} className="search-list-item">{content}</Link>;
+  };
 
   return (
     <AnimatePresence>
@@ -528,6 +531,7 @@ const SearchModal = ({ isOpen, isDark, onClose }: { isOpen: boolean, isDark: boo
                             label={event.name}
                             sublabel={formatDate(event.startDate)}
                             to={event.isManagedByUser ? `/event/manage/${event.id}` : getEventPath(event)}
+                            eventDestination={event.isManagedByUser ? undefined : event}
                           />
                         ))}
                       </>

@@ -1,7 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { getEventPath } from '../lib/eventUrl';
-import InterestButton from './InterestButton';
 import EventCard from './EventCard';
 
 interface Event {
@@ -16,6 +13,9 @@ interface Event {
   slug?: string | null;
   locationCity?: string;
   locationUf?: string;
+  isExternal?: boolean;
+  externalUrl?: string | null;
+  externalLink?: string | null;
 }
 
 interface TrendingHighlightsProps {
@@ -67,7 +67,6 @@ const TrendingHighlights: React.FC<TrendingHighlightsProps> = ({ events }) => {
         {sortedEvents.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8 max-sm:flex max-sm:overflow-x-auto max-sm:snap-x max-sm:pb-6 max-sm:px-1 max-sm:-mx-1 scrollbar-hide">
             {sortedEvents.map((ev: any) => {
-              const to = getEventPath({ id: ev.id, slug: ev.slug });
               const startDate = ev.startDate ? new Date(ev.startDate) : null;
               const dateMarkup = startDate ? startDate.toLocaleDateString('pt-BR', {
                 day: '2-digit',
@@ -88,6 +87,10 @@ const TrendingHighlights: React.FC<TrendingHighlightsProps> = ({ events }) => {
                     isTrending={true}
                     views={Number(ev.views || 0)}
                     interests={Number(ev.interests || 0)}
+                    isExternal={Boolean(ev.isExternal || ev.externalUrl || ev.externalLink)}
+                    externalUrl={ev.externalUrl}
+                    externalLink={ev.externalLink}
+                    navigationSource="trending-highlights"
                   />
                 </div>
               );

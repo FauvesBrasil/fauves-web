@@ -4,6 +4,7 @@ import { resolveImageUrl } from '@/lib/apiBase';
 import { resolveEventLocationLabel } from '@/lib/eventLocation';
 import { eventDateKey, eventTimeZone } from '@/lib/eventDateTime';
 import EventImage from '@/components/EventImage';
+import { openExternalEventIfNeeded } from '@/lib/eventUrl';
 
 type Props = {
   events: any[];
@@ -174,7 +175,19 @@ export default function CalendarPublicEventViews({
                 const timing = timeDetails(event);
                 const price = eventPriceLabel(event);
                 if (external) return (
-                  <article className={`cp-external-card ${variant === 'list' ? 'is-list' : ''}`} key={event.id} onClick={() => onEventClick(event)}>
+                  <article
+                    className={`cp-external-card ${variant === 'list' ? 'is-list' : ''}`}
+                    key={event.id}
+                    onClick={() => openExternalEventIfNeeded(event, 'calendar-external-list')}
+                    role="link"
+                    tabIndex={0}
+                    onKeyDown={(keyboardEvent) => {
+                      if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+                        keyboardEvent.preventDefault();
+                        openExternalEventIfNeeded(event, 'calendar-external-list-keyboard');
+                      }
+                    }}
+                  >
                     <div className="cp-event-card-main">
                       <div className="cp-event-card-copy">
                         <time><span>{timing.primary}</span>{timing.secondary && <em> · {timing.secondary}</em>}</time>

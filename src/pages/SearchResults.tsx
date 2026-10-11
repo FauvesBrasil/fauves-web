@@ -162,6 +162,10 @@ const SearchResults: React.FC = () => {
         if (candidate.startsWith('/uploads/')) return apiUrl(candidate);
         return candidate;
       })(),
+      isExternal: Boolean(r.isExternal || r.externalUrl || r.externalLink),
+      externalUrl: typeof r.externalUrl === 'string' ? r.externalUrl : undefined,
+      externalLink: typeof r.externalLink === 'string' ? r.externalLink : undefined,
+      navigationSource: 'search-results',
     };
   };
 

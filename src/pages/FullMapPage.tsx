@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { List, Map as MapIcon } from 'lucide-react';
+import { ExternalLink, List, Map as MapIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { MapContainer, Marker, useMap, ZoomControl } from 'react-leaflet';
@@ -11,6 +11,7 @@ import { format, isToday, isTomorrow, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import { geocodeEventAddress, resolveEventAddress, resolveEventCoordinates, resolveEventLocationLabel } from '@/lib/eventLocation';
+import { openExternalEventIfNeeded } from '@/lib/eventUrl';
 
 // --- SVGS ---
 const FAUVES_LOGO_SVG = (
@@ -626,6 +627,21 @@ const FullMapPage: React.FC = () => {
     return { main: format(d, "d 'de' MMM", { locale: ptBR }), sub: format(d, 'eeee', { locale: ptBR }) };
   };
 
+  const openEvent = (event: any, source: string) => {
+    if (openExternalEventIfNeeded(event, source)) return;
+    setViewingEventId(event.id);
+  };
+
+  const moveViewedEvent = (offset: number) => {
+    const nextEvent = mappedEvents[viewingEventIndex + offset];
+    if (!nextEvent) return;
+    if (openExternalEventIfNeeded(nextEvent, offset > 0 ? 'map-panel-next' : 'map-panel-previous')) {
+      setViewingEventId(null);
+      return;
+    }
+    setViewingEventId(nextEvent.id);
+  };
+
   return (
     <div className={`tint-root ${isDark ? 'dark dark-mode' : ''}`}>
       <LumaStyle />
@@ -721,14 +737,14 @@ const FullMapPage: React.FC = () => {
                       <div
                         key={event.id}
                         className={`event-row ${selectedEventId === event.id ? 'active' : ''}`}
-                        onClick={() => setViewingEventId(event.id)}
+                        onClick={() => openEvent(event, 'map-list')}
                         onMouseEnter={() => setSelectedEventId(event.id)}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(keyboardEvent) => {
                           if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
                             keyboardEvent.preventDefault();
-                            setViewingEventId(event.id);
+                            openEvent(event, 'map-list-keyboard');
                           }
                         }}
                       >
@@ -737,7 +753,10 @@ const FullMapPage: React.FC = () => {
                         </div>
                         <div className="flex-1">
                           <div className="event-time">{format(new Date(event.startDate), 'HH:mm')}</div>
-                          <div className="event-title"><h3>{event.name}</h3></div>
+                          <div className="event-title">
+                            <h3>{event.name}</h3>
+                            {event.isExternal && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 3, color: '#737577', fontSize: 9, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>Site oficial <ExternalLink size={9} /></span>}
+                          </div>
                           <div className="info">{event.displayLocation}</div>
                           {event._count?.tickets > 0 && (
                             <div style={{ color: '#3cbd2c', fontSize: '11px', marginTop: '4px', fontWeight: 500 }}>
@@ -767,8 +786,8 @@ const FullMapPage: React.FC = () => {
               event={viewingEvent}
               isOpen={Boolean(viewingEvent)}
               onClose={() => setViewingEventId(null)}
-              onNext={() => setViewingEventId(mappedEvents[viewingEventIndex + 1]?.id || null)}
-              onPrev={() => setViewingEventId(mappedEvents[viewingEventIndex - 1]?.id || null)}
+              onNext={() => moveViewedEvent(1)}
+              onPrev={() => moveViewedEvent(-1)}
               hasNext={viewingEventIndex >= 0 && viewingEventIndex < mappedEvents.length - 1}
               hasPrev={viewingEventIndex > 0}
             />
@@ -792,8 +811,10 @@ const FullMapPage: React.FC = () => {
                     eventHandlers={{
                       click: () => {
                         setSelectedEventId(event.id);
-                        setViewingEventId(event.id);
-                        setMobileView('list');
+                        if (!openExternalEventIfNeeded(event, 'map-marker')) {
+                          setViewingEventId(event.id);
+                          setMobileView('list');
+                        }
                       }
                     }}
                   />

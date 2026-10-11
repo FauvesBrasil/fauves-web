@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import EventDestinationLink from './EventDestinationLink';
 
 interface EventCardProps {
   id: string;
@@ -17,13 +17,16 @@ interface EventCardProps {
   showButton?: boolean;
   badge?: string;
   isTrending?: boolean;
+  isExternal?: boolean;
+  externalUrl?: string | null;
+  externalLink?: string | null;
+  navigationSource?: string;
 }
 
-import { getEventPath } from '../lib/eventUrl';
 import { useTheme } from '@/context/ThemeContext';
 import InterestButton from './InterestButton';
 import { getEventHypeLevel, getHypeBadge } from '../lib/hype';
-import { Eye, Users, Flame } from 'lucide-react';
+import { ExternalLink, Eye, Users } from 'lucide-react';
 
 const EventCard: React.FC<EventCardProps> = ({
   id,
@@ -40,11 +43,15 @@ const EventCard: React.FC<EventCardProps> = ({
   interests = 0,
   showButton = false,
   badge,
-  isTrending = false
+  isTrending = false,
+  isExternal = false,
+  externalUrl,
+  externalLink,
+  navigationSource = 'event-card',
 }) => {
   const isLarge = size === 'large';
   const { isDark } = useTheme();
-  const to = getEventPath({ id, slug });
+  const destinationEvent = { id, slug, isExternal, externalUrl, externalLink };
   const displayDate = dateShort || date;
   
   const hypeLevel = getEventHypeLevel({ views, interests });
@@ -56,7 +63,7 @@ const EventCard: React.FC<EventCardProps> = ({
         className="group relative rounded-2xl overflow-hidden border border-[rgba(9,23,71,0.08)] dark:border-[#2a2b2e] shadow-sm hover:shadow-2xl transition-all duration-500 bg-slate-100 dark:bg-slate-900 aspect-[3.2/4]"
         style={style}
       >
-        <Link to={to} className="absolute inset-0 block">
+        <EventDestinationLink event={destinationEvent} source={navigationSource} className="absolute inset-0 block">
           <img
             src={image}
             alt={title}
@@ -88,6 +95,12 @@ const EventCard: React.FC<EventCardProps> = ({
             <div className={`absolute top-12 left-3 z-20 flex items-center gap-1 px-1.5 py-0.5 rounded-md text-white text-[7px] font-black uppercase tracking-wider ${hypeBadge.color.replace('backdrop-blur-sm', '')} bg-opacity-80`}>
               <span>{hypeBadge.icon}</span>
               <span>{hypeBadge.label}</span>
+            </div>
+          )}
+
+          {isExternal && (
+            <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1 rounded-full bg-black/65 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-white backdrop-blur-sm">
+              <ExternalLink size={10} /> Site oficial
             </div>
           )}
 
@@ -123,7 +136,7 @@ const EventCard: React.FC<EventCardProps> = ({
               </div>
             </div>
           </div>
-        </Link>
+        </EventDestinationLink>
       </div>
     );
   }
@@ -138,7 +151,7 @@ const EventCard: React.FC<EventCardProps> = ({
       }`}
       style={style}
     >
-      <Link to={to} className="relative aspect-square overflow-hidden block shrink-0 max-sm:w-[130px] max-sm:h-full">
+      <EventDestinationLink event={destinationEvent} source={navigationSource} className="relative aspect-square overflow-hidden block shrink-0 max-sm:w-[130px] max-sm:h-full">
         <img
           src={image}
           alt={title}
@@ -158,6 +171,11 @@ const EventCard: React.FC<EventCardProps> = ({
               {badge}
             </span>
           )}
+          {isExternal && (
+            <span className="flex items-center gap-1 rounded-md bg-black/75 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white shadow-sm backdrop-blur-sm">
+              <ExternalLink size={9} /> Externo
+            </span>
+          )}
         </div>
 
         <div className="absolute top-2 right-2 z-10">
@@ -170,7 +188,7 @@ const EventCard: React.FC<EventCardProps> = ({
             <span>{hypeBadge.label}</span>
           </div>
         )}
-      </Link>
+      </EventDestinationLink>
 
       <div className="p-3 md:p-5 flex flex-col flex-grow min-w-0 pointer-events-none group-hover:pointer-events-auto">
         <div className="flex items-center gap-2 mb-1.5">
@@ -180,11 +198,11 @@ const EventCard: React.FC<EventCardProps> = ({
             </time>
         </div>
 
-        <Link to={to} className="hover:text-orange-600 transition-colors pointer-events-auto">
+        <EventDestinationLink event={destinationEvent} source={navigationSource} className="hover:text-orange-600 transition-colors pointer-events-auto">
           <h3 className="text-[#091747] dark:text-white text-sm md:text-lg font-bold mb-2 line-clamp-2 leading-tight min-h-[2.5rem] md:min-h-[3rem]">
             {title}
           </h3>
-        </Link>
+        </EventDestinationLink>
 
         <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-2 mt-auto">
           <svg width="10" height="10" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
@@ -209,15 +227,16 @@ const EventCard: React.FC<EventCardProps> = ({
         )}
         
         {showButton && (
-          <Link 
-            to={to}
+          <EventDestinationLink
+            event={destinationEvent}
+            source={navigationSource}
             className="w-full bg-[#091747] hover:bg-[#FF3F00] text-white font-bold py-2 md:py-3 px-4 rounded-xl text-center text-[10px] md:text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg mt-auto pointer-events-auto"
           >
-            Ver evento
+            {isExternal ? 'Ver no site' : 'Ver evento'}
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="transition-transform group-hover:translate-x-1">
               <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          </Link>
+          </EventDestinationLink>
         )}
       </div>
     </div>

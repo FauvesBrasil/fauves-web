@@ -1,7 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { getEventPath } from '../lib/eventUrl';
 import InterestButton from './InterestButton';
+import EventDestinationLink from './EventDestinationLink';
 
 interface Event {
   id: string;
@@ -15,6 +14,9 @@ interface Event {
   slug?: string | null;
   locationCity?: string;
   locationUf?: string;
+  isExternal?: boolean;
+  externalUrl?: string | null;
+  externalLink?: string | null;
 }
 
 interface WeekendHighlightsProps {
@@ -56,6 +58,9 @@ const WeekendHighlights: React.FC<WeekendHighlightsProps> = ({ events }) => {
     image: ev.bannerUrl || ev.banner || (ev.image && typeof ev.image === 'string' && ev.image.length > 5
       ? ev.image
       : '/no-image.svg'),
+    isExternal: Boolean(ev.isExternal || ev.externalUrl || ev.externalLink),
+    externalUrl: ev.externalUrl || null,
+    externalLink: ev.externalLink || null,
   });
 
   return (
@@ -73,8 +78,6 @@ const WeekendHighlights: React.FC<WeekendHighlightsProps> = ({ events }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {weekendEvents.map((ev) => {
             const displayEvent = mapEvent(ev);
-            const to = getEventPath({ id: displayEvent.id, slug: displayEvent.slug });
-
             return (
               <div 
                 key={displayEvent.id}
@@ -111,12 +114,13 @@ const WeekendHighlights: React.FC<WeekendHighlightsProps> = ({ events }) => {
                     <span className="text-xs truncate">{displayEvent.location}</span>
                   </div>
                   
-                  <Link 
-                    to={to}
+                  <EventDestinationLink
+                    event={displayEvent}
+                    source="weekend-highlights"
                     className="mt-auto w-full bg-[#FF3F00] hover:bg-[#E63900] text-white font-bold py-3 px-4 rounded-xl text-center transition-colors shadow-[0_4px_14px_rgba(255,63,0,0.25)]"
                   >
                     Ver evento
-                  </Link>
+                  </EventDestinationLink>
                 </div>
               </div>
             );

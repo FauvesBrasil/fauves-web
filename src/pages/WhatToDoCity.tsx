@@ -12,6 +12,7 @@ import LocationMapPreview from '@/components/v2/LocationMapPreview';
 import CalendarPublicEventViews from '@/components/v2/CalendarPublicEventViews';
 import { eventTimeZone } from '@/lib/eventDateTime';
 import { resolveEventCoordinates } from '@/lib/eventLocation';
+import { openExternalEventIfNeeded } from '@/lib/eventUrl';
 
 type CityEvent = {
   id: string;
@@ -28,6 +29,9 @@ type CityEvent = {
   image?: string | null;
   organization?: { name?: string | null } | null;
   price?: number | null;
+  isExternal?: boolean | null;
+  externalUrl?: string | null;
+  externalLink?: string | null;
 };
 
 type CityPageData = {
@@ -74,6 +78,7 @@ const WhatToDoCity: React.FC = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   const handleEventClick = (event: any) => {
+    if (openExternalEventIfNeeded(event, 'city-list')) return;
     setSelectedEvent(event);
     setIsPanelOpen(true);
   };
@@ -85,13 +90,23 @@ const WhatToDoCity: React.FC = () => {
 
   const handleNext = () => {
     if (currentIndex >= 0 && currentIndex < events.length - 1) {
-      setSelectedEvent(events[currentIndex + 1]);
+      const nextEvent = events[currentIndex + 1];
+      if (openExternalEventIfNeeded(nextEvent, 'city-panel-next')) {
+        setIsPanelOpen(false);
+        return;
+      }
+      setSelectedEvent(nextEvent);
     }
   };
 
   const handlePrev = () => {
     if (currentIndex > 0) {
-      setSelectedEvent(events[currentIndex - 1]);
+      const previousEvent = events[currentIndex - 1];
+      if (openExternalEventIfNeeded(previousEvent, 'city-panel-previous')) {
+        setIsPanelOpen(false);
+        return;
+      }
+      setSelectedEvent(previousEvent);
     }
   };
 

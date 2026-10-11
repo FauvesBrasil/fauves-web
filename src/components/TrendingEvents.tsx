@@ -1,7 +1,5 @@
 import React from 'react';
 import { Flame } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { getEventPath } from '@/lib/eventUrl';
 import { getSortedTrendingEvents } from '@/lib/hype';
 import EventCard from './EventCard';
 
@@ -15,6 +13,9 @@ interface TrendingEvent {
     image: string;
     percentSold?: number;
     badge?: 'hot' | 'selling-fast' | 'last-tickets';
+    isExternal?: boolean;
+    externalUrl?: string | null;
+    externalLink?: string | null;
 }
 
 interface TrendingEventsProps {
@@ -54,6 +55,9 @@ const TrendingEvents: React.FC<TrendingEventsProps> = ({ events, selectedUf, use
                 return maybeBanner;
             })(),
             percentSold: ev.percentSold || 0,
+            isExternal: Boolean(ev.isExternal || ev.externalUrl || ev.externalLink),
+            externalUrl: ev.externalUrl || null,
+            externalLink: ev.externalLink || null,
         };
     };
 
@@ -108,6 +112,10 @@ const TrendingEvents: React.FC<TrendingEventsProps> = ({ events, selectedUf, use
                                 isTrending={true}
                                 badge={`#${idx + 1}`}
                                 showButton={false}
+                                isExternal={event.isExternal}
+                                externalUrl={event.externalUrl}
+                                externalLink={event.externalLink}
+                                navigationSource="trending-events"
                             />
                         </div>
                     );

@@ -11,6 +11,7 @@ import TicketCheckoutModal from '@/components/v2/TicketCheckoutModal';
 import { AnimatePresence } from 'framer-motion';
 import EventImage from '@/components/EventImage';
 import LocationMapPreview from '@/components/v2/LocationMapPreview';
+import { getExternalEventUrl, trackExternalEventClick } from '@/lib/eventUrl';
 
 /* ─── HELPERS E CONFIGURAÇÕES DE TEMA ────────────────── */
 const THEMES = [
@@ -704,6 +705,17 @@ const EventPageV2: React.FC = () => {
 
         if (!res.ok) throw new Error('Evento não encontrado');
         const data = await res.json();
+
+        // Eventos de diretório nunca ganham uma página interna na Fauves.
+        // Isto também protege links antigos, favoritos e URLs compartilhadas.
+        if (data?.isExternal) {
+          const destination = getExternalEventUrl(data);
+          if (!destination) throw new Error('O link externo deste evento está indisponível');
+          trackExternalEventClick(data.id || data._id, 'event-direct-route');
+          window.location.replace(destination);
+          return;
+        }
+
         const eventId = data.id || data._id;
 
         // 🚀 Fetch ticket types in PARALLEL (no longer waiting after event data is ready)

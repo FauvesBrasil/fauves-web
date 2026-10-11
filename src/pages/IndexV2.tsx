@@ -32,6 +32,7 @@ import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import EventImage from '@/components/EventImage';
 import { fetchApi, apiUrl } from '@/lib/apiBase';
 import { geocodeEventAddress, resolveEventAddress, resolveEventCoordinates, resolveEventLocationLabel } from '@/lib/eventLocation';
+import { openExternalEventIfNeeded } from '@/lib/eventUrl';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useLocation } from '@/context/LocationContext';
 import { MapContainer, Marker, useMap } from 'react-leaflet';
@@ -172,7 +173,10 @@ const TimelineEventCard = ({ event }: { event: any }) => {
     <div className="luma-card" style={{ display: 'flex', textDecoration: 'none', color: 'inherit' }}>
       <div style={{ flex: 1, padding: '1rem 1.25rem', minWidth: 0 }}>
         <p style={{ fontSize: '0.9375rem', color: subTextColor, fontWeight: 400, marginBottom: '0.25rem' }}>{event.time}</p>
-        <h3 style={{ fontSize: '20px', fontWeight: 600, color: textColor, lineHeight: 1.3, marginBottom: '0.5rem' }}>{event.title}</h3>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '20px', fontWeight: 600, color: textColor, lineHeight: 1.3, marginBottom: '0.5rem' }}>
+          <span>{event.title}</span>
+          {event.isExternal && <span style={{ flexShrink: 0, borderRadius: '999px', padding: '3px 7px', background: isDark ? 'rgba(255,255,255,.10)' : 'rgba(19,21,23,.07)', color: mutedTextColor, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>Site oficial ↗</span>}
+        </h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
           <span style={{ display: 'flex' }}>
             {event.organizerLogo ? (
@@ -228,6 +232,7 @@ const IndexV2 = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   const handleEventClick = (event: any) => {
+    if (openExternalEventIfNeeded(event, 'home')) return;
     setSelectedEvent(event);
     setIsPanelOpen(true);
   };
@@ -335,8 +340,8 @@ const IndexV2 = () => {
         organizerLogo: ev.organizerLogo || ev.organizationLogo || ev.logo || ev.organization?.logoUrl || ev.organization?.logo || null,
         location: displayLocation,
         date: ev.startDate,
-        isExternal: !!(ev.isExternal || ev.externalUrl || ev.external_url || ev.registrationUrl || ev.registration_url || ev.ticketUrl || ev.ticket_url || ev.link || ev.officialLink || ev.registrationType === 'external'),
-        externalUrl: ev.externalUrl || ev.external_url || ev.registrationUrl || ev.registration_url || ev.ticketUrl || ev.ticket_url || ev.link || ev.officialLink || '',
+        isExternal: !!(ev.isExternal || ev.externalUrl || ev.externalLink || ev.external_url || ev.registrationUrl || ev.registration_url || ev.ticketUrl || ev.ticket_url || ev.link || ev.officialLink || ev.registrationType === 'external'),
+        externalUrl: ev.externalUrl || ev.externalLink || ev.external_url || ev.registrationUrl || ev.registration_url || ev.ticketUrl || ev.ticket_url || ev.link || ev.officialLink || '',
         image: ev.bannerUrl || ev.banner || ev.image || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
         attendees: Math.floor(Math.random() * 50),
         waitlist: false,
@@ -397,11 +402,23 @@ const IndexV2 = () => {
   const hasNext = currentIndex >= 0 && currentIndex < uniqueEvents.length - 1;
 
   const handleNext = useCallback(() => {
-    if (hasNext) setSelectedEvent(uniqueEvents[currentIndex + 1]);
+    if (!hasNext) return;
+    const nextEvent = uniqueEvents[currentIndex + 1];
+    if (openExternalEventIfNeeded(nextEvent, 'home-panel-next')) {
+      setIsPanelOpen(false);
+      return;
+    }
+    setSelectedEvent(nextEvent);
   }, [hasNext, currentIndex, uniqueEvents]);
 
   const handlePrev = useCallback(() => {
-    if (hasPrev) setSelectedEvent(uniqueEvents[currentIndex - 1]);
+    if (!hasPrev) return;
+    const previousEvent = uniqueEvents[currentIndex - 1];
+    if (openExternalEventIfNeeded(previousEvent, 'home-panel-previous')) {
+      setIsPanelOpen(false);
+      return;
+    }
+    setSelectedEvent(previousEvent);
   }, [hasPrev, currentIndex, uniqueEvents]);
 
   // Fetch full event details when an event is selected to get 'isExternal' and other detailed fields
@@ -443,8 +460,8 @@ const IndexV2 = () => {
                 fullLocation: fullData.location || displayLocation,
                 description: bestDescription,
                 category: fullData.category || fullData.type || fullData.categoryName || prev.category,
-                isExternal: !!(fullData.isExternal || fullData.externalUrl || fullData.external_url || fullData.registrationUrl || fullData.registration_url || fullData.ticketUrl || fullData.ticket_url || fullData.link || fullData.officialLink || fullData.registrationType === 'external'),
-                externalUrl: fullData.externalUrl || fullData.external_url || fullData.registrationUrl || fullData.registration_url || fullData.ticketUrl || fullData.ticket_url || fullData.link || fullData.officialLink || ''
+                isExternal: !!(fullData.isExternal || fullData.externalUrl || fullData.externalLink || fullData.external_url || fullData.registrationUrl || fullData.registration_url || fullData.ticketUrl || fullData.ticket_url || fullData.link || fullData.officialLink || fullData.registrationType === 'external'),
+                externalUrl: fullData.externalUrl || fullData.externalLink || fullData.external_url || fullData.registrationUrl || fullData.registration_url || fullData.ticketUrl || fullData.ticket_url || fullData.link || fullData.officialLink || ''
               };
             });
           }

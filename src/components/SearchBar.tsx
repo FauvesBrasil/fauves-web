@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import EventImage from '@/components/EventImage';
 import { resolveImageUrl } from '@/lib/apiBase';
+import { openEventDestination } from '@/lib/eventUrl';
 
 // Fallback image component for event images
 type EventImageWithFallbackProps = {
@@ -64,7 +65,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ mobile = false, onMobileFocus, on
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [focused, setFocused] = useState(false);
-  type SearchResults = { id?: string; name?: string; title?: string; image?: string; bannerImage?: string; slug?: string };
+  type SearchResults = { id?: string; name?: string; title?: string; image?: string; bannerImage?: string; slug?: string; isExternal?: boolean; externalUrl?: string; externalLink?: string };
   const [results, setResults] = useState<{ events: SearchResults[]; collections: SearchResults[]; organizations: SearchResults[] }>({ events: [], collections: [], organizations: [] });
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -208,7 +209,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ mobile = false, onMobileFocus, on
                                   key={ev.id || idx}
                                   type="button"
                                   className="flex items-center gap-2 hover:bg-card/90 rounded px-1 py-1 w-full text-left"
-                                  onMouseDown={() => navigate(`/event/${ev.slug || ev.id}`)}
+                                  onMouseDown={() => ev.id && openEventDestination({ ...ev, id: ev.id }, navigate, 'search-suggestions-desktop')}
                                 >
                                   <EventImage event={ev} alt={ev.name} className="w-8 h-8 max-sm:w-12 max-sm:h-12 rounded object-cover bg-card" />
                                   <span className="text-[#091747] dark:text-white text-xs font-semibold truncate max-w-[110px]">{ev.name}</span>
@@ -310,8 +311,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ mobile = false, onMobileFocus, on
                                   type="button"
                                   className="flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-[#1a1a1a] rounded-xl p-3 w-full text-left transition-colors"
                                   onMouseDown={() => {
-                                    const path = ev.slug ? `/${ev.slug}` : `/event/${ev.id}`;
-                                    navigate(path);
+                                    if (ev.id) openEventDestination({ ...ev, id: ev.id }, navigate, 'search-suggestions-mobile');
                                   }}
                                 >
                                   <div className="w-12 h-12 flex-shrink-0">

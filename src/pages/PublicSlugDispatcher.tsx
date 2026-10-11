@@ -7,6 +7,7 @@ import WhatToDoCity from './WhatToDoCity';
 import NotFound from './NotFound';
 import HeaderV2 from '@/components/v2/HeaderV2';
 import { useTheme } from '@/context/ThemeContext';
+import { getExternalEventUrl, trackExternalEventClick } from '@/lib/eventUrl';
 
 const toSlug = (value: string) => value
   .normalize('NFD')
@@ -44,6 +45,17 @@ const PublicSlugDispatcher: React.FC = () => {
         // Try fetching the event
         const eventRes = await fetch(eventEndpoint);
         if (eventRes.ok) {
+          const event = await eventRes.json();
+          if (event?.isExternal) {
+            const destination = getExternalEventUrl(event);
+            if (!destination) {
+              setResolvedType('notfound');
+              return;
+            }
+            trackExternalEventClick(event.id, 'public-slug-direct');
+            window.location.replace(destination);
+            return;
+          }
           setResolvedType('event');
           setLoading(false);
           return;
@@ -53,6 +65,17 @@ const PublicSlugDispatcher: React.FC = () => {
         if (!isUUID) {
           const eventIdRes = await fetch(apiUrl(`/api/event/${slugOrId}`));
           if (eventIdRes.ok) {
+            const event = await eventIdRes.json();
+            if (event?.isExternal) {
+              const destination = getExternalEventUrl(event);
+              if (!destination) {
+                setResolvedType('notfound');
+                return;
+              }
+              trackExternalEventClick(event.id, 'public-slug-direct');
+              window.location.replace(destination);
+              return;
+            }
             setResolvedType('event');
             setLoading(false);
             return;

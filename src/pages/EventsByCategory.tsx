@@ -30,6 +30,7 @@ import { resolveEventCoordinates, resolveEventLocationLabel } from '@/lib/eventL
 import { eventDateKey, eventTimeZone } from '@/lib/eventDateTime';
 import { getCategoryIcon } from '@/lib/categoryIcons';
 import mapEmptyIllustration from '@/assets/map-empty.svg';
+import { trackExternalEventClick } from '@/lib/eventUrl';
 
 type Category = {
   id: string;
@@ -360,6 +361,7 @@ const EventsByCategory: React.FC = () => {
                           target="_blank"
                           rel="noopener noreferrer"
                           key={event.id}
+                          onClick={() => trackExternalEventClick(event.id, 'category-list')}
                         >
                           <span className="category-event-image">
                             {image ? <img src={image} alt="" /> : <CalendarDays size={21} />}

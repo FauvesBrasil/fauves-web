@@ -20,6 +20,7 @@ import CalendarExternalEventModal from '@/components/v2/CalendarExternalEventMod
 import { EventSidePanel } from '@/components/v2/EventSidePanel';
 import LocationMapPreview from '@/components/v2/LocationMapPreview';
 import { geocodeEventAddress, resolveEventAddress, resolveEventCoordinates } from '@/lib/eventLocation';
+import { openExternalEventIfNeeded } from '@/lib/eventUrl';
 
 const CalendarMobileNav = ({ isDark, signedIn }: { isDark: boolean; signedIn: boolean }) => (
   <>
@@ -130,13 +131,23 @@ const OrganizationPublicProfile: React.FC = () => {
 
   const handleNext = React.useCallback(() => {
     if (selectedPanelIndex >= 0 && selectedPanelIndex < events.length - 1) {
-      setSelectedPanelEvent(events[selectedPanelIndex + 1]);
+      const nextEvent = events[selectedPanelIndex + 1];
+      if (openExternalEventIfNeeded(nextEvent, 'organization-panel-next')) {
+        setIsPanelOpen(false);
+        return;
+      }
+      setSelectedPanelEvent(nextEvent);
     }
   }, [selectedPanelIndex, events]);
 
   const handlePrev = React.useCallback(() => {
     if (selectedPanelIndex > 0) {
-      setSelectedPanelEvent(events[selectedPanelIndex - 1]);
+      const previousEvent = events[selectedPanelIndex - 1];
+      if (openExternalEventIfNeeded(previousEvent, 'organization-panel-previous')) {
+        setIsPanelOpen(false);
+        return;
+      }
+      setSelectedPanelEvent(previousEvent);
     }
   }, [selectedPanelIndex, events]);
   const [mapGeoCache, setMapGeoCache] = React.useState<Record<string, { lat: number; lng: number }>>(() => {
@@ -280,11 +291,7 @@ const OrganizationPublicProfile: React.FC = () => {
   }, [org?.id]);
 
   const openCalendarEvent = React.useCallback((event: any) => {
-    const externalUrl = event?.externalUrl || event?.externalLink;
-    if ((event?.isExternal || externalUrl) && externalUrl) {
-      window.open(externalUrl, '_blank', 'noopener,noreferrer');
-      return;
-    }
+    if (openExternalEventIfNeeded(event, 'organization-calendar')) return;
     setSelectedPanelEvent(event);
     setIsPanelOpen(true);
   }, []);

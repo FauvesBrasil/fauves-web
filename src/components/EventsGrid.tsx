@@ -11,6 +11,10 @@ interface Event {
   categories?: Array<{ name: string; slug: string }>;
   views?: number;
   interests?: number;
+  slug?: string | null;
+  isExternal?: boolean;
+  externalUrl?: string | null;
+  externalLink?: string | null;
 }
 
 interface EventsGridProps {
@@ -36,6 +40,7 @@ const EventsGrid: React.FC<EventsGridProps> = ({ title, events, size = 'large' }
           <EventCard
             key={event.id}
             id={event.id}
+            slug={event.slug}
             image={event.image}
             date={event.date}
             dateShort={event.dateShort}
@@ -44,6 +49,10 @@ const EventsGrid: React.FC<EventsGridProps> = ({ title, events, size = 'large' }
             categories={event.categories}
             views={event.views}
             interests={event.interests}
+            isExternal={event.isExternal}
+            externalUrl={event.externalUrl}
+            externalLink={event.externalLink}
+            navigationSource="events-grid"
             size={size === 'large' ? 'large' : 'small'}
             style={{
               opacity: 0,

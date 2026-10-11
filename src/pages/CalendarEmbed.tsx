@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { fetchApi } from '@/lib/apiBase';
-import { getEventPath } from '@/lib/eventUrl';
+import { getEventDestination, trackExternalEventClick } from '@/lib/eventUrl';
 import {
   CalendarEmbedLayout,
   CalendarEmbedPreview,
@@ -62,9 +62,13 @@ export default function CalendarEmbed() {
         organizationName={organization?.name || 'Organizador'}
         organizationLogoUrl={organization?.logoUrl || organization?.image || organization?.avatarUrl}
         minHeight={450}
-        onEventAction={(event) => window.open(getEventPath(event), '_blank', 'noopener,noreferrer')}
+        onEventAction={(event) => {
+          const destination = getEventDestination(event);
+          if (destination.external) trackExternalEventClick(event.id, 'calendar-embed');
+          const href = destination.external ? destination.href : `${window.location.origin}${destination.href}`;
+          window.open(href, '_blank', 'noopener,noreferrer');
+        }}
       />
     </main>
   );
 }
-

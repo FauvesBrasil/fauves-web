@@ -9,8 +9,8 @@ interface CollectionData {
   organizerId: string;
   slug: string;
 }
-interface CollectionEventItem { id: string; name: string; startDate?: string; slug?: string | null; }
-import { getEventPath } from '@/lib/eventUrl';
+interface CollectionEventItem { id: string; name: string; startDate?: string; slug?: string | null; isExternal?: boolean; externalUrl?: string | null; externalLink?: string | null; }
+import EventDestinationLink from '@/components/EventDestinationLink';
 
 const formatDate = (iso?: string) => {
   if (!iso) return '';
@@ -121,10 +121,10 @@ const PublicCollection: React.FC = () => {
           <>
             <div className="grid md:grid-cols-2 gap-6">
               {events.map(ev => (
-                <Link key={ev.id} to={getEventPath({ id: ev.id, slug: ev.slug })} className="rounded-xl border border-zinc-200 p-4 hover:shadow-sm transition bg-white">
+                <EventDestinationLink key={ev.id} event={ev} source="public-collection" className="rounded-xl border border-zinc-200 p-4 hover:shadow-sm transition bg-white">
                   <div className="text-slate-900 font-semibold mb-1 truncate" title={ev.name}>{ev.name}</div>
                   <div className="text-slate-500 text-xs">{formatDate(ev.startDate)}</div>
-                </Link>
+                </EventDestinationLink>
               ))}
             </div>
             {nextOffset != null && (

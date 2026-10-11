@@ -32,7 +32,7 @@ import HeaderV2 from '@/components/v2/HeaderV2';
 import FooterV2 from '@/components/v2/FooterV2';
 import WebGLParticleField from '@/components/home/WebGLParticleField';
 import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
-import { getEventPath } from '@/lib/eventUrl';
+import EventDestinationLink from '@/components/EventDestinationLink';
 import fauvesLogo from '@/assets/logo-fauves.svg';
 import { getCategoryIcon } from '@/lib/categoryIcons';
 import cover01 from '@/assets/covers/convites/e0d9e03b-63b3-452b-8899-3fc8f848a4bb.avif';
@@ -374,7 +374,6 @@ const FauvesHome = () => {
               const placement = floatingPlacements[index];
               const fallback = fallbackCovers[index % fallbackCovers.length];
               const eventId = event.id || event._id;
-              const href = eventId ? getEventPath({ id: eventId, slug: event.slug }) : '/discover';
               const style = {
                 left: placement.left,
                 right: placement.right,
@@ -394,9 +393,15 @@ const FauvesHome = () => {
                     animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
                     transition={{ duration: 0.65, delay: 0.18 + index * 0.08, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    <Link className="home-poster" to={href} tabIndex={-1}>
-                      <img src={eventImage(event, fallback)} alt="" loading={index < 8 ? 'eager' : 'lazy'} />
-                    </Link>
+                    {eventId ? (
+                      <EventDestinationLink event={{ ...event, id: eventId }} source="home-floating-events" className="home-poster">
+                        <img src={eventImage(event, fallback)} alt="" loading={index < 8 ? 'eager' : 'lazy'} />
+                      </EventDestinationLink>
+                    ) : (
+                      <Link className="home-poster" to="/discover" tabIndex={-1}>
+                        <img src={eventImage(event, fallback)} alt="" loading={index < 8 ? 'eager' : 'lazy'} />
+                      </Link>
+                    )}
                   </motion.div>
                 </div>
               );

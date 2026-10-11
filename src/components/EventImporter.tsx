@@ -32,6 +32,10 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
     image: '',
     externalUrl: '',
     categoryId: '',
+    externalId: '',
+    sourceKey: '',
+    artists: [] as string[],
+    priceFrom: null as number | null,
   });
 
   const [existingOrgs, setExistingOrgs] = useState<any[]>([]);
@@ -68,11 +72,15 @@ const EventImporter: React.FC<EventImporterProps> = ({ onSuccess, onClose }) => 
         image: data.image || '',
         externalUrl: url,
         categoryId: data.categoryId || '',
+        externalId: data.externalId || '',
+        sourceKey: data.sourceKey || '',
+        artists: Array.isArray(data.artists) ? data.artists : [],
+        priceFrom: Number.isFinite(Number(data.priceFrom)) ? Number(data.priceFrom) : null,
       });
       setStep('edit');
     } catch (error) {
       toast.error('Não foi possível extrair dados automaticamente. Preencha manualmente.');
-      setFormData({ ...formData, externalUrl: url, locationUf: '', locationCity: '', categoryId: '' });
+      setFormData({ ...formData, externalUrl: url, locationUf: '', locationCity: '', categoryId: '', externalId: '', sourceKey: '', artists: [], priceFrom: null });
       setStep('edit');
     } finally {
       setLoading(false);

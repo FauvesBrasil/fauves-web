@@ -10,6 +10,7 @@ import { fetchApi, resolveImageUrl } from '@/lib/apiBase';
 import { acquireDocumentScrollLock } from '@/lib/documentScrollLock';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { openExternalEventIfNeeded } from '@/lib/eventUrl';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -281,13 +282,19 @@ const PublicUserProfile = () => {
     : -1;
 
   const openEvent = (event: any, sourceEvents: any[]) => {
+    if (openExternalEventIfNeeded(event, 'public-user-profile')) return;
     setPanelEventList(sourceEvents);
     setSelectedEvent(event);
   };
 
   const moveSelectedEvent = (offset: number) => {
     const next = panelEventList[selectedEventIndex + offset];
-    if (next) setSelectedEvent(next);
+    if (!next) return;
+    if (openExternalEventIfNeeded(next, offset > 0 ? 'public-profile-panel-next' : 'public-profile-panel-previous')) {
+      setSelectedEvent(null);
+      return;
+    }
+    setSelectedEvent(next);
   };
 
   const profileBaseName = profileUser?.name || profileUser?.nome || profileUser?.full_name || '';

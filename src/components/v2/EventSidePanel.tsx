@@ -31,6 +31,7 @@ import { geocodeEventAddress, resolveEventCoordinates } from '@/lib/eventLocatio
 import { eventTimeZone } from '@/lib/eventDateTime';
 import EventRegistrationCard from './EventRegistrationCard';
 import EventImage from '@/components/EventImage';
+import { getExternalEventUrl, trackExternalEventClick } from '@/lib/eventUrl';
 
 interface EventSidePanelProps {
   event: any | null;
@@ -178,6 +179,7 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
     typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches
   ));
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const redirectedExternalEventRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     const query = window.matchMedia('(max-width: 640px)');
@@ -305,7 +307,18 @@ export const EventSidePanel: React.FC<EventSidePanelProps> = ({
     return () => { cancelled = true; };
   }, [isOpen, token, user?.id, user?.isAdmin]);
 
+  const defensiveExternalUrl = getExternalEventUrl(resolvedEvent);
+  React.useEffect(() => {
+    const eventId = String(first(resolvedEvent.id, resolvedEvent._id) || '');
+    if (!isOpen || !eventId || !defensiveExternalUrl || redirectedExternalEventRef.current === eventId) return;
+    redirectedExternalEventRef.current = eventId;
+    trackExternalEventClick(eventId, 'side-panel-fallback');
+    onClose();
+    window.location.assign(defensiveExternalUrl);
+  }, [defensiveExternalUrl, isOpen, onClose, resolvedEvent]);
+
   if (!event) return null;
+  if (isOpen && defensiveExternalUrl) return null;
 
   const title = first(resolvedEvent.name, resolvedEvent.title) || 'Evento';
   const slugOrId = first(resolvedEvent.slug, resolvedEvent.id, resolvedEvent._id);
