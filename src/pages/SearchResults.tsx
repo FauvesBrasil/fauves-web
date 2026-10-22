@@ -135,7 +135,7 @@ const SearchResults: React.FC = () => {
   // Helper to build proper API URL for images
   function apiUrl(path: string): string {
     const metaEnv = (import.meta as unknown as { env?: Record<string, string | undefined> });
-    const base = metaEnv.env?.VITE_API_BASE || metaEnv.env?.VITE_BACKEND_URL || 'https://fauves-backend-production.up.railway.app';
+    const base = metaEnv.env?.VITE_API_BASE || metaEnv.env?.VITE_BACKEND_URL || 'https://api.fauves.com.br';
     return `${base}${path}`;
   }
 

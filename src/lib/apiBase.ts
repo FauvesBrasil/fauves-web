@@ -25,7 +25,7 @@ const isProd = import.meta.env.PROD;
 // Fallback production backend (hardcoded) to guarantee API calls work even if VITE_API_BASE
 // was not set in the build environment or Vercel rewrite is not yet applied.
 // This is a safe fallback during emergency; we can remove it once Vercel rewrites are stable.
-const DEFAULT_PROD_BACKEND = 'https://fauves-backend-production.up.railway.app';
+const DEFAULT_PROD_BACKEND = 'https://api.fauves.com.br';
 let finalEnvBase = envBase;
 // Emergency: in production, force the known Railway backend as authoritative to avoid
 // situations where VITE_API_BASE is misconfigured to the frontend origin and causes 405s.

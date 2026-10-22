@@ -67,7 +67,7 @@ const Index = () => {
 
   function buildErrorMessage(status?: number, detail?: string) {
     const metaEnv = (import.meta as unknown as { env?: Record<string, string | undefined> });
-    const baseEnv = metaEnv.env?.VITE_API_BASE || metaEnv.env?.VITE_BACKEND_URL || 'https://fauves-backend-production.up.railway.app';
+    const baseEnv = metaEnv.env?.VITE_API_BASE || metaEnv.env?.VITE_BACKEND_URL || 'https://api.fauves.com.br';
     const parts: string[] = [];
     if (status) parts.push(`HTTP ${status}`);
     if (detail) parts.push(detail);

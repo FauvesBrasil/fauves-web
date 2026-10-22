@@ -1,8 +1,8 @@
 {
   "rewrites": [
-    { "source": "/sitemap.xml", "destination": "https://fauves-backend-production.up.railway.app/sitemap.xml" },
-    { "source": "/uploads/(.*)", "destination": "https://fauves-backend-production.up.railway.app/uploads/$1" },
-    { "source": "/api/(.*)", "destination": "https://fauves-backend-production.up.railway.app/api/$1" },
+    { "source": "/sitemap.xml", "destination": "https://api.fauves.com.br/sitemap.xml" },
+    { "source": "/uploads/(.*)", "destination": "https://api.fauves.com.br/uploads/$1" },
+    { "source": "/api/(.*)", "destination": "https://api.fauves.com.br/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
