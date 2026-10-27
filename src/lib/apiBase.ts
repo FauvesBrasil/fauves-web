@@ -400,13 +400,18 @@ export function getApiDiagnostics() {
 const responseCache = new Map<string, { data: any; status: number; headers: [string, string][]; timestamp: number }>();
 const pendingRequests = new Map<string, Promise<Response>>();
 
+export type ApiRequestInit = RequestInit & {
+  /** Tempo máximo da operação. Chamadas comuns usam 10 s. */
+  timeoutMs?: number;
+};
+
 function isCacheable(method: string, path: string): boolean {
   if (method !== 'GET') return false;
   return path.includes('/api/event/') || path.includes('/api/ticket-type/') || path.includes('/events');
 }
 
 // Internal implementation of fetchApi to make the actual request.
-async function executeFetchApi(path: string, init?: RequestInit): Promise<Response> {
+async function executeFetchApi(path: string, init?: ApiRequestInit): Promise<Response> {
   const now = Date.now();
   // Se estamos em período de backoff porque nada respondeu, devolve resposta fake 503 para evitar spam de network errors.
   if (backendDownUntil && now < backendDownUntil) {
@@ -423,9 +428,10 @@ async function executeFetchApi(path: string, init?: RequestInit): Promise<Respon
   try { authToken = (typeof window !== 'undefined') ? window.localStorage.getItem('AUTH_TOKEN_V1') : null; } catch { }
   const headers = new Headers(init?.headers || {});
   if (authToken && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + authToken);
-  const finalInit: RequestInit = { ...init, headers, credentials: 'include' };
+  const { timeoutMs, ...requestInit } = init || {};
+  const finalInit: RequestInit = { ...requestInit, headers, credentials: 'include' };
   // Apply a request timeout so slow endpoints don't hang forever. Default 10s.
-  const TIMEOUT_MS = 10000;
+  const TIMEOUT_MS = Math.max(1_000, Number(timeoutMs) || 10_000);
   const ctrl = new AbortController();
   const userSignal = init && (init as any).signal;
   // If caller passed a signal, propagate its abort to our controller
@@ -479,7 +485,7 @@ async function executeFetchApi(path: string, init?: RequestInit): Promise<Respon
 }
 
 // Helper para fazer fetch com fallback automático se a base falhar na primeira tentativa.
-export async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
+export async function fetchApi(path: string, init?: ApiRequestInit): Promise<Response> {
   const method = init?.method?.toUpperCase() || 'GET';
   if (method !== 'GET') {
     responseCache.clear();

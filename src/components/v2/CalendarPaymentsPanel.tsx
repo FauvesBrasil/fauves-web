@@ -15,6 +15,14 @@ type PaymentStatus = {
   account: { numberMasked: string; digit?: string | null } | null;
   validatedAt?: string | null; platformFeePercent?: number | null;
 };
+
+function getApiErrorMessage(data: any, fallback: string) {
+  if (typeof data?.message === 'string' && data.message.trim()) return data.message;
+  if (Array.isArray(data?.message) && data.message.length) return data.message.join(' ');
+  if (typeof data?.hint === 'string' && data.hint.trim()) return data.hint;
+  if (typeof data?.error_description === 'string' && data.error_description.trim()) return data.error_description;
+  return fallback;
+}
 type OnboardingForm = {
   accountType: 'PF' | 'PJ'; cpf: string; cnpj: string; fullName: string;
   birthDate: string; motherName: string; companyName: string; phone: string;
@@ -281,14 +289,14 @@ export function CalendarPaymentsPanel({ calendarId, calendarName = 'Fauves', onO
     if (!calendarId) return;
     setWorking(true); setFormError('');
     try {
-      const response = await fetchApi(`/api/organization/${calendarId}/onboarding`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      const response = await fetchApi(`/api/organization/${calendarId}/onboarding`, { method: 'POST', timeoutMs: 45_000, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         accountType: form.accountType, cpf: form.cpf, cnpj: form.cnpj, fullName: form.fullName,
         birthDate: form.birthDate, motherName: form.motherName, companyName: form.companyName,
         phone: form.phone, email: form.email, address: { zipCode: form.zipCode, state: form.state,
           city: form.city, neighborhood: form.neighborhood, street: form.street, number: form.number, complement: form.complement },
       }) });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(typeof data?.message === 'string' ? data.message : 'Não foi possível iniciar o cadastro na Efí.');
+      if (!response.ok) throw new Error(getApiErrorMessage(data, 'Não foi possível iniciar o cadastro na Efí. Tente novamente em instantes.'));
       setShowOnboarding(false);
       toast({ title: 'Cadastro enviado à Efí', description: 'Confira o WhatsApp ou SMS informado e autorize a integração.' });
       await loadStatus();
