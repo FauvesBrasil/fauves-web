@@ -1,291 +1,172 @@
-import React from 'react';
+import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  ArrowUpRight,
-  Check,
-  ClipboardList,
-  Download,
-  FileText,
-  Landmark,
-  MapPin,
-  MoreHorizontal,
-  PenLine,
-  Plus,
-  Ticket,
-} from 'lucide-react';
-import { CouponModalV2, type CouponDraft } from './CouponModalV2';
+import { ArrowUpRight, Building2, Check, CheckCircle2, CreditCard, Loader2, RefreshCw, ShieldCheck, WalletCards, X } from 'lucide-react';
+import { fetchApi } from '@/lib/apiBase';
+import { useTheme } from '@/context/ThemeContext';
+import { useToast } from '@/hooks/use-toast';
+import fauvesLogo from '@/assets/logo-square-fauves.svg';
 
-type Coupon = CouponDraft;
-type Billing = { sellerName: string; address: string; memo: string };
-
-type Props = {
-  calendarId?: string;
-  calendarName?: string;
-  onOpenFauvesPlus: () => void;
+type Props = { calendarId?: string; calendarName?: string; onOpenFauvesPlus: () => void };
+type PaymentStatus = {
+  provider: 'efibank'; status: string; step: string; ready: boolean;
+  account: { numberMasked: string; digit?: string | null } | null;
+  validatedAt?: string | null; platformFeePercent?: number | null;
+};
+type OnboardingForm = {
+  accountType: 'PF' | 'PJ'; cpf: string; cnpj: string; fullName: string;
+  birthDate: string; motherName: string; companyName: string; phone: string;
+  email: string; zipCode: string; state: string; city: string;
+  neighborhood: string; street: string; number: string; complement: string;
+};
+const emptyForm: OnboardingForm = {
+  accountType: 'PF', cpf: '', cnpj: '', fullName: '', birthDate: '', motherName: '',
+  companyName: '', phone: '', email: '', zipCode: '', state: '', city: '',
+  neighborhood: '', street: '', number: '', complement: '',
 };
 
-const EmptyRow = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
-  <div className="flex min-h-[73px] items-center gap-3 rounded-xl border border-white/[0.10] bg-white/[0.055] px-4 py-3 text-left">
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/20 text-zinc-600">{icon}</span>
-    <div><h4 className="text-base font-bold text-zinc-400">{title}</h4><p className="mt-0.5 text-sm font-semibold text-zinc-500">{description}</p></div>
-  </div>
-);
+function EfiMark({ muted = false }: { muted?: boolean }) {
+  return <span className={`grid h-[58px] w-[58px] shrink-0 place-items-center rounded-full text-[21px] font-black lowercase tracking-[-0.08em] ${muted ? 'bg-zinc-300 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' : 'bg-[#5d2de1] text-white'}`}>efí</span>;
+}
 
-const BillingModal = ({ draft, onChange, onClose, onSave }: { draft: Billing; onChange: (draft: Billing) => void; onClose: () => void; onSave: () => void }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    onMouseDown={onClose}
-    className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/70 p-3 backdrop-blur-[2px]"
-  >
-    <motion.form
-      initial={{ opacity: 0, scale: 0.96, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97, y: 8 }}
-      transition={{ type: 'spring', stiffness: 340, damping: 29 }}
-      onMouseDown={(event) => event.stopPropagation()}
-      onSubmit={(event) => { event.preventDefault(); onSave(); }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="billing-modal-title"
-      className="w-full max-w-[342px] rounded-[20px] border border-white/[0.04] bg-[#1c1d1e] px-5 pb-[18px] pt-5 text-left text-white shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
-    >
-      <div className="grid h-14 w-14 place-items-center rounded-full bg-white/10 text-zinc-300">
-        <ClipboardList size={28} strokeWidth={1.7} />
+function ConnectionMarks() {
+  return <div className="flex items-center" aria-label="Fauves conectada à Efí Bank">
+    <span className="relative z-20 grid h-[62px] w-[62px] place-items-center overflow-hidden rounded-full bg-[#2828db] ring-4 ring-white dark:ring-[#202123]"><img src={fauvesLogo} alt="Fauves" className="h-full w-full object-cover" /></span>
+    <span className="relative z-10 -ml-2 grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-zinc-100 text-xl font-bold text-zinc-500 ring-1 ring-zinc-200 dark:border-[#202123] dark:bg-zinc-800 dark:ring-zinc-700">+</span>
+    <span className="-ml-2"><EfiMark muted /></span>
+  </div>;
+}
+
+function OnboardingModal({ open, busy, error, onClose, onSubmit }: {
+  open: boolean; busy: boolean; error: string; onClose: () => void;
+  onSubmit: (form: OnboardingForm) => void;
+}) {
+  const { isDark } = useTheme();
+  const [form, setForm] = React.useState<OnboardingForm>(emptyForm);
+  React.useEffect(() => { if (!open) setForm(emptyForm); }, [open]);
+  if (!open) return null;
+  const surface = isDark ? 'border-white/10 bg-[#202123] text-white' : 'border-zinc-200 bg-white text-zinc-950';
+  const input = isDark ? 'border-white/10 bg-[#151617] text-white placeholder:text-zinc-600 focus:border-white/40' : 'border-zinc-300 bg-white text-zinc-950 placeholder:text-zinc-400 focus:border-zinc-700';
+  const label = isDark ? 'text-zinc-300' : 'text-zinc-700';
+  const set = (key: keyof OnboardingForm, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  const required = ['cpf', 'fullName', 'birthDate', 'motherName', 'phone', 'email', 'zipCode', 'state', 'city', 'neighborhood', 'street', 'number'] as const;
+  const complete = required.every((key) => form[key].trim()) && (form.accountType === 'PF' || Boolean(form.cnpj.trim() && form.companyName.trim()));
+  const Field = ({ name, text, type = 'text', placeholder, span = false, maxLength }: { name: keyof OnboardingForm; text: string; type?: string; placeholder?: string; span?: boolean; maxLength?: number }) => <label className={`${span ? 'sm:col-span-2' : ''} block`}>
+    <span className={`mb-1.5 block text-sm font-semibold ${label}`}>{text}</span>
+    <input type={type} value={form[name]} maxLength={maxLength} placeholder={placeholder} onChange={(event) => set(name, event.target.value)} className={`h-11 w-full rounded-xl border px-3 text-[15px] outline-none transition-colors ${input}`} />
+  </label>;
+
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm" onMouseDown={() => !busy && onClose()}>
+    <motion.form initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); if (complete && !busy) onSubmit(form); }} className={`max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[22px] border p-5 shadow-2xl sm:p-7 ${surface}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div><div className="mb-4 flex items-center gap-3"><EfiMark /><span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-500">Ambiente seguro</span></div><h2 className="text-2xl font-bold tracking-[-0.03em]">Ativar venda de ingressos</h2><p className={`mt-1 max-w-xl text-sm leading-6 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Enviaremos estes dados à Efí para abrir ou vincular sua conta. A Efí enviará um link por WhatsApp ou SMS para você autorizar a integração.</p></div>
+        <button type="button" onClick={onClose} disabled={busy} className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${isDark ? 'bg-white/10 hover:bg-white/15' : 'bg-zinc-100 hover:bg-zinc-200'}`} aria-label="Fechar"><X size={18} /></button>
       </div>
-
-      <h2 id="billing-modal-title" className="mb-0 mt-[14px] text-[21px] font-bold leading-[27px] tracking-[-0.025em]">Informações da Fatura</h2>
-      <p className="mb-0 mt-1 text-[14px] font-medium leading-[21px] text-zinc-300">Personalize as informações exibidas nas<br className="hidden min-[350px]:block" /> faturas dos convidados.</p>
-
-      <div className="mt-[17px]">
-        <label htmlFor="billing-seller-name" className="mb-[7px] block text-[14px] font-semibold text-zinc-300">Nome do Vendedor</label>
-        <input
-          id="billing-seller-name"
-          autoFocus
-          value={draft.sellerName}
-          onChange={(event) => onChange({ ...draft, sellerName: event.target.value })}
-          className="h-[39px] w-full rounded-lg border border-white/10 bg-[#171819] px-3 text-[15px] text-white outline-none transition-colors focus:border-white/40"
-        />
+      <div className={`my-6 h-px ${isDark ? 'bg-white/10' : 'bg-zinc-200'}`} />
+      <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-black/20">{(['PF', 'PJ'] as const).map((kind) => <button key={kind} type="button" onClick={() => set('accountType', kind)} className={`h-10 rounded-lg text-sm font-bold ${form.accountType === kind ? 'bg-white text-zinc-950 shadow-sm' : (isDark ? 'text-zinc-400' : 'text-zinc-500')}`}>{kind === 'PF' ? 'Pessoa física' : 'Pessoa jurídica'}</button>)}</div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field name="fullName" text="Nome completo" span /><Field name="cpf" text="CPF" placeholder="Somente números" maxLength={14} /><Field name="birthDate" text="Data de nascimento" type="date" /><Field name="motherName" text="Nome completo da mãe" span />
+        {form.accountType === 'PJ' && <><Field name="cnpj" text="CNPJ" placeholder="Somente números" maxLength={18} /><Field name="companyName" text="Razão social" /></>}
+        <Field name="phone" text="Celular com DDD" placeholder="(85) 99999-9999" /><Field name="email" text="E-mail" type="email" />
       </div>
-
-      <div className="mt-[14px]">
-        <label htmlFor="billing-address" className="mb-[7px] block text-[14px] font-semibold text-zinc-300">Endereço</label>
-        <div className="relative">
-          <MapPin aria-hidden="true" size={17} strokeWidth={2} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <input
-            id="billing-address"
-            value={draft.address}
-            onChange={(event) => onChange({ ...draft, address: event.target.value })}
-            placeholder="Qual é o endereço?"
-            className="h-[39px] w-full rounded-lg border border-white/10 bg-[#171819] pl-9 pr-3 text-[15px] text-white outline-none transition-colors placeholder:font-semibold placeholder:text-zinc-600 focus:border-white/40"
-          />
-        </div>
-      </div>
-
-      <div className="mt-[14px]">
-        <label htmlFor="billing-memo" className="mb-[7px] block text-[14px] font-semibold text-zinc-300">Memorando</label>
-        <textarea
-          id="billing-memo"
-          value={draft.memo}
-          onChange={(event) => onChange({ ...draft, memo: event.target.value })}
-          className="h-[84px] w-full resize-none rounded-lg border border-white/10 bg-[#171819] p-3 text-[15px] leading-5 text-white outline-none transition-colors focus:border-white/40"
-        />
-      </div>
-
-      <button type="submit" className="mt-[17px] flex h-[38px] w-full items-center justify-center rounded-lg border-0 bg-white text-[16px] font-medium text-[#171819] transition-colors hover:bg-zinc-100 active:bg-zinc-200">Salvar Alterações</button>
+      <h3 className="mb-4 mt-7 text-base font-bold">Endereço</h3>
+      <div className="grid gap-4 sm:grid-cols-2"><Field name="zipCode" text="CEP" maxLength={9} /><Field name="state" text="UF" placeholder="CE" maxLength={2} /><Field name="city" text="Cidade" /><Field name="neighborhood" text="Bairro" /><Field name="street" text="Logradouro" span /><Field name="number" text="Número" /><Field name="complement" text="Complemento (opcional)" /></div>
+      {error && <div className="mt-5 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-500">{error}</div>}
+      <div className={`mt-6 rounded-xl px-4 py-3 text-xs leading-5 ${isDark ? 'bg-white/[0.055] text-zinc-400' : 'bg-zinc-100 text-zinc-600'}`}>Ao continuar, você autoriza o envio dos dados à Efí Bank para análise cadastral e criação da conta necessária ao split de pagamentos.</div>
+      <button type="submit" disabled={!complete || busy} className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#2727d8] text-base font-bold text-white hover:bg-[#2020bd] disabled:cursor-not-allowed disabled:opacity-40">{busy && <Loader2 size={18} className="animate-spin" />}{busy ? 'Enviando para a Efí...' : 'Enviar e receber link de autorização'}</button>
     </motion.form>
-  </motion.div>
-);
-
-const RefundPolicyModal = ({ value, onChange, onClose, onSave }: { value: string; onChange: (value: string) => void; onClose: () => void; onSave: () => void }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    onMouseDown={onClose}
-    className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/70 p-3 backdrop-blur-[2px]"
-  >
-    <motion.form
-      initial={{ opacity: 0, scale: 0.96, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97, y: 8 }}
-      transition={{ type: 'spring', stiffness: 340, damping: 29 }}
-      onMouseDown={(event) => event.stopPropagation()}
-      onSubmit={(event) => { event.preventDefault(); onSave(); }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="refund-policy-modal-title"
-      className="w-full max-w-[482px] rounded-[20px] border border-white/[0.04] bg-[#1c1d1e] px-5 pb-4 pt-5 text-left text-white shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
-    >
-      <div className="grid h-14 w-14 place-items-center rounded-full bg-white/10 text-zinc-300">
-        <ClipboardList size={28} strokeWidth={1.7} />
-      </div>
-      <h2 id="refund-policy-modal-title" className="mb-0 mt-[14px] text-[21px] font-bold leading-[27px] tracking-[-0.025em]">Política de Reembolso</h2>
-      <p className="mb-0 mt-1 text-[14px] font-medium leading-[21px] text-zinc-300">Especifique sua política de reembolso abaixo.</p>
-      <textarea
-        autoFocus
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="Compartilhe informações sobre quando você oferecerá reembolso aos convidados."
-        className="mt-[17px] h-[117px] w-full resize-none rounded-lg border border-white/10 bg-[#151617] p-[14px] text-[16px] font-medium leading-[23px] text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-white/40"
-      />
-      <button type="submit" className="mt-[17px] flex h-[39px] w-full items-center justify-center rounded-lg border-0 bg-white text-[16px] font-medium text-[#171819] transition-colors hover:bg-zinc-100 active:bg-zinc-200">Salvar Alterações</button>
-    </motion.form>
-  </motion.div>
-);
+  </motion.div>;
+}
 
 export function CalendarPaymentsPanel({ calendarId, calendarName = 'Fauves', onOpenFauvesPlus }: Props) {
-  const keyPrefix = `fauves-calendar-payments-${calendarId || 'default'}`;
-  const [stripeMenuOpen, setStripeMenuOpen] = React.useState(false);
-  const stripeMenuRef = React.useRef<HTMLDivElement>(null);
-  const [salesMenuOpen, setSalesMenuOpen] = React.useState(false);
-  const salesMenuRef = React.useRef<HTMLDivElement>(null);
-  const [modal, setModal] = React.useState<'coupon' | 'billing' | 'refund' | null>(null);
-  const [coupons, setCoupons] = React.useState<Coupon[]>([]);
-  const [billing, setBilling] = React.useState<Billing>({ sellerName: calendarName, address: '', memo: '' });
-  const [billingDraft, setBillingDraft] = React.useState<Billing>(billing);
-  const [refundPolicy, setRefundPolicy] = React.useState('');
-  const [refundDraft, setRefundDraft] = React.useState('');
-
-  React.useEffect(() => {
+  const { isDark } = useTheme();
+  const { toast } = useToast();
+  const [status, setStatus] = React.useState<PaymentStatus | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [working, setWorking] = React.useState(false);
+  const [loadError, setLoadError] = React.useState('');
+  const [formError, setFormError] = React.useState('');
+  const [showOnboarding, setShowOnboarding] = React.useState(false);
+  const loadStatus = React.useCallback(async () => {
+    if (!calendarId) { setLoading(false); return; }
+    setLoading(true); setLoadError('');
     try {
-      const savedCoupons = JSON.parse(localStorage.getItem(`${keyPrefix}-coupons`) || '[]') as Array<Coupon | { code: string; discount: number }>;
-      setCoupons(savedCoupons.map((coupon) => 'discountType' in coupon ? coupon : {
-        code: coupon.code,
-        limitUses: false,
-        discountType: 'percent',
-        discountValue: coupon.discount,
-      }));
-      const savedBilling = JSON.parse(localStorage.getItem(`${keyPrefix}-billing`) || 'null');
-      setBilling(savedBilling || { sellerName: calendarName, address: '', memo: '' });
-      setRefundPolicy(localStorage.getItem(`${keyPrefix}-refund`) || '');
-    } catch { /* storage unavailable */ }
-  }, [calendarName, keyPrefix]);
+      const response = await fetchApi(`/api/organization/${calendarId}/payments/status`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.message || 'Não foi possível consultar a conta de pagamentos.');
+      setStatus(data);
+    } catch (error: any) { setLoadError(error?.message || 'Não foi possível consultar a conta de pagamentos.'); }
+    finally { setLoading(false); }
+  }, [calendarId]);
+  React.useEffect(() => { void loadStatus(); }, [loadStatus]);
 
-  React.useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!stripeMenuRef.current?.contains(event.target as Node)) setStripeMenuOpen(false);
-      if (!salesMenuRef.current?.contains(event.target as Node)) setSalesMenuOpen(false);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { setStripeMenuOpen(false); setSalesMenuOpen(false); setModal(null); }
-    };
-    document.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
-
-  const secondaryButton = 'inline-flex h-9 items-center justify-center gap-2 rounded-lg border-0 bg-white/[0.10] px-3 text-sm font-bold text-zinc-400 transition-[background-color,color,transform] duration-150 hover:bg-white/[0.15] hover:text-white active:scale-[0.97]';
-  const divider = <div className="my-8 h-px bg-white/[0.10]" />;
-
-  const downloadSales = () => {
-    const blob = new Blob(['Data,Evento,Comprador,Valor\n'], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'historico-de-vendas.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+  const submitOnboarding = async (form: OnboardingForm) => {
+    if (!calendarId) return;
+    setWorking(true); setFormError('');
+    try {
+      const response = await fetchApi(`/api/organization/${calendarId}/onboarding`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        accountType: form.accountType, cpf: form.cpf, cnpj: form.cnpj, fullName: form.fullName,
+        birthDate: form.birthDate, motherName: form.motherName, companyName: form.companyName,
+        phone: form.phone, email: form.email, address: { zipCode: form.zipCode, state: form.state,
+          city: form.city, neighborhood: form.neighborhood, street: form.street, number: form.number, complement: form.complement },
+      }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(typeof data?.message === 'string' ? data.message : 'Não foi possível iniciar o cadastro na Efí.');
+      setShowOnboarding(false);
+      toast({ title: 'Cadastro enviado à Efí', description: 'Confira o WhatsApp ou SMS informado e autorize a integração.' });
+      await loadStatus();
+    } catch (error: any) { setFormError(error?.message || 'Não foi possível iniciar o cadastro na Efí.'); }
+    finally { setWorking(false); }
+  };
+  const refresh = async () => {
+    if (!calendarId) return;
+    setWorking(true);
+    try {
+      const response = await fetchApi(`/api/organization/${calendarId}/onboarding/refresh`, { method: 'POST' });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.message || 'Não foi possível atualizar o status.');
+      setStatus(data); toast({ title: data.ready ? 'Pagamentos ativados' : 'Análise ainda em andamento' });
+    } catch (error: any) { toast({ title: 'Falha ao atualizar', description: error?.message, variant: 'destructive' }); }
+    finally { setWorking(false); }
   };
 
-  const generateFeeInvoice = () => {
-    const escapedCalendarName = `"${calendarName.replace(/"/g, '""')}"`;
-    const blob = new Blob([`Calendário,Período,Total de taxas\n${escapedCalendarName},Todo o período,"R$ 0,00"\n`], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'fatura-de-taxas.csv';
-    link.click();
-    URL.revokeObjectURL(url);
-    setSalesMenuOpen(false);
-  };
+  const card = isDark ? 'border-white/10 bg-white/[0.055]' : 'border-zinc-200 bg-white';
+  const title = isDark ? 'text-white' : 'text-zinc-950';
+  const body = isDark ? 'text-zinc-400' : 'text-zinc-600';
+  const mutedSurface = isDark ? 'border-white/10 bg-white/[0.04]' : 'border-zinc-200 bg-zinc-50';
+  if (loading) return <div className={`grid min-h-[260px] place-items-center ${body}`}><Loader2 className="animate-spin" /></div>;
+  if (loadError) return <div className={`rounded-2xl border p-6 ${card}`}><p className={`font-semibold ${title}`}>{loadError}</p><button type="button" onClick={() => void loadStatus()} className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-[#2727d8] px-4 font-bold text-white"><RefreshCw size={16} />Tentar novamente</button></div>;
+  const state = String(status?.status || 'NONE').toUpperCase();
+  const pending = ['SUBMITTING', 'PENDING_AUTHORIZATION', 'PROCESSING'].includes(state);
+  const failed = ['ERROR', 'REJECTED'].includes(state);
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="text-left">
-      <section>
-        <h2 className="mb-5 text-[20px] font-bold tracking-[-0.02em] text-white">Venda de Ingressos</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="flex min-h-[233px] flex-col overflow-visible rounded-xl border border-white/[0.10] bg-white/[0.055]">
-            <div className="flex items-center gap-3 border-b border-white/[0.10] px-[18px] py-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#635bff] text-xs font-black text-white">stripe</span>
-              <div><h3 className="text-base font-bold text-white">Conta Stripe</h3><span className="inline-flex items-center gap-1 text-sm font-semibold text-green-400"><span className="h-2 w-2 rounded-full bg-green-400" />Ativo</span></div>
-            </div>
-            <div className="flex flex-1 flex-col justify-between px-[18px] py-3">
-              <div><p className="text-sm font-semibold text-zinc-300">Conta conectada: <strong className="text-white">{calendarName}</strong></p><p className="mt-2 text-sm font-semibold text-zinc-300">Sua conta Stripe está ativa e aceitando pagamentos.</p></div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => window.open('https://dashboard.stripe.com', '_blank', 'noopener,noreferrer')} className={`${secondaryButton} flex-1`}>Abrir Stripe <ArrowUpRight size={14} /></button>
-                <div ref={stripeMenuRef} className="relative">
-                  <button type="button" onClick={() => setStripeMenuOpen((open) => !open)} aria-label="Ações da conta Stripe" className={`${secondaryButton} w-10 px-0`}><MoreHorizontal size={17} /></button>
-                  <AnimatePresence>{stripeMenuOpen && <motion.div initial={{ opacity: 0, scale: 0.96, y: -5 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: -3 }} transition={{ duration: 0.14 }} className="absolute bottom-11 right-0 z-30 w-44 origin-bottom-right rounded-xl border border-white/10 bg-[#242526] p-1.5 shadow-2xl"><button type="button" onClick={() => window.open('https://dashboard.stripe.com/settings', '_blank', 'noopener,noreferrer')} className="w-full rounded-lg border-0 bg-transparent px-3 py-2 text-left text-sm font-semibold text-white hover:bg-white/[0.08]">Configurar conta</button><button type="button" className="w-full rounded-lg border-0 bg-transparent px-3 py-2 text-left text-sm font-semibold text-red-400 hover:bg-red-500/10">Desconectar</button></motion.div>}</AnimatePresence>
-                </div>
-              </div>
-            </div>
-          </div>
+  if (!status?.ready) return <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-left">
+    <h2 className={`mb-8 text-[30px] font-bold tracking-[-0.035em] ${title}`}>Venda de Ingressos</h2>
+    <section className={`rounded-[24px] border p-6 shadow-sm sm:p-10 ${card}`}>
+      <ConnectionMarks />
+      <div className="mt-8 max-w-4xl"><h3 className={`text-[28px] font-bold tracking-[-0.035em] sm:text-[32px] ${title}`}>{pending ? 'Conclua a autorização na Efí' : failed ? 'Precisamos tentar novamente' : 'Comece a vender ingressos'}</h3>
+        <p className={`mt-3 text-base font-medium leading-7 sm:text-lg ${body}`}>{pending ? 'Seu cadastro foi enviado. Abra o link recebido por WhatsApp ou SMS, autorize a integração e depois atualize o status aqui.' : failed ? 'A configuração anterior não foi concluída. Revise os dados e envie uma nova solicitação para liberar ingressos pagos.' : 'Configure a conta Efí deste calendário para receber pagamentos com split automático. O processo normalmente leva poucos minutos.'}</p>
+        <div className="mt-6">{pending ? <button type="button" onClick={() => void refresh()} disabled={working} className="inline-flex h-12 items-center gap-2 rounded-xl bg-[#2727d8] px-6 text-base font-bold text-white disabled:opacity-50">{working ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}Verificar novamente</button> : <button type="button" onClick={() => { setFormError(''); setShowOnboarding(true); }} className="h-12 rounded-xl bg-[#2727d8] px-7 text-base font-bold text-white hover:bg-[#2020bd]">{failed ? 'Tentar novamente' : 'Começar'}</button>}</div>
+      </div>
+    </section>
+    <p className={`mt-6 text-base font-medium ${body}`}><strong>Efí Bank</strong> processa os pagamentos e repassa automaticamente a parte do organizador para a conta configurada.</p>
+    <div className={`mt-8 h-px ${isDark ? 'bg-white/10' : 'bg-zinc-300'}`} />
+    <div className={`mt-6 flex items-start gap-3 rounded-xl border p-4 ${mutedSurface}`}><ShieldCheck className="mt-0.5 shrink-0 text-emerald-500" size={21} /><p className={`text-sm leading-6 ${body}`}>Eventos continuam podendo ser criados normalmente. Apenas a criação de <strong className={title}>ingressos pagos</strong> fica bloqueada até esta configuração ser concluída.</p></div>
+    <AnimatePresence><OnboardingModal open={showOnboarding} busy={working} error={formError} onClose={() => setShowOnboarding(false)} onSubmit={(form) => void submitOnboarding(form)} /></AnimatePresence>
+  </motion.div>;
 
-          <div className="flex min-h-[233px] flex-col justify-between rounded-xl border border-white/[0.10] bg-white/[0.055] p-[18px]">
-            <div className="grid grid-cols-2 gap-x-8 gap-y-5">
-              {[['Todo o Tempo', 'R$ 0'], ['Mês Passado', 'R$ 0'], ['Ingressos Vendidos', '0'], ['Taxa da Plataforma', '0%']].map(([label, value]) => <div key={label}><span className="text-sm font-semibold text-zinc-500">{label}</span><strong className="mt-0.5 block text-[21px] text-white">{value}</strong></div>)}
-            </div>
-            <div><p className="mb-2 text-center text-sm font-semibold text-zinc-500">Isente a taxa da plataforma com o Fauves Plus.</p><button type="button" onClick={onOpenFauvesPlus} className="h-10 w-full rounded-lg border-0 bg-pink-600 text-base font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.99]">Faça upgrade para o Fauves Plus</button></div>
-          </div>
-        </div>
-      </section>
-
-      {divider}
-
-      <section>
-        <div className="mb-5 flex items-start justify-between gap-4"><div><h2 className="text-[20px] font-bold text-white">Cupons</h2><p className="mt-1 text-base font-medium text-zinc-300">Crie cupons que podem ser aplicados a qualquer evento gerenciado pelo seu calendário.</p></div><button type="button" onClick={() => setModal('coupon')} className={secondaryButton}><Plus size={15} /> Criar</button></div>
-        {coupons.length ? <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.055]">{coupons.map((coupon) => <div key={coupon.code} className="flex items-center justify-between border-b border-white/10 px-4 py-3 last:border-b-0"><div><strong className="text-white">{coupon.code}</strong><p className="text-sm text-zinc-500">{coupon.discountType === 'free' ? 'Ingresso grátis' : coupon.discountType === 'percent' ? `${coupon.discountValue}% de desconto` : `R$ ${Number(coupon.discountValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de desconto`}{coupon.limitUses && coupon.maxUses ? ` · ${coupon.maxUses} usos` : ''}</p></div><span className="rounded-full bg-green-500/15 px-2 py-1 text-xs font-bold text-green-400">Ativo</span></div>)}</div> : <EmptyRow icon={<Ticket size={19} />} title="Sem Cupons" description="Você não configurou nenhum cupom." />}
-      </section>
-
-      {divider}
-
-      <section>
-        <h2 className="text-[20px] font-bold text-white">Métodos de Pagamento</h2><p className="mb-5 mt-1 text-base font-medium text-zinc-300">Escolha os métodos de pagamento aceitos para seus eventos e associações.</p>
-        <div className="overflow-hidden rounded-xl border border-white/[0.12] bg-white/[0.055]">
-          <div className="flex min-h-[66px] items-center justify-between gap-4 border-b border-white/10 px-4 py-3"><div><div className="flex flex-wrap items-center gap-2"><strong className="text-base text-white">Cartões</strong><div className="flex gap-1"><span className="rounded bg-blue-700 px-1.5 py-0.5 text-[8px] font-black text-white">VISA</span><span className="rounded bg-red-500 px-1.5 py-0.5 text-[8px] font-black text-yellow-100">MC</span><span className="rounded border border-white/10 bg-zinc-700 px-1.5 py-0.5 text-[8px] font-bold">▣</span><span className="rounded border border-white/10 bg-zinc-700 px-1 py-0.5 text-[8px] font-bold">Pay</span><span className="rounded border border-white/10 bg-zinc-700 px-1 py-0.5 text-[8px] font-bold">G Pay</span></div></div><p className="mt-1 text-sm font-semibold text-zinc-500">Os principais cartões de crédito e débito, Apple Pay e Google Pay são sempre aceitos.</p></div><span className="shrink-0 rounded-full bg-green-500/15 px-3 py-1 text-sm font-bold text-green-400"><Check size={14} className="mr-1 inline" />Ativado</span></div>
-          <div className="flex min-h-[66px] items-center justify-between gap-4 border-b border-white/10 px-4 py-3"><div><div className="flex items-center gap-2"><strong className="text-base text-white">PIX</strong><span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-black text-emerald-300">PIX</span></div><p className="mt-1 text-sm font-semibold text-zinc-500">Receba pagamentos instantâneos por PIX.</p></div><span className="shrink-0 rounded-full bg-green-500/15 px-3 py-1 text-sm font-bold text-green-400"><Check size={14} className="mr-1 inline" />Ativado</span></div>
-          <div className="flex min-h-[76px] items-center justify-between gap-4 px-4 py-3"><div><div className="flex items-center gap-2"><strong className="text-base text-white">Ritmo</strong><span className="rounded bg-gradient-to-r from-fuchsia-500/25 to-pink-500/25 px-1.5 py-0.5 text-[9px] font-black text-pink-300">R</span></div><p className="mt-1 max-w-[620px] text-sm font-semibold leading-5 text-zinc-500">PIX parcelado: o convidado pagará as parcelas via PIX. As regras de parcelamento serão configuradas quando o Ritmo estiver disponível.</p></div><span className="shrink-0 rounded-full bg-white/[0.08] px-3 py-1 text-sm font-bold text-zinc-400">Em preparação</span></div>
-        </div>
-      </section>
-
-      {divider}
-
-      <section className="grid gap-8 md:grid-cols-2">
-        <div><div className="flex items-center justify-between"><h2 className="text-[20px] font-bold text-white">Faturamento</h2><button type="button" onClick={() => { setBillingDraft(billing); setModal('billing'); }} className={secondaryButton}><PenLine size={14} /> Editar</button></div><p className="mt-1 text-base font-medium leading-6 text-zinc-300">Suas informações de vendedor exibidas nas faturas dos convidados.</p><div className="mt-5 space-y-4 rounded-xl border border-white/10 bg-white/[0.055] p-[18px] text-sm"><div className="grid grid-cols-[130px_1fr]"><span className="font-semibold text-zinc-500">Nome do Vendedor</span><strong>{billing.sellerName || calendarName}</strong></div><div className="grid grid-cols-[130px_1fr]"><span className="font-semibold text-zinc-500">Endereço</span><span className="text-zinc-500">{billing.address || '—'}</span></div><div className="grid grid-cols-[130px_1fr]"><span className="font-semibold text-zinc-500">Memo</span><span className="text-zinc-500">{billing.memo || '—'}</span></div></div></div>
-        <div><h2 className="text-[20px] font-bold text-white">Imposto</h2><p className="mt-1 text-base font-medium leading-6 text-zinc-300">Calcule e adicione impostos sobre os preços dos ingressos.</p><div className="mt-5 flex min-h-[61px] items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.055] px-4 py-3"><span className="text-sm font-semibold text-zinc-400">Atualize para o Fauves Plus para cobrar impostos.</span><button type="button" onClick={onOpenFauvesPlus} className={`${secondaryButton} shrink-0`}>Saiba mais</button></div></div>
-      </section>
-
-      {divider}
-
-      <section><div className="mb-5 flex items-start justify-between gap-4"><div><h2 className="text-[20px] font-bold text-white">Política de Reembolso</h2><p className="mt-1 text-base font-medium text-zinc-300">A política de reembolso é exibida nas páginas do evento e na <span className="text-pink-400">página de política de reembolso</span>.</p></div><button type="button" onClick={() => { setRefundDraft(refundPolicy); setModal('refund'); }} className={secondaryButton}><Plus size={15} /> {refundPolicy ? 'Editar' : 'Adicionar'}</button></div>{refundPolicy ? <div className="rounded-xl border border-white/10 bg-white/[0.055] p-4 text-sm font-medium leading-6 text-zinc-300">{refundPolicy}</div> : <EmptyRow icon={<FileText size={19} />} title="Nenhuma Política de Reembolso" description="Informe aos convidados qual é a sua política de reembolso." />}</section>
-
-      {divider}
-
-      <section><div className="mb-4 flex items-center justify-between"><h2 className="text-[20px] font-bold text-white">Histórico de Vendas</h2><div className="flex gap-1.5"><button type="button" onClick={downloadSales} className={secondaryButton}><Download size={15} /> Baixar como CSV</button><div ref={salesMenuRef} className="group relative"><button type="button" onClick={() => setSalesMenuOpen((open) => !open)} aria-label="Ações" aria-expanded={salesMenuOpen} className={`${secondaryButton} w-9 px-0`}><MoreHorizontal size={17} /></button><span className="pointer-events-none absolute bottom-[calc(100%+9px)] left-1/2 z-40 -translate-x-1/2 translate-y-1 scale-95 rounded-lg bg-white px-2.5 py-1.5 text-[13px] font-medium leading-none text-zinc-800 opacity-0 shadow-lg transition-all group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100">Ações<span className="absolute left-1/2 top-full -translate-x-1/2 border-[5px] border-transparent border-t-white" /></span><AnimatePresence>{salesMenuOpen && <motion.div initial={{ opacity: 0, scale: 0.96, y: -5 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: -3 }} transition={{ duration: 0.14 }} className="absolute right-0 top-[42px] z-30 w-[190px] origin-top-right rounded-xl border border-white/10 bg-[#242526] p-1.5 shadow-2xl"><button type="button" onClick={generateFeeInvoice} className="flex h-9 w-full items-center gap-2 rounded-lg border-0 bg-transparent px-2.5 text-left text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.08]"><FileText size={16} className="text-zinc-400" />Gerar fatura de taxas</button></motion.div>}</AnimatePresence></div></div></div><EmptyRow icon={<FileText size={19} />} title="Nenhuma Transação" description="Você não realizou nenhuma venda." /></section>
-
-      {divider}
-
-      <section className="pb-4"><div className="mb-4 flex items-center justify-between"><h2 className="text-[20px] font-bold text-white">Histórico de Pagamentos</h2><button type="button" onClick={() => window.open('https://dashboard.stripe.com/payouts', '_blank', 'noopener,noreferrer')} className={secondaryButton}>Gerenciar <ArrowUpRight size={14} /></button></div><EmptyRow icon={<Landmark size={20} />} title="Sem Pagamentos" description="Não há pagamentos associados a este calendário." /></section>
-
-      <CouponModalV2
-        open={modal === 'coupon'}
-        onClose={() => setModal(null)}
-        onCreate={(coupon) => {
-          const next = [...coupons.filter((item) => item.code !== coupon.code), coupon];
-          setCoupons(next);
-          try { localStorage.setItem(`${keyPrefix}-coupons`, JSON.stringify(next)); } catch { /* storage unavailable */ }
-        }}
-      />
-
-      <AnimatePresence>
-        {modal === 'billing' && <BillingModal draft={billingDraft} onChange={setBillingDraft} onClose={() => setModal(null)} onSave={() => { setBilling(billingDraft); try { localStorage.setItem(`${keyPrefix}-billing`, JSON.stringify(billingDraft)); } catch { /* storage unavailable */ } setModal(null); }} />}
-        {modal === 'refund' && <RefundPolicyModal value={refundDraft} onChange={setRefundDraft} onClose={() => setModal(null)} onSave={() => { const nextPolicy = refundDraft.trim(); setRefundPolicy(nextPolicy); try { if (nextPolicy) localStorage.setItem(`${keyPrefix}-refund`, nextPolicy); else localStorage.removeItem(`${keyPrefix}-refund`); } catch { /* storage unavailable */ } setModal(null); }} />}
-      </AnimatePresence>
-    </motion.div>
-  );
+  const fee = Number(status.platformFeePercent ?? 15);
+  return <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="text-left">
+    <h2 className={`mb-6 text-[30px] font-bold tracking-[-0.035em] ${title}`}>Venda de Ingressos</h2>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <section className={`flex min-h-[250px] flex-col rounded-2xl border ${card}`}><div className={`flex items-center gap-4 border-b px-5 py-5 ${isDark ? 'border-white/10' : 'border-zinc-200'}`}><EfiMark /><div><h3 className={`text-xl font-bold ${title}`}>Conta Efí Bank</h3><span className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-emerald-500"><span className="h-2 w-2 rounded-full bg-emerald-500" />Ativa</span></div></div><div className="flex flex-1 flex-col justify-between gap-6 p-5"><div><p className={`font-semibold ${body}`}>Conta conectada: <strong className={title}>{calendarName}</strong></p><p className={`mt-2 text-sm ${body}`}>Split habilitado para Pix e cartão{status.account ? ` · conta ${status.account.numberMasked}${status.account.digit ? `-${status.account.digit}` : ''}` : ''}.</p></div><a href="https://sejaefi.com.br/login" target="_blank" rel="noreferrer" className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-bold ${isDark ? 'bg-white/10 text-zinc-200 hover:bg-white/15' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}>Abrir Efí <ArrowUpRight size={15} /></a></div></section>
+      <section className={`flex min-h-[250px] flex-col justify-between rounded-2xl border p-5 ${card}`}><div className="grid grid-cols-2 gap-6">{[['Todo o tempo', 'R$ 0'], ['Mês passado', 'R$ 0'], ['Ingressos vendidos', '0'], ['Taxa da plataforma', `${fee.toLocaleString('pt-BR')}%`]].map(([label, value]) => <div key={label}><span className={`text-sm font-semibold ${body}`}>{label}</span><strong className={`mt-1 block text-2xl ${title}`}>{value}</strong></div>)}</div>{fee > 0 && <div><p className={`mb-2 text-center text-sm font-semibold ${body}`}>Isente a taxa da plataforma com o Fauves Plus.</p><button type="button" onClick={onOpenFauvesPlus} className="h-11 w-full rounded-xl bg-pink-600 text-base font-bold text-white hover:bg-pink-500">Faça upgrade para o Fauves Plus</button></div>}</section>
+    </div>
+    <div className={`my-8 h-px ${isDark ? 'bg-white/10' : 'bg-zinc-200'}`} />
+    <section><h3 className={`text-xl font-bold ${title}`}>Métodos de pagamento</h3><p className={`mt-1 ${body}`}>O split é aplicado pela API Efí antes da cobrança ser apresentada ao comprador.</p><div className={`mt-5 overflow-hidden rounded-2xl border ${card}`}>{[
+      { icon: <WalletCards size={20} />, name: 'Pix', text: 'Cobrança vinculada à configuração de split Efí.' },
+      { icon: <CreditCard size={20} />, name: 'Cartão de crédito', text: 'Repasse feito pelo payee_code da conta conectada.' },
+    ].map((method, index) => <div key={method.name} className={`flex items-center justify-between gap-4 px-5 py-4 ${index === 0 ? (isDark ? 'border-b border-white/10' : 'border-b border-zinc-200') : ''}`}><div className="flex items-center gap-3"><span className={`grid h-10 w-10 place-items-center rounded-xl ${isDark ? 'bg-white/10 text-zinc-300' : 'bg-zinc-100 text-zinc-600'}`}>{method.icon}</span><div><strong className={title}>{method.name}</strong><p className={`mt-0.5 text-sm ${body}`}>{method.text}</p></div></div><span className="shrink-0 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-bold text-emerald-500"><Check size={14} className="mr-1 inline" />Ativado</span></div>)}</div></section>
+    <div className={`my-8 h-px ${isDark ? 'bg-white/10' : 'bg-zinc-200'}`} />
+    <section className={`flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between ${mutedSurface}`}><div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 shrink-0 text-emerald-500" /><div><h3 className={`font-bold ${title}`}>Ingressos pagos liberados</h3><p className={`mt-1 text-sm leading-6 ${body}`}>Todos os eventos criados dentro deste calendário podem vender ingressos e receber o repasse nesta conta.</p></div></div><span className={`inline-flex shrink-0 items-center gap-2 text-sm font-semibold ${body}`}><Building2 size={16} />Configuração do calendário</span></section>
+  </motion.div>;
 }

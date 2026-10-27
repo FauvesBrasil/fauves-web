@@ -356,9 +356,16 @@ export default function OrganizerSettingsV2() {
   const [feedbackFilter, setFeedbackFilter] = React.useState('Por Evento');
   const [showFeedbackDropdown, setShowFeedbackDropdown] = React.useState(false);
   const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
   const subTabParam = searchParams.get('subTab');
   const [settingsSubTab, setSettingsSubTab] = React.useState(subTabParam || 'exibicao');
   const settingsSubTabsRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (tabParam && ['eventos', 'pessoas', 'newsletters', 'pagamento', 'insights', 'configuracoes'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   React.useEffect(() => {
     if (subTabParam) {

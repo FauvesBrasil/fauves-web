@@ -196,6 +196,19 @@ const CreateTickets: React.FC = () => {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
+        const errorCode = data?.code || data?.response?.code;
+        if (res.status === 412 && errorCode === 'EFI_SPLIT_REQUIRED') {
+          const organizationId = data?.organizationId || data?.response?.organizationId;
+          setLoading(false);
+          setDrawerOpen(false);
+          toast?.({
+            title: 'Configure os pagamentos',
+            description: 'Conecte a conta Efí do calendário antes de criar ingressos pagos.',
+            variant: 'destructive',
+          });
+          if (organizationId) navigate(`/calendar/manage/cal-${organizationId}?tab=pagamento`);
+          return;
+        }
         setError(data?.message || data?.error || `Erro ao ${editingId ? 'atualizar' : 'criar'} ingresso.`);
         setLoading(false);
         return;

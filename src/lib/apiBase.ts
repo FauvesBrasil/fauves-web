@@ -27,7 +27,7 @@ const isProd = import.meta.env.PROD;
 // This is a safe fallback during emergency; we can remove it once Vercel rewrites are stable.
 const DEFAULT_PROD_BACKEND = 'https://api.fauves.com.br';
 let finalEnvBase = envBase;
-// Emergency: in production, force the known Railway backend as authoritative to avoid
+// In production, force the public API endpoint managed through Coolify to avoid
 // situations where VITE_API_BASE is misconfigured to the frontend origin and causes 405s.
 if (isProd) {
   finalEnvBase = DEFAULT_PROD_BACKEND;
@@ -179,10 +179,10 @@ if (isProd) {
   if (stored && !candidates.includes(stored)) candidates.push(stored);
   if (finalEnvBase) candidates.unshift(finalEnvBase); // authoritative
 } else {
-  // In development: PRIORITIZE localhost over any envBase (like Railway) to ensure local tests work
+  // In development: prioritize localhost over a remote envBase to keep local tests isolated.
   localCandidates.forEach(b => { if(!candidates.includes(b)) candidates.push(b); });
   if (finalEnvBase && !candidates.includes(finalEnvBase)) candidates.push(finalEnvBase);
-  // Ensure the Railway production URL is always a candidate even in dev if localhost fails
+  // Keep the production API URL as a final candidate when localhost is unavailable.
   if (!candidates.includes(DEFAULT_PROD_BACKEND)) candidates.push(DEFAULT_PROD_BACKEND);
   if (stored && !candidates.includes(stored)) candidates.push(stored);
 }
@@ -268,7 +268,7 @@ async function probe(base: string): Promise<boolean> {
 }
 
 export async function ensureApiBase(force = false): Promise<string> {
-  // Runtime override: if we're running on the public app domain, force the known Railway backend
+  // Runtime override: on the public app domain, use the public Coolify-managed backend.
   // This ensures the running bundle does not attempt to call the frontend origin and receive 405s
   // while Vercel rewrites or envs are being fixed. Temporary emergency measure.
   try {
