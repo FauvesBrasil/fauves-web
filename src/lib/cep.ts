@@ -3,6 +3,8 @@
 export interface CepResult {
   cep: string; // digits only
   address: string;
+  neighborhood: string;
+  complement: string;
   city: string;
   state: string;
   country: string;
@@ -18,6 +20,8 @@ export async function fetchCep(rawCep: string): Promise<CepResult> {
   return {
     cep: digits,
     address: (data.logradouro || '').trim(),
+    neighborhood: (data.bairro || '').trim(),
+    complement: (data.complemento || '').trim(),
     city: data.localidade || '',
     state: data.uf || '',
     country: 'Brasil'
