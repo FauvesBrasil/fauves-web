@@ -42,7 +42,46 @@ function OnboardingModal({ open, busy, error, onClose, onSubmit }: {
 }) {
   const { isDark } = useTheme();
   const [form, setForm] = React.useState<OnboardingForm>(emptyForm);
-  React.useEffect(() => { if (!open) setForm(emptyForm); }, [open]);
+  const [step, setStep] = React.useState(0);
+  const [loadingProfile, setLoadingProfile] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) {
+      setForm(emptyForm);
+      setStep(0);
+      return;
+    }
+    let active = true;
+    setStep(0);
+    setLoadingProfile(true);
+    void fetchApi('/account-settings')
+      .then((response) => response.ok ? response.json() : null)
+      .then((profile) => {
+        if (!active || !profile) return;
+        const name = String(profile.name || '').trim();
+        const surname = String(profile.surname || '').trim();
+        const fullName = surname && !name.toLowerCase().endsWith(surname.toLowerCase())
+          ? `${name} ${surname}`.trim()
+          : name;
+        setForm((current) => ({
+          ...current,
+          cpf: String(profile.cpf || ''),
+          fullName,
+          birthDate: profile.birth ? String(profile.birth).slice(0, 10) : '',
+          phone: String(profile.phone || ''),
+          email: String(profile.email || ''),
+          zipCode: String(profile.cep || ''),
+          state: String(profile.state || ''),
+          city: String(profile.city || ''),
+          street: String(profile.address || ''),
+          complement: String(profile.complement || ''),
+        }));
+      })
+      .catch(() => {})
+      .finally(() => { if (active) setLoadingProfile(false); });
+    return () => { active = false; };
+  }, [open]);
+
   if (!open) return null;
   const surface = isDark ? 'border-white/10 bg-[#202123] text-white' : 'border-zinc-200 bg-white text-zinc-950';
   const input = isDark ? 'border-white/10 bg-[#151617] text-white placeholder:text-zinc-600 focus:border-white/40' : 'border-zinc-300 bg-white text-zinc-950 placeholder:text-zinc-400 focus:border-zinc-700';
@@ -50,29 +89,55 @@ function OnboardingModal({ open, busy, error, onClose, onSubmit }: {
   const set = (key: keyof OnboardingForm, value: string) => setForm((current) => ({ ...current, [key]: value }));
   const required = ['cpf', 'fullName', 'birthDate', 'motherName', 'phone', 'email', 'zipCode', 'state', 'city', 'neighborhood', 'street', 'number'] as const;
   const complete = required.every((key) => form[key].trim()) && (form.accountType === 'PF' || Boolean(form.cnpj.trim() && form.companyName.trim()));
+  const stepComplete = [
+    Boolean(form.cpf.trim() && (form.accountType === 'PF' || (form.cnpj.trim() && form.companyName.trim()))),
+    Boolean(form.fullName.trim() && form.birthDate.trim() && form.motherName.trim() && form.phone.trim() && form.email.trim()),
+    Boolean(form.zipCode.trim() && form.state.trim() && form.city.trim() && form.neighborhood.trim() && form.street.trim() && form.number.trim()),
+  ];
+  const stepTitles = ['Tipo de conta', 'Dados do titular', 'Endereço'];
   const Field = ({ name, text, type = 'text', placeholder, span = false, maxLength }: { name: keyof OnboardingForm; text: string; type?: string; placeholder?: string; span?: boolean; maxLength?: number }) => <label className={`${span ? 'sm:col-span-2' : ''} block`}>
     <span className={`mb-1.5 block text-sm font-semibold ${label}`}>{text}</span>
     <input type={type} value={form[name]} maxLength={maxLength} placeholder={placeholder} onChange={(event) => set(name, event.target.value)} className={`h-11 w-full rounded-xl border px-3 text-[15px] outline-none transition-colors ${input}`} />
   </label>;
 
   return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm" onMouseDown={() => !busy && onClose()}>
-    <motion.form initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); if (complete && !busy) onSubmit(form); }} className={`max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border p-5 shadow-2xl sm:p-6 ${surface}`}>
+    <motion.form initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); if (step < 2 && stepComplete[step]) setStep((current) => current + 1); else if (complete && !busy) onSubmit(form); }} className={`max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-2xl border p-5 shadow-2xl sm:p-6 ${surface}`}>
       <div className="flex items-start justify-between gap-4">
         <div><div className="mb-3 flex items-center gap-2.5"><EfiMark /><span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[11px] font-bold text-emerald-500">Ambiente seguro</span></div><h2 className="text-xl font-bold tracking-[-0.02em]">Ativar venda de ingressos</h2><p className={`mt-1 max-w-xl text-sm leading-5 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Enviaremos estes dados à Efí para abrir ou vincular sua conta. A Efí enviará um link por WhatsApp ou SMS para você autorizar a integração.</p></div>
         <button type="button" onClick={onClose} disabled={busy} className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${isDark ? 'bg-white/10 hover:bg-white/15' : 'bg-zinc-100 hover:bg-zinc-200'}`} aria-label="Fechar"><X size={18} /></button>
       </div>
-      <div className={`my-6 h-px ${isDark ? 'bg-white/10' : 'bg-zinc-200'}`} />
-      <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-black/20">{(['PF', 'PJ'] as const).map((kind) => <button key={kind} type="button" onClick={() => set('accountType', kind)} className={`h-10 rounded-lg text-sm font-bold ${form.accountType === kind ? 'bg-white text-zinc-950 shadow-sm' : (isDark ? 'text-zinc-400' : 'text-zinc-500')}`}>{kind === 'PF' ? 'Pessoa física' : 'Pessoa jurídica'}</button>)}</div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field name="fullName" text="Nome completo" span /><Field name="cpf" text="CPF" placeholder="Somente números" maxLength={14} /><Field name="birthDate" text="Data de nascimento" type="date" /><Field name="motherName" text="Nome completo da mãe" span />
-        {form.accountType === 'PJ' && <><Field name="cnpj" text="CNPJ" placeholder="Somente números" maxLength={18} /><Field name="companyName" text="Razão social" /></>}
-        <Field name="phone" text="Celular com DDD" placeholder="(85) 99999-9999" /><Field name="email" text="E-mail" type="email" />
+      <div className="mb-5 mt-5">
+        <div className="mb-2 flex items-center justify-between text-xs font-semibold"><span className={label}>Etapa {step + 1} de 3</span><span className={isDark ? 'text-zinc-500' : 'text-zinc-400'}>{stepTitles[step]}</span></div>
+        <div className="grid grid-cols-3 gap-1.5">{stepTitles.map((item, index) => <span key={item} className={`h-1 rounded-full ${index <= step ? 'bg-[#5d2de1]' : (isDark ? 'bg-white/10' : 'bg-zinc-200')}`} />)}</div>
       </div>
-      <h3 className="mb-4 mt-7 text-base font-bold">Endereço</h3>
-      <div className="grid gap-4 sm:grid-cols-2"><Field name="zipCode" text="CEP" maxLength={9} /><Field name="state" text="UF" placeholder="CE" maxLength={2} /><Field name="city" text="Cidade" /><Field name="neighborhood" text="Bairro" /><Field name="street" text="Logradouro" span /><Field name="number" text="Número" /><Field name="complement" text="Complemento (opcional)" /></div>
+
+      {loadingProfile ? <div className={`flex min-h-[220px] items-center justify-center gap-2 text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}><Loader2 size={16} className="animate-spin" />Carregando seus dados…</div> : <>
+        {step === 0 && <div>
+          <h3 className="text-base font-bold">Como você vai receber?</h3>
+          <p className={`mt-1 text-sm leading-5 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Escolha o tipo de conta e confirme o documento do titular.</p>
+          <div className="mb-5 mt-4 grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-black/20">{(['PF', 'PJ'] as const).map((kind) => <button key={kind} type="button" onClick={() => set('accountType', kind)} className={`h-10 rounded-lg text-sm font-bold ${form.accountType === kind ? 'bg-white text-zinc-950 shadow-sm' : (isDark ? 'text-zinc-400' : 'text-zinc-500')}`}>{kind === 'PF' ? 'Pessoa física' : 'Pessoa jurídica'}</button>)}</div>
+          <div className="grid gap-4 sm:grid-cols-2"><Field name="cpf" text="CPF do titular" placeholder="Somente números" maxLength={14} span={form.accountType === 'PF'} />{form.accountType === 'PJ' && <><Field name="cnpj" text="CNPJ" placeholder="Somente números" maxLength={18} /><Field name="companyName" text="Razão social" span /></>}</div>
+        </div>}
+
+        {step === 1 && <div>
+          <h3 className="text-base font-bold">Dados do titular</h3>
+          <p className={`mt-1 text-sm leading-5 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Alguns campos já vêm preenchidos com os dados do seu perfil.</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2"><Field name="fullName" text="Nome completo" span /><Field name="birthDate" text="Data de nascimento" type="date" /><Field name="phone" text="Celular com DDD" placeholder="(85) 99999-9999" /><Field name="motherName" text="Nome completo da mãe" span /><Field name="email" text="E-mail" type="email" span /></div>
+        </div>}
+
+        {step === 2 && <div>
+          <h3 className="text-base font-bold">Endereço</h3>
+          <p className={`mt-1 text-sm leading-5 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>Última etapa. Use o endereço cadastrado para o titular.</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2"><Field name="zipCode" text="CEP" maxLength={9} /><Field name="state" text="UF" placeholder="CE" maxLength={2} /><Field name="city" text="Cidade" /><Field name="neighborhood" text="Bairro" /><Field name="street" text="Logradouro" span /><Field name="number" text="Número" /><Field name="complement" text="Complemento (opcional)" /></div>
+        </div>}
+      </>}
+
       {error && <div className="mt-5 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-500">{error}</div>}
-      <div className={`mt-6 rounded-xl px-4 py-3 text-xs leading-5 ${isDark ? 'bg-white/[0.055] text-zinc-400' : 'bg-zinc-100 text-zinc-600'}`}>Ao continuar, você autoriza o envio dos dados à Efí Bank para análise cadastral e criação da conta necessária ao split de pagamentos.</div>
-      <button type="submit" disabled={!complete || busy} className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#2727d8] text-sm font-bold text-white hover:bg-[#2020bd] disabled:cursor-not-allowed disabled:opacity-40">{busy && <Loader2 size={16} className="animate-spin" />}{busy ? 'Enviando para a Efí...' : 'Enviar e receber link de autorização'}</button>
+      {step === 2 && <div className={`mt-5 rounded-xl px-3 py-2.5 text-xs leading-5 ${isDark ? 'bg-white/[0.055] text-zinc-400' : 'bg-zinc-100 text-zinc-600'}`}>Ao continuar, você autoriza o envio dos dados à Efí Bank para análise cadastral e criação da conta necessária ao split de pagamentos.</div>}
+      <div className="mt-5 flex items-center gap-2">
+        {step > 0 && <button type="button" disabled={busy} onClick={() => setStep((current) => current - 1)} className={`h-10 rounded-lg px-4 text-sm font-bold ${isDark ? 'bg-white/10 text-zinc-300 hover:bg-white/15' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'}`}>Voltar</button>}
+        <button type="submit" disabled={loadingProfile || !stepComplete[step] || busy} className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[#2727d8] px-4 text-sm font-bold text-white hover:bg-[#2020bd] disabled:cursor-not-allowed disabled:opacity-40">{busy && <Loader2 size={16} className="animate-spin" />}{busy ? 'Enviando para a Efí...' : step < 2 ? 'Continuar' : 'Enviar e receber autorização'}</button>
+      </div>
     </motion.form>
   </motion.div>;
 }
